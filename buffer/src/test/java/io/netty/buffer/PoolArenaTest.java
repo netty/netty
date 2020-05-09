@@ -20,29 +20,85 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.junit.Assume.assumeTrue;
-
 import java.nio.ByteBuffer;
+
+import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class PoolArenaTest {
 
     @Test
-    public void testNormalizeCapacity() throws Exception {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 0);
+    public void testNormalizeCapacity() {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
-        int[] expectedResult = {0, 16, 512, 1024, 1024, 2048};
+        int[] expectedResult = {16, 16, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
-            Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
+            Assert.assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
         }
     }
 
     @Test
-    public void testNormalizeAlignedCapacity() throws Exception {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 64);
+    public void testNormalizeAlignedCapacity() {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 64);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
-        int[] expectedResult = {0, 64, 512, 1024, 1024, 2048};
+        int[] expectedResult = {16, 64, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
-            Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
+            Assert.assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
+        }
+    }
+
+    @Test
+    public void testSize2SizeIdx() {
+        int chunkSize = 20 * 1024 * 1024;
+
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 8192, 13, chunkSize, 0);
+
+        for (int sz = 0; sz <= chunkSize; sz++) {
+            int sizeIdx = arena.size2SizeIdx(sz);
+            Assert.assertTrue(sz <= arena.sizeIdx2size(sizeIdx));
+            if (sizeIdx > 0) {
+                Assert.assertTrue(sz > arena.sizeIdx2size(sizeIdx - 1));
+            }
+        }
+    }
+
+    @Test
+    public void testPages2PageIdx() {
+        int pageSize = 8192;
+        int pageShifts = 13;
+        int chunkSize = 20 * 1024 * 1024;
+
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, pageSize, pageShifts, chunkSize, 0);
+
+        int maxPages = chunkSize >> pageShifts;
+        for (int pages = 1; pages <= maxPages; pages++) {
+            int pageIdxFloor = arena.pages2pageIdxFloor(pages);
+            Assert.assertTrue(pages << pageShifts >= arena.pageIdx2size(pageIdxFloor));
+            if (pageIdxFloor > 0 && pages < maxPages) {
+                Assert.assertTrue(pages << pageShifts < arena.pageIdx2size(pageIdxFloor + 1));
+            }
+
+            int pageIdxCeiling = arena.pages2pageIdx(pages);
+            Assert.assertTrue(pages << pageShifts <= arena.pageIdx2size(pageIdxCeiling));
+            if (pageIdxCeiling > 0) {
+                Assert.assertTrue(pages << pageShifts > arena.pageIdx2size(pageIdxCeiling - 1));
+            }
+        }
+    }
+
+    @Test
+    public void testSizeIdx2size() {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
+        for (int i = 0; i < arena.nSizes; i++) {
+            assertEquals(arena.sizeIdx2sizeCompute(i), arena.sizeIdx2size(i));
+        }
+    }
+
+    @Test
+    public void testPageIdx2size() {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
+        for (int i = 0; i < arena.nPSizes; i++) {
+            assertEquals(arena.pageIdx2sizeCompute(i), arena.pageIdx2size(i));
         }
     }
 
@@ -57,7 +113,7 @@ public class PoolArenaTest {
                     ? PlatformDependent.allocateDirectNoCleaner(capacity + alignment)
                     : ByteBuffer.allocateDirect(capacity + alignment);
 
-            PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 0, 0, 9, 9, alignment);
+            PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 512, 9, 512, alignment);
             int offset = arena.offsetCacheLine(bb);
             long address = PlatformDependent.directBufferAddress(bb);
 
@@ -73,38 +129,31 @@ public class PoolArenaTest {
                 0,      // nHeapArena
                 1,      // nDirectArena
                 8192,   // pageSize
-                11,     // maxOrder
-                0,      // tinyCacheSize
+                2560,     // maxPages
                 0,      // smallCacheSize
                 0,      // normalCacheSize
                 true    // useCacheForAllThreads
-                );
+        );
 
-        // create tiny buffer
-        final ByteBuf b1 = allocator.directBuffer(24);
         // create small buffer
-        final ByteBuf b2 = allocator.directBuffer(800);
+        final ByteBuf b1 = allocator.directBuffer(800);
         // create normal buffer
-        final ByteBuf b3 = allocator.directBuffer(8192 * 2);
+        final ByteBuf b2 = allocator.directBuffer(8192 * 5);
 
         Assert.assertNotNull(b1);
         Assert.assertNotNull(b2);
-        Assert.assertNotNull(b3);
 
         // then release buffer to deallocated memory while threadlocal cache has been disabled
         // allocations counter value must equals deallocations counter value
         Assert.assertTrue(b1.release());
         Assert.assertTrue(b2.release());
-        Assert.assertTrue(b3.release());
 
         Assert.assertTrue(allocator.directArenas().size() >= 1);
         final PoolArenaMetric metric = allocator.directArenas().get(0);
 
-        Assert.assertEquals(3, metric.numDeallocations());
-        Assert.assertEquals(3, metric.numAllocations());
+        Assert.assertEquals(2, metric.numDeallocations());
+        Assert.assertEquals(2, metric.numAllocations());
 
-        Assert.assertEquals(1, metric.numTinyDeallocations());
-        Assert.assertEquals(1, metric.numTinyAllocations());
         Assert.assertEquals(1, metric.numSmallDeallocations());
         Assert.assertEquals(1, metric.numSmallAllocations());
         Assert.assertEquals(1, metric.numNormalDeallocations());

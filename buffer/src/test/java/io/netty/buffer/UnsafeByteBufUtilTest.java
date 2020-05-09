@@ -65,7 +65,7 @@ public class UnsafeByteBufUtilTest {
         int pageSize = 4096;
 
         // create memory pool with one page
-        ByteBufAllocator alloc = new PooledByteBufAllocator(true, 1, 1, pageSize, 0);
+        ByteBufAllocator alloc = new PooledByteBufAllocator(true, 1, 1, pageSize, 1);
         UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, length, length);
 
         ByteBuf b1 = alloc.heapBuffer(16);

@@ -67,13 +67,6 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
     }
 
     /**
-     * Return the size of the tiny cache.
-     */
-    public int tinyCacheSize() {
-        return allocator.tinyCacheSize();
-    }
-
-    /**
      * Return the size of the small cache.
      */
     public int smallCacheSize() {
@@ -112,7 +105,6 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
                 .append("; usedDirectMemory: ").append(usedDirectMemory())
                 .append("; numHeapArenas: ").append(numHeapArenas())
                 .append("; numDirectArenas: ").append(numDirectArenas())
-                .append("; tinyCacheSize: ").append(tinyCacheSize())
                 .append("; smallCacheSize: ").append(smallCacheSize())
                 .append("; normalCacheSize: ").append(normalCacheSize())
                 .append("; numThreadLocalCaches: ").append(numThreadLocalCaches())

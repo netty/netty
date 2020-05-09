@@ -21,17 +21,12 @@ import java.util.List;
 /**
  * Expose metrics for an arena.
  */
-public interface PoolArenaMetric {
+public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Returns the number of thread caches backed by this arena.
      */
     int numThreadCaches();
-
-    /**
-     * Returns the number of tiny sub-pages for the arena.
-     */
-    int numTinySubpages();
 
     /**
      * Returns the number of small sub-pages for the arena.
@@ -42,11 +37,6 @@ public interface PoolArenaMetric {
      * Returns the number of chunk lists for the arena.
      */
     int numChunkLists();
-
-    /**
-     * Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for tiny sub-pages.
-     */
-    List<PoolSubpageMetric> tinySubpages();
 
     /**
      * Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for small sub-pages.
@@ -62,11 +52,6 @@ public interface PoolArenaMetric {
      * Return the number of allocations done via the arena. This includes all sizes.
      */
     long numAllocations();
-
-    /**
-     * Return the number of tiny allocations done via the arena.
-     */
-    long numTinyAllocations();
 
     /**
      * Return the number of small allocations done via the arena.
@@ -89,11 +74,6 @@ public interface PoolArenaMetric {
     long numDeallocations();
 
     /**
-     * Return the number of tiny deallocations done via the arena.
-     */
-    long numTinyDeallocations();
-
-    /**
      * Return the number of small deallocations done via the arena.
      */
     long numSmallDeallocations();
@@ -112,11 +92,6 @@ public interface PoolArenaMetric {
      * Return the number of currently active allocations.
      */
     long numActiveAllocations();
-
-    /**
-     * Return the number of currently active tiny allocations.
-     */
-    long numActiveTinyAllocations();
 
     /**
      * Return the number of currently active small allocations.

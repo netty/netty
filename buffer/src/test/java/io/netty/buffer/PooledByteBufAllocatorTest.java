@@ -23,6 +23,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
+import static io.netty.buffer.PoolChunk.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -120,8 +122,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 /*nHeapArena=*/ 1,
                 /*nDirectArena=*/ 1,
                 /*pageSize=*/8192,
-                /*maxOrder=*/ 11,
-                /*tinyCacheSize=*/ 0,
+                /*maxPages=*/ 2560,
                 /*smallCacheSize=*/ 0,
                 /*normalCacheSize=*/ 0,
                 /*useCacheForAllThreads=*/ false);
@@ -131,24 +132,24 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testArenaMetricsNoCache() {
-        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0), 100, 0, 100, 100);
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 2560, 0, 0), 100, 0, 100, 100);
     }
 
     @Test
     public void testArenaMetricsCache() {
-        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 2560, 1000, 1000), 100, 1, 1, 0);
     }
 
     @Test
     public void testArenaMetricsNoCacheAlign() {
         Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
-        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true, 64), 100, 0, 100, 100);
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 2560, 0, 0, true, 64), 100, 0, 100, 100);
     }
 
     @Test
     public void testArenaMetricsCacheAlign() {
         Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
-        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 2560, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 
     private static void testArenaMetrics0(
@@ -201,7 +202,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testSmallSubpageMetric() {
-        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 2560, 0, 0);
         ByteBuf buffer = allocator.heapBuffer(500);
         try {
             PoolArenaMetric metric = allocator.metric().heapArenas().get(0);
@@ -213,21 +214,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    public void testTinySubpageMetric() {
-        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
-        ByteBuf buffer = allocator.heapBuffer(1);
-        try {
-            PoolArenaMetric metric = allocator.metric().heapArenas().get(0);
-            PoolSubpageMetric subpageMetric = metric.tinySubpages().get(0);
-            assertEquals(1, subpageMetric.maxNumElements() - subpageMetric.numAvailable());
-        } finally {
-            buffer.release();
-        }
-    }
-
-    @Test
     public void testAllocNotNull() {
-        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 2560, 0, 0);
         // Huge allocation
         testAllocNotNull(allocator, allocator.metric().chunkSize() + 1);
         // Normal allocation
@@ -247,8 +235,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testFreePoolChunk() {
-        int chunkSize = 16 * 1024 * 1024;
-        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 0, 8192, 11, 0, 0, 0);
+        int chunkSize = 20 * 1024 * 1024;
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 0, 8192, 2560, 0, 0);
         ByteBuf buffer = allocator.heapBuffer(chunkSize);
         List<PoolArenaMetric> arenas = allocator.metric().heapArenas();
         assertEquals(1, arenas.size());
@@ -272,6 +260,89 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertFalse(lists.get(3).iterator().hasNext());
         assertFalse(lists.get(4).iterator().hasNext());
         assertFalse(lists.get(5).iterator().hasNext());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testCollapse() {
+        int pageSize = 8192;
+        //no cache
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 2560, 0, 0);
+
+        ByteBuf b1 = allocator.buffer(pageSize * 4);
+        ByteBuf b2 = allocator.buffer(pageSize * 5);
+        ByteBuf b3 = allocator.buffer(pageSize * 6);
+
+        b2.release();
+        b3.release();
+
+        ByteBuf b4 = allocator.buffer(pageSize * 10);
+
+        PooledByteBuf<ByteBuffer> b;
+        if (b4 instanceof PooledByteBuf) {
+            b = (PooledByteBuf<ByteBuffer>) b4;
+        } else {
+            SimpleLeakAwareByteBuf s = (SimpleLeakAwareByteBuf) b4;
+            b = (PooledByteBuf<ByteBuffer>) s.buf;
+        }
+
+        //b2 and b3 are collapsed, b4 should start at offset 4
+        assertEquals(4, runOffset(b.handle));
+        assertEquals(10, runPages(b.handle));
+
+        b1.release();
+        b4.release();
+
+        //all ByteBuf are collapsed, b5 should start at offset 0
+        ByteBuf b5 = allocator.buffer(pageSize * 20);
+
+        if (b5 instanceof PooledByteBuf) {
+            b = (PooledByteBuf<ByteBuffer>) b5;
+        } else {
+            SimpleLeakAwareByteBuf s = (SimpleLeakAwareByteBuf) b5;
+            b = (PooledByteBuf<ByteBuffer>) s.buf;
+        }
+
+        assertEquals(0, runOffset(b.handle));
+        assertEquals(20, runPages(b.handle));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testAllocateSmallOffset() {
+        int pageSize = 8192;
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 2560, 0, 0);
+
+        int size = pageSize * 5;
+
+        ByteBuf[] bufs = new ByteBuf[10];
+        for (int i = 0; i < 10; i++) {
+            bufs[i] = allocator.buffer(size);
+        }
+
+        for (int i = 0; i < 5; i++) {
+            bufs[i].release();
+            bufs[i] = null;
+        }
+
+        //make sure we always allocate runs with small offset
+        for (int i = 0; i < 5; i++) {
+            PooledByteBuf<ByteBuffer> buf = (PooledByteBuf<ByteBuffer>) allocator.buffer(size);
+            assertEquals(runOffset(buf.handle), i * 5);
+            bufs[i] = buf;
+        }
+
+        //release at reverse order
+        for (int i = 10 - 1; i >= 5; i--) {
+            bufs[i].release();
+            bufs[i] = null;
+        }
+
+        for (int i = 5; i < 10; i++) {
+            PooledByteBuf<ByteBuffer> buf = (PooledByteBuf<ByteBuffer>) allocator.buffer(size);
+            assertEquals(runOffset(buf.handle), i * 5);
+            bufs[i] = buf;
+        }
     }
 
     @Test (timeout = 4000)
@@ -449,7 +520,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         // We use no caches and only one arena to maximize the chance of hitting the race-condition we
         // had before.
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 2560, 0, 0);
         List<AllocationThread> threads = new ArrayList<AllocationThread>();
         try {
             for (int i = 0; i < 512; i++) {
@@ -490,7 +561,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     private static final class AllocationThread extends Thread {
 
-        private static final int[] ALLOCATION_SIZES = new int[16 * 1024];
+        private static final int[] ALLOCATION_SIZES = new int[20 * 1024];
         static {
             for (int i = 0; i < ALLOCATION_SIZES.length; i++) {
                 ALLOCATION_SIZES[i] = i;
@@ -511,9 +582,14 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 int idx = 0;
                 while (finish.get() == null) {
                     for (int i = 0; i < 10; i++) {
-                        buffers.add(allocator.directBuffer(
-                                ALLOCATION_SIZES[Math.abs(idx++ % ALLOCATION_SIZES.length)],
-                                Integer.MAX_VALUE));
+                        int len = ALLOCATION_SIZES[Math.abs(idx++ % ALLOCATION_SIZES.length)];
+                        ByteBuf buf = allocator.directBuffer(len, Integer.MAX_VALUE);
+                        assertEquals(len, buf.writableBytes());
+                        while (buf.isWritable()) {
+                            buf.writeByte(i);
+                        }
+
+                        buffers.offer(buf);
                     }
                     releaseBuffers();
                 }
@@ -525,12 +601,14 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
 
         private void releaseBuffers() {
-            for (;;) {
+            int i = 0;
+            while (!buffers.isEmpty()) {
                 ByteBuf buf = buffers.poll();
-                if (buf == null) {
-                    break;
+                while (buf.isReadable()) {
+                    assertEquals(i, buf.readByte());
                 }
                 buf.release();
+                i++;
             }
         }
 
