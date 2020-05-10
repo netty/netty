@@ -79,7 +79,7 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DefaultDnsQuery> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DefaultDnsQuery msg, List<Object> out) throws Exception {
-        ByteBuf byteBuf = ctx.alloc().buffer(); // TODO: is this freed?
+        ByteBuf byteBuf = ctx.alloc().buffer();
         encoder.encode(msg, byteBuf);
 
         FullHttpRequest fullHttpRequest;
