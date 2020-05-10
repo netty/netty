@@ -79,7 +79,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxPages);
         } catch (Throwable t) {
             maxOrderFallbackCause = t;
-            defaultMaxPages = 11;
+            defaultMaxPages = 2560;
         }
         DEFAULT_PAGES = defaultMaxPages;
 
