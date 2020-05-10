@@ -305,7 +305,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             try {
                 readnow = fileChannel.read(byteBuffer);
             }catch (IOException e){
-                logger.warn("Failed to read a file.", e);
+                logger.warn("Failed to read a Buffer.", e);
             }
             finally {
                 fileChannel.close();
