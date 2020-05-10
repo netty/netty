@@ -33,11 +33,11 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 @UnstableApi
-public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
+public class DoHQueryEncoder extends MessageToMessageEncoder<DefaultDnsQuery> {
 
     private final DnsQueryEncoder encoder;
-    private final boolean HTTP2;
-    private final boolean GET;
+    private final boolean http2;
+    private final boolean get;
     private final URL url;
 
     /**
@@ -51,14 +51,14 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     }
 
     /**
-     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}, uses HTTP POST method
-     * and specifies if we're using HTTP/2 (h2).
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}, uses HTTP POST
+     * method and specifies if we're using HTTP/2 (h2).
      *
-     * @param HTTP2 Use HTTP/2 (h2)
+     * @param http2 Use HTTP/2 (h2)
      * @param url   DoH Upstream Server
      */
-    public DoHQueryEncoder(boolean HTTP2, URL url) {
-        this(DnsRecordEncoder.DEFAULT, HTTP2, false, url);
+    public DoHQueryEncoder(boolean http2, URL url) {
+        this(DnsRecordEncoder.DEFAULT, http2, false, url);
     }
 
     /**
@@ -66,24 +66,28 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
      * {@code GET} and {@code url}
      *
      * @param recordEncoder DNS Record Encoder
-     * @param HTTP2         Use HTTP/2 (h2)
-     * @param GET           Use HTTP GET method
+     * @param http2         Use HTTP/2 (h2)
+     * @param get           Use HTTP GET method
      * @param url           DoH Upstream Server
      */
-    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean HTTP2, boolean GET, URL url) {
+    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean http2, boolean get, URL url) {
         this.encoder = new DnsQueryEncoder(recordEncoder);
-        this.HTTP2 = HTTP2;
-        this.GET = GET;
+        this.http2 = http2;
+        this.get = get;
         this.url = url;
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, DnsQuery msg, List<Object> out) throws Exception {
-        ByteBuf byteBuf = ctx.alloc().buffer();
+    protected void encode(ChannelHandlerContext ctx, DefaultDnsQuery msg, List<Object> out) throws Exception {
+        ByteBuf byteBuf = ctx.alloc().buffer(); // TODO: is this freed?
         encoder.encode(msg, byteBuf);
 
         FullHttpRequest fullHttpRequest;
-        if (GET) {
+        if (get) {
+            /*
+             * As per RFC 8484, variable "dns" is specified for GET request.
+             * [https://tools.ietf.org/html/rfc8484#section-4.1]
+             */
             fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                     url.getPath() + "?dns=" + Base64.encode(byteBuf).toString(Charset.forName("UTF-8")));
         } else {
@@ -98,7 +102,7 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
                 .add(HttpHeaderNames.ACCEPT, "application/dns-message");
 
         // If we're using HTTP/2 (h2) then we'll add "x-http2-scheme" header
-        if (HTTP2) {
+        if (http2) {
             fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
                     HttpScheme.HTTPS.name());
         }

@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-
 import io.netty.handler.codec.dns.DefaultDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DnsOpCode;
@@ -31,15 +30,13 @@ import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
-
 
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 public final class DoHClient {
 
-    private static final String QUERY_DOMAIN = "www.example.com";
+    private static final String QUERY_DOMAIN = "netty.io";
 
     private DoHClient() {
     }
@@ -50,7 +47,6 @@ public final class DoHClient {
 
         try {
             final SslContext sslContext = SslContextBuilder.forClient()
-                    .protocols("TLSv1.2", "TLSv1.3")
                     .applicationProtocolConfig(new ApplicationProtocolConfig(
                             ApplicationProtocolConfig.Protocol.ALPN,
                             ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
@@ -64,12 +60,10 @@ public final class DoHClient {
                     .channel(NioSocketChannel.class)
                     .handler(new Initializer(sslContext, url));
 
-            final Channel ch = b.connect(url.getHost(), url.getDefaultPort()).sync().channel();
+            Channel ch = b.connect(url.getHost(), url.getDefaultPort()).sync().channel();
 
-            // Wait for TLS Handshake to finish
-            ch.pipeline().get(SslHandler.class).handshakeFuture().sync();
-
-            Thread.sleep(500); // See https://github.com/netty/netty/pull/10258#discussion_r421823210
+            // Wait for application protocol negotiation to finish
+            ch.pipeline().get(ALPNHandler.class).promise().sync();
 
             // RFC 8484 recommends ID 0 [https://tools.ietf.org/html/rfc8484#section-4.1]
             DnsQuery query = new DefaultDnsQuery(0, DnsOpCode.QUERY);
