@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.handler.codec.dns.DefaultDnsQuery;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsRecordEncoder;
@@ -87,7 +88,7 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DefaultDnsQuery> {
 
         FullHttpRequest fullHttpRequest;
         if (get) {
-            ByteBuf encodedDNS = Base64.encode(byteBuf);
+            ByteBuf encodedDNS = Base64.encode(byteBuf, Base64Dialect.URL_SAFE);
 
             /*
              * As per RFC 8484, variable "dns" is specified for GET request.
