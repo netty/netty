@@ -37,7 +37,6 @@ import io.netty.util.AsciiString;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
 import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 
 final class HpackStaticTable {

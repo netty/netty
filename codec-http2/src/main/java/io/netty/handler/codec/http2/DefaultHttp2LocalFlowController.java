@@ -31,7 +31,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
