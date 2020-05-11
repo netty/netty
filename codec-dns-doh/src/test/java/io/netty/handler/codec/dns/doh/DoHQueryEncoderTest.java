@@ -55,7 +55,6 @@ public class DoHQueryEncoderTest {
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(new DoHQueryEncoder(false, url),
                 new DoHResponseDecoder());
 
-
         // Query
         DnsQuery query = new DefaultDnsQuery(0, DnsOpCode.QUERY);
         query.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion("www.example.com", DnsRecordType.A));
