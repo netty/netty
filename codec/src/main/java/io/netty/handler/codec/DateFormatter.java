@@ -38,10 +38,12 @@ import java.util.TimeZone;
  * If you're looking for a date format that validates day of week, or supports other timezones, consider using
  * java.util.DateTimeFormatter.RFC_1123_DATE_TIME.
  *
- * On the formatting side, it uses RFC1123 format.
+ * On the formatting side, it uses a subset of RFC1123 (2 digit day-of-month and 4 digit year) as per RFC2616.
+ * This subset supports RFC6265.
  *
  * @see <a href="https://tools.ietf.org/html/rfc6265#section-5.1.1">RFC6265</a> for the parsing side
- * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> for the encoding side.
+ * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> and
+ * <a href="https://tools.ietf.org/html/rfc2616#section-3.3.1">RFC2616</a> for the encoding side.
  */
 public final class DateFormatter {
 
@@ -429,7 +431,7 @@ public final class DateFormatter {
         cal.setTime(date);
 
         sb.append(DAY_OF_WEEK_TO_SHORT_NAME[cal.get(Calendar.DAY_OF_WEEK) - 1]).append(", ");
-        sb.append(cal.get(Calendar.DAY_OF_MONTH)).append(' ');
+        appendZeroLeftPadded(cal.get(Calendar.DAY_OF_MONTH), sb).append(' ');
         sb.append(CALENDAR_MONTH_TO_SHORT_NAME[cal.get(Calendar.MONTH)]).append(' ');
         sb.append(cal.get(Calendar.YEAR)).append(' ');
         appendZeroLeftPadded(cal.get(Calendar.HOUR_OF_DAY), sb).append(':');
