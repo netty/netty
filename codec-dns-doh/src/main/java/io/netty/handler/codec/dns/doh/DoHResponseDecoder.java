@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,10 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.dns.doh;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsOpCode;
+import io.netty.handler.codec.dns.DnsRecordDecoder;
+import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.util.internal.UnstableApi;
@@ -44,7 +50,7 @@ public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
         this.dnsResponseDecoder = new DnsResponseDecoder<SocketAddress>(dnsRecordDecoder) {
             @Override
             protected DnsResponse newResponse(SocketAddress sender, SocketAddress recipient, int id,
-                                              DnsOpCode opCode, DnsResponseCode responseCode) throws Exception {
+                                              DnsOpCode opCode, DnsResponseCode responseCode) {
                 return new DefaultDnsResponse(id, opCode, responseCode);
             }
         };

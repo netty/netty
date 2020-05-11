@@ -16,8 +16,8 @@
 package io.netty.example.dns.doh;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.dns.DoHQueryEncoder;
-import io.netty.handler.codec.dns.DoHResponseDecoder;
+import io.netty.handler.codec.dns.doh.DoHQueryEncoder;
+import io.netty.handler.codec.dns.doh.DoHResponseDecoder;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;

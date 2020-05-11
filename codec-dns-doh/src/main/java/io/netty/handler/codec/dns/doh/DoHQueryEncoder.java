@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,12 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.dns.doh;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.dns.DefaultDnsQuery;
+import io.netty.handler.codec.dns.DnsQueryEncoder;
+import io.netty.handler.codec.dns.DnsRecordEncoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -26,10 +29,10 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.List;
 
 @UnstableApi
@@ -84,12 +87,17 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DefaultDnsQuery> {
 
         FullHttpRequest fullHttpRequest;
         if (get) {
+            ByteBuf encodedDNS = Base64.encode(byteBuf);
+
             /*
              * As per RFC 8484, variable "dns" is specified for GET request.
              * [https://tools.ietf.org/html/rfc8484#section-4.1]
              */
             fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                    url.getPath() + "?dns=" + Base64.encode(byteBuf).toString(Charset.forName("UTF-8")));
+                    url.getPath() + "?dns=" + encodedDNS.toString(CharsetUtil.UTF_8));
+
+            // Release ByteBuf since we only use `toString()` method to prevent memory leak.
+            encodedDNS.release();
         } else {
             fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                     url.getPath(), byteBuf);
