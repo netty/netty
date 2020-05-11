@@ -17,6 +17,7 @@ package io.netty.handler.codec.dns.doh;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsRecordDecoder;
@@ -27,7 +28,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.util.internal.UnstableApi;
 
-import java.io.InvalidObjectException;
 import java.net.SocketAddress;
 import java.util.List;
 
@@ -61,7 +61,7 @@ public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
 
         // We don't any other HttpObject except FullHttpResponse
         if (!(msg instanceof FullHttpResponse)) {
-            throw new InvalidObjectException("HttpObject is not FullHttpResponse");
+            throw new UnsupportedMessageTypeException("HttpObject is not FullHttpResponse");
         }
 
         FullHttpResponse fullHttpResponse = (FullHttpResponse) msg;
