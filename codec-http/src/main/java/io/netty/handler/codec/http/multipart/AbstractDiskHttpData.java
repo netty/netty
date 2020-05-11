@@ -300,23 +300,19 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         int read = 0;
         ByteBuffer byteBuffer = ByteBuffer.allocate(length);
-        while (read < length) {
-            int readnow=-1;
-            try {
-                readnow = fileChannel.read(byteBuffer);
-            }catch (IOException e){
-                logger.warn("Failed to read a Buffer.", e);
+        try{
+            while (read < length) {
+                int readnow = fileChannel.read(byteBuffer);
+                if (readnow == -1) {
+                    fileChannel.close();
+                    fileChannel = null;
+                    break;
+                } else {
+                    read += readnow;
+                }
             }
-            finally {
-                fileChannel.close();
-            }
-            if (readnow == -1) {
-                fileChannel.close();
-                fileChannel = null;
-                break;
-            } else {
-                read += readnow;
-            }
+        }finally {
+            fileChannel.close();
         }
         if (read == 0) {
             return EMPTY_BUFFER;
