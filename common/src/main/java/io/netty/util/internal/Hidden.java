@@ -61,6 +61,8 @@ class Hidden {
                     "io.netty.util.concurrent.SingleThreadEventExecutor",
                     "confirmShutdown"
             );
+            builder.allowBlockingCallsInside("io.netty.util.concurrent.GlobalEventExecutor",
+                    "addTask");
 
             builder.allowBlockingCallsInside("io.netty.util.concurrent.GlobalEventExecutor",
                     "takeTask");
