@@ -300,7 +300,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         int read = 0;
         ByteBuffer byteBuffer = ByteBuffer.allocate(length);
-        try{
+        try {
             while (read < length) {
                 int readnow = fileChannel.read(byteBuffer);
                 if (readnow == -1) {
@@ -311,7 +311,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     read += readnow;
                 }
             }
-        }finally {
+        } finally {
             fileChannel.close();
         }
         if (read == 0) {
