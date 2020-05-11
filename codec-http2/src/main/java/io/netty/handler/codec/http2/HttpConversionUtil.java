@@ -654,8 +654,5 @@ public final class HttpConversionUtil {
                 output.add(COOKIE, cookies.toString());
             }
         }
-
-        private void translateHeader(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
-        }
     }
 }
