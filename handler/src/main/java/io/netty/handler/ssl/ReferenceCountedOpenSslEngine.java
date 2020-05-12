@@ -313,9 +313,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         engineMap = context.engineMap;
         enableOcsp = context.enableOcsp;
-        // context.keyCertChain will only be non-null if we do not use the KeyManagerFactory. In this case
-        // localCertificateChain will be set in setKeyMaterial(...).
-        localCertificateChain = context.keyCertChain;
+        if (!context.sessionContext().useKeyManager()) {
+            // If we do not use the KeyManagerFactory we need to set localCertificateChain now.
+            // When we use a KeyManagerFactory it will be set during setKeyMaterial(...).
+            localCertificateChain = context.keyCertChain;
+        }
 
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         Lock readerLock = context.ctxLock.readLock();
