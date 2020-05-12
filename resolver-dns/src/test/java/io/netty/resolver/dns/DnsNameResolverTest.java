@@ -2974,4 +2974,80 @@ public class DnsNameResolverTest {
         }
         assertThat(isQuerySentToSecondServer.get(), is(false));
     }
+
+    @Test
+    public void testCNAMERecursiveResolveDifferentNameServersForDomains() throws IOException {
+        final String firstName = "firstname.com";
+        final String secondName = "secondname.com";
+        final String lastName = "lastname.com";
+        final String ipv4Addr = "1.2.3.4";
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                ResourceRecordModifier rm = new ResourceRecordModifier();
+                rm.setDnsClass(RecordClass.IN);
+                rm.setDnsName(question.getDomainName());
+                rm.setDnsTtl(100);
+
+                if (question.getDomainName().equals(firstName)) {
+                    rm.setDnsType(RecordType.CNAME);
+                    rm.put(DnsAttribute.DOMAIN_NAME, secondName);
+                } else if (question.getDomainName().equals(lastName)) {
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, ipv4Addr);
+                } else {
+                    return null;
+                }
+                return Collections.singleton(rm.getEntry());
+            }
+        });
+        dnsServer2.start();
+        final TestDnsServer dnsServer3 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(secondName)) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+                    rm.setDnsType(RecordType.CNAME);
+                    rm.put(DnsAttribute.DOMAIN_NAME, lastName);
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        });
+        dnsServer3.start();
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver()
+                    .resolveCache(NoopDnsCache.INSTANCE)
+                    .cnameCache(NoopDnsCnameCache.INSTANCE)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new DnsServerAddressStreamProvider() {
+                        @Override
+                        public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                            if (hostname.equals(secondName + '.')) {
+                                return DnsServerAddresses.singleton(dnsServer3.localAddress()).stream();
+                            }
+                            return DnsServerAddresses.singleton(dnsServer2.localAddress()).stream();
+                        }
+                    })
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED).build();
+
+            assertResolvedAddress(resolver.resolve(firstName).syncUninterruptibly().getNow(), ipv4Addr, firstName);
+        } finally {
+            dnsServer2.stop();
+            dnsServer3.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    private static void assertResolvedAddress(InetAddress resolvedAddress, String ipAddr, String hostname) {
+        assertEquals(ipAddr, resolvedAddress.getHostAddress());
+        assertEquals(hostname, resolvedAddress.getHostName());
+    }
 }

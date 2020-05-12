@@ -986,7 +986,9 @@ abstract class DnsResolveContext<T> {
 
     private DnsServerAddressStream getNameServers(String hostname) {
         DnsServerAddressStream stream = getNameServersFromCache(hostname);
-        return stream == null ? nameServerAddrs.duplicate() : stream;
+        // We need to obtain a new stream from the parent DnsNameResolver as the hostname may not be the same as the
+        // one used for the original query (for example we may follow CNAMEs).
+        return stream == null ? parent.newNameServerAddressStream(hostname) : stream;
     }
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
