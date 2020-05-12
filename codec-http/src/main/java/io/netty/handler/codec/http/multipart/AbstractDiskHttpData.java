@@ -304,14 +304,17 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             while (read < length) {
                 int readnow = fileChannel.read(byteBuffer);
                 if (readnow == -1) {
+                    fileChannel.close();
+                    fileChannel = null;
                     break;
                 } else {
                     read += readnow;
                 }
             }
         } finally {
-            fileChannel.close();
-            fileChannel = null;
+            if (fileChannel != null) {
+                fileChannel.close();
+            }
         }
         if (read == 0) {
             return EMPTY_BUFFER;
