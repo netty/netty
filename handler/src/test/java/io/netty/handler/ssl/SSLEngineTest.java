@@ -3371,7 +3371,8 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(protocols())
-                .ciphers(ciphers());
+                .ciphers(ciphers())
+                .clientAuth(ClientAuth.NONE);
 
         serverSslCtx = wrapContext(serverSslCtxBuilder.build());
         SSLEngine clientEngine = null;
