@@ -529,8 +529,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    // Exposed for testing only
-    final void setUseTasks(boolean useTasks) {
+    public final void setUseTasks(boolean useTasks) {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {
