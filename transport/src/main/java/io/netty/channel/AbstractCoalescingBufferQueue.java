@@ -140,6 +140,10 @@ public abstract class AbstractCoalescingBufferQueue {
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {
+            if (readableBytes != 0) {
+                // This prevents DefaultHttp2RemoteFlowController.FlowState#writeAllocatedBytes going into endless loop
+                throw new IllegalStateException("CoalescingBufferQueue is corrupted");
+            }
             return removeEmptyValue();
         }
         bytes = Math.min(bytes, readableBytes);
