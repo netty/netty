@@ -53,6 +53,10 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         stats = new OpenSslSessionStats(context);
     }
 
+    final boolean useKeyManager() {
+        return provider != null;
+    }
+
     @Override
     public SSLSession getSession(byte[] bytes) {
         requireNonNull(bytes, "bytes");
