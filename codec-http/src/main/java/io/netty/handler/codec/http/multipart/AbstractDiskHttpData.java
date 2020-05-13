@@ -305,9 +305,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 int readnow = fileChannel.read(byteBuffer);
                 if (readnow == -1) {
                     break;
-                } else {
-                    read += readnow;
                 }
+                read += readnow;
             }
         } finally {
             fileChannel.close();
