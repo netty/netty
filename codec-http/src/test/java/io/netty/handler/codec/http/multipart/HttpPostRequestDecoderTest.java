@@ -829,7 +829,7 @@ public class HttpPostRequestDecoderTest {
 
     @Test
     public void testDecodeFullHttpRequestWithUrlEncodedBody() throws Exception {
-        byte[] bodyBytes = "foo=bar&a=b&empty=&city=%3c%22new%22%20york%20city%3e".getBytes();
+        byte[] bodyBytes = "foo=bar&a=b&empty=&city=%3c%22new%22%20york%20city%3e&other_city=los+angeles".getBytes();
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
@@ -838,7 +838,7 @@ public class HttpPostRequestDecoderTest {
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
 
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
-        assertEquals(4, decoder.getBodyHttpDatas().size());
+        assertEquals(5, decoder.getBodyHttpDatas().size());
 
         Attribute attr = (Attribute) decoder.getBodyHttpData("foo");
         assertTrue(attr.getByteBuf().isDirect());
@@ -855,6 +855,10 @@ public class HttpPostRequestDecoderTest {
         attr = (Attribute) decoder.getBodyHttpData("city");
         assertTrue(attr.getByteBuf().isDirect());
         assertEquals("<\"new\" york city>", attr.getValue());
+
+        attr = (Attribute) decoder.getBodyHttpData("other_city");
+        assertTrue(attr.getByteBuf().isDirect());
+        assertEquals("los angeles", attr.getValue());
 
         decoder.destroy();
         req.release();
