@@ -67,6 +67,13 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
     }
 
     /**
+     * Return the size of the tiny cache.
+     */
+    public int tinyCacheSize() {
+        return allocator.tinyCacheSize();
+    }
+
+    /**
      * Return the size of the small cache.
      */
     public int smallCacheSize() {

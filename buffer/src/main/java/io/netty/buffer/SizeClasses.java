@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,7 +20,7 @@ import static io.netty.buffer.PoolThreadCache.*;
 /**
  * SizeClasses requires {@code pageShifts} to be defined prior to inclusion,
  * and it in turn defines:
- *
+ * <p>
  *   LOG2_SIZE_CLASS_GROUP: Log of size class count for each size doubling.
  *   LOG2_MAX_LOOKUP_SIZE: Log of max size class in the lookup table.
  *   sizeClasses: Complete table of [index, log2Group, log2Delta, nDelta, isMultiPageSize,
@@ -33,7 +33,7 @@ import static io.netty.buffer.PoolThreadCache.*;
  *     isSubPage: 'yes' if a subpage size class, 'no' otherwise.
  *     log2DeltaLookup: Same as log2Delta if a lookup table size class, 'no'
  *                      otherwise.
- *
+ * <p>
  *   nSubpages: Number of subpages size classes.
  *   nSizes: Number of size classes.
  *   nPSizes: Number of size classes that are multiples of pageSize.
@@ -42,8 +42,7 @@ import static io.netty.buffer.PoolThreadCache.*;
  *
  *   lookupMaxclass: Maximum size class included in lookup table.
  *   log2NormalMinClass: Log of minimum normal size class.
- *
- *
+ * <p>
  *   The first size class and spacing are 1 << LOG2_QUANTUM.
  *   Each group has 1 << LOG2_SIZE_CLASS_GROUP of size classes.
  *
@@ -55,32 +54,29 @@ import static io.netty.buffer.PoolThreadCache.*;
  *   If pageShift = 13, sizeClasses looks like this:
  *
  *   (index, log2Group, log2Delta, nDelta, isMultiPageSize, isSubPage, log2DeltaLookup)
- *
+ * <p>
  *   ( 0,     4,        4,         0,       no,             yes,        4)
  *   ( 1,     4,        4,         1,       no,             yes,        4)
  *   ( 2,     4,        4,         2,       no,             yes,        4)
  *   ( 3,     4,        4,         3,       no,             yes,        4)
- *
+ * <p>
  *   ( 4,     6,        4,         1,       no,             yes,        4)
  *   ( 5,     6,        4,         2,       no,             yes,        4)
  *   ( 6,     6,        4,         3,       no,             yes,        4)
  *   ( 7,     6,        4,         4,       no,             yes,        4)
- *
+ * <p>
  *   ( 8,     7,        5,         1,       no,             yes,        5)
  *   ( 9,     7,        5,         2,       no,             yes,        5)
  *   ( 10,    7,        5,         3,       no,             yes,        5)
  *   ( 11,    7,        5,         4,       no,             yes,        5)
- *
  *   ...
  *   ...
- *
  *   ( 72,    23,       21,        1,       yes,            no,        no)
  *   ( 73,    23,       21,        2,       yes,            no,        no)
  *   ( 74,    23,       21,        3,       yes,            no,        no)
  *   ( 75,    23,       21,        4,       yes,            no,        no)
- *
+ * <p>
  *   ( 76,    24,       22,        1,       yes,            no,        no)
- *
  */
 public abstract class SizeClasses implements SizeClassesMetric {
 
@@ -138,6 +134,8 @@ public abstract class SizeClasses implements SizeClassesMetric {
     private int[] size2idxTab;
 
     private void sizeClasses() {
+        int normalMaxSize = -1;
+
         int index = 0;
         int size = 0;
 
@@ -159,11 +157,15 @@ public abstract class SizeClasses implements SizeClassesMetric {
 
             while (nDelta <= ndeltaLimit && size < chunkSize) {
                 size = sizeClass(index++, log2Group, log2Delta, nDelta++);
+                normalMaxSize = size;
             }
 
             log2Group++;
             log2Delta++;
         }
+
+        //chunkSize must be normalMaxSize
+        assert chunkSize == normalMaxSize;
 
         nSizes = index;
     }
@@ -390,7 +392,7 @@ public abstract class SizeClasses implements SizeClassesMetric {
         return normalizeSizeCompute(size);
     }
 
-    private int normalizeSizeCompute(int size) {
+    private static int normalizeSizeCompute(int size) {
         int x = log2((size << 1) - 1);
         int log2Delta = x < LOG2_SIZE_CLASS_GROUP + LOG2_QUANTUM + 1
                 ? LOG2_QUANTUM : x - LOG2_SIZE_CLASS_GROUP - 1;

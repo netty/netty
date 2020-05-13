@@ -59,7 +59,8 @@ public class SimpleByteBufPooledAllocatorBenchmark extends AbstractMicrobenchmar
                 PooledByteBufAllocator.defaultNumHeapArena(),
                 PooledByteBufAllocator.defaultNumDirectArena(),
                 PooledByteBufAllocator.defaultPageSize(),
-                PooledByteBufAllocator.defaultPages(),
+                PooledByteBufAllocator.defaultMaxOrder(),
+                PooledByteBufAllocator.defaultTinyCacheSize(),
                 PooledByteBufAllocator.defaultSmallCacheSize(),
                 PooledByteBufAllocator.defaultNormalCacheSize(),
                 useThreadCache);

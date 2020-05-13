@@ -274,6 +274,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     @Override
+    public int pageSize() {
+        return 1 << pageShifts;
+    }
+
+    @Override
     public int runSize() {
         return runSize;
     }

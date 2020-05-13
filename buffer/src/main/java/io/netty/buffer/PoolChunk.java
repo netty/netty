@@ -15,13 +15,12 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.RedBlackTree;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
@@ -153,7 +152,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * store the first page and last page of each avail run
      */
-    private final Map<Integer, Long> runsAvailMap;
+    private final IntObjectMap<Long> runsAvailMap;
 
     /**
      * manage all avail runs
@@ -197,7 +196,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         freeBytes = chunkSize;
 
         runsAvail = newRunsAvailTreeArray(maxPageIdx);
-        runsAvailMap = new HashMap<Integer, Long>();
+        runsAvailMap = new IntObjectHashMap<Long>();
         subpages = new PoolSubpage[chunkSize >> pageShifts];
 
         //insert initial run, offset = 0, pages = chunkSize / pageSize
@@ -224,7 +223,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     @SuppressWarnings("unchecked")
-    private RedBlackTree<Long>[] newRunsAvailTreeArray(int size) {
+    private static RedBlackTree<Long>[] newRunsAvailTreeArray(int size) {
         RedBlackTree<Long>[] treeArray = new RedBlackTree[size];
         for (int i = 0; i < treeArray.length; i++) {
             treeArray[i] = new RedBlackTree<Long>();
@@ -232,7 +231,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return treeArray;
     }
 
-    private void insertAvailRun(int runOffset, int pages, long handle) {
+    private void insertAvailRun(int runOffset, int pages, Long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(pages);
         RedBlackTree<Long> tree = runsAvail[pageIdxFloor];
         tree.put(handle);
@@ -349,11 +348,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         do {
             runSize += pageSize;
             nElements = runSize / elemSize;
-
-            if (nElements >= maxElements) {
-                break;
-            }
-        } while (runSize != nElements * elemSize);
+        } while (nElements < maxElements && runSize != nElements * elemSize);
 
         while (nElements > maxElements) {
             runSize -= pageSize;

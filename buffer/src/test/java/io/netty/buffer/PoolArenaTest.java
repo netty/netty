@@ -29,7 +29,7 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeCapacity() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 8388608, 0);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {16, 16, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
@@ -39,7 +39,7 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeAlignedCapacity() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 64);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 8388608, 64);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {16, 64, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
@@ -88,7 +88,7 @@ public class PoolArenaTest {
 
     @Test
     public void testSizeIdx2size() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 8388608, 0);
         for (int i = 0; i < arena.nSizes; i++) {
             assertEquals(arena.sizeIdx2sizeCompute(i), arena.sizeIdx2size(i));
         }
@@ -96,7 +96,7 @@ public class PoolArenaTest {
 
     @Test
     public void testPageIdx2size() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 10567680, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 4096, 12, 8388608, 0);
         for (int i = 0; i < arena.nPSizes; i++) {
             assertEquals(arena.pageIdx2sizeCompute(i), arena.pageIdx2size(i));
         }
@@ -129,11 +129,12 @@ public class PoolArenaTest {
                 0,      // nHeapArena
                 1,      // nDirectArena
                 8192,   // pageSize
-                2560,     // maxPages
+                11,     // maxOrder
+                0,      // tinyCacheSize
                 0,      // smallCacheSize
                 0,      // normalCacheSize
                 true    // useCacheForAllThreads
-        );
+                );
 
         // create small buffer
         final ByteBuf b1 = allocator.directBuffer(800);

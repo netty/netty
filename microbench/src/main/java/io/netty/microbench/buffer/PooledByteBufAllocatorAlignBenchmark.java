@@ -74,7 +74,7 @@ public class PooledByteBufAllocatorAlignBenchmark extends
 
     @Setup
     public void doSetup() {
-        PooledByteBufAllocator pooledAllocator = new PooledByteBufAllocator(true, 4, 4, 8192, 2560,
+        PooledByteBufAllocator pooledAllocator = new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0,
                 0, 0, true, cacheAlign);
         pooledDirectBuffer = pooledAllocator.directBuffer(size + 64);
         sizeMask = size - 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.buffer;
 
 import java.util.NoSuchElementException;
 
-public class RedBlackTree<Key extends Comparable<Key>> {
+import static io.netty.buffer.RedBlackTree.Color.BLACK;
+import static io.netty.buffer.RedBlackTree.Color.RED;
 
-    private static final boolean RED = true;
-    private static final boolean BLACK = false;
+class RedBlackTree<Key extends Comparable<Key>> {
 
-    private Node root;
+    enum Color {
+        RED,
+        BLACK
+    }
 
-    private final class Node {
+    private Node<Key> root;
+
+    private static final class Node<Key> {
         private Key key;
-        private Node left, right;
-        private boolean color;
+        private Node<Key> left, right;
+        private Color color;
         private int size;
 
-        private Node(Key key, boolean color, int size) {
+        private Node(Key key, Color color, int size) {
             this.key = key;
             this.color = color;
             this.size = size;
@@ -38,19 +43,13 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // is node x red; false if x is null ?
-    private boolean isRed(Node x) {
-        if (x == null) {
-            return false;
-        }
-        return x.color == RED;
+    private static <Key> boolean isRed(Node<Key> x) {
+        return x != null && x.color == RED;
     }
 
     // number of node in subtree rooted at x; 0 if x is null
-    private int size(Node x) {
-        if (x == null) {
-            return 0;
-        }
-        return x.size;
+    private static <Key> int size(Node<Key> x) {
+        return x == null ? 0 : x.size;
     }
 
     /**
@@ -71,24 +70,24 @@ public class RedBlackTree<Key extends Comparable<Key>> {
         return root == null;
     }
 
+    private Node<Key> get(Key key) {
+        return get(root, key);
+    }
+
     /**
-     * Returns the value associated with the given key.
+     * Find a Node hold the given key rooted at x
      *
      * @param key the key
      *
-     * @return the value associated with the given key if the key is in the tree and {@code null} if the key is not in
+     * @return the Node if the key is in the tree and {@code null} if the key is not in
      * the tree
      *
      * @throws IllegalArgumentException if {@code key} is {@code null}
      */
-    private Key get(Key key) {
+    private Node<Key> get(Node<Key> x, Key key) {
         if (key == null) {
             throw new IllegalArgumentException("argument to get() is null");
         }
-        return get(root, key);
-    }
-
-    private Key get(Node x, Key key) {
         while (x != null) {
             int cmp = key.compareTo(x.key);
             if (cmp < 0) {
@@ -96,7 +95,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
             } else if (cmp > 0) {
                 x = x.right;
             } else {
-                return x.key;
+                return x;
             }
         }
         return null;
@@ -116,13 +115,12 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     /**
-     * Inserts the specified key into the tree, overwriting the old value with the new value if the tree already
-     * contains the specified key. Deletes the specified key (and its associated value) from this tree if the specified
-     * value is {@code null}.
+     * Inserts the specified key into the tree, throw an exception if the tree already
+     * contains the specified key.
      *
      * @param key the key
      *
-     * @throws IllegalArgumentException if {@code key} is {@code null}
+     * @throws IllegalArgumentException if {@code key} is {@code null} or {@code key} already existed
      */
     public void put(Key key) {
         if (key == null) {
@@ -131,13 +129,12 @@ public class RedBlackTree<Key extends Comparable<Key>> {
 
         root = put(root, key);
         root.color = BLACK;
-        // assert check();
     }
 
     // insert the key in the subtree rooted at h
-    private Node put(Node h, Key key) {
+    private Node<Key> put(Node<Key> h, Key key) {
         if (h == null) {
-            return new Node(key, RED, 1);
+            return new Node<Key>(key, RED, 1);
         }
 
         int cmp = key.compareTo(h.key);
@@ -157,13 +154,13 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     /**
-     * Removes the smallest key and associated value from the tree.
+     * Removes the smallest key from the tree.
      *
      * @throws NoSuchElementException if the tree is empty
      */
     public void deleteMin() {
         if (isEmpty()) {
-            throw new NoSuchElementException("BST underflow");
+            throw new NoSuchElementException("calls deleteMin() with empty tree");
         }
 
         // if both children of root are black, set root to red
@@ -175,11 +172,10 @@ public class RedBlackTree<Key extends Comparable<Key>> {
         if (!isEmpty()) {
             root.color = BLACK;
         }
-        // assert check();
     }
 
     // delete the key with the minimum key rooted at h
-    private Node deleteMin(Node h) {
+    private Node<Key> deleteMin(Node<Key> h) {
         if (h.left == null) {
             return null;
         }
@@ -193,13 +189,13 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     /**
-     * Removes the largest key and associated value from the tree.
+     * Removes the largest key from the tree.
      *
      * @throws NoSuchElementException if the tree is empty
      */
     public void deleteMax() {
         if (isEmpty()) {
-            throw new NoSuchElementException("BST underflow");
+            throw new NoSuchElementException("calls deleteMax() with empty tree");
         }
 
         // if both children of root are black, set root to red
@@ -214,7 +210,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // delete the key with the maximum key rooted at h
-    private Node deleteMax(Node h) {
+    private Node<Key> deleteMax(Node<Key> h) {
         if (isRed(h.left)) {
             h = rotateRight(h);
         }
@@ -233,7 +229,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     /**
-     * Removes the specified key and its associated value from this tree (if the key is in this tree).
+     * Removes the specified key from this tree (if the key is in this tree).
      *
      * @param key the key
      *
@@ -259,7 +255,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // delete the key with the given key rooted at h
-    private Node delete(Node h, Key key) {
+    private Node<Key> delete(Node<Key> h, Key key) {
         assert get(h, key) != null;
 
         if (key.compareTo(h.key) < 0) {
@@ -278,7 +274,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
                 h = moveRedRight(h);
             }
             if (key.compareTo(h.key) == 0) {
-                Node x = min(h.right);
+                Node<Key> x = min(h.right);
                 h.key = x.key;
                 h.right = deleteMin(h.right);
             } else {
@@ -289,9 +285,9 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // make a left-leaning link lean to the right
-    private Node rotateRight(Node h) {
-        // assert (h != null) && isRed(h.left);
-        Node x = h.left;
+    private Node<Key> rotateRight(Node<Key> h) {
+        assert h != null && isRed(h.left);
+        Node<Key> x = h.left;
         h.left = x.right;
         x.right = h;
         x.color = x.right.color;
@@ -302,9 +298,9 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // make a right-leaning link lean to the left
-    private Node rotateLeft(Node h) {
-        // assert (h != null) && isRed(h.right);
-        Node x = h.right;
+    private Node<Key> rotateLeft(Node<Key> h) {
+        assert h != null && isRed(h.right);
+        Node<Key> x = h.right;
         h.right = x.left;
         x.left = h;
         x.color = x.left.color;
@@ -315,19 +311,23 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // flip the colors of a node and its two children
-    private void flipColors(Node h) {
+    private void flipColors(Node<Key> h) {
         // h must have opposite color of its two children
         assert h != null && h.left != null && h.right != null;
         assert !isRed(h) && isRed(h.left) && isRed(h.right)
                || isRed(h) && !isRed(h.left) && !isRed(h.right);
-        h.color = !h.color;
-        h.left.color = !h.left.color;
-        h.right.color = !h.right.color;
+        h.color = reverseColor(h.color);
+        h.left.color = reverseColor(h.left.color);
+        h.right.color = reverseColor(h.right.color);
+    }
+
+    private static Color reverseColor(Color color) {
+        return color == RED ? BLACK : RED;
     }
 
     // Assuming that h is red and both h.left and h.left.left
     // are black, make h.left or one of its children red.
-    private Node moveRedLeft(Node h) {
+    private Node<Key> moveRedLeft(Node<Key> h) {
         assert h != null;
         assert isRed(h) && !isRed(h.left) && !isRed(h.left.left);
 
@@ -342,7 +342,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
 
     // Assuming that h is red and both h.right and h.right.left
     // are black, make h.right or one of its children red.
-    private Node moveRedRight(Node h) {
+    private Node<Key> moveRedRight(Node<Key> h) {
         assert h != null;
         assert isRed(h) && !isRed(h.right) && !isRed(h.right.left);
         flipColors(h);
@@ -354,7 +354,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // restore red-black tree invariant
-    private Node balance(Node h) {
+    private Node<Key> balance(Node<Key> h) {
         assert h != null;
 
         if (isRed(h.right)) {
@@ -363,7 +363,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
         return fixup(h);
     }
 
-    private Node fixup(Node h) {
+    private Node<Key> fixup(Node<Key> h) {
         if (isRed(h.left) && isRed(h.left.left)) {
             h = rotateRight(h);
         }
@@ -390,7 +390,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // the smallest key in subtree rooted at x; null if no such key
-    private Node min(Node x) {
+    private Node<Key> min(Node<Key> x) {
         while (true) {
             assert x != null;
             if (x.left == null) {
@@ -416,7 +416,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // the largest key in the subtree rooted at x; null if no such key
-    private Node max(Node x) {
+    private Node<Key> max(Node<Key> x) {
         while (true) {
             assert x != null;
             if (x.right == null) {
@@ -444,7 +444,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
         if (isEmpty()) {
             throw new NoSuchElementException("calls floor() with empty tree");
         }
-        Node x = floor(root, key);
+        Node<Key> x = floor(root, key);
         if (x == null) {
             throw new NoSuchElementException("argument to floor() is too small");
         } else {
@@ -453,7 +453,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // the largest key in the subtree rooted at x less than or equal to the given key
-    private Node floor(Node x, Key key) {
+    private Node<Key> floor(Node<Key> x, Key key) {
         while (true) {
             if (x == null) {
                 return null;
@@ -466,7 +466,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
                 x = x.left;
                 continue;
             }
-            Node t = floor(x.right, key);
+            Node<Key> t = floor(x.right, key);
             if (t != null) {
                 return t;
             } else {
@@ -492,7 +492,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
         if (isEmpty()) {
             throw new NoSuchElementException("calls ceiling() with empty tree");
         }
-        Node x = ceiling(root, key);
+        Node<Key> x = ceiling(root, key);
         if (x == null) {
             throw new NoSuchElementException("argument to ceiling() is too small");
         } else {
@@ -501,7 +501,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
     }
 
     // the smallest key in the subtree rooted at x greater than or equal to the given key
-    private Node ceiling(Node x, Key key) {
+    private Node<Key> ceiling(Node<Key> x, Key key) {
         while (true) {
             if (x == null) {
                 return null;
@@ -514,7 +514,7 @@ public class RedBlackTree<Key extends Comparable<Key>> {
                 x = x.right;
                 continue;
             }
-            Node t = ceiling(x.left, key);
+            Node<Key> t = ceiling(x.left, key);
             if (t != null) {
                 return t;
             } else {

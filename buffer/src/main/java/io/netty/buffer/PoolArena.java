@@ -302,6 +302,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     }
 
     @Override
+    public int numTinySubpages() {
+        return 0;
+    }
+
+    @Override
     public int numSmallSubpages() {
         return smallSubpagePools.length;
     }
@@ -309,6 +314,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     @Override
     public int numChunkLists() {
         return chunkListMetrics.size();
+    }
+
+    @Override
+    public List<PoolSubpageMetric> tinySubpages() {
+        return new ArrayList<PoolSubpageMetric>();
     }
 
     @Override
@@ -349,6 +359,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     }
 
     @Override
+    public long numTinyAllocations() {
+        return 0;
+    }
+
+    @Override
     public long numSmallAllocations() {
         return allocationsSmall.value();
     }
@@ -365,6 +380,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             deallocs = deallocationsSmall + deallocationsNormal;
         }
         return deallocs + deallocationsHuge.value();
+    }
+
+    @Override
+    public long numTinyDeallocations() {
+        return 0;
     }
 
     @Override
@@ -395,6 +415,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             val += allocationsNormal - (deallocationsSmall + deallocationsNormal);
         }
         return max(val, 0);
+    }
+
+    @Override
+    public long numActiveTinyAllocations() {
+        return 0;
     }
 
     @Override
