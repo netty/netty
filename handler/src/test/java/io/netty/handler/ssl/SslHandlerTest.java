@@ -1092,16 +1092,29 @@ public class SslHandlerTest {
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv12() throws Throwable {
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2);
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2, true);
     }
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv13() throws Throwable {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3);
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3, true);
     }
 
-    private static void testSessionTickets(String protocol) throws Throwable {
+    @Test(timeout = 5000L)
+    public void testSessionTicketsWithTLSv12AndNoKey() throws Throwable {
+        assumeTrue(OpenSsl.isBoringSSL());
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2, false);
+    }
+
+    @Test(timeout = 5000L)
+    public void testSessionTicketsWithTLSv13AndNoKey() throws Throwable {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        assumeTrue(OpenSsl.isBoringSSL());
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3, false);
+    }
+
+    private static void testSessionTickets(String protocol, boolean withKey) throws Throwable {
         assumeTrue(OpenSsl.isAvailable());
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -1115,10 +1128,15 @@ public class SslHandlerTest {
                 .protocols(protocol)
                 .build();
 
-        OpenSslSessionTicketKey key = new OpenSslSessionTicketKey(new byte[OpenSslSessionTicketKey.NAME_SIZE],
-                new byte[OpenSslSessionTicketKey.HMAC_KEY_SIZE], new byte[OpenSslSessionTicketKey.AES_KEY_SIZE]);
-        ((OpenSslSessionContext) sslClientCtx.sessionContext()).setTicketKeys(key);
-        ((OpenSslSessionContext) sslServerCtx.sessionContext()).setTicketKeys(key);
+        if (withKey) {
+            OpenSslSessionTicketKey key = new OpenSslSessionTicketKey(new byte[OpenSslSessionTicketKey.NAME_SIZE],
+                    new byte[OpenSslSessionTicketKey.HMAC_KEY_SIZE], new byte[OpenSslSessionTicketKey.AES_KEY_SIZE]);
+            ((OpenSslSessionContext) sslClientCtx.sessionContext()).setTicketKeys(key);
+            ((OpenSslSessionContext) sslServerCtx.sessionContext()).setTicketKeys(key);
+        } else {
+            ((OpenSslSessionContext) sslClientCtx.sessionContext()).setTicketKeys();
+            ((OpenSslSessionContext) sslServerCtx.sessionContext()).setTicketKeys();
+        }
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
