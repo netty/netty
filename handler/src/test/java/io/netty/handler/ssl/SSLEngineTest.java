@@ -3335,6 +3335,68 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
+        testSessionLocalWhenNonMutual(true);
+    }
+
+    @Test
+    public void testSessionLocalWhenNonMutualWithoutKeyManager() throws Exception {
+        testSessionLocalWhenNonMutual(false);
+    }
+
+    private void testSessionLocalWhenNonMutual(boolean useKeyManager) throws Exception {
+        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        SslContextBuilder clientSslCtxBuilder = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers());
+
+        if (useKeyManager) {
+            clientSslCtxBuilder.keyManager(newKeyManagerFactory(ssc));
+        } else {
+            clientSslCtxBuilder.keyManager(ssc.certificate(), ssc.privateKey());
+        }
+        clientSslCtx = wrapContext(clientSslCtxBuilder.build());
+
+        final SslContextBuilder serverSslCtxBuilder;
+        if (useKeyManager) {
+            serverSslCtxBuilder = SslContextBuilder.forServer(newKeyManagerFactory(ssc));
+        } else {
+            serverSslCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+        }
+        serverSslCtxBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .clientAuth(ClientAuth.NONE);
+
+        serverSslCtx = wrapContext(serverSslCtxBuilder.build());
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
+
+            SSLSession clientSession = clientEngine.getSession();
+            assertNull(clientSession.getLocalCertificates());
+            assertNull(clientSession.getLocalPrincipal());
+
+            SSLSession serverSession = serverEngine.getSession();
+            assertNotNull(serverSession.getLocalCertificates());
+            assertNotNull(serverSession.getLocalPrincipal());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    @Test
     public void testMasterKeyLogging() throws Exception {
 
         /*
