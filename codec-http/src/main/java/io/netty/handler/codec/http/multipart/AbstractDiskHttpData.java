@@ -310,8 +310,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 }
             }
         } finally {
-                fileChannel.close();
-                fileChannel = null;
+            fileChannel.close();
+            fileChannel = null;
         }
         if (read == 0) {
             return EMPTY_BUFFER;
