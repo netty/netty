@@ -100,7 +100,8 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
      * Sets the SSL session ticket keys of this context. Depending on the underlying native library you may omit the
      * argument or pass an empty array and so let the native library handle the key generation and rotating for you.
      * If this is supported by the underlying native library should be checked in this case. For example
-     * <a href="https://boringssl.googlesource.com/boringssl/">BoringSSL</a> is known to support this.
+     * <a href="https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets/">
+     *     BoringSSL</a> is known to support this.
      */
     public void setTicketKeys(OpenSslSessionTicketKey... keys) {
         ObjectUtil.checkNotNull(keys, "keys");

@@ -1136,7 +1136,6 @@ public class SslHandlerTest {
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv13AndNoKey() throws Throwable {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        assumeTrue(OpenSsl.isBoringSSL());
         testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3, false);
     }
 
