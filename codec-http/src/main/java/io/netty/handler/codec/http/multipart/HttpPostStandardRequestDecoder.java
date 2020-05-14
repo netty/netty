@@ -656,7 +656,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     }
 
     private static ByteBuf decodeAttribute(ByteBuf b, Charset charset) {
-        int firstEscaped = b.forEachByte(new ByteProcessor.IndexOfProcessor((byte) '%'));
+        int firstEscaped = b.forEachByte(new UrlEncodedDetector());
         if (firstEscaped == -1) {
             return null; // nothing to decode
         }
@@ -714,6 +714,13 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         factory.removeHttpDataFromClean(request, data);
     }
 
+    private static final class UrlEncodedDetector implements ByteProcessor {
+        @Override
+        public boolean process(byte value) throws Exception {
+            return value != '%' && value != '+';
+        }
+    }
+
     private static final class UrlDecoder implements ByteProcessor {
 
         private final ByteBuf output;
@@ -742,6 +749,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 }
             } else if (value == '%') {
                 nextEscapedIdx = 1;
+            } else if (value == '+') {
+                output.writeByte(' ');
             } else {
                 output.writeByte(value);
             }
