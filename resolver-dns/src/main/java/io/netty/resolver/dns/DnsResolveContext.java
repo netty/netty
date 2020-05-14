@@ -49,7 +49,6 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -301,20 +300,24 @@ abstract class DnsResolveContext<T> {
     }
 
     private String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
-        // Detect loops using a HashSet. We use this as last resort implementation to reduce allocations in the most
-        // common cases.
-        Set<String> cnames = new HashSet<String>(4);
-        cnames.add(first);
-        cnames.add(mapping);
+        // Detect loops by advance only every other iteration. This is the same concepts as used in guava
+        String otherMapping = first;
+        boolean advance = false;
 
         String name = mapping;
         // Resolve from cnameCache() until there is no more cname entry cached.
         while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
-            if (!cnames.add(mapping)) {
+            if (otherMapping.equals(mapping)) {
                 // Follow CNAME from cache would loop. Lets break here.
                 break;
             }
             name = mapping;
+            if (advance) {
+                otherMapping = mapping;
+                advance = false;
+            } else {
+                advance = true;
+            }
         }
         return name;
     }
