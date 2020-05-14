@@ -131,6 +131,7 @@ public class HttpPostRequestDecoderTest {
         }
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
@@ -169,6 +170,7 @@ public class HttpPostRequestDecoderTest {
             req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
             // Create decoder instance to test.
             final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+            decoder.offer(req);
             assertFalse(decoder.getBodyHttpDatas().isEmpty());
             // Check correctness: data size
             InterfaceHttpData httpdata = decoder.getBodyHttpData("file" + i);
@@ -210,6 +212,7 @@ public class HttpPostRequestDecoderTest {
         }
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
@@ -367,6 +370,7 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
@@ -392,6 +396,7 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue(part1 instanceof FileUpload);
@@ -426,6 +431,7 @@ public class HttpPostRequestDecoderTest {
         }
         // Create decoder instance to test without any exception.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
@@ -453,6 +459,7 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
@@ -484,7 +491,7 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
+            new HttpPostRequestDecoder(inMemoryFactory, req).offer(req);
             fail("Was expecting an ErrorDataDecoderException");
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertTrue(e.getCause() instanceof UnsupportedCharsetException);
@@ -517,7 +524,7 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
+            new HttpPostRequestDecoder(inMemoryFactory, req).offer(req);
             fail("Was expecting an ErrorDataDecoderException");
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertTrue(e.getCause() instanceof UnsupportedCharsetException);
@@ -568,6 +575,7 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
@@ -604,6 +612,7 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
@@ -636,7 +645,7 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
+            new HttpPostRequestDecoder(inMemoryFactory, req).offer(req);
             fail("Was expecting an ErrorDataDecoderException");
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertTrue(e.getCause() instanceof ArrayIndexOutOfBoundsException);
@@ -668,7 +677,7 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
+            new HttpPostRequestDecoder(inMemoryFactory, req).offer(req);
             fail("Was expecting an ErrorDataDecoderException");
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertTrue(e.getCause() instanceof UnsupportedCharsetException);
@@ -699,6 +708,7 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue(part1 instanceof FileUpload);
@@ -731,6 +741,7 @@ public class HttpPostRequestDecoderTest {
                 new HttpPostRequestDecoder(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
                         req,
                         CharsetUtil.UTF_8);
+        decoder.offer(req);
 
         assertTrue(decoder.isMultipart());
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
@@ -817,6 +828,7 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        decoder.offer(req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
