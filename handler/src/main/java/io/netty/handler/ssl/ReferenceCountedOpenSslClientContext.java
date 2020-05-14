@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.internal.tcnative.SSL;
@@ -56,6 +57,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                           OpenSslKeyMaterialManager.KEY_TYPE_EC,
                           OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
                           OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
+    private static final boolean ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", false);
     private final OpenSslSessionContext sessionContext;
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -70,6 +73,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
+            if (ENABLE_SESSION_TICKET) {
+                sessionContext.setTicketKeys();
+            }
             success = true;
         } finally {
             if (!success) {
