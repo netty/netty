@@ -277,8 +277,9 @@ abstract class DnsResolveContext<T> {
 
     // Resolve the final name from the CNAME cache until there is nothing to follow anymore. This also
     // guards against loops in the cache but early return once a loop is detected.
-    private String cnameResolveFromCache(String name) {
-        DnsCnameCache cnameCache = cnameCache();
+    //
+    // Visible for testing only
+    static String cnameResolveFromCache(DnsCnameCache cnameCache, String name) {
         String first = cnameCache.get(hostnameWithDot(name));
         if (first == null) {
             // Nothing in the cache at all
@@ -299,7 +300,7 @@ abstract class DnsResolveContext<T> {
         return cnameResolveFromCacheLoop(cnameCache, first, second);
     }
 
-    private String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
+    static String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
         // Detect loops by advance only every other iteration.
         // See https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_Tortoise_and_Hare
         String otherMapping = first;
@@ -314,7 +315,7 @@ abstract class DnsResolveContext<T> {
             }
             name = mapping;
             if (advance) {
-                otherMapping = mapping;
+                otherMapping = cnameCache.get(otherMapping);
             }
             advance = !advance;
         }
@@ -323,7 +324,7 @@ abstract class DnsResolveContext<T> {
 
     private void internalResolve(String name, Promise<List<T>> promise) {
         // Resolve from cnameCache() until there is no more cname entry cached.
-        name = cnameResolveFromCache(name);
+        name = cnameResolveFromCache(cnameCache(), name);
 
         try {
             DnsServerAddressStream nameServerAddressStream = getNameServers(name);
@@ -995,7 +996,7 @@ abstract class DnsResolveContext<T> {
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
-        cname = cnameResolveFromCache(cname);
+        cname = cnameResolveFromCache(cnameCache(), cname);
         DnsServerAddressStream stream = getNameServers(cname);
 
         final DnsQuestion cnameQuestion;
