@@ -794,7 +794,7 @@ public final class ByteBufUtil {
         return reserveAndWriteUtf8Seq(buf, checkCharSequenceBounds(seq, start, end), start, end, reserveBytes);
     }
 
-    private static int reserveAndWriteUtf8Seq(ByteBuf buf, CharSequence seq, int start, int end, int reserveBytes) {
+    static int reserveAndWriteUtf8Seq(ByteBuf buf, CharSequence seq, int start, int end, int reserveBytes) {
         for (;;) {
             if (buf instanceof WrappedCompositeByteBuf) {
                 // WrappedCompositeByteBuf is a sub-class of AbstractByteBuf so it needs special handling.
