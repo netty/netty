@@ -1199,6 +1199,51 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/ASCII">ASCII</a> and write it
+     * to a {@link ByteBuf}.
+     *
+     * This method returns the actual number of bytes written.
+     */
+    public static int writeAscii(ByteBuf buf, CharSequence seq, int srcIndex, int len) {
+        // ASCII uses 1 byte per char
+        if (seq instanceof AsciiString) {
+            AsciiString asciiString = (AsciiString) seq;
+            buf.writeBytes(asciiString.array(), srcIndex + asciiString.arrayOffset(), len);
+        } else {
+            for (;;) {
+                if (buf instanceof WrappedCompositeByteBuf) {
+                    // WrappedCompositeByteBuf is a sub-class of AbstractByteBuf so it needs special handling.
+                    buf = buf.unwrap();
+                } else if (buf instanceof AbstractByteBuf) {
+                    AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
+                    byteBuf.ensureWritable0(len);
+                    int written = writeAscii(byteBuf, byteBuf.writerIndex, seq, srcIndex, len);
+                    byteBuf.writerIndex += written;
+                    return written;
+                } else if (buf instanceof WrappedByteBuf) {
+                    // Unwrap as the wrapped buffer may be an AbstractByteBuf and so we can use fast-path.
+                    buf = buf.unwrap();
+                } else {
+                    byte[] bytes = seq.subSequence(srcIndex, srcIndex + len).toString().getBytes(CharsetUtil.US_ASCII);
+                    buf.writeBytes(bytes);
+                    return bytes.length;
+                }
+            }
+        }
+        return len;
+    }
+
+    static int writeAscii(AbstractByteBuf buffer, int writerIndex, CharSequence seq, int srcIndex, int len) {
+
+        // We can use the _set methods as these not need to do any index checks and reference checks.
+        // This is possible as we called ensureWritable(...) before.
+        for (int i = srcIndex, end = srcIndex + len; i < end; i++) {
+            buffer._setByte(writerIndex++, AsciiString.c2b(seq.charAt(i)));
+        }
+        return len;
+    }
+
+    /**
      * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
      * is allocated via the {@link ByteBufAllocator}.
      */
