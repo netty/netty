@@ -302,6 +302,22 @@ public class ByteBufUtilTest {
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
+    public void testWriteUsAsciiOffsetLength(BufferType bufferType) {
+        String usAscii = "NettyRocks";
+        ByteBuf buf = buffer(bufferType, 16);
+        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII), 5, 4);
+        ByteBuf buf2 = buffer(bufferType, 16);
+        ByteBufUtil.writeAscii(buf2, usAscii, 5, 4);
+
+        assertEquals(buf, buf2);
+        assertEquals("Rock", buf2.toString(CharsetUtil.US_ASCII));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
     public void testWriteUsAsciiSwapped(BufferType bufferType) {
         String usAscii = "NettyRocks";
         ByteBuf buf = buffer(bufferType, 16);
