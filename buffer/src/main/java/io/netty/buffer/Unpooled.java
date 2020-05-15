@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.buffer.CompositeByteBuf.ByteWrapper;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -647,6 +648,7 @@ public final class Unpooled {
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
         ObjectUtil.checkNotNull(string, "string");
+        checkBounds(offset, length, string.length());
         if (length == 0) {
             return EMPTY_BUFFER;
         }
@@ -702,6 +704,7 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
         ObjectUtil.checkNotNull(array, "array");
+        checkBounds(offset, length, array.length);
         if (length == 0) {
             return EMPTY_BUFFER;
         }
@@ -716,6 +719,13 @@ public final class Unpooled {
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
         return ByteBufUtil.encodeString0(ALLOC, true, buffer, charset, 0);
+    }
+
+    private static void checkBounds(int start, int length, int capacity) {
+        if (MathUtil.isOutOfBounds(start, length, capacity)) {
+            throw new IndexOutOfBoundsException("expected: 0 <= start(" + start + ") <= start + length ("
+                                                + (start + length) + ") <= capacity(" + capacity + ')');
+        }
     }
 
     /**
