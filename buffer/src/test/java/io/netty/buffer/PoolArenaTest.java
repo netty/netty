@@ -49,7 +49,7 @@ public class PoolArenaTest {
 
     @Test
     public void testSize2SizeIdx() {
-        int chunkSize = 20 * 1024 * 1024;
+        int chunkSize = 16 * 1024 * 1024;
 
         PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 8192, 13, chunkSize, 0);
 
@@ -66,7 +66,7 @@ public class PoolArenaTest {
     public void testPages2PageIdx() {
         int pageSize = 8192;
         int pageShifts = 13;
-        int chunkSize = 20 * 1024 * 1024;
+        int chunkSize = 16 * 1024 * 1024;
 
         PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, pageSize, pageShifts, chunkSize, 0);
 

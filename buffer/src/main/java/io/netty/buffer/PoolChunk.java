@@ -21,6 +21,7 @@ import io.netty.util.collection.IntObjectMap;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.PriorityQueue;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
@@ -90,8 +91,8 @@ import java.util.Deque;
  *
  * runsAvail:
  * ----------
- * an array of {@link RedBlackTree}
- * Each tree manages same size of runs.
+ * an array of {@link PriorityQueue}
+ * Each queue manages same size of runs.
  * Runs are sorted by offset, so that we always allocate runs with smaller offset.
  *
  *
@@ -157,7 +158,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * manage all avail runs
      */
-    private final RedBlackTree<Long>[] runsAvail;
+    private final PriorityQueue<Long>[] runsAvail;
 
     /**
      * manage all subpages in this chunk
@@ -195,7 +196,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         this.offset = offset;
         freeBytes = chunkSize;
 
-        runsAvail = newRunsAvailTreeArray(maxPageIdx);
+        runsAvail = newRunsAvailqueueArray(maxPageIdx);
         runsAvailMap = new IntObjectHashMap<Long>();
         subpages = new PoolSubpage[chunkSize >> pageShifts];
 
@@ -223,18 +224,18 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     @SuppressWarnings("unchecked")
-    private static RedBlackTree<Long>[] newRunsAvailTreeArray(int size) {
-        RedBlackTree<Long>[] treeArray = new RedBlackTree[size];
-        for (int i = 0; i < treeArray.length; i++) {
-            treeArray[i] = new RedBlackTree<Long>();
+    private static PriorityQueue<Long>[] newRunsAvailqueueArray(int size) {
+        PriorityQueue<Long>[] queueArray = new PriorityQueue[size];
+        for (int i = 0; i < queueArray.length; i++) {
+            queueArray[i] = new PriorityQueue<Long>();
         }
-        return treeArray;
+        return queueArray;
     }
 
     private void insertAvailRun(int runOffset, int pages, Long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(pages);
-        RedBlackTree<Long> tree = runsAvail[pageIdxFloor];
-        tree.put(handle);
+        PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
+        queue.offer(handle);
 
         //insert first page of run
         runsAvailMap.put(runOffset, handle);
@@ -246,12 +247,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private void removeAvailRun(long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
-        RedBlackTree<Long> tree = runsAvail[pageIdxFloor];
-        removeAvailRun(tree, handle);
+        PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
+        removeAvailRun(queue, handle);
     }
 
-    private void removeAvailRun(RedBlackTree<Long> tree, long handle) {
-        tree.delete(handle);
+    private void removeAvailRun(PriorityQueue<Long> queue, long handle) {
+        queue.remove(handle);
 
         int runOffset = runOffset(handle);
         int pages = runPages(handle);
@@ -293,16 +294,18 @@ final class PoolChunk<T> implements PoolChunkMetric {
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
             handle = allocateSubpage(sizeIdx);
+            if (handle < 0) {
+                return false;
+            }
             assert isSubpage(handle);
         } else {
             // normal
             // runSize must be multiple of pageSize
             int runSize = arena.sizeIdx2size(sizeIdx);
             handle = allocateRun(runSize);
-        }
-
-        if (handle < 0) {
-            return false;
+            if (handle < 0) {
+                return false;
+            }
         }
 
         ByteBuffer nioBuffer = cachedNioBuffers != null? cachedNioBuffers.pollLast() : null;
@@ -315,19 +318,19 @@ final class PoolChunk<T> implements PoolChunkMetric {
         int pageIdx = arena.pages2pageIdx(pages);
 
         synchronized (runsAvail) {
-            //find first tree which has at least one big enough run
-            int treeIdx = runFirstBestFit(pageIdx);
-            if (treeIdx == -1) {
+            //find first queue which has at least one big enough run
+            int queueIdx = runFirstBestFit(pageIdx);
+            if (queueIdx == -1) {
                 return -1;
             }
 
-            //get run with min offset in this tree
-            RedBlackTree<Long> tree = runsAvail[treeIdx];
-            long handle = tree.min();
+            //get run with min offset in this queue
+            PriorityQueue<Long> queue = runsAvail[queueIdx];
+            long handle = queue.poll();
 
             assert !isUsed(handle);
 
-            removeAvailRun(tree, handle);
+            removeAvailRun(queue, handle);
 
             if (handle != -1) {
                 handle = splitLargeRun(handle, pages);
@@ -340,7 +343,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private int calculateRunSize(int sizeIdx) {
         int maxElements = 1 << pageShifts - SizeClasses.LOG2_QUANTUM;
-        int runSize = 0, nElements;
+        int runSize = 0;
+        int nElements;
 
         final int elemSize = arena.sizeIdx2size(sizeIdx);
 
@@ -364,8 +368,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private int runFirstBestFit(int pageIdx) {
         for (int i = pageIdx; i < arena.nPSizes; i++) {
-            RedBlackTree<Long> tree = runsAvail[i];
-            if (tree != null && !tree.isEmpty()) {
+            PriorityQueue<Long> queue = runsAvail[i];
+            if (queue != null && !queue.isEmpty()) {
                 return i;
             }
         }
@@ -464,6 +468,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
             //set run as not used
             finalRun &= ~(1L << ISUSED_SHIFT);
+            //if it is a subpage, set it to run
+            finalRun &= ~(1L << ISSUBPAGE_SHIFT);
+
             insertAvailRun(runOffset(finalRun), runPages(finalRun), finalRun);
             freeBytes += pages << pageShifts;
         }
