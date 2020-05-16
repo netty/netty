@@ -334,7 +334,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
         capacity(newCapacity);
         return 2;
     }
-
+    
+    @SuppressWarnings("deprecation")
     @Override
     public ByteBuf order(ByteOrder endianness) {
         if (endianness == order()) {
@@ -347,6 +348,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     /**
      * Creates a new {@link SwappedByteBuf} for this {@link ByteBuf} instance.
      */
+    @SuppressWarnings("deprecation")
     protected SwappedByteBuf newSwappedByteBuf() {
         return new SwappedByteBuf(this);
     }
