@@ -279,7 +279,7 @@ abstract class DnsResolveContext<T> {
     // guards against loops in the cache but early return once a loop is detected.
     //
     // Visible for testing only
-    static String cnameResolveFromCache(DnsCnameCache cnameCache, String name) {
+    static String cnameResolveFromCache(DnsCnameCache cnameCache, String name) throws UnknownHostException {
         String first = cnameCache.get(hostnameWithDot(name));
         if (first == null) {
             // Nothing in the cache at all
@@ -292,15 +292,12 @@ abstract class DnsResolveContext<T> {
             return first;
         }
 
-        if (first.equals(second)) {
-            // Loop detected.... early return.
-            return first;
-        }
-
-        return cnameResolveFromCacheLoop(cnameCache, first, second);
+        checkCnameLoop(name, first, second);
+        return cnameResolveFromCacheLoop(cnameCache, name, first, second);
     }
 
-    static String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
+    private static String cnameResolveFromCacheLoop(
+            DnsCnameCache cnameCache, String hostname, String first, String mapping) throws UnknownHostException {
         // Detect loops by advance only every other iteration.
         // See https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_Tortoise_and_Hare
         boolean advance = false;
@@ -308,10 +305,7 @@ abstract class DnsResolveContext<T> {
         String name = mapping;
         // Resolve from cnameCache() until there is no more cname entry cached.
         while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
-            if (first.equals(mapping)) {
-                // Follow CNAME from cache would loop. Lets break here.
-                break;
-            }
+            checkCnameLoop(hostname, first, mapping);
             name = mapping;
             if (advance) {
                 first = cnameCache.get(first);
@@ -321,9 +315,20 @@ abstract class DnsResolveContext<T> {
         return name;
     }
 
+    private static void checkCnameLoop(String hostname, String first, String second) throws UnknownHostException {
+        if (first.equals(second)) {
+            // Follow CNAME from cache would loop. Lets throw and so fail the resolution.
+            throw new UnknownHostException("CNAME loop detected for '" + hostname + '\'');
+        }
+    }
     private void internalResolve(String name, Promise<List<T>> promise) {
-        // Resolve from cnameCache() until there is no more cname entry cached.
-        name = cnameResolveFromCache(cnameCache(), name);
+        try {
+            // Resolve from cnameCache() until there is no more cname entry cached.
+            name = cnameResolveFromCache(cnameCache(), name);
+        } catch (Throwable cause) {
+            promise.tryFailure(cause);
+            return;
+        }
 
         try {
             DnsServerAddressStream nameServerAddressStream = getNameServers(name);
@@ -995,11 +1000,11 @@ abstract class DnsResolveContext<T> {
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
-        cname = cnameResolveFromCache(cnameCache(), cname);
-        DnsServerAddressStream stream = getNameServers(cname);
-
         final DnsQuestion cnameQuestion;
+        final DnsServerAddressStream stream;
         try {
+            cname = cnameResolveFromCache(cnameCache(), cname);
+            stream = getNameServers(cname);
             cnameQuestion = new DefaultDnsQuestion(cname, question.type(), dnsClass);
         } catch (Throwable cause) {
             queryLifecycleObserver.queryFailed(cause);
