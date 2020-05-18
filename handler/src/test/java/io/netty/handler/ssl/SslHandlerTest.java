@@ -1103,7 +1103,6 @@ public class SslHandlerTest {
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv12AndNoKey() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
         testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2, false);
     }
 
