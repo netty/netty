@@ -519,6 +519,7 @@ public class FlowControlHandlerTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 //consume this msg
+                ReferenceCountUtil.release(msg);
             }
         };
 
