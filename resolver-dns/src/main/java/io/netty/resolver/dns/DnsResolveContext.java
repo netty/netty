@@ -303,19 +303,18 @@ abstract class DnsResolveContext<T> {
     static String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
         // Detect loops by advance only every other iteration.
         // See https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_Tortoise_and_Hare
-        String otherMapping = first;
         boolean advance = false;
 
         String name = mapping;
         // Resolve from cnameCache() until there is no more cname entry cached.
         while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
-            if (otherMapping.equals(mapping)) {
+            if (first.equals(mapping)) {
                 // Follow CNAME from cache would loop. Lets break here.
                 break;
             }
             name = mapping;
             if (advance) {
-                otherMapping = cnameCache.get(otherMapping);
+                first = cnameCache.get(first);
             }
             advance = !advance;
         }
