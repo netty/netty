@@ -118,6 +118,14 @@ public class FlowControlHandler implements ChannelHandler {
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (!isQueueEmpty()) {
+            dequeue(ctx, queue.size());
+        }
+        destroy();
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
         ctx.fireChannelInactive();
