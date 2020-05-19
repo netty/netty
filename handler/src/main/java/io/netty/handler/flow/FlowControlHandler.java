@@ -120,6 +120,15 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        if (!isQueueEmpty()) {
+            dequeue(ctx, queue.size());
+        }
+        destroy();
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
         ctx.fireChannelInactive();
