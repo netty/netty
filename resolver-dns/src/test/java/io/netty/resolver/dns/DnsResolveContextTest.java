@@ -18,6 +18,10 @@ package io.netty.resolver.dns;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
+
+import static org.junit.Assert.fail;
+
 public class DnsResolveContextTest {
 
     private static final String HOSTNAME = "netty.io.";
@@ -25,7 +29,12 @@ public class DnsResolveContextTest {
     @Test
     public void testCnameLoop() {
         for (int i = 1; i < 128; i++) {
-            DnsResolveContext.cnameResolveFromCache(buildCache(i), HOSTNAME);
+            try {
+                DnsResolveContext.cnameResolveFromCache(buildCache(i), HOSTNAME);
+                fail();
+            } catch (UnknownHostException expected) {
+                // expected
+            }
         }
     }
 
