@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.TooLongFrameException;
 
+import java.util.Map;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpContent}s.
@@ -55,30 +56,60 @@ import io.netty.handler.codec.TooLongFrameException;
 public class HttpRequestDecoder extends HttpObjectDecoder {
 
     /**
-     * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
+     * Create a new builder for building an {@link HttpRequestDecoder}.
+     *
+     * @see HttpRequestDecoderBuilder
+     */
+    public static HttpRequestDecoderBuilder builder() {
+        return new HttpRequestDecoderBuilder();
+    }
+
+    /**
+     * @deprecated Please use {@link #builder()} instead.
+     * <p>
+     * Creates a new instance with the default {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}.
      */
+    @Deprecated
     public HttpRequestDecoder() {
     }
 
     /**
-     * Creates a new instance with the specified parameters.
+     * @deprecated Please use {@link #builder()} instead.
      */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED);
     }
 
+    /**
+     * @deprecated Please use {@link #builder()} instead.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders);
     }
 
+    /**
+     * @deprecated Please use {@link #builder()} instead.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders, initialBufferSize);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders,
+              initialBufferSize);
+    }
+
+    private HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            Map<HttpDecoderOption<?>, Object> options) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize,
+              chunkedSupported, validateHeaders, initialBufferSize,
+              options);
     }
 
     @Override
@@ -96,5 +127,21 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     @Override
     protected boolean isDecodingRequest() {
         return true;
+    }
+
+    /**
+     * @see AbstractHttpObjectDecoderBuilder
+     */
+    public static class HttpRequestDecoderBuilder
+            extends AbstractHttpObjectDecoderBuilder<HttpRequestDecoder, HttpRequestDecoderBuilder> {
+
+        HttpRequestDecoderBuilder() {
+        }
+
+        @Override
+        public HttpRequestDecoder build() {
+            return new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported,
+                                          validateHeaders, initialBufferSize, options);
+        }
     }
 }

@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -25,10 +23,16 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.http.HttpDecoderOption.MultipleContentLengthHeadersBehavior;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.StringUtil.COMMA;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -102,11 +106,19 @@ import java.util.List;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
+    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4 * 1024;
+    public static final int DEFAULT_MAX_HEADER_SIZE = 8 * 1024;
+    public static final boolean DEFAULT_CHUNKED_SUPPORTED = true;
+    public static final int DEFAULT_MAX_CHUNK_SIZE = 8 * 1024;
+    public static final boolean DEFAULT_VALIDATE_HEADERS = true;
+    public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
+
     private static final String EMPTY_VALUE = "";
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
+    protected final Map<HttpDecoderOption<?>, Object> options;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
 
@@ -147,7 +159,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, 8192, true);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
+             DEFAULT_CHUNKED_SUPPORTED);
     }
 
     /**
@@ -155,7 +168,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
     }
 
     /**
@@ -164,12 +177,21 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders,
+             DEFAULT_INITIAL_BUFFER_SIZE);
     }
 
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
+             null);
+    }
+
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            Map<HttpDecoderOption<?>, Object> options) {
         checkPositive(maxInitialLineLength, "maxInitialLineLength");
         checkPositive(maxHeaderSize, "maxHeaderSize");
         checkPositive(maxChunkSize, "maxChunkSize");
@@ -180,6 +202,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
+        if (options != null) {
+            this.options = options;
+        } else {
+            this.options = Collections.emptyMap();
+        }
     }
 
     @Override
@@ -585,34 +612,25 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         name = null;
         value = null;
 
-        List<String> values = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-        int contentLengthValuesCount = values.size();
-
-        if (contentLengthValuesCount > 0) {
-            // Guard against multiple Content-Length headers as stated in
-            // https://tools.ietf.org/html/rfc7230#section-3.3.2:
-            //
-            // If a message is received that has multiple Content-Length header
-            //   fields with field-values consisting of the same decimal value, or a
-            //   single Content-Length header field with a field value containing a
-            //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
-            //   indicating that duplicate Content-Length header fields have been
-            //   generated or combined by an upstream message processor, then the
-            //   recipient MUST either reject the message as invalid or replace the
-            //   duplicated field-values with a single valid Content-Length field
-            //   containing that decimal value prior to determining the message body
-            //   length or forwarding the message.
-            if (contentLengthValuesCount > 1 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                throw new IllegalArgumentException("Multiple Content-Length headers found");
+        List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
+        if (!contentLengthFields.isEmpty()) {
+            if (contentLengthFields.size() > 1 || contentLengthFields.get(0).indexOf(COMMA) >= 0) {
+                MultipleContentLengthHeadersBehavior behavior = (MultipleContentLengthHeadersBehavior) options
+                        .get(HttpDecoderOption.MULTIPLE_CONTENT_LENGTH_HEADERS_BEHAVIOR);
+                if (behavior == null) {
+                    behavior = MultipleContentLengthHeadersBehavior.DEFAULT;
+                }
+                contentLength = behavior.resolveContentLength(headers, contentLengthFields);
+            } else {
+                contentLength = Long.parseLong(contentLengthFields.get(0));
             }
-            contentLength = Long.parseLong(values.get(0));
         }
 
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         } else if (HttpUtil.isTransferEncodingChunked(message)) {
-            if (contentLengthValuesCount > 0 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+            if (!contentLengthFields.isEmpty()) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
