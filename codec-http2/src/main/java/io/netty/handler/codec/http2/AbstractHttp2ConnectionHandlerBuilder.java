@@ -18,13 +18,13 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -85,7 +85,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private boolean decoupleCloseAndGoAway;
 
     // The property that will prohibit connection() and codec() if set by server(),
-    // because this property is used only when this builder creates a Http2Connection.
+    // because this property is used only when this builder creates an Http2Connection.
     private Boolean isServer;
     private Integer maxReservedStreams;
 
@@ -107,6 +107,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
     private boolean autoAckSettingsFrame = true;
     private boolean autoAckPingFrame = true;
+    private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
+    private int maxConsecutiveEmptyFrames = 2;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -326,6 +328,30 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Returns the maximum number of queued control frames that are allowed before the connection is closed.
+     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
+     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
+     *
+     * {@code 0} means no protection is in place.
+     */
+    protected int encoderEnforceMaxQueuedControlFrames() {
+        return maxQueuedControlFrames;
+    }
+
+    /**
+     * Sets the maximum number of queued control frames that are allowed before the connection is closed.
+     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
+     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
+     *
+     * {@code 0} means no protection should be applied.
+     */
+    protected B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
+        enforceNonCodecConstraints("encoderEnforceMaxQueuedControlFrames");
+        this.maxQueuedControlFrames = ObjectUtil.checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
+        return self();
+    }
+
+    /**
      * Returns the {@link SensitivityDetector} to use.
      */
     protected SensitivityDetector headerSensitivityDetector() {
@@ -380,6 +406,31 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected Http2PromisedRequestVerifier promisedRequestVerifier() {
         return promisedRequestVerifier;
+    }
+
+    /**
+     * Returns the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
+     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     *
+     * {@code 0} means no protection is in place.
+     */
+    protected int decoderEnforceMaxConsecutiveEmptyDataFrames() {
+        return maxConsecutiveEmptyFrames;
+    }
+
+    /**
+     * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
+     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     *
+     * {@code 0} means no protection should be applied.
+     */
+    protected B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
+        enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
+        this.maxConsecutiveEmptyFrames = ObjectUtil.checkPositiveOrZero(
+                maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
+        return self();
     }
 
     /**
@@ -470,6 +521,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         boolean encoderEnforceMaxConcurrentStreams = encoderEnforceMaxConcurrentStreams();
 
+        if (maxQueuedControlFrames != 0) {
+            encoder = new Http2ControlFrameLimitEncoder(encoder, maxQueuedControlFrames);
+        }
         if (encoderEnforceMaxConcurrentStreams) {
             if (connection.isServer()) {
                 encoder.close();
@@ -487,6 +541,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromCodec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+        int maxConsecutiveEmptyDataFrames = decoderEnforceMaxConsecutiveEmptyDataFrames();
+        if (maxConsecutiveEmptyDataFrames > 0) {
+            decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
+        }
         final T handler;
         try {
             // Call the abstract build method
@@ -494,7 +552,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         } catch (Throwable t) {
             encoder.close();
             decoder.close();
-            throw new IllegalStateException("failed to build a Http2ConnectionHandler", t);
+            throw new IllegalStateException("failed to build an Http2ConnectionHandler", t);
         }
 
         // Setup post build options

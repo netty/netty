@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 
 /**
- * An interface that defines a HTTP message, providing common properties for
+ * An interface that defines an HTTP message, providing common properties for
  * {@link HttpRequest} and {@link HttpResponse}.
  *
  * @see HttpResponse

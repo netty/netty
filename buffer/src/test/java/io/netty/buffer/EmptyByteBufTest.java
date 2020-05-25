@@ -23,6 +23,12 @@ import static org.junit.Assert.*;
 public class EmptyByteBufTest {
 
     @Test
+    public void testIsContiguous() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        assertTrue(empty.isContiguous());
+    }
+
+    @Test
     public void testIsWritable() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
         assertFalse(empty.isWritable());

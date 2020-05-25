@@ -31,7 +31,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 /**
- * Demonstrates a http server using Netty to display a bunch of images, simulate
+ * Demonstrates an http server using Netty to display a bunch of images, simulate
  * latency and compare it against the http2 implementation.
  */
 public final class HttpServer {

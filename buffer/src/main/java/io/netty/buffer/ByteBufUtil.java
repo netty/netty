@@ -18,10 +18,11 @@ package io.netty.buffer;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -586,18 +587,13 @@ public final class ByteBufUtil {
                     buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
                     continue;
                 }
-                final char c2;
-                try {
-                    // Surrogate Pair consumes 2 characters. Optimistically try to get the next character to avoid
-                    // duplicate bounds checking with charAt. If an IndexOutOfBoundsException is thrown we will
-                    // re-throw a more informative exception describing the problem.
-                    c2 = seq.charAt(++i);
-                } catch (IndexOutOfBoundsException ignored) {
+                // Surrogate Pair consumes 2 characters.
+                if (++i == end) {
                     buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
                     break;
                 }
                 // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
-                writerIndex = writeUtf8Surrogate(buffer, writerIndex, c, c2);
+                writerIndex = writeUtf8Surrogate(buffer, writerIndex, c, seq.charAt(i));
             } else {
                 buffer._setByte(writerIndex++, (byte) (0xe0 | (c >> 12)));
                 buffer._setByte(writerIndex++, (byte) (0x80 | ((c >> 6) & 0x3f)));
@@ -684,17 +680,13 @@ public final class ByteBufUtil {
                     // WRITE_UTF_UNKNOWN
                     continue;
                 }
-                final char c2;
-                try {
-                    // Surrogate Pair consumes 2 characters. Optimistically try to get the next character to avoid
-                    // duplicate bounds checking with charAt.
-                    c2 = seq.charAt(++i);
-                } catch (IndexOutOfBoundsException ignored) {
+                // Surrogate Pair consumes 2 characters.
+                if (++i == end) {
                     encodedLength++;
                     // WRITE_UTF_UNKNOWN
                     break;
                 }
-                if (!Character.isLowSurrogate(c2)) {
+                if (!Character.isLowSurrogate(seq.charAt(i))) {
                     // WRITE_UTF_UNKNOWN + (Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2)
                     encodedLength += 2;
                     continue;
@@ -1180,13 +1172,13 @@ public final class ByteBufUtil {
 
     static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
-        private static final Recycler<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
-                new Recycler<ThreadLocalUnsafeDirectByteBuf>() {
+        private static final ObjectPool<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
+                ObjectPool.newPool(new ObjectCreator<ThreadLocalUnsafeDirectByteBuf>() {
                     @Override
-                    protected ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
+                    public ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
                         return new ThreadLocalUnsafeDirectByteBuf(handle);
                     }
-                };
+                });
 
         static ThreadLocalUnsafeDirectByteBuf newInstance() {
             ThreadLocalUnsafeDirectByteBuf buf = RECYCLER.get();
@@ -1214,12 +1206,13 @@ public final class ByteBufUtil {
 
     static final class ThreadLocalDirectByteBuf extends UnpooledDirectByteBuf {
 
-        private static final Recycler<ThreadLocalDirectByteBuf> RECYCLER = new Recycler<ThreadLocalDirectByteBuf>() {
+        private static final ObjectPool<ThreadLocalDirectByteBuf> RECYCLER = ObjectPool.newPool(
+                new ObjectCreator<ThreadLocalDirectByteBuf>() {
             @Override
-            protected ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
+            public ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
                 return new ThreadLocalDirectByteBuf(handle);
             }
-        };
+        });
 
         static ThreadLocalDirectByteBuf newInstance() {
             ThreadLocalDirectByteBuf buf = RECYCLER.get();

@@ -323,7 +323,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         buf.writeShort(topicNameBytes.length);
         buf.writeBytes(topicNameBytes);
         if (mqttFixedHeader.qosLevel().value() > 0) {
-            buf.writeShort(variableHeader.messageId());
+            buf.writeShort(variableHeader.packetId());
         }
         buf.writeBytes(payload);
 

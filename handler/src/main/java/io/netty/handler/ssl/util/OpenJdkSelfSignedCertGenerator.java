@@ -16,6 +16,7 @@
 
 package io.netty.handler.ssl.util;
 
+import io.netty.util.internal.SuppressJava6Requirement;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateIssuerName;
@@ -42,8 +43,9 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
  */
 final class OpenJdkSelfSignedCertGenerator {
 
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter)
-            throws Exception {
+    @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
+    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
+                             String algorithm) throws Exception {
         PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
@@ -68,12 +70,12 @@ final class OpenJdkSelfSignedCertGenerator {
 
         // Sign the cert to identify the algorithm that's used.
         X509CertImpl cert = new X509CertImpl(info);
-        cert.sign(key, "SHA256withRSA");
+        cert.sign(key, algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256withRSA");
 
         // Update the algorithm and sign again.
         info.set(CertificateAlgorithmId.NAME + '.' + CertificateAlgorithmId.ALGORITHM, cert.get(X509CertImpl.SIG_ALG));
         cert = new X509CertImpl(info);
-        cert.sign(key, "SHA256withRSA");
+        cert.sign(key, algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256withRSA");
         cert.verify(keypair.getPublic());
 
         return newSelfSignedCertificate(fqdn, key, cert);

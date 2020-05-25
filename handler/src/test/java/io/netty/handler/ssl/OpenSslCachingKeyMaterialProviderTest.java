@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +34,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
     @Override
     protected OpenSslKeyMaterialProvider newMaterialProvider(KeyManagerFactory factory, String password) {
         return new OpenSslCachingKeyMaterialProvider(ReferenceCountedOpenSslContext.chooseX509KeyManager(
-                factory.getKeyManagers()), password);
+                factory.getKeyManagers()), password, Integer.MAX_VALUE);
     }
 
     @Override
@@ -66,5 +67,23 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
 
         assertEquals(0, material.refCnt());
         assertEquals(0, material2.refCnt());
+    }
+
+    @Test
+    public void testCacheForSunX509() throws Exception {
+        OpenSslCachingX509KeyManagerFactory factory = new OpenSslCachingX509KeyManagerFactory(
+                super.newKeyManagerFactory("SunX509"));
+        OpenSslKeyMaterialProvider provider = factory.newProvider(PASSWORD);
+        assertThat(provider,
+                CoreMatchers.<OpenSslKeyMaterialProvider>instanceOf(OpenSslCachingKeyMaterialProvider.class));
+    }
+
+    @Test
+    public void testNotCacheForX509() throws Exception {
+        OpenSslCachingX509KeyManagerFactory factory = new OpenSslCachingX509KeyManagerFactory(
+                super.newKeyManagerFactory("PKIX"));
+        OpenSslKeyMaterialProvider provider = factory.newProvider(PASSWORD);
+        assertThat(provider, CoreMatchers.not(
+                CoreMatchers.<OpenSslKeyMaterialProvider>instanceOf(OpenSslCachingKeyMaterialProvider.class)));
     }
 }

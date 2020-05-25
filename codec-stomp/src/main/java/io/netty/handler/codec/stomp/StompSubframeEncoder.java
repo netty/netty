@@ -15,16 +15,14 @@
  */
 package io.netty.handler.codec.stomp;
 
-import java.util.List;
-import java.util.Map.Entry;
-
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.AsciiHeadersEncoder;
-import io.netty.handler.codec.AsciiHeadersEncoder.NewlineType;
-import io.netty.handler.codec.AsciiHeadersEncoder.SeparatorType;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.
@@ -36,9 +34,14 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         if (msg instanceof StompFrame) {
             StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);
-            out.add(frameBuf);
-            ByteBuf contentBuf = encodeContent(frame, ctx);
-            out.add(contentBuf);
+            if (frame.content().isReadable()) {
+                out.add(frameBuf);
+                ByteBuf contentBuf = encodeContent(frame, ctx);
+                out.add(contentBuf);
+            } else {
+                frameBuf.writeByte(StompConstants.NUL);
+                out.add(frameBuf);
+            }
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe frame = (StompHeadersSubframe) msg;
             ByteBuf buf = encodeFrame(frame, ctx);
@@ -64,11 +67,13 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     private static ByteBuf encodeFrame(StompHeadersSubframe frame, ChannelHandlerContext ctx) {
         ByteBuf buf = ctx.alloc().buffer();
 
-        buf.writeCharSequence(frame.command().toString(), CharsetUtil.US_ASCII);
+        buf.writeCharSequence(frame.command().toString(), CharsetUtil.UTF_8);
         buf.writeByte(StompConstants.LF);
-        AsciiHeadersEncoder headersEncoder = new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF);
         for (Entry<CharSequence, CharSequence> entry : frame.headers()) {
-            headersEncoder.encode(entry);
+            ByteBufUtil.writeUtf8(buf, entry.getKey());
+            buf.writeByte(StompConstants.COLON);
+            ByteBufUtil.writeUtf8(buf, entry.getValue());
+            buf.writeByte(StompConstants.LF);
         }
         buf.writeByte(StompConstants.LF);
         return buf;

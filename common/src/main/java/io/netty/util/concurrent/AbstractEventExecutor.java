@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -165,4 +166,25 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
             logger.warn("A task raised an exception. Task: {}", task, t);
         }
     }
+
+    /**
+     * Like {@link #execute(Runnable)} but does not guarantee the task will be run until either
+     * a non-lazy task is executed or the executor is shut down.
+     *
+     * This is equivalent to submitting a {@link EventExecutor.LazyRunnable} to
+     * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
+     *
+     * The default implementation just delegates to {@link #execute(Runnable)}.
+     */
+    @UnstableApi
+    public void lazyExecute(Runnable task) {
+        execute(task);
+    }
+
+    /**
+     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
+     * but does not need to run immediately.
+     */
+    @UnstableApi
+    public interface LazyRunnable extends Runnable { }
 }

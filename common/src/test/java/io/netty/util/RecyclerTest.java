@@ -26,8 +26,15 @@ import static org.junit.Assert.*;
 
 public class RecyclerTest {
 
-    private static Recycler<HandledObject> newRecycler(int max) {
-        return new Recycler<HandledObject>(max) {
+    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
+        return newRecycler(maxCapacityPerThread, 2, 8, 2, 8);
+    }
+
+    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
+                                                       int ratio, int maxDelayedQueuesPerThread,
+                                                       int delayedQueueRatio) {
+        return new Recycler<HandledObject>(maxCapacityPerThread, maxSharedCapacityFactor, ratio,
+                maxDelayedQueuesPerThread, delayedQueueRatio) {
             @Override
             protected HandledObject newObject(
                     Recycler.Handle<HandledObject> handle) {
@@ -133,6 +140,40 @@ public class RecyclerTest {
         object2.recycle();
     }
 
+    @Test
+    public void testRecycleDisableDrop() {
+        Recycler<HandledObject> recycler = newRecycler(1024, 2, 0, 2, 0);
+        HandledObject object = recycler.get();
+        object.recycle();
+        HandledObject object2 = recycler.get();
+        assertSame(object, object2);
+        object2.recycle();
+        HandledObject object3 = recycler.get();
+        assertSame(object, object3);
+        object3.recycle();
+    }
+
+    @Test
+    public void testRecycleDisableDelayedQueueDrop() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(1024, 2, 1, 2, 0);
+        final HandledObject o = recycler.get();
+        final HandledObject o2 = recycler.get();
+        final HandledObject o3 = recycler.get();
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                o.recycle();
+                o2.recycle();
+                o3.recycle();
+            }
+        };
+        thread.start();
+        thread.join();
+        // In reverse order
+        assertSame(o3, recycler.get());
+        assertSame(o, recycler.get());
+    }
+
     /**
      * Test to make sure bug #2848 never happens again
      * https://github.com/netty/netty/issues/2848
@@ -165,15 +206,10 @@ public class RecyclerTest {
 
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2, 10) {
-            @Override
-            protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
-                return new HandledObject(handle);
-            }
-        };
-
+        final Recycler<HandledObject> recycler = newRecycler(256, 10, 2, 10, 2);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
+
         final Thread thread = new Thread() {
             @Override
             public void run() {

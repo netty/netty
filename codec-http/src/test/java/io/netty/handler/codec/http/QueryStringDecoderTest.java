@@ -130,6 +130,13 @@ public class QueryStringDecoderTest {
     }
 
     @Test
+    public void testSemicolon() {
+        assertQueryString("/foo?a=1;2", "/foo?a=1;2", false);
+        // ";" should be treated as a normal character, see #8855
+        assertQueryString("/foo?a=1;2", "/foo?a=1%3B2", true);
+    }
+
+    @Test
     public void testPathSpecific() {
         // decode escaped characters
         Assert.assertEquals("/foo bar/", new QueryStringDecoder("/foo%20bar/?").path());
@@ -225,8 +232,14 @@ public class QueryStringDecoderTest {
     }
 
     private static void assertQueryString(String expected, String actual) {
-        QueryStringDecoder ed = new QueryStringDecoder(expected, CharsetUtil.UTF_8);
-        QueryStringDecoder ad = new QueryStringDecoder(actual, CharsetUtil.UTF_8);
+        assertQueryString(expected, actual, false);
+    }
+
+    private static void assertQueryString(String expected, String actual, boolean semicolonIsNormalChar) {
+        QueryStringDecoder ed = new QueryStringDecoder(expected, CharsetUtil.UTF_8, true,
+                1024, semicolonIsNormalChar);
+        QueryStringDecoder ad = new QueryStringDecoder(actual, CharsetUtil.UTF_8, true,
+                1024, semicolonIsNormalChar);
         Assert.assertEquals(ed.path(), ad.path());
         Assert.assertEquals(ed.parameters(), ad.parameters());
     }

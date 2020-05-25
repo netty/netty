@@ -97,7 +97,7 @@ public class Http2Exception extends Exception {
      * @param error The type of error as defined by the HTTP/2 specification.
      * @param fmt String with the content and format for the additional debug data.
      * @param args Objects which fit into the format defined by {@code fmt}.
-     * @return An exception which can be translated into a HTTP/2 error.
+     * @return An exception which can be translated into an HTTP/2 error.
      */
     public static Http2Exception connectionError(Http2Error error, String fmt, Object... args) {
         return new Http2Exception(error, String.format(fmt, args));
@@ -110,7 +110,7 @@ public class Http2Exception extends Exception {
      * @param cause The object which caused the error.
      * @param fmt String with the content and format for the additional debug data.
      * @param args Objects which fit into the format defined by {@code fmt}.
-     * @return An exception which can be translated into a HTTP/2 error.
+     * @return An exception which can be translated into an HTTP/2 error.
      */
     public static Http2Exception connectionError(Http2Error error, Throwable cause,
             String fmt, Object... args) {
@@ -123,7 +123,7 @@ public class Http2Exception extends Exception {
      * @param error The type of error as defined by the HTTP/2 specification.
      * @param fmt String with the content and format for the additional debug data.
      * @param args Objects which fit into the format defined by {@code fmt}.
-     * @return An exception which can be translated into a HTTP/2 error.
+     * @return An exception which can be translated into an HTTP/2 error.
      */
     public static Http2Exception closedStreamError(Http2Error error, String fmt, Object... args) {
         return new ClosedStreamCreationException(error, String.format(fmt, args));

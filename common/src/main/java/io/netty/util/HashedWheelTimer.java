@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -242,18 +243,10 @@ public class HashedWheelTimer implements Timer {
             long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
             long maxPendingTimeouts) {
 
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
-        }
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
-        if (tickDuration <= 0) {
-            throw new IllegalArgumentException("tickDuration must be greater than 0: " + tickDuration);
-        }
-        if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException("ticksPerWheel must be greater than 0: " + ticksPerWheel);
-        }
+        ObjectUtil.checkNotNull(threadFactory, "threadFactory");
+        ObjectUtil.checkNotNull(unit, "unit");
+        ObjectUtil.checkPositive(tickDuration, "tickDuration");
+        ObjectUtil.checkPositive(ticksPerWheel, "ticksPerWheel");
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
@@ -270,10 +263,8 @@ public class HashedWheelTimer implements Timer {
         }
 
         if (duration < MILLISECOND_NANOS) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Configured tickDuration %d smaller then %d, using 1ms.",
-                            tickDuration, MILLISECOND_NANOS);
-            }
+            logger.warn("Configured tickDuration {} smaller then {}, using 1ms.",
+                        tickDuration, MILLISECOND_NANOS);
             this.tickDuration = MILLISECOND_NANOS;
         } else {
             this.tickDuration = duration;
@@ -410,12 +401,8 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        ObjectUtil.checkNotNull(task, "task");
+        ObjectUtil.checkNotNull(unit, "unit");
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 
@@ -573,6 +560,9 @@ public class HashedWheelTimer implements Timer {
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
                     sleepTimeMs = sleepTimeMs / 10 * 10;
+                    if (sleepTimeMs == 0) {
+                        sleepTimeMs = 1;
+                    }
                 }
 
                 try {

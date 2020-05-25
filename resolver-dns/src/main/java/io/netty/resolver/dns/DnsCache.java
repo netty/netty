@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -25,7 +24,6 @@ import java.util.List;
 /**
  * A cache for DNS resolution entries.
  */
-@UnstableApi
 public interface DnsCache {
 
     /**

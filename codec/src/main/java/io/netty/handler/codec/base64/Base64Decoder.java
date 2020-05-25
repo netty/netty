@@ -23,6 +23,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -53,10 +54,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public Base64Decoder(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
-        this.dialect = dialect;
+        this.dialect = ObjectUtil.checkNotNull(dialect, "dialect");
     }
 
     @Override

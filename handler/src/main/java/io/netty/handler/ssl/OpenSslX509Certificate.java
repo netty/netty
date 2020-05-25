@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.SuppressJava6Requirement;
+
 import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
@@ -81,7 +83,7 @@ final class OpenSslX509Certificate extends X509Certificate {
     }
 
     // No @Override annotation as it was only introduced in Java8.
-    @Override
+    @SuppressJava6Requirement(reason = "Can only be called from Java8 as class is package-private")
     public void verify(PublicKey key, Provider sigProvider)
             throws CertificateException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         unwrap().verify(key, sigProvider);

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Set;
 
@@ -29,10 +30,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     private final int version;
 
     public SpdyHeaderBlockRawEncoder(SpdyVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        this.version = version.getVersion();
+        this.version = ObjectUtil.checkNotNull(version, "version").getVersion();
     }
 
     private static void setLengthField(ByteBuf buffer, int writerIndex, int length) {

@@ -33,11 +33,16 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
+@SuppressJava6Requirement(reason = "Unsafe access is guarded")
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long INT_ARRAY_BASE_OFFSET;
+    private static final long INT_ARRAY_INDEX_SCALE;
+    private static final long LONG_ARRAY_BASE_OFFSET;
+    private static final long LONG_ARRAY_INDEX_SCALE;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
@@ -207,6 +212,10 @@ final class PlatformDependent0 {
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
             BYTE_ARRAY_BASE_OFFSET = -1;
+            LONG_ARRAY_BASE_OFFSET = -1;
+            LONG_ARRAY_INDEX_SCALE = -1;
+            INT_ARRAY_BASE_OFFSET = -1;
+            INT_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
@@ -262,6 +271,10 @@ final class PlatformDependent0 {
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            INT_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(int[].class);
+            INT_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(int[].class);
+            LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
+            LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
@@ -524,6 +537,10 @@ final class PlatformDependent0 {
         return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
+    static byte getByte(byte[] data, long index) {
+        return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
     static short getShort(byte[] data, int index) {
         return UNSAFE.getShort(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
@@ -532,8 +549,16 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
+    static int getInt(int[] data, long index) {
+        return UNSAFE.getInt(data, INT_ARRAY_BASE_OFFSET + INT_ARRAY_INDEX_SCALE * index);
+    }
+
     static long getLong(byte[] data, int index) {
         return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static long getLong(long[] data, long index) {
+        return UNSAFE.getLong(data, LONG_ARRAY_BASE_OFFSET + LONG_ARRAY_INDEX_SCALE * index);
     }
 
     static void putByte(long address, byte value) {

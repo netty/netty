@@ -15,14 +15,11 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.net.InetSocketAddress;
 
 /**
  * A {@link DnsServerAddressStreamProvider} which always uses a single DNS server for resolution.
  */
-@UnstableApi
 public final class SingletonDnsServerAddressStreamProvider extends UniSequentialDnsServerAddressStreamProvider {
     /**
      * Create a new instance.

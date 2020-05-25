@@ -50,6 +50,14 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * Create a new instance using the default number of threads and the given {@link ThreadFactory}.
+     */
+    @SuppressWarnings("deprecation")
+    public KQueueEventLoopGroup(ThreadFactory threadFactory) {
+        this(0, threadFactory, 0);
+    }
+
+    /**
      * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
      */
     @SuppressWarnings("deprecation")

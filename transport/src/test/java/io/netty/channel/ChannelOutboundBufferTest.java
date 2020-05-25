@@ -124,6 +124,31 @@ public class ChannelOutboundBufferTest {
         buf.release();
     }
 
+    @Test
+    public void testNioBuffersMaxCount() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+
+        CompositeByteBuf comp = compositeBuffer(256);
+        ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
+        for (int i = 0; i < 65; i++) {
+            comp.addComponent(true, buf.copy());
+        }
+        assertEquals(65, comp.nioBufferCount());
+        buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
+        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        buffer.addFlush();
+        final int maxCount = 10;    // less than comp.nioBufferCount()
+        ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
+        assertTrue("Should not be greater than maxCount", buffer.nioBufferCount() <= maxCount);
+        for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+            assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
+        }
+        release(buffer);
+        buf.release();
+    }
+
     private static void release(ChannelOutboundBuffer buffer) {
         for (;;) {
             if (!buffer.remove()) {

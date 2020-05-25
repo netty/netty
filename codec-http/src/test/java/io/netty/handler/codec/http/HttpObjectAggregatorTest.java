@@ -197,7 +197,7 @@ public class HttpObjectAggregatorTest {
 
     @Test
     public void testOversizedRequestWithoutKeepAlive() {
-        // send a HTTP/1.0 request with no keep-alive header
+        // send an HTTP/1.0 request with no keep-alive header
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
         HttpUtil.setContentLength(message, 5);
         checkOversizedRequest(message);

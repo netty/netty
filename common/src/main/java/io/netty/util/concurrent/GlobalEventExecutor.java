@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -88,7 +89,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 return task;
             } else {
                 long delayNanos = scheduledTask.delayNanos();
-                Runnable task;
+                Runnable task = null;
                 if (delayNanos > 0) {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
@@ -96,11 +97,12 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                         // Waken up.
                         return null;
                     }
-                } else {
-                    task = taskQueue.poll();
                 }
-
                 if (task == null) {
+                    // We need to fetch the scheduled tasks now as otherwise there may be a chance that
+                    // scheduled tasks are never executed if there is always one task in the taskQueue.
+                    // This is for example true for the read task of OIO Transport
+                    // See https://github.com/netty/netty/issues/1614
                     fetchFromScheduledTaskQueue();
                     task = taskQueue.poll();
                 }
@@ -136,10 +138,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
      * before.
      */
     private void addTask(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
-        taskQueue.add(task);
+        taskQueue.add(ObjectUtil.checkNotNull(task, "task"));
     }
 
     @Override
@@ -192,9 +191,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
      * @return {@code true} if and only if the worker thread has been terminated
      */
     public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        ObjectUtil.checkNotNull(unit, "unit");
 
         final Thread thread = this.thread;
         if (thread == null) {
@@ -206,11 +203,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public void execute(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
-
-        addTask(task);
+        addTask(ObjectUtil.checkNotNull(task, "task"));
         if (!inEventLoop()) {
             startThread();
         }

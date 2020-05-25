@@ -16,8 +16,8 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.ObjectPool.Handle;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -121,6 +121,11 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     @Override
     public boolean hasMemoryAddress() {
         return unwrap().hasMemoryAddress();
+    }
+
+    @Override
+    public boolean isContiguous() {
+        return unwrap().isContiguous();
     }
 
     @Override

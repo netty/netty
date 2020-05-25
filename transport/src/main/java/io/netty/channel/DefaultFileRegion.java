@@ -15,10 +15,9 @@
  */
 package io.netty.channel;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -27,6 +26,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
@@ -51,15 +52,10 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
-        checkPositiveOrZero(position, "position");
-        checkPositiveOrZero(count, "count");
-        this.file = file;
-        this.position = position;
-        this.count = count;
-        f = null;
+        this.file = ObjectUtil.checkNotNull(file, "file");
+        this.position = checkPositiveOrZero(position, "position");
+        this.count = checkPositiveOrZero(count, "count");
+        this.f = null;
     }
 
     /**
@@ -71,14 +67,9 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
-        if (f == null) {
-            throw new NullPointerException("f");
-        }
-        checkPositiveOrZero(position, "position");
-        checkPositiveOrZero(count, "count");
-        this.position = position;
-        this.count = count;
-        this.f = f;
+        this.f = ObjectUtil.checkNotNull(f, "f");
+        this.position = checkPositiveOrZero(position, "position");
+        this.count = checkPositiveOrZero(count, "count");
     }
 
     /**
@@ -161,9 +152,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         try {
             file.close();
         } catch (IOException e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a file.", e);
-            }
+            logger.warn("Failed to close a file.", e);
         }
     }
 

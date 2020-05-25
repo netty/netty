@@ -50,14 +50,12 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
-        checkNotNull(alloc, "alloc");
-
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
-        this.alloc = alloc;
+        this.alloc = checkNotNull(alloc, "alloc");
         setArray(allocateArray(initialCapacity));
         setIndex(0, 0);
     }
@@ -73,7 +71,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
         checkNotNull(alloc, "alloc");
         checkNotNull(initialArray, "initialArray");
-
         if (initialArray.length > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity(%d) > maxCapacity(%d)", initialArray.length, maxCapacity));
@@ -120,29 +117,23 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf capacity(int newCapacity) {
         checkNewCapacity(newCapacity);
-
-        int oldCapacity = array.length;
         byte[] oldArray = array;
-        if (newCapacity > oldCapacity) {
-            byte[] newArray = allocateArray(newCapacity);
-            System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
-            setArray(newArray);
-            freeArray(oldArray);
-        } else if (newCapacity < oldCapacity) {
-            byte[] newArray = allocateArray(newCapacity);
-            int readerIndex = readerIndex();
-            if (readerIndex < newCapacity) {
-                int writerIndex = writerIndex();
-                if (writerIndex > newCapacity) {
-                    writerIndex(writerIndex = newCapacity);
-                }
-                System.arraycopy(oldArray, readerIndex, newArray, readerIndex, writerIndex - readerIndex);
-            } else {
-                setIndex(newCapacity, newCapacity);
-            }
-            setArray(newArray);
-            freeArray(oldArray);
+        int oldCapacity = oldArray.length;
+        if (newCapacity == oldCapacity) {
+            return this;
         }
+
+        int bytesToCopy;
+        if (newCapacity > oldCapacity) {
+            bytesToCopy = oldCapacity;
+        } else {
+            trimIndicesToCapacity(newCapacity);
+            bytesToCopy = newCapacity;
+        }
+        byte[] newArray = allocateArray(newCapacity);
+        System.arraycopy(oldArray, 0, newArray, 0, bytesToCopy);
+        setArray(newArray);
+        freeArray(oldArray);
         return this;
     }
 
@@ -324,6 +315,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+    }
+
+    @Override
+    public final boolean isContiguous() {
+        return true;
     }
 
     @Override
@@ -536,9 +532,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        byte[] copiedArray = PlatformDependent.allocateUninitializedArray(length);
-        System.arraycopy(array, index, copiedArray, 0, length);
-        return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());
+        return alloc().heapBuffer(length, maxCapacity()).writeBytes(array, index, length);
     }
 
     private ByteBuffer internalNioBuffer() {

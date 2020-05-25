@@ -42,7 +42,11 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
+
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
@@ -249,9 +253,9 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test(expected = Http2Exception.StreamException.class)
     public void dataReadForUnknownStreamShouldApplyFlowControlAndFail() throws Exception {
-        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(true);
         when(connection.stream(STREAM_ID)).thenReturn(null);
         final ByteBuf data = dummyData();
         int padding = 10;
@@ -262,6 +266,32 @@ public class DefaultHttp2ConnectionDecoderTest {
             try {
                 verify(localFlow)
                         .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
+                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+                verify(localFlow).frameWriter(any(Http2FrameWriter.class));
+                verifyNoMoreInteractions(localFlow);
+                verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+            } finally {
+                data.release();
+            }
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void dataReadForUnknownStreamThatCouldntExistFail() throws Exception {
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        final ByteBuf data = dummyData();
+        int padding = 10;
+        int processedBytes = data.readableBytes() + padding;
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+        } catch (Http2Exception ex) {
+            assertThat(ex, not(instanceOf(Http2Exception.StreamException.class)));
+            throw ex;
+        } finally {
+            try {
+                verify(localFlow)
+                    .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
                 verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
                 verify(localFlow).frameWriter(any(Http2FrameWriter.class));
                 verifyNoMoreInteractions(localFlow);

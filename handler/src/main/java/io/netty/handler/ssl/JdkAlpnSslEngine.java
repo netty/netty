@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -30,7 +31,8 @@ import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 
-final class Java9SslEngine extends JdkSslEngine {
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
+final class JdkAlpnSslEngine extends JdkSslEngine {
     private final ProtocolSelectionListener selectionListener;
     private final AlpnSelector alpnSelector;
 
@@ -77,18 +79,20 @@ final class Java9SslEngine extends JdkSslEngine {
         }
     }
 
-    Java9SslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
+    JdkAlpnSslEngine(SSLEngine engine,
+                     @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
+                     boolean isServer) {
         super(engine);
         if (isServer) {
             selectionListener = null;
             alpnSelector = new AlpnSelector(applicationNegotiator.protocolSelectorFactory().
                     newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())));
-            Java9SslUtils.setHandshakeApplicationProtocolSelector(engine, alpnSelector);
+            JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(engine, alpnSelector);
         } else {
             selectionListener = applicationNegotiator.protocolListenerFactory()
                     .newListener(this, applicationNegotiator.protocols());
             alpnSelector = null;
-            Java9SslUtils.setApplicationProtocols(engine, applicationNegotiator.protocols());
+            JdkAlpnSslUtils.setApplicationProtocols(engine, applicationNegotiator.protocols());
         }
     }
 
@@ -151,7 +155,7 @@ final class Java9SslEngine extends JdkSslEngine {
 
     @Override
     void setNegotiatedApplicationProtocol(String applicationProtocol) {
-        // Do nothing as this is handled internally by the Java9 implementation of SSLEngine.
+        // Do nothing as this is handled internally by the Java8u251+ implementation of SSLEngine.
     }
 
     @Override
@@ -160,24 +164,24 @@ final class Java9SslEngine extends JdkSslEngine {
         if (protocol != null) {
             return protocol.isEmpty() ? null : protocol;
         }
-        return protocol;
+        return null;
     }
 
-    // These methods will override the methods defined by Java 9. As we compile with Java8 we can not add
-    // @Override annotations here.
+    // These methods will override the methods defined by Java 8u251 and later. As we may compile with an earlier
+    // java8 version we don't use @Override annotations here.
     public String getApplicationProtocol() {
-        return Java9SslUtils.getApplicationProtocol(getWrappedEngine());
+        return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
     }
 
     public String getHandshakeApplicationProtocol() {
-        return Java9SslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+        return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
     }
 
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
-        Java9SslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+        JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
     }
 
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
-        return Java9SslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+        return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
     }
 }

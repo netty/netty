@@ -266,17 +266,17 @@ public class MqttCodecTest {
 
     @Test
     public void testPingReqMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MqttMessageType.PINGREQ);
+        testMessageWithOnlyFixedHeader(MqttMessage.PINGREQ);
     }
 
     @Test
     public void testPingRespMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MqttMessageType.PINGRESP);
+        testMessageWithOnlyFixedHeader(MqttMessage.PINGRESP);
     }
 
     @Test
     public void testDisconnectMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MqttMessageType.DISCONNECT);
+        testMessageWithOnlyFixedHeader(MqttMessage.DISCONNECT);
     }
 
     @Test
@@ -450,8 +450,7 @@ public class MqttCodecTest {
         }
     }
 
-    private void testMessageWithOnlyFixedHeader(MqttMessageType messageType) throws Exception {
-        MqttMessage message = createMessageWithFixedHeader(messageType);
+    private void testMessageWithOnlyFixedHeader(MqttMessage message) throws Exception {
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();

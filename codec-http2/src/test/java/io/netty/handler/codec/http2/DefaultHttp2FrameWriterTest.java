@@ -206,6 +206,48 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     @Test
+    public void writeLargeHeaderWithPadding() throws Exception {
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+        headers = dummyHeaders(headers, 20);
+
+        http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        frameWriter.writeHeaders(ctx, streamId, headers, 5, true, promise);
+
+        byte[] expectedPayload = buildLargeHeaderPayload(streamId, headers, (byte) 4,
+                Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        // First frame: HEADER(length=0x4000, flags=0x09)
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readUnsignedMedium());
+        assertEquals(0x01, outbound.readByte());
+        assertEquals(0x09, outbound.readByte()); // 0x01 + 0x08
+        assertEquals(streamId, outbound.readInt());
+
+        byte[] firstPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
+        outbound.readBytes(firstPayload);
+
+        int remainPayloadLength = expectedPayload.length - Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+        // Second frame: CONTINUATION(length=remainPayloadLength, flags=0x04)
+        assertEquals(remainPayloadLength, outbound.readUnsignedMedium());
+        assertEquals(0x09, outbound.readByte());
+        assertEquals(0x04, outbound.readByte());
+        assertEquals(streamId, outbound.readInt());
+
+        byte[] secondPayload = new byte[remainPayloadLength];
+        outbound.readBytes(secondPayload);
+
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, 0, firstPayload.length),
+                firstPayload);
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, firstPayload.length,
+                expectedPayload.length),
+                secondPayload);
+    }
+
+    @Test
     public void writeFrameZeroPayload() throws Exception {
         frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
 
@@ -263,6 +305,22 @@ public class DefaultHttp2FrameWriterTest {
             return bytes;
         } finally {
             byteBuf.release();
+        }
+    }
+
+    private byte[] buildLargeHeaderPayload(int streamId, Http2Headers headers, byte padding, int maxFrameSize)
+            throws Http2Exception, IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            outputStream.write(padding);
+            byte[] payload = headerPayload(streamId, headers);
+            int firstPayloadSize = maxFrameSize - (padding + 1); //1 for padding length
+            outputStream.write(payload, 0, firstPayloadSize);
+            outputStream.write(new byte[padding]);
+            outputStream.write(payload, firstPayloadSize, payload.length - firstPayloadSize);
+            return outputStream.toByteArray();
+        } finally {
+            outputStream.close();
         }
     }
 

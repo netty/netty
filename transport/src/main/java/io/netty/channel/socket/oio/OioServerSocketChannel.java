@@ -20,6 +20,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -32,7 +33,6 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.
@@ -59,7 +59,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     final ServerSocket socket;
-    final Lock shutdownLock = new ReentrantLock();
     private final OioServerSocketChannelConfig config;
 
     /**
@@ -76,9 +75,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
      */
     public OioServerSocketChannel(ServerSocket socket) {
         super(null);
-        if (socket == null) {
-            throw new NullPointerException("socket");
-        }
+        ObjectUtil.checkNotNull(socket, "socket");
 
         boolean success = false;
         try {

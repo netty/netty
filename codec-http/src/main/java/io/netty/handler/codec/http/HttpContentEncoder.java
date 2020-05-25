@@ -22,10 +22,14 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpContent}.
@@ -71,21 +75,30 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
-            throws Exception {
-        CharSequence acceptedEncoding = msg.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
-        if (acceptedEncoding == null) {
-            acceptedEncoding = HttpContentDecoder.IDENTITY;
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+        CharSequence acceptEncoding;
+        List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
+        switch (acceptEncodingHeaders.size()) {
+        case 0:
+            acceptEncoding = HttpContentDecoder.IDENTITY;
+            break;
+        case 1:
+            acceptEncoding = acceptEncodingHeaders.get(0);
+            break;
+        default:
+            // Multiple message-header fields https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+            acceptEncoding = StringUtil.join(",", acceptEncodingHeaders);
+            break;
         }
 
         HttpMethod method = msg.method();
         if (HttpMethod.HEAD.equals(method)) {
-            acceptedEncoding = ZERO_LENGTH_HEAD;
+            acceptEncoding = ZERO_LENGTH_HEAD;
         } else if (HttpMethod.CONNECT.equals(method)) {
-            acceptedEncoding = ZERO_LENGTH_CONNECT;
+            acceptEncoding = ZERO_LENGTH_CONNECT;
         }
 
-        acceptEncodingQueue.add(acceptedEncoding);
+        acceptEncodingQueue.add(acceptEncoding);
         out.add(ReferenceCountUtil.retain(msg));
     }
 
@@ -275,8 +288,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     /**
      * Prepare to encode the HTTP message content.
      *
-     * @param headers
-     *        the headers
+     * @param httpResponse
+     *        the http response
      * @param acceptEncoding
      *        the value of the {@code "Accept-Encoding"} header
      *
@@ -286,7 +299,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception;
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
@@ -350,15 +363,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         private final EmbeddedChannel contentEncoder;
 
         public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
-            if (targetContentEncoding == null) {
-                throw new NullPointerException("targetContentEncoding");
-            }
-            if (contentEncoder == null) {
-                throw new NullPointerException("contentEncoder");
-            }
-
-            this.targetContentEncoding = targetContentEncoding;
-            this.contentEncoder = contentEncoder;
+            this.targetContentEncoding = ObjectUtil.checkNotNull(targetContentEncoding, "targetContentEncoding");
+            this.contentEncoder = ObjectUtil.checkNotNull(contentEncoder, "contentEncoder");
         }
 
         public String targetContentEncoding() {

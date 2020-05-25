@@ -16,7 +16,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -34,7 +33,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
- * here <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.">HTTP/2 Spec Message Flow</a>.
+ * in <a href="https://tools.ietf.org/html/rfc7540#section-8.1">[RFC 7540], Section 8.1</a>.
  * <p>
  * See {@link HttpToHttp2ConnectionHandler} to get translation from HTTP/1.x objects to HTTP/2 frames for writes.
  */
@@ -53,9 +52,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         @Override
-        public FullHttpMessage copyIfNeeded(FullHttpMessage msg) {
+        public FullHttpMessage copyIfNeeded(ByteBufAllocator allocator, FullHttpMessage msg) {
             if (msg instanceof FullHttpRequest) {
-                FullHttpRequest copy = ((FullHttpRequest) msg).replace(Unpooled.buffer(0));
+                FullHttpRequest copy = ((FullHttpRequest) msg).replace(allocator.buffer(0));
                 copy.headers().remove(HttpHeaderNames.EXPECT);
                 return copy;
             }
@@ -73,11 +72,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                                         boolean validateHttpHeaders, boolean propagateSettings) {
 
-        checkNotNull(connection, "connection");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
         }
-        this.connection = connection;
+        this.connection = checkNotNull(connection, "connection");
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         this.propagateSettings = propagateSettings;
@@ -200,7 +198,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         if (sendDetector.mustSendImmediately(msg)) {
             // Copy the message (if necessary) before sending. The content is not expected to be copied (or used) in
             // this operation but just in case it is used do the copy before sending and the resource may be released
-            final FullHttpMessage copy = endOfStream ? null : sendDetector.copyIfNeeded(msg);
+            final FullHttpMessage copy = endOfStream ? null : sendDetector.copyIfNeeded(ctx.alloc(), msg);
             fireChannelRead(ctx, msg, release, stream);
             return copy;
         }
@@ -354,9 +352,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * with a 'Expect: 100-continue' header. The message will be sent immediately,
          * and the data will be queued and sent at the end of the stream.
          *
+         * @param allocator The {@link ByteBufAllocator} that can be used to allocate
          * @param msg The message which has just been sent due to {@link #mustSendImmediately(FullHttpMessage)}
          * @return A modified copy of the {@code msg} or {@code null} if a copy is not needed.
          */
-        FullHttpMessage copyIfNeeded(FullHttpMessage msg);
+        FullHttpMessage copyIfNeeded(ByteBufAllocator allocator, FullHttpMessage msg);
     }
 }

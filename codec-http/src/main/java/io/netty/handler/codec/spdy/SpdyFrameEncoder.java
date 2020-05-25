@@ -17,6 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 import java.util.Set;
@@ -34,10 +35,7 @@ public class SpdyFrameEncoder {
      * Creates a new instance with the specified {@code spdyVersion}.
      */
     public SpdyFrameEncoder(SpdyVersion spdyVersion) {
-        if (spdyVersion == null) {
-            throw new NullPointerException("spdyVersion");
-        }
-        version = spdyVersion.getVersion();
+        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
     }
 
     private void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {

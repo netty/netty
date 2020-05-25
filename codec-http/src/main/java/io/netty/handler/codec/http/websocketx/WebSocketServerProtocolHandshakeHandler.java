@@ -44,25 +44,16 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
 
-    private final String websocketPath;
-    private final String subprotocols;
-    private final boolean checkStartsWith;
-    private final long handshakeTimeoutMillis;
-    private final WebSocketDecoderConfig decoderConfig;
+    private final WebSocketServerProtocolConfig serverConfig;
     private ChannelHandlerContext ctx;
     private ChannelPromise handshakePromise;
 
-    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean checkStartsWith, long handshakeTimeoutMillis, WebSocketDecoderConfig decoderConfig) {
-        this.websocketPath = websocketPath;
-        this.subprotocols = subprotocols;
-        this.checkStartsWith = checkStartsWith;
-        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
-        this.decoderConfig = checkNotNull(decoderConfig, "decoderConfig");
+    WebSocketServerProtocolHandshakeHandler(WebSocketServerProtocolConfig serverConfig) {
+        this.serverConfig = checkNotNull(serverConfig, "serverConfig");
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
         handshakePromise = ctx.newPromise();
     }
@@ -82,16 +73,25 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, decoderConfig);
+                    getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
+                    serverConfig.subprotocols(), serverConfig.decoderConfig());
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             final ChannelPromise localHandshakePromise = handshakePromise;
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
+                // Ensure we set the handshaker and replace this handler before we
+                // trigger the actual handshake. Otherwise we may receive websocket bytes in this handler
+                // before we had a chance to replace it.
+                //
+                // See https://github.com/netty/netty/issues/9471.
+                WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
+                ctx.pipeline().remove(this);
+
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
                 handshakeFuture.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             localHandshakePromise.tryFailure(future.cause());
                             ctx.fireExceptionCaught(future.cause());
@@ -107,9 +107,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     }
                 });
                 applyHandshakeTimeout();
-                WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
             }
         } finally {
             req.release();
@@ -117,7 +114,8 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     }
 
     private boolean isNotWebSocketPath(FullHttpRequest req) {
-        return checkStartsWith ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
+        String websocketPath = serverConfig.websocketPath();
+        return serverConfig.checkStartsWith() ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
@@ -139,7 +137,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     private void applyHandshakeTimeout() {
         final ChannelPromise localHandshakePromise = handshakePromise;
-        final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
+        final long handshakeTimeoutMillis = serverConfig.handshakeTimeoutMillis();
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
         }
@@ -159,7 +157,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> f) throws Exception {
+            public void operationComplete(Future<Void> f) {
                 timeoutFuture.cancel(false);
             }
         });

@@ -27,7 +27,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
- * A HTTP server which serves Web Socket requests at:
+ * An HTTP server which serves Web Socket requests at:
  *
  * http://localhost:8080/websocket
  *

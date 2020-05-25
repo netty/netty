@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -75,14 +76,8 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         if (this.os != null) {
             throw new IllegalStateException("output was set already");
         }
-        if (is == null) {
-            throw new NullPointerException("is");
-        }
-        if (os == null) {
-            throw new NullPointerException("os");
-        }
-        this.is = is;
-        this.os = os;
+        this.is = ObjectUtil.checkNotNull(is, "is");
+        this.os = ObjectUtil.checkNotNull(os, "os");
     }
 
     @Override

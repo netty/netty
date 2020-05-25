@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -29,7 +28,6 @@ import java.util.Map;
 /**
  * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
  */
-@UnstableApi
 public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
 
     private final Map<String, Inet4Address> inet4Entries;

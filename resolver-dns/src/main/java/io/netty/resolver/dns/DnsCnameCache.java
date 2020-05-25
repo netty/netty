@@ -16,12 +16,10 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * A cache for {@code CNAME}s.
  */
-@UnstableApi
 public interface DnsCnameCache {
 
     /**

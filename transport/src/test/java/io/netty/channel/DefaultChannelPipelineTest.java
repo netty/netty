@@ -43,6 +43,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.SocketAddress;
@@ -59,6 +60,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
@@ -73,10 +75,15 @@ import static org.junit.Assert.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
+    private static EventLoopGroup group;
 
     private Channel self;
     private Channel peer;
+
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        group = new DefaultEventLoopGroup(1);
+    }
 
     @AfterClass
     public static void afterClass() throws Exception {
@@ -258,6 +265,61 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler2"), newHandler2);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReplaceHandlerChecksDuplicateNames() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler2);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "handler2", newHandler1);
+    }
+
+    @Test
+    public void testReplaceNameWithGenerated() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", null, newHandler1);
+        assertSame(pipeline.get("DefaultChannelPipelineTest$TestHandler#0"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+    }
+
+    @Test
+    public void testRenameChannelHandler() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler1);
+        pipeline.addLast("handler3", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+        assertSame(pipeline.get("handler2"), handler1);
+        assertSame(pipeline.get("handler3"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "newHandler1", newHandler1);
+        assertSame(pipeline.get("newHandler1"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+
+        ChannelHandler newHandler3 = newHandler();
+        pipeline.replace("handler3", "newHandler3", newHandler3);
+        assertSame(pipeline.get("newHandler3"), newHandler3);
+        assertNull(pipeline.get("handler3"));
+
+        ChannelHandler newHandler2 = newHandler();
+        pipeline.replace("handler2", "newHandler2", newHandler2);
+        assertSame(pipeline.get("newHandler2"), newHandler2);
+        assertNull(pipeline.get("handler2"));
+    }
+
     @Test
     public void testChannelHandlerContextNavigation() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
@@ -270,6 +332,87 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(lastHandlers);
 
         verifyContextNumber(pipeline, HANDLER_ARRAY_LEN * 2);
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireChannelReadComplete();
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInOtherHandlerAfterInvokedFromExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    ctx.fireChannelReadComplete();
+                }
+            }, new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireExceptionCaught(new Exception());
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
     }
 
     @Test
@@ -1635,6 +1778,67 @@ public class DefaultChannelPipelineTest {
 
         channel.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+    }
+
+    @Test(timeout = 5000)
+    public void testHandlerAddedFailedButHandlerStillRemoved() throws InterruptedException {
+        testHandlerAddedFailedButHandlerStillRemoved0(false);
+    }
+
+    @Test(timeout = 5000)
+    public void testHandlerAddedFailedButHandlerStillRemovedWithLaterRegister() throws InterruptedException {
+        testHandlerAddedFailedButHandlerStillRemoved0(true);
+    }
+
+    private static void testHandlerAddedFailedButHandlerStillRemoved0(boolean lateRegister)
+            throws InterruptedException {
+        EventExecutorGroup executorGroup = new DefaultEventExecutorGroup(16);
+        final int numHandlers = 32;
+        try {
+            Channel channel = new LocalChannel();
+            channel.config().setOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP, false);
+            if (!lateRegister) {
+                group.register(channel).sync();
+            }
+            channel.pipeline().addFirst(newHandler());
+
+            List<CountDownLatch> latchList = new ArrayList<CountDownLatch>(numHandlers);
+            for (int i = 0; i < numHandlers; i++) {
+                CountDownLatch latch = new CountDownLatch(1);
+                channel.pipeline().addFirst(executorGroup, "h" + i, new BadChannelHandler(latch));
+                latchList.add(latch);
+            }
+            if (lateRegister) {
+                group.register(channel).sync();
+            }
+
+            for (int i = 0; i < numHandlers; i++) {
+                // Wait until the latch was countDown which means handlerRemoved(...) was called.
+                latchList.get(i).await();
+                assertNull(channel.pipeline().get("h" + i));
+            }
+        } finally {
+            executorGroup.shutdownGracefully();
+        }
+    }
+
+    private static final class BadChannelHandler extends ChannelHandlerAdapter {
+        private final CountDownLatch latch;
+
+        BadChannelHandler(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            TimeUnit.MILLISECONDS.sleep(10);
+            throw new RuntimeException();
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            latch.countDown();
+        }
     }
 
     @Test(timeout = 5000)

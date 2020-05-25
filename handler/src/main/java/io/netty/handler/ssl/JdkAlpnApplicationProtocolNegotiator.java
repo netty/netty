@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 
@@ -28,7 +27,7 @@ import javax.net.ssl.SSLEngine;
 @Deprecated
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final boolean AVAILABLE = Conscrypt.isAvailable() ||
-                                             jdkAlpnSupported() ||
+                                             JdkAlpnSslUtils.supportsAlpn() ||
                                              JettyAlpnSslEngine.isAvailable();
 
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
@@ -134,18 +133,23 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
                         : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
             }
-            if (jdkAlpnSupported()) {
-                return new Java9SslEngine(engine, applicationNegotiator, isServer);
+            // ALPN support was recently backported to Java8 as
+            // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8230977.
+            // Because of this lets not do a Java version runtime check but just depend on if the required methods are
+            // present
+            if (JdkAlpnSslUtils.supportsAlpn()) {
+                return new JdkAlpnSslEngine(engine, applicationNegotiator, isServer);
             }
             if (JettyAlpnSslEngine.isAvailable()) {
                 return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
                         : JettyAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
             }
-            throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
+            throw new UnsupportedOperationException("ALPN not supported. Unable to wrap SSLEngine of type '"
+                    + engine.getClass().getName() + "')");
         }
     }
 
-    static boolean jdkAlpnSupported() {
-        return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+    static boolean isAlpnSupported() {
+        return AVAILABLE;
     }
 }

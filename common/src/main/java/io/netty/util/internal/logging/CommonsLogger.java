@@ -39,6 +39,7 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.ObjectUtil;
 import org.apache.commons.logging.Log;
 
 /**
@@ -57,10 +58,7 @@ class CommonsLogger extends AbstractInternalLogger {
 
     CommonsLogger(Log logger, String name) {
         super(name);
-        if (logger == null) {
-            throw new NullPointerException("logger");
-        }
-        this.logger = logger;
+        this.logger = ObjectUtil.checkNotNull(logger, "logger");
     }
 
     /**

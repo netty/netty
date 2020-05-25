@@ -16,21 +16,26 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.util.internal.UnstableApi;
 
-import java.security.KeyStore;
-import java.security.Provider;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-
 import java.io.File;
 import java.io.InputStream;
+import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.cert.X509Certificate;
-import javax.net.ssl.SSLEngine;
+import java.util.ArrayList;
+import java.util.List;
+
+import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
+import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -80,6 +85,17 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain the X.509 certificate chain
+     * @see #keyManager(PrivateKey, X509Certificate[])
+     */
+    public static SslContextBuilder forServer(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        return forServer(key, toArray(keyCertChain, EMPTY_X509_CERTIFICATES));
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
@@ -122,6 +138,20 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain the X.509 certificate chain
+     * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
+     *     password-protected
+     * @see #keyManager(File, File, String)
+     */
+    public static SslContextBuilder forServer(
+            PrivateKey key, String keyPassword, Iterable<? extends X509Certificate> keyCertChain) {
+        return forServer(key, keyPassword, toArray(keyCertChain, EMPTY_X509_CERTIFICATES));
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
      * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
      * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      *
@@ -130,6 +160,15 @@ public final class SslContextBuilder {
      */
     public static SslContextBuilder forServer(KeyManagerFactory keyManagerFactory) {
         return new SslContextBuilder(true).keyManager(keyManagerFactory);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext} with {@link KeyManager}.
+     *
+     * @param KeyManager non-{@code null} KeyManager for server's private key
+     */
+    public static SslContextBuilder forServer(KeyManager keyManager) {
+        return new SslContextBuilder(true).keyManager(keyManager);
     }
 
     private final boolean forServer;
@@ -216,11 +255,31 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Trusted certificates for verifying the remote endpoint's certificate, {@code null} uses the system default.
+     */
+    public SslContextBuilder trustManager(Iterable<? extends X509Certificate> trustCertCollection) {
+        return trustManager(toArray(trustCertCollection, EMPTY_X509_CERTIFICATES));
+    }
+
+    /**
      * Trusted manager for verifying the remote endpoint's certificate. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         trustCertCollection = null;
         this.trustManagerFactory = trustManagerFactory;
+        return this;
+    }
+
+    /**
+     * A single trusted manager for verifying the remote endpoint's certificate.
+     * This is helpful when custom implementation of {@link TrustManager} is needed.
+     * Internally, a simple wrapper of {@link TrustManagerFactory} that only produces this
+     * specified {@link TrustManager} will be created, thus all the requirements specified in
+     * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
+     */
+    public SslContextBuilder trustManager(TrustManager trustManager) {
+        this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        trustCertCollection = null;
         return this;
     }
 
@@ -255,6 +314,17 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(PrivateKey key, X509Certificate... keyCertChain) {
         return keyManager(key, null, keyCertChain);
+    }
+
+    /**
+     * Identifying certificate for this host. {@code keyCertChain} and {@code key} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain an X.509 certificate chain
+     */
+    public SslContextBuilder keyManager(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        return keyManager(key, toArray(keyCertChain, EMPTY_X509_CERTIFICATES));
     }
 
     /**
@@ -342,6 +412,20 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Identifying certificate for this host. {@code keyCertChain} and {@code key} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param key a PKCS#8 private key file
+     * @param keyPassword the password of the {@code key}, or {@code null} if it's not
+     *     password-protected
+     * @param keyCertChain an X.509 certificate chain
+     */
+    public SslContextBuilder keyManager(PrivateKey key, String keyPassword,
+                                        Iterable<? extends X509Certificate> keyCertChain) {
+        return keyManager(key, keyPassword, toArray(keyCertChain, EMPTY_X509_CERTIFICATES));
+    }
+
+    /**
      * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
      * client contexts, which disables mutual authentication. Using a {@link KeyManagerFactory}
      * is only supported for {@link SslProvider#JDK} or {@link SslProvider#OPENSSL} / {@link SslProvider#OPENSSL_REFCNT}
@@ -364,6 +448,28 @@ public final class SslContextBuilder {
     }
 
     /**
+     * A single key manager managing the identity information of this host.
+     * This is helpful when custom implementation of {@link KeyManager} is needed.
+     * Internally, a wrapper of {@link KeyManagerFactory} that only produces this specified
+     * {@link KeyManager} will be created, thus all the requirements specified in
+     * {@link #keyManager(KeyManagerFactory keyManagerFactory)} also apply here.
+     */
+    public SslContextBuilder keyManager(KeyManager keyManager) {
+        if (forServer) {
+            checkNotNull(keyManager, "keyManager required for servers");
+        }
+        if (keyManager != null) {
+            this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
+        } else {
+            this.keyManagerFactory = null;
+        }
+        keyCertChain = null;
+        key = null;
+        keyPassword = null;
+        return this;
+    }
+
+    /**
      * The cipher suites to enable, in the order of preference. {@code null} to use default
      * cipher suites.
      */
@@ -377,9 +483,8 @@ public final class SslContextBuilder {
      * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-        checkNotNull(cipherFilter, "cipherFilter");
+        this.cipherFilter = checkNotNull(cipherFilter, "cipherFilter");
         this.ciphers = ciphers;
-        this.cipherFilter = cipherFilter;
         return this;
     }
 
@@ -428,6 +533,15 @@ public final class SslContextBuilder {
     }
 
     /**
+     * The TLS protocol versions to enable.
+     * @param protocols The protocols to enable, or {@code null} to enable the default protocols.
+     * @see SSLEngine#setEnabledCipherSuites(String[])
+     */
+    public SslContextBuilder protocols(Iterable<String> protocols) {
+        return protocols(toArray(protocols, EMPTY_STRINGS));
+    }
+
+    /**
      * {@code true} if the first write request shouldn't be encrypted.
      */
     public SslContextBuilder startTls(boolean startTls) {
@@ -463,5 +577,16 @@ public final class SslContextBuilder {
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType);
         }
+    }
+
+    private static <T> T[] toArray(Iterable<? extends T> iterable, T[] prototype) {
+        if (iterable == null) {
+            return null;
+        }
+        final List<T> list = new ArrayList<T>();
+        for (T element : iterable) {
+            list.add(element);
+        }
+        return list.toArray(prototype);
     }
 }

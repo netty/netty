@@ -15,6 +15,8 @@
  */
 package io.netty.channel.group;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -27,15 +29,9 @@ final class CombinedIterator<E> implements Iterator<E> {
     private Iterator<E> currentIterator;
 
     CombinedIterator(Iterator<E> i1, Iterator<E> i2) {
-        if (i1 == null) {
-            throw new NullPointerException("i1");
-        }
-        if (i2 == null) {
-            throw new NullPointerException("i2");
-        }
-        this.i1 = i1;
-        this.i2 = i2;
-        currentIterator = i1;
+        this.i1 = ObjectUtil.checkNotNull(i1, "i1");
+        this.i2 = ObjectUtil.checkNotNull(i2, "i2");
+        this.currentIterator = i1;
     }
 
     @Override

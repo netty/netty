@@ -159,7 +159,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
     private void onQueryWriteCompletion(ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            setFailure("failed to send a query via " + protocol(), writeFuture.cause());
+            tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
             return;
         }
 
@@ -174,40 +174,37 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                         return;
                     }
 
-                    setFailure("query via " + protocol() + " timed out after " +
-                            queryTimeoutMillis + " milliseconds", null);
+                    tryFailure("query via " + protocol() + " timed out after " +
+                            queryTimeoutMillis + " milliseconds", null, true);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
     }
 
+    /**
+     * Takes ownership of passed envelope
+     */
     void finish(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
         final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
             logger.warn("Received a DNS response with invalid number of questions: {}", envelope);
-            return;
-        }
-
-        if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
+        } else if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
             logger.warn("Received a mismatching DNS response: {}", envelope);
-            return;
+        } else if (trySuccess(envelope)) {
+            return; // Ownership transferred, don't release
         }
-
-        setSuccess(envelope);
+        envelope.release();
     }
 
-    private void setSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
-        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = this.promise;
-        @SuppressWarnings("unchecked")
-        AddressedEnvelope<DnsResponse, InetSocketAddress> castResponse =
-                (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope.retain();
-        if (!promise.trySuccess(castResponse)) {
-            // We failed to notify the promise as it was failed before, thus we need to release the envelope
-            envelope.release();
-        }
+    @SuppressWarnings("unchecked")
+    private boolean trySuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+        return promise.trySuccess((AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope);
     }
 
-    private void setFailure(String message, Throwable cause) {
+    boolean tryFailure(String message, Throwable cause, boolean timeout) {
+        if (promise.isDone()) {
+            return false;
+        }
         final InetSocketAddress nameServerAddr = nameServerAddr();
 
         final StringBuilder buf = new StringBuilder(message.length() + 64);
@@ -218,14 +215,14 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
            .append(" (no stack trace available)");
 
         final DnsNameResolverException e;
-        if (cause == null) {
+        if (timeout) {
             // This was caused by an timeout so use DnsNameResolverTimeoutException to allow the user to
             // handle it special (like retry the query).
             e = new DnsNameResolverTimeoutException(nameServerAddr, question(), buf.toString());
         } else {
             e = new DnsNameResolverException(nameServerAddr, question(), buf.toString(), cause);
         }
-        promise.tryFailure(e);
+        return promise.tryFailure(e);
     }
 
     @Override

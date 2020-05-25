@@ -15,12 +15,6 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static io.netty.handler.codec.http.cookie.CookieUtil.add;
-import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpResponse;
@@ -33,6 +27,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static io.netty.handler.codec.http.cookie.CookieUtil.add;
+import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
@@ -123,6 +123,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
         }
         if (cookie.isHttpOnly()) {
             add(buf, CookieHeaderNames.HTTPONLY);
+        }
+        if (cookie instanceof DefaultCookie) {
+            DefaultCookie c = (DefaultCookie) cookie;
+            if (c.sameSite() != null) {
+                add(buf, CookieHeaderNames.SAMESITE, c.sameSite().name());
+            }
         }
 
         return stripTrailingSeparator(buf);

@@ -64,5 +64,18 @@ public final class StompTestConstants {
             '\n' +
             "some body\0";
 
+    public static final String FRAME_WITH_EMPTY_HEADER_NAME = "SEND\n" +
+            "destination:/some-destination\n" +
+            "content-type:text/plain\n" +
+            ":header-value\n" +
+            '\n' +
+            "some body\0";
+
+    public static final String SEND_FRAME_UTF8 = "SEND\n" +
+            "destination:/queue/№11±♛нетти♕\n" +
+            "content-type:text/plain\n" +
+            '\n' +
+            "body\0";
+
     private StompTestConstants() { }
 }

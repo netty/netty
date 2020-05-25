@@ -21,7 +21,7 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * A HTTP/2 exception for a specific {@link Http2FrameStream}.
+ * An HTTP/2 exception for a specific {@link Http2FrameStream}.
  */
 @UnstableApi
 public final class Http2FrameStreamException extends Exception {

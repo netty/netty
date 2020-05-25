@@ -96,10 +96,18 @@ final class WebSocketUtil {
         if (PlatformDependent.javaVersion() >= 8) {
             return java.util.Base64.getEncoder().encodeToString(data);
         }
+        String encodedString;
         ByteBuf encodedData = Unpooled.wrappedBuffer(data);
-        ByteBuf encoded = Base64.encode(encodedData);
-        String encodedString = encoded.toString(CharsetUtil.UTF_8);
-        encoded.release();
+        try {
+            ByteBuf encoded = Base64.encode(encodedData);
+            try {
+                encodedString = encoded.toString(CharsetUtil.UTF_8);
+            } finally {
+                encoded.release();
+            }
+        } finally {
+            encodedData.release();
+        }
         return encodedString;
     }
 

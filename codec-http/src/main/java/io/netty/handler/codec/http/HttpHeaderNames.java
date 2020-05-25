@@ -161,6 +161,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString DATE = AsciiString.cached("date");
     /**
+     * {@code "dnt"}
+     */
+    public static final AsciiString DNT = AsciiString.cached("dnt");
+    /**
      * {@code "etag"}
      */
     public static final AsciiString ETAG = AsciiString.cached("etag");
@@ -319,6 +323,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString UPGRADE = AsciiString.cached("upgrade");
     /**
+     * {@code "upgrade-insecure-requests"}
+     */
+    public static final AsciiString UPGRADE_INSECURE_REQUESTS = AsciiString.cached("upgrade-insecure-requests");
+    /**
      * {@code "user-agent"}
      */
     public static final AsciiString USER_AGENT = AsciiString.cached("user-agent");
@@ -354,6 +362,10 @@ public final class HttpHeaderNames {
      * {@code "x-frame-options"}
      */
     public static final AsciiString X_FRAME_OPTIONS = AsciiString.cached("x-frame-options");
+    /**
+     * {@code "x-requested-with"}
+     */
+    public static final AsciiString X_REQUESTED_WITH = AsciiString.cached("x-requested-with");
 
     private HttpHeaderNames() { }
 }

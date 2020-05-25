@@ -197,7 +197,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                         task.promise.setFailure(new TimeoutException(
                                 "Acquire operation took longer then configured maximum time") {
                             @Override
-                            public synchronized Throwable fillInStackTrace() {
+                            public Throwable fillInStackTrace() {
                                 return this;
                             }
                         });
@@ -455,6 +455,7 @@ public class FixedChannelPool extends SimpleChannelPool {
      *
      * @return Future which represents completion of the close task
      */
+    @Override
     public Future<Void> closeAsync() {
         if (executor.inEventLoop()) {
             return close0();

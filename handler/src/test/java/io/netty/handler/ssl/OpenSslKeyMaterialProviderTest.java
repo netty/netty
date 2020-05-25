@@ -46,12 +46,16 @@ public class OpenSslKeyMaterialProviderTest {
     }
 
     protected KeyManagerFactory newKeyManagerFactory() throws Exception {
+       return newKeyManagerFactory(KeyManagerFactory.getDefaultAlgorithm());
+    }
+
+    protected KeyManagerFactory newKeyManagerFactory(String algorithm) throws Exception {
         char[] password = PASSWORD.toCharArray();
         final KeyStore keystore = KeyStore.getInstance("PKCS12");
         keystore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
 
         KeyManagerFactory kmf =
-                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                KeyManagerFactory.getInstance(algorithm);
         kmf.init(keystore, password);
         return kmf;
     }

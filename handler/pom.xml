@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.38.Final-SNAPSHOT</version>
+    <version>4.1.51.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-handler</artifactId>
@@ -38,6 +38,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-resolver</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -85,6 +90,14 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>software.amazon.cryptools</groupId>
+      <artifactId>AmazonCorrettoCryptoProvider</artifactId>
+      <version>1.1.0</version>
+      <classifier>linux-x86_64</classifier>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
