@@ -377,9 +377,9 @@ public abstract class Recycler<T> {
         void add(DefaultHandle<?> handle) {
             handle.lastRecycledId = id;
 
-            // While we also enforce the recycling ratio one we transfer objects from the WeakOrderQueue to the Stack
+            // While we also enforce the recycling ratio when we transfer objects from the WeakOrderQueue to the Stack
             // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
-            // without control if the Stack
+            // without control
             if (handleRecycleCount < interval) {
                 handleRecycleCount++;
                 // Drop the item to prevent recycling to aggressive.
