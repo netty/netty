@@ -59,6 +59,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -71,6 +72,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -92,6 +94,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
     private static final InetAddress LOCALHOST_ADDRESS;
+    private static final String INVALID = "invalid.";
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
             {DnsRecordType.A};
@@ -880,6 +883,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         final String hostname = hostname(inetHost);
 
+        if (isSpecialInvalid(hostname, promise)) {
+            return;
+        }
         InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
         if (hostsFileEntry != null) {
             promise.setSuccess(hostsFileEntry);
@@ -983,6 +989,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         final String hostname = hostname(inetHost);
 
+        if (isSpecialInvalid(hostname, promise)) {
+            return;
+        }
         InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
         if (hostsFileEntry != null) {
             promise.setSuccess(Collections.singletonList(hostsFileEntry));
@@ -1195,6 +1204,34 @@ public class DnsNameResolver extends InetNameResolver {
 
     final DnsServerAddressStream newNameServerAddressStream(String hostname) {
         return dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
+    }
+
+    private static boolean isSpecialInvalid(final String hostname, final Promise<?> promise) {
+        if (INVALID.equalsIgnoreCase(hostname)) {
+            promise.setFailure(StacklessUnknownHostException.newInstance(
+                    "Special domain name \"invalid.\" always returns NXDOMAIN", DnsNameResolver.class,
+                    "doResolve(...)"));
+            return true;
+        }
+        return false;
+    }
+
+    private static final class StacklessUnknownHostException extends UnknownHostException {
+        private static final long serialVersionUID = 953185196356867541L;
+
+        private StacklessUnknownHostException(final String message) {
+            super(message);
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+
+        public static StacklessUnknownHostException newInstance(final String message, final Class<?> clazz,
+                final String method) {
+            return ThrowableUtil.unknownStackTrace(new StacklessUnknownHostException(message), clazz, method);
+        }
     }
 
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {

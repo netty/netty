@@ -105,6 +105,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -115,7 +116,15 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class DnsNameResolverTest {
 
@@ -739,6 +748,42 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveEmptyIpv6() {
         testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveSpecialInvalidDomain() {
+        testResolveSpecialInvalidDomain(new BiFunction<DnsNameResolver, String, Future<?>>() {
+            @Override
+            public Future<?> apply(DnsNameResolver resolver, String inetHost) {
+                return resolver.resolve(inetHost);
+            }
+        });
+    }
+
+    @Test
+    public void testResolveAllSpecialInvalidDomain() {
+        testResolveSpecialInvalidDomain(new BiFunction<DnsNameResolver, String, Future<?>>() {
+            @Override
+            public Future<?> apply(DnsNameResolver resolver, String inetHost) {
+                return resolver.resolveAll(inetHost);
+            }
+        });
+    }
+
+    private void testResolveSpecialInvalidDomain(BiFunction<DnsNameResolver, String, Future<?>> resolveAction) {
+        DnsNameResolver resolver = newResolver().build();
+        try {
+            expectedException.expect(UnknownHostException.class);
+            resolveAction.apply(resolver, "invalid.").syncUninterruptibly().getNow();
+            fail("No exception was thrown.");
+        } finally {
+            try {
+                // We are resolving the special address, so we shouldn't make any queries.
+                assertNoQueriesMade(resolver);
+            } finally {
+                resolver.close();
+            }
+        }
     }
 
     @Test
