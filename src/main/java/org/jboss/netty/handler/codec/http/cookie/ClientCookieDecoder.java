@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http.cookie;
 
 import org.jboss.netty.handler.codec.http.HttpHeaderDateFormat;
+import org.jboss.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 import java.text.ParsePosition;
 import java.util.Date;
@@ -158,6 +159,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         private String expires;
         private boolean secure;
         private boolean httpOnly;
+        private SameSite sameSite;
 
         public CookieBuilder(DefaultCookie cookie) {
             this.cookie = cookie;
@@ -183,6 +185,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             cookie.setMaxAge(mergeMaxAgeAndExpire(maxAge, expires));
             cookie.setSecure(secure);
             cookie.setHttpOnly(httpOnly);
+            cookie.setSameSite(sameSite);
             return cookie;
         }
 
@@ -256,6 +259,8 @@ public final class ClientCookieDecoder extends CookieDecoder {
         private void parse8(String header, int nameStart, String value) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
+            } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
+                sameSite = SameSite.of(value);
             }
         }
     }

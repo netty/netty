@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import org.jboss.netty.handler.codec.http.HttpHeaderDateFormat;
+import org.jboss.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -36,7 +37,7 @@ import java.util.TimeZone;
 public class ClientCookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
-        String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
+        String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None";
         cookieString = cookieString.replace("XXX", HttpHeaderDateFormat.get()
                 .format(new Date(System.currentTimeMillis() + 50000)));
 
@@ -58,6 +59,8 @@ public class ClientCookieDecoderTest {
 
         assertEquals("/apathsomewhere", cookie.path());
         assertTrue(cookie.isSecure());
+
+        assertEquals(SameSite.None, ((DefaultCookie) cookie).sameSite());
     }
 
     @Test

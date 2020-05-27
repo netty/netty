@@ -112,6 +112,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
         if (cookie.isHttpOnly()) {
             add(buf, CookieHeaderNames.HTTPONLY);
         }
+        if (cookie instanceof DefaultCookie) {
+            DefaultCookie c = (DefaultCookie) cookie;
+            if (c.sameSite() != null) {
+                add(buf, CookieHeaderNames.SAMESITE, c.sameSite().name());
+            }
+        }
 
         return stripTrailingSeparator(buf);
     }

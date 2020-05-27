@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.http.cookie;
 import org.junit.Test;
 
 import org.jboss.netty.handler.codec.http.HttpHeaderDateFormat;
+import org.jboss.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 import java.text.ParseException;
 import java.util.Date;
@@ -35,12 +36,13 @@ public class ServerCookieEncoderTest {
         int maxAge = 50;
 
         String result =
-                "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
-        Cookie cookie = new DefaultCookie("myCookie", "myValue");
+                "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; Domain=.adomainsomewhere; Secure; SameSite=Lax";
+        DefaultCookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setDomain(".adomainsomewhere");
         cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
+        cookie.setSameSite(SameSite.Lax);
 
         String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
 
