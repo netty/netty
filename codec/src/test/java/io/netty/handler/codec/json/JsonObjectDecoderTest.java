@@ -185,7 +185,7 @@ public class JsonObjectDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\""}
         String json = "{\"foo\" : \"bar\\\"\"}";
-        System.out.println(json);
+
         ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
 
         ByteBuf res = ch.readInbound();
@@ -200,7 +200,7 @@ public class JsonObjectDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\\"}
         String json = "{\"foo\" : \"bar\\\\\"}";
-        System.out.println(json);
+
         ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
 
         ByteBuf res = ch.readInbound();
@@ -215,7 +215,7 @@ public class JsonObjectDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\\\""}
         String json = "{\"foo\" : \"bar\\\\\\\"\"}";
-        System.out.println(json);
+
         ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
 
         ByteBuf res = ch.readInbound();

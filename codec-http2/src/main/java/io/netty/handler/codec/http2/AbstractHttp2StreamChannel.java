@@ -558,10 +558,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
             if (allocHandle.continueReading()) {
-                if (!readCompletePending) {
-                    readCompletePending = true;
-                    addChannelToReadCompletePendingQueue();
-                }
+                maybeAddChannelToReadCompletePendingQueue();
             } else {
                 unsafe.notifyReadComplete(allocHandle, true);
             }
@@ -807,6 +804,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     if (readEOS) {
                         unsafe.closeForcibly();
                     }
+                    // We need to double check that there is nothing left to flush such as a
+                    // window update frame.
+                    flush();
                     break;
                 }
                 final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
@@ -822,10 +822,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     // currently reading it is possible that more frames will be delivered to this child channel. In
                     // the case that this child channel still wants to read we delay the channelReadComplete on this
                     // child channel until the parent is done reading.
-                    if (!readCompletePending) {
-                        readCompletePending = true;
-                        addChannelToReadCompletePendingQueue();
-                    }
+                    maybeAddChannelToReadCompletePendingQueue();
                 } else {
                     notifyReadComplete(allocHandle, true);
                 }
@@ -841,6 +838,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+                // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
+                // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
+                // to assume there was a write done that needs to be flushed or we risk flow control starvation.
+                writeDoneAndNoFlush = true;
                 // Add a listener which will notify and teardown the stream
                 // when a window update fails if needed or check the result of the future directly if it was completed
                 // already.
@@ -849,7 +850,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
                 } else {
                     future.addListener(windowUpdateFrameWriteListener);
-                    writeDoneAndNoFlush = true;
                 }
             }
         }
@@ -920,58 +920,57 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             try {
                 if (msg instanceof Http2StreamFrame) {
                     Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
-                    if (!firstFrameWritten && !isStreamIdValid(stream().id())) {
-                        if (!(frame instanceof Http2HeadersFrame)) {
-                            ReferenceCountUtil.release(frame);
-                            promise.setFailure(
-                                    new IllegalArgumentException("The first frame must be a headers frame. Was: "
-                                            + frame.name()));
-                            return;
-                        }
-                        firstFrameWritten = true;
-                        ChannelFuture f = write0(parentContext(), frame);
-                        if (f.isDone()) {
-                            firstWriteComplete(f, promise);
-                        } else {
-                            final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(msg);
-                            incrementPendingOutboundBytes(bytes, false);
-                            f.addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) {
-                                    firstWriteComplete(future, promise);
-                                    decrementPendingOutboundBytes(bytes, false);
-                                }
-                            });
-                            writeDoneAndNoFlush = true;
-                        }
-                        return;
-                    }
+                    writeHttp2StreamFrame(frame, promise);
                 } else {
                     String msgStr = msg.toString();
                     ReferenceCountUtil.release(msg);
                     promise.setFailure(new IllegalArgumentException(
                             "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
                                     ": " + msgStr));
-                    return;
-                }
-
-                ChannelFuture f = write0(parentContext(), msg);
-                if (f.isDone()) {
-                    writeComplete(f, promise);
-                } else {
-                    final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(msg);
-                    incrementPendingOutboundBytes(bytes, false);
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            writeComplete(future, promise);
-                            decrementPendingOutboundBytes(bytes, false);
-                        }
-                    });
-                    writeDoneAndNoFlush = true;
                 }
             } catch (Throwable t) {
                 promise.tryFailure(t);
+            }
+        }
+
+        private void writeHttp2StreamFrame(Http2StreamFrame frame, final ChannelPromise promise) {
+            if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
+                ReferenceCountUtil.release(frame);
+                promise.setFailure(
+                    new IllegalArgumentException("The first frame must be a headers frame. Was: "
+                        + frame.name()));
+                return;
+            }
+
+            final boolean firstWrite;
+            if (firstFrameWritten) {
+                firstWrite = false;
+            } else {
+                firstWrite = firstFrameWritten = true;
+            }
+
+            ChannelFuture f = write0(parentContext(), frame);
+            if (f.isDone()) {
+                if (firstWrite) {
+                    firstWriteComplete(f, promise);
+                } else {
+                    writeComplete(f, promise);
+                }
+            } else {
+                final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(frame);
+                incrementPendingOutboundBytes(bytes, false);
+                f.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) {
+                        if (firstWrite) {
+                            firstWriteComplete(future, promise);
+                        } else {
+                            writeComplete(future, promise);
+                        }
+                        decrementPendingOutboundBytes(bytes, false);
+                    }
+                });
+                writeDoneAndNoFlush = true;
             }
         }
 
@@ -1035,11 +1034,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 // There is nothing to flush so this is a NOOP.
                 return;
             }
-            try {
-                flush0(parentContext());
-            } finally {
-                writeDoneAndNoFlush = false;
-            }
+            // We need to set this to false before we call flush0(...) as ChannelFutureListener may produce more data
+            // that are explicit flushed.
+            writeDoneAndNoFlush = false;
+            flush0(parentContext());
         }
 
         @Override
@@ -1082,6 +1080,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
             super.setRecvByteBufAllocator(allocator);
             return this;
+        }
+    }
+
+    private void maybeAddChannelToReadCompletePendingQueue() {
+        if (!readCompletePending) {
+            readCompletePending = true;
+            addChannelToReadCompletePendingQueue();
         }
     }
 

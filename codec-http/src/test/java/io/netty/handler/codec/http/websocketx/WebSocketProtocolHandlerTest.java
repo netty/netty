@@ -18,9 +18,17 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
+import io.netty.util.ReferenceCountUtil;
+import org.hamcrest.Matchers;
 import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.*;
@@ -136,6 +144,33 @@ public class WebSocketProtocolHandlerTest {
         assertPropagatedInbound(textFrame, channel);
 
         textFrame.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTimeout() throws Exception {
+        final AtomicReference<ChannelPromise> ref = new AtomicReference<ChannelPromise>();
+        WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
+                false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ref.set(promise);
+                ReferenceCountUtil.release(msg);
+            }
+        }, handler);
+
+        ChannelFuture future = channel.writeAndFlush(new CloseWebSocketFrame());
+        ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
+        handler.close(ctx, ctx.newPromise());
+
+        do {
+            Thread.sleep(10);
+            channel.runPendingTasks();
+        } while (!future.isDone());
+
+        assertThat(future.cause(), Matchers.instanceOf(WebSocketHandshakeException.class));
+        assertFalse(ref.get().isDone());
         assertFalse(channel.finish());
     }
 

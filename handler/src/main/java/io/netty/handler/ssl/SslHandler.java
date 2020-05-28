@@ -68,6 +68,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
@@ -691,6 +692,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     new ChannelException("Pending write on removal of SslHandler"));
         }
         pendingUnencryptedWrites = null;
+
+        SSLHandshakeException cause = null;
+
+        // If the handshake is not done yet we should fail the handshake promise and notify the rest of the
+        // pipeline.
+        if (!handshakePromise.isDone()) {
+            cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+            if (handshakePromise.tryFailure(cause)) {
+                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            }
+        }
+        if (!sslClosePromise.isDone()) {
+            if (cause == null) {
+                cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+            }
+            notifyClosePromise(cause);
+        }
+
         if (engine instanceof ReferenceCounted) {
             ((ReferenceCounted) engine).release();
         }
@@ -858,11 +877,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         case NOT_HANDSHAKING:
                             setHandshakeSuccessIfStillHandshaking();
                             // deliberate fall-through
-                        case NEED_WRAP:
-                            finishWrap(ctx, out, promise, inUnwrap, false);
+                        case NEED_WRAP: {
+                            ChannelPromise p = promise;
+
+                            // Null out the promise so it is not reused in the finally block in the cause of
+                            // finishWrap(...) throwing.
                             promise = null;
-                            out = null;
+                            final ByteBuf b;
+
+                            if (out.isReadable()) {
+                                // There is something in the out buffer. Ensure we null it out so it is not re-used.
+                                b = out;
+                                out = null;
+                            } else {
+                                // If out is not readable we can re-use it and so save an extra allocation
+                                b = null;
+                            }
+                            finishWrap(ctx, b, p, inUnwrap, false);
                             break;
+                        }
                         case NEED_UNWRAP:
                             needUnwrap = true;
                             return;
@@ -1059,6 +1092,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        boolean handshakeFailed = handshakePromise.cause() != null;
+
         ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
@@ -1067,7 +1102,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Ensure we always notify the sslClosePromise as well
         notifyClosePromise(exception);
 
-        super.channelInactive(ctx);
+        try {
+            super.channelInactive(ctx);
+        } catch (DecoderException e) {
+            if (!handshakeFailed || !(e.getCause() instanceof SSLException)) {
+                // We only rethrow the exception if the handshake did not fail before channelInactive(...) was called
+                // as otherwise this may produce duplicated failures as super.channelInactive(...) will also call
+                // channelRead(...).
+                //
+                // See https://github.com/netty/netty/issues/10119
+                throw e;
+            }
+        }
     }
 
     @Override
@@ -1149,8 +1195,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         return true;
                     }
                 } catch (Throwable cause) {
-                    logger.debug("Unexpected exception while loading class {} classname {}",
-                                 getClass(), classname, cause);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Unexpected exception while loading class {} classname {}",
+                                getClass(), classname, cause);
+                    }
                 }
             }
         }
@@ -1740,7 +1788,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         handshakePromise.trySuccess(ctx.channel());
 
         if (logger.isDebugEnabled()) {
-            logger.debug("{} HANDSHAKEN: {}", ctx.channel(), engine.getSession().getCipherSuite());
+            SSLSession session = engine.getSession();
+            logger.debug(
+              "{} HANDSHAKEN: protocol:{} cipher suite:{}",
+              ctx.channel(),
+              session.getProtocol(),
+              session.getCipherSuite());
         }
         ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
 
@@ -1998,7 +2051,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (localHandshakePromise.isDone()) {
                     return;
                 }
-                SSLException exception = new SSLException("handshake timed out");
+                SSLException exception =
+                        new SslHandshakeTimeoutException("handshake timed out after " + handshakeTimeoutMillis + "ms");
                 try {
                     if (localHandshakePromise.tryFailure(exception)) {
                         SslUtils.handleHandshakeFailure(ctx, exception, true);

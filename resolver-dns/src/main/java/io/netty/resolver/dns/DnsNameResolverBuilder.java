@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.resolver.dns.DnsServerAddressStreamProviders.platformDefault;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
 
@@ -46,16 +45,17 @@ public final class DnsNameResolverBuilder {
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
-    private long queryTimeoutMillis = 5000;
+    private long queryTimeoutMillis = -1;
     private ResolvedAddressTypes resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
     private boolean completeOncePreferredResolved;
     private boolean recursionDesired = true;
-    private int maxQueriesPerResolve = 16;
+    private int maxQueriesPerResolve = -1;
     private boolean traceEnabled;
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
-    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
+    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+            DnsServerAddressStreamProviders.platformDefault();
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;

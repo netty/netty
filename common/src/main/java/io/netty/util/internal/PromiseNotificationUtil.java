@@ -65,7 +65,7 @@ public final class PromiseNotificationUtil {
             Throwable err = p.cause();
             if (err == null) {
                 logger.warn("Failed to mark a promise as failure because it has succeeded already: {}", p, cause);
-            } else {
+            } else if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Failed to mark a promise as failure because it has failed already: {}, unnotified cause: {}",
                         p, ThrowableUtil.stackTraceToString(err), cause);

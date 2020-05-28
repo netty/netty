@@ -51,6 +51,20 @@ public final class SmtpRequests {
     }
 
     /**
+     * Creates a {@code EMPTY} request.
+     */
+    public static SmtpRequest empty(CharSequence... parameter) {
+        return new DefaultSmtpRequest(SmtpCommand.EMPTY, parameter);
+    }
+
+    /**
+     * Creates a {@code AUTH} request.
+     */
+    public static SmtpRequest auth(CharSequence... parameter) {
+        return new DefaultSmtpRequest(SmtpCommand.AUTH, parameter);
+    }
+
+    /**
      * Creates a {@code NOOP} request.
      */
     public static SmtpRequest noop() {

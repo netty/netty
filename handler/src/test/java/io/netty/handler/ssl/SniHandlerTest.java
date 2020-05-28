@@ -368,10 +368,12 @@ public class SniHandlerTest {
 
             ch.close();
 
-            // When the channel is closed the SslHandler will write an empty buffer to the channel.
-            ByteBuf buf = ch.readOutbound();
-            if (buf != null) {
-                assertFalse(buf.isReadable());
+            // Consume all the outbound data that may be produced by the SSLEngine.
+            for (;;) {
+                ByteBuf buf = ch.readOutbound();
+                if (buf == null) {
+                    break;
+                }
                 buf.release();
             }
 

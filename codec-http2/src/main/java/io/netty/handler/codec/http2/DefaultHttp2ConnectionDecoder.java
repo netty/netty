@@ -214,8 +214,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
-        connection.goAwayReceived(lastStreamId, errorCode, debugData);
         listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,

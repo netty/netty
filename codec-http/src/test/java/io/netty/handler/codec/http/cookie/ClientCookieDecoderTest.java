@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.DateFormatter;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -25,6 +26,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 public class ClientCookieDecoderTest {
@@ -32,7 +35,7 @@ public class ClientCookieDecoderTest {
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires="
                 + DateFormatter.format(new Date(System.currentTimeMillis() + 50000))
-                + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;";
+                + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None";
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode(cookieString);
         assertNotNull(cookie);
@@ -44,6 +47,9 @@ public class ClientCookieDecoderTest {
                 cookie.maxAge() >= 40 && cookie.maxAge() <= 60);
         assertEquals("/apathsomewhere", cookie.path());
         assertTrue(cookie.isSecure());
+
+        assertThat(cookie, is(instanceOf(DefaultCookie.class)));
+        assertEquals(SameSite.None, ((DefaultCookie) cookie).sameSite());
     }
 
     @Test
@@ -259,7 +265,7 @@ public class ClientCookieDecoderTest {
                 "'=KqtH";
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode("bh=\"" + longValue
-                                                   + "\";");
+                + "\";");
         assertEquals("bh", cookie.name());
         assertEquals(longValue, cookie.value());
     }

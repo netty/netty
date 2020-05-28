@@ -221,12 +221,19 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         if (customHeaders != null) {
             headers.add(customHeaders);
+            if (!headers.contains(HttpHeaderNames.HOST)) {
+                // Only add HOST header if customHeaders did not contain it.
+                //
+                // See https://github.com/netty/netty/issues/10101
+                headers.set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
+            }
+        } else {
+            headers.set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
         }
 
         headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
-               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
+               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key);
 
         if (!headers.contains(HttpHeaderNames.ORIGIN)) {
             headers.set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL));
@@ -237,7 +244,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
-        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
+        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, version().toAsciiString());
         return request;
     }
 

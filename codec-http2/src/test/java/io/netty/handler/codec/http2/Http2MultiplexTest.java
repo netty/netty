@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -63,7 +64,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -1150,6 +1150,66 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar2"), 0, true);
 
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 3);
+    }
+
+    private static final class FlushSniffer extends ChannelOutboundHandlerAdapter {
+
+        private boolean didFlush;
+
+        public boolean checkFlush() {
+            boolean r = didFlush;
+            didFlush = false;
+            return r;
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            didFlush = true;
+            super.flush(ctx);
+        }
+    }
+
+    @Test
+    public void windowUpdatesAreFlushed() {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        FlushSniffer flushSniffer = new FlushSniffer();
+        parentChannel.pipeline().addFirst(flushSniffer);
+
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        childChannel.config().setAutoRead(false);
+        assertFalse(childChannel.config().isAutoRead());
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        assertTrue(flushSniffer.checkFlush());
+
+        // Write some bytes to get the channel into the idle state with buffered data and also verify we
+        // do not dispatch it until we receive a read() call.
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(16 * 1024), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(16 * 1024), 0, false);
+        assertTrue(flushSniffer.checkFlush());
+
+        verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
+        // only the first one was read because it was legacy auto-read behavior.
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        assertFalse(flushSniffer.checkFlush());
+
+        // Trigger a read of the second frame.
+        childChannel.read();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        // We expect a flush here because the StreamChannel will flush the smaller increment but the
+        // connection will collect the bytes and decide not to send a wire level frame until more are consumed.
+        assertTrue(flushSniffer.checkFlush());
+        verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
+
+        // Call read one more time which should trigger the writing of the flow control update.
+        childChannel.read();
+        verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
+        verify(frameWriter).writeWindowUpdate(
+            eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
+        assertTrue(flushSniffer.checkFlush());
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,

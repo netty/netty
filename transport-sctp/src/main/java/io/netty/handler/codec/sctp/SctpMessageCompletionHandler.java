@@ -22,10 +22,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
@@ -33,7 +33,7 @@ import java.util.Map;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
+    private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {

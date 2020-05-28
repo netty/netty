@@ -452,7 +452,7 @@ public final class ChannelOutboundBuffer {
                         // branch is not very likely to get hit very frequently.
                         nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
                     }
-                    if (nioBufferCount == maxCount) {
+                    if (nioBufferCount >= maxCount) {
                         break;
                     }
                 }

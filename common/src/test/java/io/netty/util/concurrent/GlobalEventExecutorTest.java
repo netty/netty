@@ -108,6 +108,62 @@ public class GlobalEventExecutorTest {
         assertEquals(group, capturedGroup.get());
     }
 
+    @Test(timeout = 5000)
+    public void testTakeTask() throws Exception {
+        //add task
+        TestRunnable beforeTask = new TestRunnable(0);
+        e.execute(beforeTask);
+
+        //add scheduled task
+        TestRunnable scheduledTask = new TestRunnable(0);
+        ScheduledFuture<?> f = e.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
+
+        //add task
+        TestRunnable afterTask = new TestRunnable(0);
+        e.execute(afterTask);
+
+        f.sync();
+
+        assertThat(beforeTask.ran.get(), is(true));
+        assertThat(scheduledTask.ran.get(), is(true));
+        assertThat(afterTask.ran.get(), is(true));
+    }
+
+    @Test(timeout = 5000)
+    public void testTakeTaskAlwaysHasTask() throws Exception {
+        //for https://github.com/netty/netty/issues/1614
+        //add scheduled task
+        TestRunnable t = new TestRunnable(0);
+        ScheduledFuture<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
+
+        final Runnable doNothing = new Runnable() {
+            @Override
+            public void run() {
+                //NOOP
+            }
+        };
+        final AtomicBoolean stop = new AtomicBoolean(false);
+
+        //ensure always has at least one task in taskQueue
+        //check if scheduled tasks are triggered
+        try {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (!stop.get()) {
+                        e.execute(doNothing);
+                    }
+                }
+            }).start();
+
+            f.sync();
+
+            assertThat(t.ran.get(), is(true));
+        } finally {
+            stop.set(true);
+        }
+    }
+
     private static final class TestRunnable implements Runnable {
         final AtomicBoolean ran = new AtomicBoolean();
         final long delay;

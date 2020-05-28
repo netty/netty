@@ -51,6 +51,8 @@ import static io.netty.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_DISCONNECT;
 import static io.netty.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
 import static io.netty.channel.ChannelHandlerMask.MASK_FLUSH;
+import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_INBOUND;
+import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_OUTBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
 import static io.netty.channel.ChannelHandlerMask.MASK_WRITE;
@@ -163,7 +165,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelRegistered(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelRegistered();
@@ -195,7 +197,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelUnregistered(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelUnregistered();
@@ -227,7 +229,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelActive(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelActive();
@@ -259,7 +261,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelInactive(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelInactive();
@@ -343,7 +345,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireUserEventTriggered(event);
@@ -376,7 +378,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelRead(this, msg);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelRead(msg);
@@ -407,7 +409,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelReadComplete(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelReadComplete();
@@ -438,7 +440,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelWritabilityChanged();
@@ -683,7 +685,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelOutboundHandler) handler()).read(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             read();
@@ -747,7 +749,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         try {
             ((ChannelOutboundHandler) handler()).flush(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -812,39 +814,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
     }
 
-    private void notifyHandlerException(Throwable cause) {
-        if (inExceptionCaught(cause)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler " +
-                                "while handling an exceptionCaught event", cause);
-            }
-            return;
-        }
-
-        invokeExceptionCaught(cause);
-    }
-
-    private static boolean inExceptionCaught(Throwable cause) {
-        do {
-            StackTraceElement[] trace = cause.getStackTrace();
-            if (trace != null) {
-                for (StackTraceElement t : trace) {
-                    if (t == null) {
-                        break;
-                    }
-                    if ("exceptionCaught".equals(t.getMethodName())) {
-                        return true;
-                    }
-                }
-            }
-
-            cause = cause.getCause();
-        } while (cause != null);
-
-        return false;
-    }
-
     @Override
     public ChannelPromise newPromise() {
         return new DefaultChannelPromise(channel(), executor());
@@ -906,18 +875,31 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private AbstractChannelHandlerContext findContextInbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
+        EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.next;
-        } while ((ctx.executionMask & mask) == 0);
+        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND));
         return ctx;
     }
 
     private AbstractChannelHandlerContext findContextOutbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
+        EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.prev;
-        } while ((ctx.executionMask & mask) == 0);
+        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND));
         return ctx;
+    }
+
+    private static boolean skipContext(
+            AbstractChannelHandlerContext ctx, EventExecutor currentExecutor, int mask, int onlyMask) {
+        // Ensure we correctly handle MASK_EXCEPTION_CAUGHT which is not included in the MASK_EXCEPTION_CAUGHT
+        return (ctx.executionMask & (onlyMask | mask)) == 0 ||
+                // We can only skip if the EventExecutor is the same as otherwise we need to ensure we offload
+                // everything to preserve ordering.
+                //
+                // See https://github.com/netty/netty/issues/10067
+                (ctx.executor() == currentExecutor && (ctx.executionMask & mask) == 0);
     }
 
     @Override

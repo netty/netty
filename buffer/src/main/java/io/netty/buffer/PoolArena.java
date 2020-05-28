@@ -206,13 +206,13 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
                     assert handle >= 0;
-                    s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity);
+                    s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
                     incTinySmallAllocation(tiny);
                     return;
                 }
             }
             synchronized (this) {
-                allocateNormal(buf, reqCapacity, normCapacity);
+                allocateNormal(buf, reqCapacity, normCapacity, cache);
             }
 
             incTinySmallAllocation(tiny);
@@ -224,7 +224,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return;
             }
             synchronized (this) {
-                allocateNormal(buf, reqCapacity, normCapacity);
+                allocateNormal(buf, reqCapacity, normCapacity, cache);
                 ++allocationsNormal;
             }
         } else {
@@ -234,16 +234,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     // Method must be called inside synchronized(this) { ... } block
-    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
-            q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
-            q075.allocate(buf, reqCapacity, normCapacity)) {
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity, PoolThreadCache threadCache) {
+        if (q050.allocate(buf, reqCapacity, normCapacity, threadCache) ||
+            q025.allocate(buf, reqCapacity, normCapacity, threadCache) ||
+            q000.allocate(buf, reqCapacity, normCapacity, threadCache) ||
+            qInit.allocate(buf, reqCapacity, normCapacity, threadCache) ||
+            q075.allocate(buf, reqCapacity, normCapacity, threadCache)) {
             return;
         }
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-        boolean success = c.allocate(buf, reqCapacity, normCapacity);
+        boolean success = c.allocate(buf, reqCapacity, normCapacity, threadCache);
         assert success;
         qInit.add(c);
     }
@@ -319,15 +321,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         int tableIdx;
         PoolSubpage<T>[] table;
         if (isTiny(elemSize)) { // < 512
-            tableIdx = elemSize >>> 4;
+            tableIdx = tinyIdx(elemSize);
             table = tinySubpagePools;
         } else {
-            tableIdx = 0;
-            elemSize >>>= 10;
-            while (elemSize != 0) {
-                elemSize >>>= 1;
-                tableIdx ++;
-            }
+            tableIdx = smallIdx(elemSize);
             table = smallSubpagePools;
         }
 

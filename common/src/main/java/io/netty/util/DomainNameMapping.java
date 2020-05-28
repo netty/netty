@@ -33,7 +33,9 @@ import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
  * DNS wildcard is supported as hostname, so you can use {@code *.netty.io} to match both {@code netty.io}
  * and {@code downloads.netty.io}.
  * </p>
+ * @deprecated Use {@link DomainWildcardMappingBuilder}}
  */
+@Deprecated
 public class DomainNameMapping<V> implements Mapping<String, V> {
 
     final V defaultValue;

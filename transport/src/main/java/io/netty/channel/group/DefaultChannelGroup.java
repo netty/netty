@@ -267,7 +267,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.write(safeDuplicate(message)));
@@ -400,7 +400,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.writeAndFlush(safeDuplicate(message)));

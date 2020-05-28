@@ -42,10 +42,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
 
-    // Fallback provider
-    private static final DnsServerAddressStreamProvider DEFAULT_PROVIDER =
-            DnsServerAddressStreamProviders.platformDefault();
-
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     private static final InternalLogger logger =
@@ -167,7 +163,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
                 if (addresses != null) {
                     return addresses.stream();
                 }
-                return DEFAULT_PROVIDER.nameServerAddressStream(originalHostname);
+                return DnsServerAddressStreamProviders.unixDefault().nameServerAddressStream(originalHostname);
             }
 
             DnsServerAddresses addresses = resolverMap.get(hostname);

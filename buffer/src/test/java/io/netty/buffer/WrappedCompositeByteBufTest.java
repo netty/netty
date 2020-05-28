@@ -25,4 +25,9 @@ public class WrappedCompositeByteBufTest extends BigEndianCompositeByteBufTest {
     protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
         return new WrappedCompositeByteBuf(buffer);
     }
+
+    @Override
+    protected CompositeByteBuf newCompositeBuffer() {
+        return wrap(super.newCompositeBuffer());
+    }
 }

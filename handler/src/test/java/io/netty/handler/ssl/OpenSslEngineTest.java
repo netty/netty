@@ -1305,6 +1305,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     @Override
+    @Test
+    public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionLocalWhenNonMutualWithKeyManager();
+    }
+
+    @Override
     protected SslProvider sslClientProvider() {
         return SslProvider.OPENSSL;
     }

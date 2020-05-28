@@ -168,7 +168,7 @@ public class SnappyFrameDecoderTest {
             // checksum here is presented as a282986f (little endian)
             ByteBuf in = Unpooled.wrappedBuffer(new byte[]{
                     (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-                    0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
+                    0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, 0x2e, -0x47, 'n', 'e', 't', 't', 'y'
             });
 
             assertTrue(channel.writeInbound(in));

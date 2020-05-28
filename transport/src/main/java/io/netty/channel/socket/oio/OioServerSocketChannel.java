@@ -33,7 +33,6 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.
@@ -60,7 +59,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     final ServerSocket socket;
-    final Lock shutdownLock = new ReentrantLock();
     private final OioServerSocketChannelConfig config;
 
     /**

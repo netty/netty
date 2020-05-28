@@ -50,7 +50,7 @@ public class HttpResponseDecoderTest {
         final int maxHeaderSize = 8192;
 
         final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize, 8192));
-        final char[] bytes = new char[maxHeaderSize / 2 - 2];
+        final char[] bytes = new char[maxHeaderSize / 2 - 4];
         Arrays.fill(bytes, 'a');
 
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n", CharsetUtil.US_ASCII));

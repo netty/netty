@@ -566,12 +566,9 @@ public abstract class WebSocketClientHandshaker {
         }
 
         String path = wsURL.getRawPath();
+        path = path == null || path.isEmpty() ? "/" : path;
         String query = wsURL.getRawQuery();
-        if (query != null && !query.isEmpty()) {
-            path = path + '?' + query;
-        }
-
-        return path == null || path.isEmpty() ? "/" : path;
+        return query != null && !query.isEmpty() ? path + '?' + query : path;
     }
 
     static CharSequence websocketHostValue(URI wsURL) {

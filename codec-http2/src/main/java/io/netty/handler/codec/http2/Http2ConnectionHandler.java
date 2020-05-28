@@ -935,6 +935,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private final ChannelHandlerContext ctx;
         private final ChannelPromise promise;
         private final ScheduledFuture<?> timeoutTask;
+        private boolean closed;
 
         ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {
             this.ctx = ctx;
@@ -963,6 +964,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         private void doClose() {
+            // We need to guard against multiple calls as the timeout may trigger close() first and then it will be
+            // triggered again because of operationComplete(...) is called.
+            if (closed) {
+                // This only happens if we also scheduled a timeout task.
+                assert timeoutTask != null;
+                return;
+            }
+            closed = true;
             if (promise == null) {
                 ctx.close();
             } else {

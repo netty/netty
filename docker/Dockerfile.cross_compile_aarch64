@@ -1,0 +1,18 @@
+FROM centos:7.6.1810
+
+ARG gcc_version=4.9-2016.02
+ENV GCC_VERSION $gcc_version
+
+# Install requirements
+RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools
+
+# Install Java
+RUN yum install -y java-1.8.0-openjdk-devel
+
+# Install aarch64 gcc toolchain
+RUN set -x && \
+  wget https://releases.linaro.org/components/toolchain/binaries/$GCC_VERSION/aarch64-linux-gnu/gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu.tar.xz && \
+  tar xvf gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu.tar.xz
+
+ENV PATH="/gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu/bin:${PATH}"
+ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"

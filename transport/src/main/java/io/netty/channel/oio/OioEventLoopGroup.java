@@ -24,7 +24,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ThreadPerChannelEventLoopGroup;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -53,7 +52,7 @@ public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {
      *                          Use {@code 0} to use no limit
      */
     public OioEventLoopGroup(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
+        this(maxChannels, (ThreadFactory) null);
     }
 
     /**

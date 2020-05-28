@@ -17,6 +17,8 @@ package io.netty.resolver.dns.macos;
 
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -30,7 +32,7 @@ public class MacOSDnsServerAddressStreamProviderTest {
     }
 
     @Test
-    public void test() {
+    public void testStream() {
         DnsServerAddressStreamProvider provider = new MacOSDnsServerAddressStreamProvider();
         DnsServerAddressStream stream = provider.nameServerAddressStream("netty.io");
         Assert.assertNotNull(stream);
@@ -40,4 +42,11 @@ public class MacOSDnsServerAddressStreamProviderTest {
             Assert.assertNotEquals(0, stream.next().getPort());
         }
     }
+
+    @Test
+    public void testDefaultUseCorrectInstance() {
+        Assert.assertThat(DnsServerAddressStreamProviders.platformDefault(),
+                Matchers.instanceOf(MacOSDnsServerAddressStreamProvider.class));
+    }
+
 }

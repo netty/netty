@@ -25,7 +25,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class ProtocolDetectionResult<T> {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    private static final ProtocolDetectionResult NEEDS_MORE_DATE =
+    private static final ProtocolDetectionResult NEEDS_MORE_DATA =
             new ProtocolDetectionResult(ProtocolDetectionState.NEEDS_MORE_DATA, null);
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private static final ProtocolDetectionResult INVALID =
@@ -39,7 +39,7 @@ public final class ProtocolDetectionResult<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> ProtocolDetectionResult<T> needsMoreData() {
-        return NEEDS_MORE_DATE;
+        return NEEDS_MORE_DATA;
     }
 
     /**
