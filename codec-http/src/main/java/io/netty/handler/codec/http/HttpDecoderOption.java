@@ -111,7 +111,7 @@ public final class HttpDecoderOption<T> extends AbstractConstant<HttpDecoderOpti
          * that the {@link List} of values represents different header lines and has not been split on commas. A single
          * line may or may not have multiple, comma-separated values.
          */
-        long resolveContentLength(HttpHeaders headers, List<String> contentLengthFields);
+        long resolveContentLength(HttpHeaders headers, List<String> contentLengthFieldValues);
 
         /**
          * {@link #ALWAYS_REJECT} will always throw an {@link IllegalArgumentException} (and thus trigger a failed
@@ -124,7 +124,7 @@ public final class HttpDecoderOption<T> extends AbstractConstant<HttpDecoderOpti
         MultipleContentLengthHeadersBehavior ALWAYS_REJECT =
                 new MultipleContentLengthHeadersBehavior() {
                     @Override
-                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFields) {
+                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFieldValues) {
                         throw new IllegalArgumentException("Multiple Content-Length headers found");
                     }
                 };
@@ -139,8 +139,8 @@ public final class HttpDecoderOption<T> extends AbstractConstant<HttpDecoderOpti
         MultipleContentLengthHeadersBehavior IF_DIFFERENT_REJECT_ELSE_DEDUPE =
                 new MultipleContentLengthHeadersBehavior() {
                     @Override
-                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFields) {
-                        String contentLength = findAndEnforceUniqueContentLength(contentLengthFields);
+                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFieldValues) {
+                        String contentLength = findAndEnforceUniqueContentLength(contentLengthFieldValues);
                         headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
                         return Long.parseLong(contentLength);
                     }
@@ -151,13 +151,13 @@ public final class HttpDecoderOption<T> extends AbstractConstant<HttpDecoderOpti
          * all the same. When this occurs, the original {@link HttpHeaders} (and its multiple values) are left
          * untouched.
          * <p>
-         * This behavior is not offered as an explicit option in the RFC but may desired for pass-through behavior.
+         * This behavior is not offered as an explicit option in the RFC but may be desired for pass-through behavior.
          */
         MultipleContentLengthHeadersBehavior IF_DIFFERENT_REJECT_ELSE_ALLOW =
                 new MultipleContentLengthHeadersBehavior() {
                     @Override
-                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFields) {
-                        String contentLength = findAndEnforceUniqueContentLength(contentLengthFields);
+                    public long resolveContentLength(HttpHeaders headers, List<String> contentLengthFieldValues) {
+                        String contentLength = findAndEnforceUniqueContentLength(contentLengthFieldValues);
                         return Long.parseLong(contentLength);
                     }
                 };

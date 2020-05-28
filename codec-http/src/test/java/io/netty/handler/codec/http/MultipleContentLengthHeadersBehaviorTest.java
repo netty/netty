@@ -44,7 +44,6 @@ public class MultipleContentLengthHeadersBehaviorTest {
     private final boolean singleField;
 
     private EmbeddedChannel channel;
-    private HttpRequest request;
 
     @Parameters
     public static Collection<Object[]> parameters() {
@@ -83,7 +82,7 @@ public class MultipleContentLengthHeadersBehaviorTest {
     public void testMultipleContentLengthHeadersBehavior() {
         String requestStr = setupRequestString();
         assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
-        request = channel.readInbound();
+        HttpRequest request = channel.readInbound();
 
         if (behavior == MultipleContentLengthHeadersBehavior.ALWAYS_REJECT) {
             assertInvalid(request);
@@ -113,7 +112,7 @@ public class MultipleContentLengthHeadersBehaviorTest {
 
     private String setupRequestString() {
         String firstValue = "1";
-        String secondValue = sameValue? firstValue : "2";
+        String secondValue = sameValue ? firstValue : "2";
         String contentLength;
         if (singleField) {
             contentLength = "Content-Length: " + firstValue + ", " + secondValue + "\r\n\r\n";
@@ -133,7 +132,7 @@ public class MultipleContentLengthHeadersBehaviorTest {
                             "Connection: close\n\n" +
                             "b";
         assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
-        request = channel.readInbound();
+        HttpRequest request = channel.readInbound();
         assertInvalid(request);
         assertThat(channel.finish(), is(false));
     }
