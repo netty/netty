@@ -59,7 +59,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1208,30 +1207,10 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static boolean isSpecialInvalid(final String hostname, final Promise<?> promise) {
         if (INVALID.equalsIgnoreCase(hostname)) {
-            promise.setFailure(StacklessUnknownHostException.newInstance(
-                    "Special domain name \"invalid.\" always returns NXDOMAIN", DnsNameResolver.class,
-                    "doResolve(...)"));
+            promise.setFailure(new UnknownHostException("Special domain name \"invalid.\" always returns NXDOMAIN"));
             return true;
         }
         return false;
-    }
-
-    private static final class StacklessUnknownHostException extends UnknownHostException {
-        private static final long serialVersionUID = 953185196356867541L;
-
-        private StacklessUnknownHostException(final String message) {
-            super(message);
-        }
-
-        @Override
-        public Throwable fillInStackTrace() {
-            return this;
-        }
-
-        public static StacklessUnknownHostException newInstance(final String message, final Class<?> clazz,
-                final String method) {
-            return ThrowableUtil.unknownStackTrace(new StacklessUnknownHostException(message), clazz, method);
-        }
     }
 
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
