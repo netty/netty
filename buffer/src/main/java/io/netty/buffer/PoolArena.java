@@ -198,7 +198,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
 
         // Add a new chunk.
-        PoolChunk<T> c = newChunk(pageSize, pageShifts, chunkSize, nPSizes);
+        PoolChunk<T> c = newChunk(pageSize, nPSizes, pageShifts, chunkSize);
         boolean success = c.allocate(buf, reqCapacity, sizeIdx, threadCache);
         assert success;
         qInit.add(c);
@@ -233,7 +233,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     }
 
     private SizeClass sizeClass(long handle) {
-        return isSubpage(handle)? SizeClass.Small : SizeClass.Normal;
+        return isSubpage(handle) ? SizeClass.Small : SizeClass.Normal;
     }
 
     void freeChunk(PoolChunk<T> chunk, long handle, int normCapacity, SizeClass sizeClass, ByteBuffer nioBuffer,
@@ -318,7 +318,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
     @Override
     public List<PoolSubpageMetric> tinySubpages() {
-        return new ArrayList<PoolSubpageMetric>();
+        return Collections.emptyList();
     }
 
     @Override
@@ -454,7 +454,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         return max(0, val);
     }
 
-    protected abstract PoolChunk<T> newChunk(int pageSize, int pageShifts, int chunkSize, int maxPageIdx);
+    protected abstract PoolChunk<T> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
     protected abstract void memoryCopy(T src, int srcOffset, PooledByteBuf<T> dst, int length);
@@ -555,7 +555,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
 
         @Override
-        protected PoolChunk<byte[]> newChunk(int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
+        protected PoolChunk<byte[]> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
             return new PoolChunk<byte[]>(this, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx, 0);
         }
 
@@ -611,8 +611,8 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
 
         @Override
-        protected PoolChunk<ByteBuffer> newChunk(int pageSize, int pageShifts,
-            int chunkSize, int maxPageIdx) {
+        protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxPageIdx,
+            int pageShifts, int chunkSize) {
             if (directMemoryCacheAlignment == 0) {
                 return new PoolChunk<ByteBuffer>(this,
                         allocateDirect(chunkSize), pageSize, pageShifts,
