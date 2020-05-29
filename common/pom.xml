@@ -92,7 +92,6 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-dev-tools</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
       <optional>true</optional>
     </dependency>
@@ -131,7 +130,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.10</version>
         <executions>
           <execution>
             <id>add-source</id>
