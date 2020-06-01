@@ -42,6 +42,9 @@ EXAMPLE_MAP=(
   'sctpecho-client:io.netty.example.sctp.SctpEchoClient'
   'sctpecho-server:io.netty.example.sctp.SctpEchoServer'
   'localecho:io.netty.example.localecho.LocalEcho'
+  'udp-dns-client:io.netty.example.dns.udp.DnsClient'
+  'tcp-dns-client:io.netty.example.dns.tcp.TcpDnsClient'
+  'dot-dns-client:io.netty.example.dns.dot.DoTClient'
 )
 
 NEEDS_NPN_MAP=(
