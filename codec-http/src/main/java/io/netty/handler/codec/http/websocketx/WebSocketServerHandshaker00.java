@@ -147,8 +147,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
 
         // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {

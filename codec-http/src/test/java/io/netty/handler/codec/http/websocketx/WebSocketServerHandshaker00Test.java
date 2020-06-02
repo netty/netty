@@ -36,7 +36,18 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-public class WebSocketServerHandshaker00Test {
+public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTest {
+
+    @Override
+    protected WebSocketServerHandshaker newHandshaker(String webSocketURL, String subprotocols,
+            WebSocketDecoderConfig decoderConfig) {
+        return new WebSocketServerHandshaker00(webSocketURL, subprotocols, decoderConfig);
+    }
+
+    @Override
+    protected WebSocketVersion webSocketVersion() {
+        return WebSocketVersion.V00;
+    }
 
     @Test
     public void testPerformOpeningHandshake() {
