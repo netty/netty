@@ -267,6 +267,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
+    private static void checkForOverflow(int capacity, int readableBytes) {
+        if (capacity + readableBytes < 0) {
+            throw new IllegalArgumentException("Can't increase by " + readableBytes + " as capacity(" + capacity + ")" +
+                    " would overflow " + Integer.MAX_VALUE);
+        }
+    }
+
     /**
      * Precondition is that {@code buffer != null}.
      */
@@ -282,9 +289,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
             // Check if we would overflow.
             // See https://github.com/netty/netty/issues/10194
-            if (capacity() + readableBytes < 0) {
-                throw new IllegalArgumentException("Can't increase by " + readableBytes);
-            }
+            checkForOverflow(capacity(), readableBytes);
 
             addComp(cIndex, c);
             wasAdded = true;
@@ -374,9 +379,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
             // Check if we would overflow.
             // See https://github.com/netty/netty/issues/10194
-            if (capacity + readableBytes < 0) {
-                throw new IllegalArgumentException("Can't increase by " + readableBytes);
-            }
+            checkForOverflow(capacity, readableBytes);
         }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
