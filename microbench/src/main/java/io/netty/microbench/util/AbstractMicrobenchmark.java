@@ -33,7 +33,7 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 @Fork(AbstractMicrobenchmark.DEFAULT_FORKS)
 public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
 
-    protected static final int DEFAULT_FORKS = 2;
+    protected static final int DEFAULT_FORKS = 1;
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
         private final  InternalLogger logger = InternalLoggerFactory.getInstance(AbstractMicrobenchmark.class);

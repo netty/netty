@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
-public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
+public class UnpooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
     private final UnpooledByteBufAllocatorMetric metric = new UnpooledByteBufAllocatorMetric();
     private final boolean disableLeakDetector;
@@ -246,9 +246,9 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
     }
 
-    private static final class UnpooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {
-        final LongCounter directCounter = PlatformDependent.newLongCounter();
-        final LongCounter heapCounter = PlatformDependent.newLongCounter();
+    protected static final class UnpooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {
+        protected final LongCounter directCounter = PlatformDependent.newLongCounter();
+        protected final LongCounter heapCounter = PlatformDependent.newLongCounter();
 
         @Override
         public long usedHeapMemory() {

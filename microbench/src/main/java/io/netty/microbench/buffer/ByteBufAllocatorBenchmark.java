@@ -17,6 +17,7 @@ package io.netty.microbench.buffer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.JniByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
@@ -33,7 +34,7 @@ import java.util.Random;
 @State(Scope.Benchmark)
 public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
-    private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
+    private static final ByteBufAllocator unpooledAllocator = new JniByteBufAllocator(true);
     private static final ByteBufAllocator pooledAllocator =
             new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0, true, 0); // Disable thread-local cache
 
@@ -50,33 +51,13 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
     public int size;
 
     @Benchmark
-    public void unpooledHeapAllocAndFree() {
-        int idx = rand.nextInt(unpooledHeapBuffers.length);
-        ByteBuf oldBuf = unpooledHeapBuffers[idx];
-        if (oldBuf != null) {
-            oldBuf.release();
-        }
-        unpooledHeapBuffers[idx] = unpooledAllocator.heapBuffer(size);
-    }
-
-    @Benchmark
-    public void unpooledDirectAllocAndFree() {
+    public void npooledDirectAllocAndFree() {
         int idx = rand.nextInt(unpooledDirectBuffers.length);
         ByteBuf oldBuf = unpooledDirectBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
         }
         unpooledDirectBuffers[idx] = unpooledAllocator.directBuffer(size);
-    }
-
-    @Benchmark
-    public void pooledHeapAllocAndFree() {
-        int idx = rand.nextInt(pooledHeapBuffers.length);
-        ByteBuf oldBuf = pooledHeapBuffers[idx];
-        if (oldBuf != null) {
-            oldBuf.release();
-        }
-        pooledHeapBuffers[idx] = pooledAllocator.heapBuffer(size);
     }
 
     @Benchmark
@@ -87,25 +68,5 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
             oldBuf.release();
         }
         pooledDirectBuffers[idx] = pooledAllocator.directBuffer(size);
-    }
-
-    @Benchmark
-    public void defaultPooledHeapAllocAndFree() {
-        int idx = rand.nextInt(defaultPooledHeapBuffers.length);
-        ByteBuf oldBuf = defaultPooledHeapBuffers[idx];
-        if (oldBuf != null) {
-            oldBuf.release();
-        }
-        defaultPooledHeapBuffers[idx] = PooledByteBufAllocator.DEFAULT.heapBuffer(size);
-    }
-
-    @Benchmark
-    public void defaultPooledDirectAllocAndFree() {
-        int idx = rand.nextInt(defaultPooledDirectBuffers.length);
-        ByteBuf oldBuf = defaultPooledDirectBuffers[idx];
-        if (oldBuf != null) {
-            oldBuf.release();
-        }
-        defaultPooledDirectBuffers[idx] = PooledByteBufAllocator.DEFAULT.directBuffer(size);
     }
 }

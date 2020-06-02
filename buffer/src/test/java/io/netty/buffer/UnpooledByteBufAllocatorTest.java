@@ -15,15 +15,15 @@
  */
 package io.netty.buffer;
 
-public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<UnpooledByteBufAllocator> {
+public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<JniByteBufAllocator> {
 
     @Override
-    protected UnpooledByteBufAllocator newAllocator(boolean preferDirect) {
-        return new UnpooledByteBufAllocator(preferDirect);
+    protected JniByteBufAllocator newAllocator(boolean preferDirect) {
+        return new JniByteBufAllocator(preferDirect);
     }
 
     @Override
-    protected UnpooledByteBufAllocator newUnpooledAllocator() {
-        return new UnpooledByteBufAllocator(false);
+    protected JniByteBufAllocator newUnpooledAllocator() {
+        return new JniByteBufAllocator(false);
     }
 }
