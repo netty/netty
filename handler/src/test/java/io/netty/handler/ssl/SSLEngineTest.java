@@ -951,9 +951,14 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                        ctx.write(ctx.alloc().buffer(1).writeByte(1))
-                                .addListener(new UnaryPromiseNotifier<Void>(clientWritePromise));
+                    public void handlerAdded(ChannelHandlerContext ctx) {
+                        // Only write if there is a failure expected. We don't actually care about the write going
+                        // through we just want to verify the local failure condition. This way we don't have to worry
+                        // about verifying the payload and releasing the content on the server side.
+                        if (failureExpected) {
+                            ctx.write(ctx.alloc().buffer(1).writeByte(1))
+                                    .addListener(new UnaryPromiseNotifier<Void>(clientWritePromise));
+                        }
                     }
 
                     @Override
