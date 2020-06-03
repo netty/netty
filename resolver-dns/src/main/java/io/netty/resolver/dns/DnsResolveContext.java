@@ -503,22 +503,26 @@ abstract class DnsResolveContext<T> {
                 parent.resolvedInternetProtocolFamiliesUnsafe())) {
             new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
                                          parent.newNameServerAddressStream(nameServerName), resolveCache,
-                                         new RedirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
+                                         redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
                     .resolve(resolverPromise);
         }
+    }
+
+    private static AuthoritativeDnsServerCache redirectAuthoritativeDnsServerCache(
+            AuthoritativeDnsServerCache authoritativeDnsServerCache) {
+        // Don't wrap again to prevent the possibility of an StackOverflowError when wrapping another
+        // RedirectAuthoritativeDnsServerCache.
+        if (authoritativeDnsServerCache instanceof RedirectAuthoritativeDnsServerCache) {
+            return authoritativeDnsServerCache;
+        }
+        return new RedirectAuthoritativeDnsServerCache(authoritativeDnsServerCache);
     }
 
     private static final class RedirectAuthoritativeDnsServerCache implements AuthoritativeDnsServerCache {
         private final AuthoritativeDnsServerCache wrapped;
 
         RedirectAuthoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
-            // Unwrap to prevent the possibility of an StackOverflowError when wrapping another
-            // RedirectAuthoritativeDnsServerCache.
-            if (authoritativeDnsServerCache instanceof RedirectAuthoritativeDnsServerCache) {
-                this.wrapped = ((RedirectAuthoritativeDnsServerCache) authoritativeDnsServerCache).wrapped;
-            } else {
-                this.wrapped = authoritativeDnsServerCache;
-            }
+            this.wrapped = authoritativeDnsServerCache;
         }
 
         @Override
