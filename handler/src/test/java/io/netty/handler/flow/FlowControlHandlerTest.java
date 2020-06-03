@@ -473,7 +473,7 @@ public class FlowControlHandlerTest {
         channel.flushInbound();
         assertNull(channel.readInbound());
 
-        Thread.sleep(delayMillis);
+        Thread.sleep(delayMillis + 20L);
         channel.runPendingTasks();
         assertEquals(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT, userEvents.poll());
         assertFalse(channel.finish());
