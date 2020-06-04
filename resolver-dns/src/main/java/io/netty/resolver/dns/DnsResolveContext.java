@@ -498,34 +498,53 @@ abstract class DnsResolveContext<T> {
                 }
             }
         });
-        if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache(),
+        DnsCache resolveCache = resolveCache();
+        if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
                 parent.resolvedInternetProtocolFamiliesUnsafe())) {
-            final AuthoritativeDnsServerCache authoritativeDnsServerCache = authoritativeDnsServerCache();
             new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
-                                         parent.newNameServerAddressStream(nameServerName),
-                                         resolveCache(), new AuthoritativeDnsServerCache() {
-                @Override
-                public DnsServerAddressStream get(String hostname) {
-                    // To not risk falling into any loop, we will not use the cache while following redirects but only
-                    // on the initial query.
-                    return null;
-                }
+                                         parent.newNameServerAddressStream(nameServerName), resolveCache,
+                                         redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
+                    .resolve(resolverPromise);
+        }
+    }
 
-                @Override
-                public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
-                    authoritativeDnsServerCache.cache(hostname, address, originalTtl, loop);
-                }
+    private static AuthoritativeDnsServerCache redirectAuthoritativeDnsServerCache(
+            AuthoritativeDnsServerCache authoritativeDnsServerCache) {
+        // Don't wrap again to prevent the possibility of an StackOverflowError when wrapping another
+        // RedirectAuthoritativeDnsServerCache.
+        if (authoritativeDnsServerCache instanceof RedirectAuthoritativeDnsServerCache) {
+            return authoritativeDnsServerCache;
+        }
+        return new RedirectAuthoritativeDnsServerCache(authoritativeDnsServerCache);
+    }
 
-                @Override
-                public void clear() {
-                    authoritativeDnsServerCache.clear();
-                }
+    private static final class RedirectAuthoritativeDnsServerCache implements AuthoritativeDnsServerCache {
+        private final AuthoritativeDnsServerCache wrapped;
 
-                @Override
-                public boolean clear(String hostname) {
-                    return authoritativeDnsServerCache.clear(hostname);
-                }
-            }, false).resolve(resolverPromise);
+        RedirectAuthoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
+            this.wrapped = authoritativeDnsServerCache;
+        }
+
+        @Override
+        public DnsServerAddressStream get(String hostname) {
+            // To not risk falling into any loop, we will not use the cache while following redirects but only
+            // on the initial query.
+            return null;
+        }
+
+        @Override
+        public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
+            wrapped.cache(hostname, address, originalTtl, loop);
+        }
+
+        @Override
+        public void clear() {
+            wrapped.clear();
+        }
+
+        @Override
+        public boolean clear(String hostname) {
+            return wrapped.clear(hostname);
         }
     }
 
