@@ -46,7 +46,7 @@ public class EchoClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        System.err.println(msg.toString());
+
     }
 
     @Override
