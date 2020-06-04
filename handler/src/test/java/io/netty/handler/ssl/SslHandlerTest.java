@@ -1095,13 +1095,11 @@ public class SslHandlerTest {
 
             if (client) {
                 Throwable cause = clientSslHandler.handshakeFuture().await().cause();
-                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-                assertThat(cause.getMessage(), containsString("timed out"));
+                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SslHandshakeTimeoutException.class));
                 assertFalse(serverSslHandler.handshakeFuture().await().isSuccess());
             } else {
                 Throwable cause = serverSslHandler.handshakeFuture().await().cause();
-                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-                assertThat(cause.getMessage(), containsString("timed out"));
+                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SslHandshakeTimeoutException.class));
                 assertFalse(clientSslHandler.handshakeFuture().await().isSuccess());
             }
         } finally {
