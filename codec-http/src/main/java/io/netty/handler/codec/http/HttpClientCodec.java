@@ -28,6 +28,10 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
+
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
  * which enables easier client side HTTP implementation. {@link HttpClientCodec}
@@ -61,7 +65,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
      * {@code maxChunkSize (8192)}).
      */
     public HttpClientCodec() {
-        this(4096, 8192, 8192, false);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE, false);
     }
 
     /**
