@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.StringUtil.COMMA;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -29,6 +30,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -108,12 +110,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
+    public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 
     private static final String EMPTY_VALUE = "";
+    private static final Pattern COMMA_PATTERN = Pattern.compile(",");
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
+    private final boolean allowDuplicateContentLengths;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
 
@@ -176,9 +181,20 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
              DEFAULT_INITIAL_BUFFER_SIZE);
     }
 
+    /**
+     * Creates a new instance with the specified parameters.
+     */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
+             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+    }
+
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            boolean allowDuplicateContentLengths) {
         checkPositive(maxInitialLineLength, "maxInitialLineLength");
         checkPositive(maxHeaderSize, "maxHeaderSize");
         checkPositive(maxChunkSize, "maxChunkSize");
@@ -189,6 +205,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
+        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
     }
 
     @Override
@@ -594,10 +611,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         name = null;
         value = null;
 
-        List<String> values = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-        int contentLengthValuesCount = values.size();
+        List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
 
-        if (contentLengthValuesCount > 0) {
+        if (!contentLengthFields.isEmpty()) {
             // Guard against multiple Content-Length headers as stated in
             // https://tools.ietf.org/html/rfc7230#section-3.3.2:
             //
@@ -611,17 +627,40 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             //   duplicated field-values with a single valid Content-Length field
             //   containing that decimal value prior to determining the message body
             //   length or forwarding the message.
-            if (contentLengthValuesCount > 1 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                throw new IllegalArgumentException("Multiple Content-Length headers found");
+            boolean multipleContentLengths =
+                    contentLengthFields.size() > 1 || contentLengthFields.get(0).indexOf(COMMA) >= 0;
+            if (multipleContentLengths && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+                if (allowDuplicateContentLengths) {
+                    // Find and enforce that all Content-Length values are the same
+                    String firstValue = null;
+                    for (String field : contentLengthFields) {
+                        String[] tokens = COMMA_PATTERN.split(field, -1);
+                        for (String token : tokens) {
+                            String trimmed = token.trim();
+                            if (firstValue == null) {
+                                firstValue = trimmed;
+                            } else if (!trimmed.equals(firstValue)) {
+                                throw new IllegalArgumentException("Multiple Content-Length headers found");
+                            }
+                        }
+                    }
+                    // Replace the duplicated field-values with a single valid Content-Length field
+                    headers.set(HttpHeaderNames.CONTENT_LENGTH, firstValue);
+                    contentLength = Long.parseLong(firstValue);
+                } else {
+                    // Reject the message as invalid
+                    throw new IllegalArgumentException("Multiple Content-Length headers found");
+                }
+            } else {
+                contentLength = Long.parseLong(contentLengthFields.get(0));
             }
-            contentLength = Long.parseLong(values.get(0));
         }
 
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         } else if (HttpUtil.isTransferEncodingChunked(message)) {
-            if (contentLengthValuesCount > 0 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+            if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
