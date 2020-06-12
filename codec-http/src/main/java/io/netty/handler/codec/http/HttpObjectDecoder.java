@@ -102,6 +102,12 @@ import java.util.List;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
+    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
+    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    public static final boolean DEFAULT_CHUNKED_SUPPORTED = true;
+    public static final boolean DEFAULT_VALIDATE_HEADERS = true;
+    public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
+
     private static final String EMPTY_VALUE = "";
 
     private final boolean chunkedSupported;
@@ -146,7 +152,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, true);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_CHUNKED_SUPPORTED);
     }
 
     /**
@@ -154,7 +160,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, true);
+        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
     }
 
     /**
@@ -163,7 +169,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, validateHeaders, 128);
+        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, validateHeaders, DEFAULT_INITIAL_BUFFER_SIZE);
     }
 
     protected HttpObjectDecoder(

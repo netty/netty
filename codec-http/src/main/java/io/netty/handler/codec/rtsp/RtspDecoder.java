@@ -72,16 +72,6 @@ public class RtspDecoder extends HttpObjectDecoder {
     private static final Pattern versionPattern = Pattern.compile("RTSP/\\d\\.\\d");
 
     /**
-     * Constant for default max initial line length.
-     */
-    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
-
-    /**
-     * Constant for default max header size.
-     */
-    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
-
-    /**
      * Constant for default max content length.
      */
     public static final int DEFAULT_MAX_CONTENT_LENGTH = 8192;
