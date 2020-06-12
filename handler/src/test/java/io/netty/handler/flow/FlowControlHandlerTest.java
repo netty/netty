@@ -382,7 +382,7 @@ public class FlowControlHandlerTest {
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
 
-        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
