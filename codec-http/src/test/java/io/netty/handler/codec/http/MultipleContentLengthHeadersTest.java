@@ -91,6 +91,9 @@ public class MultipleContentLengthHeadersTest {
                 assertValid(request);
                 List<String> contentLengths = request.headers().getAll(HttpHeaderNames.CONTENT_LENGTH);
                 assertThat(contentLengths, contains("1"));
+                LastHttpContent body = channel.readInbound();
+                assertThat(body.content().readableBytes(), is(1));
+                assertThat(body.content().readCharSequence(1, CharsetUtil.US_ASCII).toString(), is("a"));
             } else {
                 assertInvalid(request);
             }
@@ -112,7 +115,7 @@ public class MultipleContentLengthHeadersTest {
         }
         return "PUT /some/path HTTP/1.1\r\n" +
                contentLength +
-               "b";
+               "ab";
     }
 
     @Test
@@ -120,16 +123,15 @@ public class MultipleContentLengthHeadersTest {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                             "Content-Length: 1,\r\n" +
                             "Connection: close\n\n" +
-                            "b";
+                            "ab";
         assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
         HttpRequest request = channel.readInbound();
         assertInvalid(request);
         assertThat(channel.finish(), is(false));
     }
 
-    private void assertValid(HttpRequest request) {
+    private static void assertValid(HttpRequest request) {
         assertThat(request.decoderResult().isFailure(), is(false));
-        assertThat(channel.readInbound(), instanceOf(LastHttpContent.class));
     }
 
     private static void assertInvalid(HttpRequest request) {
