@@ -191,7 +191,7 @@ import java.util.NoSuchElementException;
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * static final {@link EventExecutorGroup} group = new {@link DefaultEventExecutorGroup}(16);
+ * static final {@link EventExecutorGroup} group = new {@link UnorderedThreadPoolEventExecutor}(16);
  * ...
  *
  * {@link ChannelPipeline} pipeline = ch.pipeline();
