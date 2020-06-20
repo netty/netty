@@ -39,6 +39,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 /**
  * A skeletal {@link Channel} implementation.
+ * @author pengzhengfa
  */
 public abstract class AbstractChannel extends DefaultAttributeMap implements Channel {
 
@@ -465,13 +466,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             AbstractChannel.this.eventLoop = eventLoop;
 
             if (eventLoop.inEventLoop()) {
-                register0(promise);
+                toRegister(promise);
             } else {
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
-                            register0(promise);
+                            toRegister(promise);
                         }
                     });
                 } catch (Throwable t) {
@@ -485,7 +486,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void register0(ChannelPromise promise) {
+        private void toRegister(ChannelPromise promise) {
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop

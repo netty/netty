@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
+ * @author pengzhengfa
  *
  */
 public final class NioEventLoop extends SingleThreadEventLoop {
@@ -301,7 +302,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         if (inEventLoop()) {
-            register0(ch, interestOps, task);
+            toRegister(ch, interestOps, task);
         } else {
             try {
                 // Offload to the EventLoop as otherwise java.nio.channels.spi.AbstractSelectableChannel.register
@@ -309,7 +310,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 submit(new Runnable() {
                     @Override
                     public void run() {
-                        register0(ch, interestOps, task);
+                        toRegister(ch, interestOps, task);
                     }
                 }).sync();
             } catch (InterruptedException ignore) {
@@ -319,7 +320,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void register0(SelectableChannel ch, int interestOps, NioTask<?> task) {
+    private void toRegister(SelectableChannel ch, int interestOps, NioTask<?> task) {
         try {
             ch.register(unwrappedSelector, interestOps, task);
         } catch (Exception e) {
