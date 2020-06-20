@@ -56,7 +56,7 @@ import java.util.Map;
 /**
  * An NIO datagram {@link Channel} that sends and receives an
  * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
- *
+ * @author pengzhengfa
  * @see AddressedEnvelope
  * @see DatagramPacket
  */
@@ -192,10 +192,10 @@ public final class NioDatagramChannel
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+        toDoBind(localAddress);
     }
 
-    private void doBind0(SocketAddress localAddress) throws Exception {
+    private void toDoBind(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
             SocketUtils.bind(javaChannel(), localAddress);
         } else {
@@ -207,7 +207,7 @@ public final class NioDatagramChannel
     protected boolean doConnect(SocketAddress remoteAddress,
             SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            doBind0(localAddress);
+            toDoBind(localAddress);
         }
 
         boolean success = false;

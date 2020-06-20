@@ -52,6 +52,7 @@ import java.util.concurrent.Executor;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 
 /**
+ * @author pengzhengfa
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
@@ -293,10 +294,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+        toDoBind(localAddress);
     }
 
-    private void doBind0(SocketAddress localAddress) throws Exception {
+    private void toDoBind(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
             SocketUtils.bind(javaChannel(), localAddress);
         } else {
@@ -307,7 +308,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            doBind0(localAddress);
+            toDoBind(localAddress);
         }
 
         boolean success = false;
