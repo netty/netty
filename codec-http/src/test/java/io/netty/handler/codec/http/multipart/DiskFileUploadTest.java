@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -178,6 +179,42 @@ public class DiskFileUploadTest {
                 is.close();
             }
         } finally {
+            f1.delete();
+        }
+    }
+
+    @Test
+    public void testAddContentFromByteBuf() throws Exception {
+        testAddContentFromByteBuf0(false);
+    }
+
+    @Test
+    public void testAddContentFromCompositeByteBuf() throws Exception {
+        testAddContentFromByteBuf0(true);
+    }
+
+    private static void testAddContentFromByteBuf0(boolean composite) throws Exception {
+        DiskFileUpload f1 = new DiskFileUpload("file3", "file3", "application/json", null, null, 0);
+        try {
+            byte[] bytes = new byte[4096];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+            final ByteBuf buffer;
+
+            if (composite) {
+                buffer = Unpooled.compositeBuffer()
+                        .addComponent(true, Unpooled.wrappedBuffer(bytes, 0 , bytes.length / 2))
+                        .addComponent(true, Unpooled.wrappedBuffer(bytes, bytes.length / 2, bytes.length / 2));
+            } else {
+                buffer = Unpooled.wrappedBuffer(bytes);
+            }
+            f1.addContent(buffer, true);
+            ByteBuf buf = f1.getByteBuf();
+            assertEquals(buf.readerIndex(), 0);
+            assertEquals(buf.writerIndex(), bytes.length);
+            assertArrayEquals(bytes, ByteBufUtil.getBytes(buf));
+        } finally {
+            //release the ByteBuf
             f1.delete();
         }
     }
