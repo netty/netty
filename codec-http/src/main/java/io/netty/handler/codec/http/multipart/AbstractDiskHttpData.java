@@ -154,7 +154,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     throw new IOException("Out of size: " + (size + localsize) +
                             " > " + definedSize);
                 }
-                ByteBuffer byteBuffer = buffer.nioBufferCount() == 1 ? buffer.nioBuffer() : buffer.copy().nioBuffer();
                 int written = 0;
                 if (file == null) {
                     file = tempFile();
@@ -163,9 +162,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                     fileChannel = accessFile.getChannel();
                 }
-                while (written < localsize) {
-                    written += fileChannel.write(byteBuffer);
-                }
+                buffer.getBytes(buffer.readerIndex(), fileChannel, fileChannel.position(), localsize);
                 size += localsize;
                 buffer.readerIndex(buffer.readerIndex() + written);
             } finally {
