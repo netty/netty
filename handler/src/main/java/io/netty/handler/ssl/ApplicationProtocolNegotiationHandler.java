@@ -81,30 +81,32 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
-        try {
-            if (handshakeEvent.isSuccess()) {
-                SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                if (sslHandler == null) {
-                    throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
-                            + "application-level protocol negotiation)");
+        if (evt instanceof SslHandshakeCompletionEvent) {
+            SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
+            try {
+                if (handshakeEvent.isSuccess()) {
+                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+                    if (sslHandler == null) {
+                        throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
+                                + "application-level protocol negotiation)");
+                    }
+                    String protocol = sslHandler.applicationProtocol();
+                    configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
+                } else {
+                    // if the event is not produced because of an successful handshake we will receive the same exception
+                    // in exceptionCaught(...) and handle it there. This will allow us more fine-granted control over
+                    // which exception we propergate down the ChannelPipeline.
+                    //
+                    // See https://github.com/netty/netty/issues/10342
                 }
-                String protocol = sslHandler.applicationProtocol();
-                configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
-            } else {
-                // if the event is not produced because of an successful handshake we will receive the same exception
-                // in exceptionCaught(...) and handle it there. This will allow us more fine-granted control over
-                // which exception we propergate down the ChannelPipeline.
-                //
-                // See https://github.com/netty/netty/issues/10342
-            }
-        } catch (Throwable cause) {
-            exceptionCaught(ctx, cause);
-        } finally {
-            ChannelPipeline pipeline = ctx.pipeline();
-            // Handshake failures are handled in exceptionCaught(...).
-            if (handshakeEvent.isSuccess() && pipeline.context(this) != null) {
-                pipeline.remove(this);
+            } catch (Throwable cause) {
+                exceptionCaught(ctx, cause);
+            } finally {
+                ChannelPipeline pipeline = ctx.pipeline();
+                // Handshake failures are handled in exceptionCaught(...).
+                if (handshakeEvent.isSuccess() && pipeline.context(this) != null) {
+                    pipeline.remove(this);
+                }
             }
         }
 
