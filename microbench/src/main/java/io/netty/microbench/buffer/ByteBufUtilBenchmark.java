@@ -22,6 +22,7 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -34,6 +35,11 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 10)
 public class
     ByteBufUtilBenchmark extends AbstractMicrobenchmark {
+
+    @Param({ "true", "false" })
+    private boolean direct;
+    @Param({ "8", "16", "64", "128" })
+    private int length;
     private ByteBuf buffer;
     private ByteBuf wrapped;
     private ByteBuf asciiBuffer;
@@ -48,18 +54,19 @@ public class
     @Setup
     public void setup() {
         // Use buffer sizes that will also allow to write UTF-8 without grow the buffer
-        buffer = Unpooled.directBuffer(512);
-        wrapped = Unpooled.unreleasableBuffer(Unpooled.directBuffer(512));
-        asciiSequence = new StringBuilder(128);
-        for (int i = 0; i < 128; i++) {
+        final int maxBytes = ByteBufUtil.utf8MaxBytes(length);
+        buffer = direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes);
+        wrapped = Unpooled.unreleasableBuffer(direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes));
+        asciiSequence = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
             asciiSequence.append('a');
         }
         ascii = asciiSequence.toString();
 
         // Generate some mixed UTF-8 String for benchmark
-        utf8Sequence = new StringBuilder(128);
+        utf8Sequence = new StringBuilder(length);
         char[] chars = "Some UTF-8 like äÄ∏ŒŒ".toCharArray();
-        for (int i = 0; i < 128; i++) {
+        for (int i = 0; i < length; i++) {
             utf8Sequence.append(chars[i % chars.length]);
         }
         utf8 = utf8Sequence.toString();

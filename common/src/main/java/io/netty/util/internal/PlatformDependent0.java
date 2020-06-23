@@ -590,6 +590,10 @@ final class PlatformDependent0 {
         UNSAFE.putByte(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
+    static void putByte(Object data, long offset, byte value) {
+        UNSAFE.putByte(data, offset, value);
+    }
+
     static void putShort(byte[] data, int index, short value) {
         UNSAFE.putShort(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
