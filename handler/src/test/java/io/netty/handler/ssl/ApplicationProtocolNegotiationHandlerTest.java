@@ -58,7 +58,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         final AtomicBoolean configureCalled = new AtomicBoolean(false);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
-            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
                 configureCalled.set(true);
                 assertEquals(ApplicationProtocolNames.HTTP_1_1, protocol);
             }
