@@ -45,6 +45,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
         };
 
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        channel.runPendingTasks();
+
         SSLHandshakeException exception = new SSLHandshakeException("error");
         SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
         channel.pipeline().fireUserEventTriggered(completionEvent);
@@ -64,8 +66,9 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
 
-        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(SSLContext.getDefault().createSSLEngine()),
-                alpnHandler);
+        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(
+                SSLContext.getDefault().createSSLEngine()), alpnHandler);
+        channel.runPendingTasks();
 
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
@@ -83,6 +86,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        channel.runPendingTasks();
         try {
             channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         } finally {
