@@ -229,7 +229,7 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString WEBSOCKET = AsciiString.cached("websocket");
     /**
-     * {@code "websocket"}
+     * {@code "XmlHttpRequest"}
      */
     public static final AsciiString XML_HTTP_REQUEST = AsciiString.cached("XmlHttpRequest");
 
