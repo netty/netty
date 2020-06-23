@@ -22,6 +22,7 @@ import io.netty.handler.codec.DecoderException;
 import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,8 +46,6 @@ public class ApplicationProtocolNegotiationHandlerTest {
         };
 
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        channel.runPendingTasks();
-
         SSLHandshakeException exception = new SSLHandshakeException("error");
         SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
         channel.pipeline().fireUserEventTriggered(completionEvent);
@@ -66,10 +65,10 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
 
-        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(
-                SSLContext.getDefault().createSSLEngine()), alpnHandler);
-        channel.runPendingTasks();
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
 
+        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), alpnHandler);
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
@@ -86,7 +85,6 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        channel.runPendingTasks();
         try {
             channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         } finally {
