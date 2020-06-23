@@ -93,19 +93,18 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    // if the event is not produced because of an successful handshake we will receive the same exception
-                    // in exceptionCaught(...) and handle it there. This will allow us more fine-granted control over
-                    // which exception we propergate down the ChannelPipeline.
+                    // if the event is not produced because of an successful handshake we will receive the same
+                    // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
+                    // control over which exception we propagate down the ChannelPipeline.
                     //
                     // See https://github.com/netty/netty/issues/10342
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                ChannelPipeline pipeline = ctx.pipeline();
                 // Handshake failures are handled in exceptionCaught(...).
-                if (handshakeEvent.isSuccess() && pipeline.context(this) != null) {
-                    pipeline.remove(this);
+                if (handshakeEvent.isSuccess()) {
+                    removeSelfIfPresent(ctx);
                 }
             }
         }
@@ -113,6 +112,12 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         ctx.fireUserEventTriggered(evt);
     }
 
+    private void removeSelfIfPresent(ChannelHandlerContext ctx) {
+        ChannelPipeline pipeline = ctx.pipeline();
+        if (pipeline.context(this) != null) {
+            pipeline.remove(this);
+        }
+    }
     /**
      * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline
      * for the negotiated application-level protocol.
@@ -139,10 +144,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                 handshakeFailure(ctx, wrapped);
                 return;
             } finally {
-                ChannelPipeline pipeline = ctx.pipeline();
-                if (pipeline.context(this) != null) {
-                    pipeline.remove(this);
-                }
+                removeSelfIfPresent(ctx);
             }
         }
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
