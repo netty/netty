@@ -35,6 +35,7 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
@@ -137,6 +138,7 @@ public class MultipleContentLengthHeadersTest {
     private static void assertInvalid(HttpRequest request) {
         assertThat(request.decoderResult().isFailure(), is(true));
         assertThat(request.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
-        assertThat(request.decoderResult().cause().getMessage(), is("Multiple Content-Length headers found"));
+        assertThat(request.decoderResult().cause().getMessage(),
+                   containsString("Multiple Content-Length values found"));
     }
 }
