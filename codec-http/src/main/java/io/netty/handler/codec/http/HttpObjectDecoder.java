@@ -39,10 +39,11 @@ import java.util.regex.Pattern;
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
  * <tr>
- * <th>Name</th><th>Meaning</th>
+ * <th>Name</th><th>Default value</th><th>Meaning</th>
  * </tr>
  * <tr>
  * <td>{@code maxInitialLineLength}</td>
+ * <td>{@value #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td>
  * <td>The maximum length of the initial line
  *     (e.g. {@code "GET / HTTP/1.0"} or {@code "HTTP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
@@ -50,15 +51,32 @@ import java.util.regex.Pattern;
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
+ * <td>{@value #DEFAULT_MAX_HEADER_SIZE}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
  *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxChunkSize}</td>
+ * <td>{@value #DEFAULT_MAX_CHUNK_SIZE}</td>
  * <td>The maximum length of the content or each chunk.  If the content length
  *     (or the length of each chunk) exceeds this value, the content or chunk
  *     will be split into multiple {@link HttpContent}s whose length is
  *     {@code maxChunkSize} at maximum.</td>
+ * </tr>
+ * </table>
+ *
+ * <h3>Parameters that control parsing behavior</h3>
+ * <table border="1">
+ * <tr>
+ * <th>Name</th><th>Default value</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code allowDuplicateContentLengths}</td>
+ * <td>{@value #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS}</td>
+ * <td>When set to {@code false}, will reject any messages that contain multiple Content-Length header fields.
+ *     When set to {@code true}, will allow multiple Content-Length headers only if they are all the same decimal value.
+ *     The duplicated field-values will be replaced with a single valid Content-Length field.
+ *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
  * </tr>
  * </table>
  *
@@ -640,7 +658,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                             if (firstValue == null) {
                                 firstValue = trimmed;
                             } else if (!trimmed.equals(firstValue)) {
-                                throw new IllegalArgumentException("Multiple Content-Length headers found");
+                                throw new IllegalArgumentException(
+                                        "Multiple Content-Length values found: " + contentLengthFields);
                             }
                         }
                     }
@@ -649,7 +668,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     contentLength = Long.parseLong(firstValue);
                 } else {
                     // Reject the message as invalid
-                    throw new IllegalArgumentException("Multiple Content-Length headers found");
+                    throw new IllegalArgumentException(
+                            "Multiple Content-Length values found: " + contentLengthFields);
                 }
             } else {
                 contentLength = Long.parseLong(contentLengthFields.get(0));
