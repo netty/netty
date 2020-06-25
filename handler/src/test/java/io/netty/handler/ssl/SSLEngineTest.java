@@ -1483,6 +1483,9 @@ public abstract class SSLEngineTest {
         boolean clientHandshakeFinished = false;
         boolean serverHandshakeFinished = false;
 
+        boolean cTOsHasRemaining;
+        boolean sTOcHasRemaining;
+
         do {
             int cTOsPos = cTOs.position();
             int sTOcPos = sTOc.position();
@@ -1547,9 +1550,16 @@ public abstract class SSLEngineTest {
                 assertFalse(cTOs.hasRemaining());
             }
 
+            cTOsHasRemaining = cTOs.hasRemaining();
+            sTOcHasRemaining = sTOc.hasRemaining();
+
             sTOc.compact();
             cTOs.compact();
-        } while (!clientHandshakeFinished || !serverHandshakeFinished);
+        } while (!clientHandshakeFinished || !serverHandshakeFinished ||
+                // We need to ensure we feed all the data to the engine to not end up with a corrupted state.
+                // This is especially important with TLS1.3 which may produce sessions after the "main handshake" is
+                // done
+                cTOsHasRemaining || sTOcHasRemaining);
     }
 
     private static boolean isHandshakeFinished(SSLEngineResult result) {
