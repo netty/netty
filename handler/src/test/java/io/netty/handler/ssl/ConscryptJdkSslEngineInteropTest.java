@@ -22,6 +22,7 @@ import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.net.ssl.SSLSessionContext;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -79,5 +80,10 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
+    }
+
+    @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
     }
 }
