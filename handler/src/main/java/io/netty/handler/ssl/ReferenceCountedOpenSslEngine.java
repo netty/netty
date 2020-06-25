@@ -30,6 +30,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -1277,12 +1278,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
         // See https://github.com/netty/netty/issues/3900
         if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+            // we seems to have data left that needs to be transferred and so the user needs
+            // call wrap(...). Store the error so we can pick it up later.
+            String message = SSL.getErrorString(stackError);
+            SSLException exception = handshakeState == HandshakeState.FINISHED ?
+                    new SSLException(message) : new SSLHandshakeException(message);
             if (pendingException == null) {
-                // we seems to have data left that needs to be transferred and so the user needs
-                // call wrap(...). Store the error so we can pick it up later.
-                String message = SSL.getErrorString(stackError);
-                pendingException = handshakeState == HandshakeState.FINISHED ?
-                        new SSLException(message) : new SSLHandshakeException(message);
+               pendingException = exception;
+            } else {
+                ThrowableUtil.addSuppressed(pendingException, exception);
             }
             // We need to clear all errors so we not pick up anything that was left on the stack on the next
             // operation. Note that shutdownWithError(...) will cleanup the stack as well so its only needed here.
@@ -1763,7 +1767,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * This cause will then be used to give more details as part of the {@link SSLHandshakeException}.
      */
     final void initHandshakeException(Throwable cause) {
-        pendingException = cause;
+        if (pendingException == null) {
+            pendingException = cause;
+        } else {
+            ThrowableUtil.addSuppressed(pendingException, cause);
+        }
     }
 
     private SSLEngineResult.HandshakeStatus handshake() throws SSLException {
