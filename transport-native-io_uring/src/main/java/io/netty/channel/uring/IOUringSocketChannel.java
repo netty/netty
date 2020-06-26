@@ -30,7 +30,6 @@ import io.netty.channel.unix.FileDescriptor;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-
 public class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
 
     IOUringSocketChannel(final Channel parent, final LinuxSocket fd, final boolean active, final long ioUring) {
@@ -47,14 +46,12 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
         return null;
     }
 
-
     @Override
     protected AbstractUringUnsafe newUnsafe() {
         return new AbstractUringUnsafe() {
 
             @Override
             public void uringEventExecution() {
-
                 final ChannelConfig config = config();
 
                 final ByteBufAllocator allocator = config.getAllocator();
@@ -63,17 +60,13 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
 
                 ByteBuf byteBuf = allocHandle.allocate(allocator);
                 doReadBytes(byteBuf);
-
             }
         };
     }
 
-
     @Override
     public void doBind(SocketAddress localAddress) throws Exception {
-
     }
-
 
     @Override
     public boolean isInputShutdown() {
@@ -145,5 +138,3 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
         return (InetSocketAddress) super.localAddress();
     }
 }
-
-

@@ -84,19 +84,16 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             event.setOp(EventType.READ);
 
             int error = socket.readEvent(ioUring, eventId, byteBuf.memoryAddress(), byteBuf.writerIndex(),
-                                         byteBuf.capacity());
+                    byteBuf.capacity());
             if (error == 0) {
                 ioUringEventLoop.addNewEvent(event);
             }
         }
     }
 
-
-
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
         return newDirectBuffer(buf, buf);
     }
-
 
     protected final ByteBuf newDirectBuffer(Object holder, ByteBuf buf) {
         final int readableBytes = buf.readableBytes();
@@ -129,15 +126,13 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
     @Override
     protected void doDisconnect() throws Exception {
-
     }
 
     @Override
     protected void doClose() throws Exception {
-
     }
 
-    //Channel/ChannelHandlerContext.read() was called
+    // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() throws Exception {
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
@@ -160,7 +155,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             while (readableBytes > 0) {
                 doWriteBytes(buf);
 
-                //have to move it to the eventloop
+                // have to move it to the eventloop
                 int newReadableBytes = buf.readableBytes();
                 in.progress(readableBytes - newReadableBytes);
                 readableBytes = newReadableBytes;
@@ -190,7 +185,6 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             }
         };
 
-
         /**
          * Create a new {@link } instance.
          *
@@ -199,7 +193,6 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
         IOUringRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
             return new IOUringRecvByteAllocatorHandle(handle);
         }
-
 
         @Override
         public IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
@@ -211,8 +204,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                            final ChannelPromise promise) {
-
+                final ChannelPromise promise) {
         }
 
         final void executeUringReadOperator() {
@@ -225,16 +217,14 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
         public abstract void uringEventExecution();
     }
 
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
         }
 
-        throw new UnsupportedOperationException(
-                "unsupported message type");
+        throw new UnsupportedOperationException("unsupported message type");
     }
 
     @Override

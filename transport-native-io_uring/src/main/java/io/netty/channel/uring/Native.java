@@ -15,31 +15,76 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
+import io.netty.util.internal.NativeLibraryLoader;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.io.IOException;
+import java.nio.channels.Selector;
+import java.util.Locale;
+
 public final class Native {
-    public static native long io_uring_setup(int entries);
 
-    public static native long getSQE(long io_uring);
+    static {
+        loadNativeLibrary();
+    }
 
-    public static native long getQC(long io_uring);
+    public static native long ioUringSetup(int entries);
 
-    public static native int read(long io_uring, long fd, long eventId, long bufferAddress, int pos,
-                                            int limit);
+    public static native int ioUringRead(long io_uring, long fd, long eventId, long bufferAddress, int pos, int limit);
 
-    public static native int write(long io_uring, long fd, long eventId, long bufferAddress, int pos,
-                                             int limit);
+    public static native int ioUringWrite(long io_uring, long fd, long eventId, long bufferAddress, int pos, int limit);
 
-    public static native int accept(long io_uring, long fd, byte[] addr);
+    public static native int ioUringAccept(long io_uring, long fd, byte[] addr);
 
-    //return id
-    public static native long wait_cqe(long io_uring);
+    // return id
+    public static native long ioUringWaitCqe(long io_uring);
 
-    public static native long deleteCqe(long io_uring, long cqeAddress);
+    public static native long ioUringDeleteCqe(long io_uring, long cqeAddress);
 
-    public static native long getEventId(long cqeAddress);
+    public static native long ioUringGetEventId(long cqeAddress);
 
-    public static native int getRes(long cqeAddress);
+    public static native int ioUringGetRes(long cqeAddress);
 
-    public static native long close(long io_uring);
+    public static native long ioUringClose(long io_uring);
 
-    public static native long submit(long io_uring);
+    public static native long ioUringSubmit(long io_uring);
+
+    public static native long ioUringGetSQE(long io_uring);
+
+    public static native long ioUringGetQC(long io_uring);
+
+    // for testing(it is only temporary)
+    public static native long createFile();
+
+    private Native() {
+        // utility
+    }
+
+    // From epoll native library
+    private static void loadNativeLibrary() {
+        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+        if (!name.startsWith("linux")) {
+            throw new IllegalStateException("Only supported on Linux");
+        }
+        String staticLibName = "netty_transport_native_io_uring";
+        String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
+        ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
+        try {
+            NativeLibraryLoader.load(sharedLibName, cl);
+        } catch (UnsatisfiedLinkError e1) {
+            // try {
+            // NativeLibraryLoader.load(staticLibName, cl);
+            // System.out.println("Failed to load io_uring");
+            // } catch (UnsatisfiedLinkError e2) {
+            // ThrowableUtil.addSuppressed(e1, e2);
+            // throw e1;
+            // }
+        }
+    }
 }

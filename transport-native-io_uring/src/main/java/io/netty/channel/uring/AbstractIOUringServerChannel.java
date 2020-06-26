@@ -67,7 +67,7 @@ public class AbstractIOUringServerChannel extends AbstractIOUringChannel impleme
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                            final ChannelPromise promise) {
+                final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -82,7 +82,7 @@ public class AbstractIOUringServerChannel extends AbstractIOUringChannel impleme
 
             if (socket.acceptEvent(getIoUring(), eventId, acceptedAddress) == 0) {
                 ioUringEventLoop.addNewEvent(event);
-                Native.submit(getIoUring());
+                Native.ioUringSubmit(getIoUring());
             }
         }
     }
