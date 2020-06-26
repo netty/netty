@@ -445,7 +445,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
-      <module>transport-native-io_uring</module>
+    <module>transport-native-io_uring</module>
   </modules>
 
   <dependencyManagement>

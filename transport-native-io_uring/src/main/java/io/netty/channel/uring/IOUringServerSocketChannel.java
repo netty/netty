@@ -18,13 +18,11 @@ package io.netty.channel.uring;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 public class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
-    IOUringServerSocketChannel(Channel parent, LinuxSocket fd, boolean active,
-                               long ioUring) {
+    IOUringServerSocketChannel(Channel parent, LinuxSocket fd, boolean active, long ioUring) {
         super(parent, fd, active, ioUring);
     }
 
@@ -32,7 +30,6 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     public void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
     }
-
 
     @Override
     public boolean isOpen() {
@@ -48,7 +45,6 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
-
 
     @Override
     public InetSocketAddress remoteAddress() {

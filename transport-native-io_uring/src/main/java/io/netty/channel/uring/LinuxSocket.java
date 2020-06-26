@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.channel.unix.Socket;
 
 public class LinuxSocket extends Socket {
-    private long fd;
+    private final long fd;
 
     public LinuxSocket(final int fd) {
         super(fd);
@@ -26,15 +26,15 @@ public class LinuxSocket extends Socket {
     }
 
     public int readEvent(long ring, long eventId, long bufferAddress, int pos, int limit) {
-        return Native.read(ring, fd, eventId, bufferAddress, pos, limit);
+        return Native.ioUringRead(ring, fd, eventId, bufferAddress, pos, limit);
     }
 
     public int writeEvent(long ring, long eventId, long bufferAddress, int pos, int limit) {
-        return Native.write(ring, fd, eventId, bufferAddress, pos, limit);
+        return Native.ioUringWrite(ring, fd, eventId, bufferAddress, pos, limit);
     }
 
     public int acceptEvent(long ring, long eventId, byte[] addr) {
-        return Native.accept(ring, eventId, addr);
+        return Native.ioUringAccept(ring, eventId, addr);
     }
 
 }

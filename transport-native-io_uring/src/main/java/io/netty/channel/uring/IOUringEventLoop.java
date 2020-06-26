@@ -19,6 +19,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 
 import java.util.HashMap;
@@ -26,19 +27,18 @@ import java.util.concurrent.Executor;
 
 class IOUringEventLoop extends SingleThreadEventLoop {
 
-    //C pointer
+    // C pointer
     private final long io_uring;
 
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
-    //events should be unique to identify which event type that was
+    // events should be unique to identify which event type that was
     private long eventIdCounter;
-    private HashMap<Long, Event> events = new HashMap<Long, Event>();
+    private final LongObjectHashMap<Event> events = new LongObjectHashMap<Event>();
 
     protected IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp,
-                               final int maxPendingTasks,
-                               final RejectedExecutionHandler rejectedExecutionHandler) {
+            final int maxPendingTasks, final RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        this.io_uring = Native.io_uring_setup(100);
+        this.io_uring = Native.ioUringSetup(32);
     }
 
     public long incrementEventIdCounter() {
@@ -53,24 +53,25 @@ class IOUringEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        for (; ; ) {
-            //wait until an event has finished
-            final long cqe = Native.wait_cqe(io_uring);
-            final Event event = events.get(Native.getEventId(cqe));
-            final int ret = Native.getRes(cqe);
+        for (;;) {
+            // wait until an event has finished
+            final long cqe = Native.ioUringWaitCqe(io_uring);
+            final Event event = events.get(Native.ioUringGetEventId(cqe));
+            final int ret = Native.ioUringGetRes(cqe);
             switch (event.getOp()) {
-            case ACCEPT:
-                //serverChannel is necessary to call newChildchannel
-                //create a new accept event
-                break;
-            case READ:
-                //need to save the Bytebuf before I execute the read operation fireChannelRead(byteBuf)
-                break;
-            case WRITE:
-                //you have to store Bytebuf to continue writing
-                break;
+                case ACCEPT:
+                    // serverChannel is necessary to call newChildchannel
+                    // create a new accept event
+                    break;
+                case READ:
+                    // need to save the Bytebuf before I execute the read operation
+                    // fireChannelRead(byteBuf)
+                    break;
+                case WRITE:
+                    // you have to store Bytebuf to continue writing
+                    break;
             }
-            //processing Tasks
+            // processing Tasks
         }
     }
 }
