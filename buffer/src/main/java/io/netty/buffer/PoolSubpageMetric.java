@@ -39,10 +39,5 @@ public interface PoolSubpageMetric {
      * Return the page size (in bytes) of this page.
      */
     int pageSize();
-
-    /**
-     * Return the size (in bytes) of this subpage.
-     */
-    int runSize();
 }
 

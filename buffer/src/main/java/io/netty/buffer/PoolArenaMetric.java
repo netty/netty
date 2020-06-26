@@ -30,6 +30,8 @@ public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Returns the number of tiny sub-pages for the arena.
+     *
+     * @deprecated Tiny sub-pages have been merged into small sub-pages.
      */
     @Deprecated
     int numTinySubpages();
@@ -46,6 +48,8 @@ public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for tiny sub-pages.
+     *
+     * @deprecated Tiny sub-pages have been merged into small sub-pages.
      */
     @Deprecated
     List<PoolSubpageMetric> tinySubpages();
@@ -67,6 +71,8 @@ public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Return the number of tiny allocations done via the arena.
+     *
+     * @deprecated Tiny allocations have been merged into small allocations.
      */
     @Deprecated
     long numTinyAllocations();
@@ -93,6 +99,8 @@ public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Return the number of tiny deallocations done via the arena.
+     *
+     * @deprecated Tiny deallocations have been merged into small deallocations.
      */
     @Deprecated
     long numTinyDeallocations();
@@ -119,6 +127,8 @@ public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Return the number of currently active tiny allocations.
+     *
+     * @deprecated Tiny allocations have been merged into small allocations.
      */
     @Deprecated
     long numActiveTinyAllocations();

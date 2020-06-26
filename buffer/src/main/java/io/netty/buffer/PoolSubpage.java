@@ -197,8 +197,8 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         int pages = runSize >> pageShifts;
         return (long) runOffset << RUN_OFFSET_SHIFT
                | (long) pages << SIZE_SHIFT
-               | 1L << ISUSED_SHIFT
-               | 1L << ISSUBPAGE_SHIFT
+               | 1L << IS_USED_SHIFT
+               | 1L << IS_SUBPAGE_SHIFT
                | bitmapIdx;
     }
 
@@ -276,11 +276,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     @Override
     public int pageSize() {
         return 1 << pageShifts;
-    }
-
-    @Override
-    public int runSize() {
-        return runSize;
     }
 
     void destroy() {

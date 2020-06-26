@@ -78,7 +78,7 @@ import static io.netty.buffer.PoolThreadCache.*;
  * <p>
  *   ( 76,    24,       22,        1,       yes,            no,        no)
  */
-public abstract class SizeClasses implements SizeClassesMetric {
+abstract class SizeClasses implements SizeClassesMetric {
 
     static final int LOG2_QUANTUM = 4;
 
@@ -102,13 +102,18 @@ public abstract class SizeClasses implements SizeClassesMetric {
         this.directMemoryCacheAlignment = directMemoryCacheAlignment;
 
         int group = log2(chunkSize) + 1 - LOG2_QUANTUM;
-        sizeClasses = new short[group << LOG2_SIZE_CLASS_GROUP][7];
 
         //generate size classes
-        sizeClasses();
+        sizeClasses = new short[group << LOG2_SIZE_CLASS_GROUP][7];
+        nSizes = sizeClasses();
+
         //generate lookup table
-        idx2SizeTab();
-        size2idxTab();
+        sizeIdx2sizeTab = new int[nSizes];
+        pageIdx2sizeTab = new int[nPSizes];
+        idx2SizeTab(sizeIdx2sizeTab, pageIdx2sizeTab);
+
+        size2idxTab = new int[lookupMaxSize >> LOG2_QUANTUM];
+        size2idxTab(size2idxTab);
     }
 
     protected final int pageSize;
@@ -116,7 +121,9 @@ public abstract class SizeClasses implements SizeClassesMetric {
     protected final int chunkSize;
     protected final int directMemoryCacheAlignment;
 
-    int nSizes, nSubpages, nPSizes;
+    final int nSizes;
+    int nSubpages;
+    int nPSizes;
 
     int smallMaxSizeIdx;
 
@@ -124,16 +131,16 @@ public abstract class SizeClasses implements SizeClassesMetric {
 
     private final short[][] sizeClasses;
 
-    private int[] pageIdx2sizeTab;
+    private final int[] pageIdx2sizeTab;
 
     // lookup table for sizeIdx <= smallMaxSizeIdx
-    private int[] sizeIdx2sizeTab;
+    private final int[] sizeIdx2sizeTab;
 
     // lookup table used for size <= lookupMaxclass
     // spacing is 1 << LOG2_QUANTUM, so the size of array is lookupMaxclass >> LOG2_QUANTUM
-    private int[] size2idxTab;
+    private final int[] size2idxTab;
 
-    private void sizeClasses() {
+    private int sizeClasses() {
         int normalMaxSize = -1;
 
         int index = 0;
@@ -167,7 +174,8 @@ public abstract class SizeClasses implements SizeClassesMetric {
         //chunkSize must be normalMaxSize
         assert chunkSize == normalMaxSize;
 
-        nSizes = index;
+        //return number of size index
+        return index;
     }
 
     //calculate size class
@@ -218,10 +226,7 @@ public abstract class SizeClasses implements SizeClassesMetric {
         return size;
     }
 
-    private void idx2SizeTab() {
-        sizeIdx2sizeTab = new int[nSizes];
-        pageIdx2sizeTab = new int[nPSizes];
-
+    private void idx2SizeTab(int[] sizeIdx2sizeTab, int[] pageIdx2sizeTab) {
         int pageIdx = 0;
 
         for (int i = 0; i < nSizes; i++) {
@@ -239,9 +244,7 @@ public abstract class SizeClasses implements SizeClassesMetric {
         }
     }
 
-    private void size2idxTab() {
-        size2idxTab = new int[lookupMaxSize >> LOG2_QUANTUM];
-
+    private void size2idxTab(int[] size2idxTab) {
         int idx = 0;
         int size = 0;
 

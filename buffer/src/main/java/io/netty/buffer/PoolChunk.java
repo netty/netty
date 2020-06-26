@@ -38,9 +38,9 @@ import java.util.PriorityQueue;
  * return a (long) handle that encodes this offset information, (this memory segment is then
  * marked as reserved so it is always used by exactly one ByteBuf and no more)
  *
- * For simplicity all sizes are normalized according to {@link PoolArena#size2SizeIdx(int)} method
+ * For simplicity all sizes are normalized according to {@link PoolArena#size2SizeIdx(int)} method.
  * This ensures that when we request for memory segments of size > pageSize the normalizedCapacity
- * equals the next nearest size in {@link SizeClasses}
+ * equals the next nearest size in {@link SizeClasses}.
  *
  *
  *  A chunk has the following layout:
@@ -84,14 +84,14 @@ import java.util.PriorityQueue;
  *
  * runsAvailMap:
  * ------
- * a map which manages all runs (used and not in used)
+ * a map which manages all runs (used and not in used).
  * For each run, the first runOffset and last runOffset are stored in runsAvailMap.
  * key: runOffset
  * value: handle
  *
  * runsAvail:
  * ----------
- * an array of {@link PriorityQueue}
+ * an array of {@link PriorityQueue}.
  * Each queue manages same size of runs.
  * Runs are sorted by offset, so that we always allocate runs with smaller offset.
  *
@@ -103,7 +103,7 @@ import java.util.PriorityQueue;
  *
  * Initialization -
  *  In the beginning we store the initial run which is the whole chunk.
- *  the initial run:
+ *  The initial run:
  *  runOffset = 0
  *  size = chunkSize
  *  isUsed = no
@@ -140,9 +140,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private static final int SUBPAGE_BIT_LENGTH = 1;
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
 
-    static final int ISSUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;
-    static final int ISUSED_SHIFT = SUBPAGE_BIT_LENGTH + ISSUBPAGE_SHIFT;
-    static final int SIZE_SHIFT = INUSED_BIT_LENGTH + ISUSED_SHIFT;
+    static final int IS_SUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;
+    static final int IS_USED_SHIFT = SUBPAGE_BIT_LENGTH + IS_SUBPAGE_SHIFT;
+    static final int SIZE_SHIFT = INUSED_BIT_LENGTH + IS_USED_SHIFT;
     static final int RUN_OFFSET_SHIFT = SIZE_BIT_LENGTH + SIZE_SHIFT;
 
     final PoolArena<T> arena;
@@ -241,7 +241,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         runsAvailMap.put(runOffset, handle);
         if (pages > 1) {
             //insert last page of run
-            runsAvailMap.put(runOffset + pages - 1, handle);
+            runsAvailMap.put(lastPage(runOffset, pages), handle);
         }
     }
 
@@ -260,8 +260,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
         runsAvailMap.remove(runOffset);
         if (pages > 1) {
             //remove last page of run
-            runsAvailMap.remove(runOffset + pages - 1);
+            runsAvailMap.remove(lastPage(runOffset, pages));
         }
+    }
+
+    private static Integer lastPage(int runOffset, int pages) {
+        return runOffset + pages - 1;
     }
 
     private Long getAvailRunByOffset(int runOffset) {
@@ -396,8 +400,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
             return toRunHandle(runOffset, needPages, 1);
         }
 
-        //make used
-        handle |= 1L << ISUSED_SHIFT;
+        //mark it as used
+        handle |= 1L << IS_USED_SHIFT;
         return handle;
     }
 
@@ -467,9 +471,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
             long finalRun = collapseRuns(handle);
 
             //set run as not used
-            finalRun &= ~(1L << ISUSED_SHIFT);
+            finalRun &= ~(1L << IS_USED_SHIFT);
             //if it is a subpage, set it to run
-            finalRun &= ~(1L << ISSUBPAGE_SHIFT);
+            finalRun &= ~(1L << IS_SUBPAGE_SHIFT);
 
             insertAvailRun(runOffset(finalRun), runPages(finalRun), finalRun);
             freeBytes += pages << pageShifts;
@@ -486,7 +490,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private long collapsePast(long handle) {
-        while (true) {
+        for (; ;) {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
@@ -510,7 +514,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private long collapseNext(long handle) {
-        while (true) {
+        for (; ;) {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
@@ -536,7 +540,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private static long toRunHandle(int runOffset, int runPages, int inUsed) {
         return (long) runOffset << RUN_OFFSET_SHIFT
                | (long) runPages << SIZE_SHIFT
-               | (long) inUsed << ISUSED_SHIFT;
+               | (long) inUsed << IS_USED_SHIFT;
     }
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
@@ -612,7 +616,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     static boolean isUsed(long handle) {
-        return (handle >> ISUSED_SHIFT & 1) == 1L;
+        return (handle >> IS_USED_SHIFT & 1) == 1L;
     }
 
     static boolean isRun(long handle) {
@@ -620,7 +624,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     static boolean isSubpage(long handle) {
-        return (handle >> ISSUBPAGE_SHIFT & 1) == 1L;
+        return (handle >> IS_SUBPAGE_SHIFT & 1) == 1L;
     }
 
     static int bitmapIdx(long handle) {
