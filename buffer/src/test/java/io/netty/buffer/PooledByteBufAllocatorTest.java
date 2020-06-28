@@ -263,7 +263,6 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testCollapse() {
         int pageSize = 8192;
         //no cache
@@ -278,13 +277,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         ByteBuf b4 = allocator.buffer(pageSize * 10);
 
-        PooledByteBuf<ByteBuffer> b;
-        if (b4 instanceof PooledByteBuf) {
-            b = (PooledByteBuf<ByteBuffer>) b4;
-        } else {
-            SimpleLeakAwareByteBuf s = (SimpleLeakAwareByteBuf) b4;
-            b = (PooledByteBuf<ByteBuffer>) s.buf;
-        }
+        PooledByteBuf<ByteBuffer> b = unwrapIfNeeded(b4);
 
         //b2 and b3 are collapsed, b4 should start at offset 4
         assertEquals(4, runOffset(b.handle));
@@ -295,20 +288,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         //all ByteBuf are collapsed, b5 should start at offset 0
         ByteBuf b5 = allocator.buffer(pageSize * 20);
-
-        if (b5 instanceof PooledByteBuf) {
-            b = (PooledByteBuf<ByteBuffer>) b5;
-        } else {
-            SimpleLeakAwareByteBuf s = (SimpleLeakAwareByteBuf) b5;
-            b = (PooledByteBuf<ByteBuffer>) s.buf;
-        }
+        b = unwrapIfNeeded(b5);
 
         assertEquals(0, runOffset(b.handle));
         assertEquals(20, runPages(b.handle));
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testAllocateSmallOffset() {
         int pageSize = 8192;
         ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
@@ -327,7 +313,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         //make sure we always allocate runs with small offset
         for (int i = 0; i < 5; i++) {
-            PooledByteBuf<ByteBuffer> buf = (PooledByteBuf<ByteBuffer>) allocator.buffer(size);
+            PooledByteBuf<ByteBuffer> buf = unwrapIfNeeded(allocator.buffer(size));
             assertEquals(runOffset(buf.handle), i * 5);
             bufs[i] = buf;
         }
@@ -339,7 +325,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
 
         for (int i = 5; i < 10; i++) {
-            PooledByteBuf<ByteBuffer> buf = (PooledByteBuf<ByteBuffer>) allocator.buffer(size);
+            PooledByteBuf<ByteBuffer> buf = unwrapIfNeeded(allocator.buffer(size));
             assertEquals(runOffset(buf.handle), i * 5);
             bufs[i] = buf;
         }
@@ -636,5 +622,10 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 throw (Throwable) obj;
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
+        return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
     }
 }

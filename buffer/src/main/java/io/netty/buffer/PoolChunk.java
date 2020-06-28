@@ -264,7 +264,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
     }
 
-    private static Integer lastPage(int runOffset, int pages) {
+    private static int lastPage(int runOffset, int pages) {
         return runOffset + pages - 1;
     }
 
@@ -490,7 +490,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private long collapsePast(long handle) {
-        for (; ;) {
+        for (;;) {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
@@ -514,7 +514,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private long collapseNext(long handle) {
-        for (; ;) {
+        for (;;) {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
