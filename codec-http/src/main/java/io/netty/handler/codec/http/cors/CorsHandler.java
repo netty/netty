@@ -87,12 +87,21 @@ public class CorsHandler extends ChannelDuplexHandler {
                 handlePreflight(ctx, request);
                 return;
             }
-            if (isShortCircuit && !(origin == null || config != null)) {
+            if (isShortCircuit && !allowRequest(origin)) {
                 forbidden(ctx, request);
                 return;
             }
         }
         ctx.fireChannelRead(msg);
+    }
+
+    private boolean allowRequest(String origin) {
+        if (origin == null) {
+            // Not a CORS Request, allow it to proceed.
+            return true;
+        }
+        // A rule was matched from the configs, so allow it.
+        return config != null;
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
