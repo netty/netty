@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -347,5 +348,29 @@ public class HttpUtilTest {
         http11Message.headers().set(
                 HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.KEEP_ALIVE);
         assertTrue(HttpUtil.isKeepAlive(http11Message));
+    }
+
+    @Test
+    public void testIsOriginFormAndIsAsteriskForm() {
+        // There are four distinct formats for the request-target, depending on both the method
+        // being requested and whether the request is to a proxy..
+        // All examples are from https://tools.ietf.org/html/rfc7230#section-5.3
+
+        URI originFormUri = URI.create("/where?q=now");
+        URI asteriskFormUri = URI.create("*");
+        URI absoluteFormUri = URI.create("http://www.example.org/pub/WWW/TheProject.html");
+        URI authorityFormUri = URI.create("www.example.com:80");
+        URI malformedAsteriskFormUri = URI.create("*?q=now");
+        assertTrue(HttpUtil.isOriginForm(originFormUri));
+        assertFalse(HttpUtil.isOriginForm(asteriskFormUri));
+        assertFalse(HttpUtil.isOriginForm(absoluteFormUri));
+        assertFalse(HttpUtil.isOriginForm(authorityFormUri));
+        assertFalse(HttpUtil.isOriginForm(malformedAsteriskFormUri));
+
+        assertFalse(HttpUtil.isAsteriskForm(originFormUri));
+        assertTrue(HttpUtil.isAsteriskForm(asteriskFormUri));
+        assertFalse(HttpUtil.isAsteriskForm(absoluteFormUri));
+        assertFalse(HttpUtil.isAsteriskForm(authorityFormUri));
+        assertFalse(HttpUtil.isAsteriskForm(malformedAsteriskFormUri));
     }
 }

@@ -44,7 +44,7 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isOriginForm(URI uri) {
-        return uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
+        return uri.getScheme() == null && !"*".equals(uri.getPath()) &&
                uri.getHost() == null && uri.getAuthority() == null;
     }
 
@@ -53,8 +53,7 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.getPath()) &&
-                uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
+        return "*".equals(uri.getPath()) && uri.getScheme() == null &&
                 uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
                 uri.getFragment() == null;
     }

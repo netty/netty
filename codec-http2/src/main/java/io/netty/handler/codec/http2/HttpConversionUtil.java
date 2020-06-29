@@ -48,8 +48,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
-import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
-import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -395,10 +393,12 @@ public final class HttpConversionUtil {
             out.method(request.method().asciiName());
             setHttp2Scheme(inHeaders, requestTargetUri, out);
 
-            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
-                // Attempt to take from HOST header before taking from the request-line
-                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority((host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
+            // Attempt to take from HOST header before taking from the request-line
+            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            if (host != null && !host.isEmpty()) {
+                setHttp2Authority(host, out);
+            } else if (requestTargetUri.getAuthority() != null) {
+                setHttp2Authority(requestTargetUri.getAuthority(), out);
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
