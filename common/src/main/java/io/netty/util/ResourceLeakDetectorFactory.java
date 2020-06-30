@@ -56,7 +56,7 @@ public abstract class ResourceLeakDetectorFactory {
      * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
      *
      * @param resource the resource class used to initialize the {@link ResourceLeakDetector}
-     * @param <T>      the type of the resource class
+     * @param <T> the type of the resource class
      * @return a new instance of {@link ResourceLeakDetector}
      */
     public final <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource) {
@@ -64,14 +64,15 @@ public abstract class ResourceLeakDetectorFactory {
     }
 
     /**
-     * @param resource         the resource class used to initialize the {@link ResourceLeakDetector}
-     * @param samplingInterval the interval on which sampling takes place
-     * @param maxActive        This is deprecated and will be ignored.
-     * @param <T>              the type of the resource class
-     * @return a new instance of {@link ResourceLeakDetector}
      * @deprecated Use {@link #newResourceLeakDetector(Class, int)} instead.
      * <p>
      * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
+     *
+     * @param resource the resource class used to initialize the {@link ResourceLeakDetector}
+     * @param samplingInterval the interval on which sampling takes place
+     * @param maxActive This is deprecated and will be ignored.
+     * @param <T> the type of the resource class
+     * @return a new instance of {@link ResourceLeakDetector}
      */
     @Deprecated
     public abstract <T> ResourceLeakDetector<T> newResourceLeakDetector(
@@ -80,9 +81,9 @@ public abstract class ResourceLeakDetectorFactory {
     /**
      * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
      *
-     * @param resource         the resource class used to initialize the {@link ResourceLeakDetector}
+     * @param resource the resource class used to initialize the {@link ResourceLeakDetector}
      * @param samplingInterval the interval on which sampling takes place
-     * @param <T>              the type of the resource class
+     * @param <T> the type of the resource class
      * @return a new instance of {@link ResourceLeakDetector}
      */
     @SuppressWarnings("deprecation")
@@ -169,7 +170,7 @@ public abstract class ResourceLeakDetectorFactory {
             }
 
             ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(resource, samplingInterval,
-                    maxActive);
+                                                                                       maxActive);
             logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
             return resourceLeakDetector;
         }
