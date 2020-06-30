@@ -88,7 +88,7 @@ public abstract class ResourceLeakDetectorFactory {
      */
     @SuppressWarnings("deprecation")
     public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval) {
-        return newResourceLeakDetector(resource, ResourceLeakDetector.SAMPLING_INTERVAL, Long.MAX_VALUE);
+        return newResourceLeakDetector(resource, samplingInterval, Long.MAX_VALUE);
     }
 
     /**
