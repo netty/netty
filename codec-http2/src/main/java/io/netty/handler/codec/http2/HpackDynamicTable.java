@@ -83,7 +83,8 @@ final class HpackDynamicTable {
      */
     public HpackHeaderField getEntry(int index) {
         if (index <= 0 || index > length()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: 0 < index(" + index + ") <= length("
+                    + length() + ')');
         }
         int i = head - index;
         if (i < 0) {
