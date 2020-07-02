@@ -72,8 +72,6 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
-import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
-import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
@@ -1490,10 +1488,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledCipherSuites() {
+        final String[] extraCiphers;
         final String[] enabled;
         synchronized (this) {
             if (!isDestroyed()) {
                 enabled = SSL.getCiphers(ssl);
+                int opts = SSL.getOptions(ssl);
+                if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_3, PROTOCOL_TLS_V1_3)) {
+                    extraCiphers = OpenSsl.EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
+                } else {
+                    extraCiphers = EmptyArrays.EMPTY_STRINGS;
+                }
             } else {
                 return EmptyArrays.EMPTY_STRINGS;
             }
@@ -1501,7 +1506,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (enabled == null) {
             return EmptyArrays.EMPTY_STRINGS;
         } else {
-            List<String> enabledList = new ArrayList<String>();
+            Set<String> enabledSet = new LinkedHashSet<String>(enabled.length + extraCiphers.length);
             synchronized (this) {
                 for (int i = 0; i < enabled.length; i++) {
                     String mapped = toJavaCipherSuite(enabled[i]);
@@ -1509,10 +1514,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     if (!OpenSsl.isTlsv13Supported() && SslUtils.isTLSv13Cipher(cipher)) {
                         continue;
                     }
-                    enabledList.add(cipher);
+                    enabledSet.add(cipher);
                 }
+                Collections.addAll(enabledSet, extraCiphers);
             }
-            return enabledList.toArray(new String[0]);
+            return enabledSet.toArray(new String[0]);
         }
     }
 
@@ -2254,8 +2260,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             byte[][] chain = SSL.getPeerCertChain(ssl);
             if (clientMode) {
                 if (isEmpty(chain)) {
-                    peerCerts = EMPTY_CERTIFICATES;
-                    x509PeerCerts = EMPTY_JAVAX_X509_CERTIFICATES;
+                    peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
+                    x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                 } else {
                     peerCerts = new Certificate[chain.length];
                     x509PeerCerts = new X509Certificate[chain.length];
@@ -2269,8 +2275,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // See https://www.openssl.org/docs/ssl/SSL_get_peer_cert_chain.html
                 byte[] clientCert = SSL.getPeerCertificate(ssl);
                 if (isEmpty(clientCert)) {
-                    peerCerts = EMPTY_CERTIFICATES;
-                    x509PeerCerts = EMPTY_JAVAX_X509_CERTIFICATES;
+                    peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
+                    x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                 } else {
                     if (isEmpty(chain)) {
                         peerCerts = new Certificate[] {new OpenSslX509Certificate(clientCert)};

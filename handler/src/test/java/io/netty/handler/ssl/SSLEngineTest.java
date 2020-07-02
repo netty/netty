@@ -3428,6 +3428,54 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testEnabledProtocolsAndCiphers() throws Exception {
+        clientSslCtx = wrapContext(SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build());
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build());
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
+            assertEnabledProtocolsAndCipherSuites(clientEngine);
+            assertEnabledProtocolsAndCipherSuites(serverEngine);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    private static void assertEnabledProtocolsAndCipherSuites(SSLEngine engine) {
+        String protocol = engine.getSession().getProtocol();
+        String cipherSuite = engine.getSession().getCipherSuite();
+
+        assertArrayContains(protocol, engine.getEnabledProtocols());
+        assertArrayContains(cipherSuite, engine.getEnabledCipherSuites());
+    }
+
+    private static void assertArrayContains(String expected, String[] array) {
+        for (String value: array) {
+            if (expected.equals(value)) {
+                return;
+            }
+        }
+        fail("Array did not contain '" + expected + "':" + Arrays.toString(array));
+    }
+
+    @Test
     public void testMasterKeyLogging() throws Exception {
 
         /*
