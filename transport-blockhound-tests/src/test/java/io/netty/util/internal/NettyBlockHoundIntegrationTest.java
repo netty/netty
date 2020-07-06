@@ -153,6 +153,25 @@ public class NettyBlockHoundIntegrationTest {
         }
     }
 
+    @Test
+    public void testTrustManagerVerify() throws Exception {
+        final SslContext sslClientCtx =
+                SslContextBuilder.forClient()
+                                 .trustManager(ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"))
+                                 .build();
+
+        final SslContext sslServerCtx =
+                SslContextBuilder.forServer(ResourcesUtil.getFile(getClass(), "localhost_server.pem"),
+                                            ResourcesUtil.getFile(getClass(), "localhost_server.key"),
+                                            null)
+                                 .build();
+
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+
+        testHandshake(sslClientCtx, clientSslHandler, serverSslHandler);
+    }
+
     private static void testHandshakeWithExecutor(Executor executor) throws Exception {
         String tlsVersion = "TLSv1.2";
         final SslContext sslClientCtx = SslContextBuilder.forClient()
@@ -163,12 +182,17 @@ public class NettyBlockHoundIntegrationTest {
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
-        Channel sc = null;
-        Channel cc = null;
         final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
         final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
 
+        testHandshake(sslClientCtx, clientSslHandler, serverSslHandler);
+    }
+
+    private static void testHandshake(SslContext sslClientCtx, SslHandler clientSslHandler,
+                                      SslHandler serverSslHandler) throws Exception {
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
         try {
             sc = new ServerBootstrap()
                     .group(group)
