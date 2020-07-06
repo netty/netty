@@ -197,7 +197,7 @@ public class DiskFileUploadTest {
         DiskFileUpload f1 = new DiskFileUpload("file3", "file3", "application/json", null, null, 0);
         try {
             byte[] bytes = new byte[4096];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
 
             final ByteBuf buffer;
 
