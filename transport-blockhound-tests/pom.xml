@@ -71,6 +71,12 @@
       <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <optional>true</optional>
+    </dependency>
 
     <dependency>
       <groupId>org.bouncycastle</groupId>

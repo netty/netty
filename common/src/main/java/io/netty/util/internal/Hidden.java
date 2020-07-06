@@ -72,6 +72,10 @@ class Hidden {
                     "runAllDelegatedTasks"
             );
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
+                    "verify");
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }
