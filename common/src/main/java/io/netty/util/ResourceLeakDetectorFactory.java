@@ -18,6 +18,7 @@ package io.netty.util;
 
 import static java.util.Objects.requireNonNull;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
