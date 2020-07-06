@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -87,7 +88,7 @@ public class CorsHandler extends ChannelDuplexHandler {
                 handlePreflight(ctx, request);
                 return;
             }
-            if (isShortCircuit && !allowRequest(origin)) {
+            if (isShortCircuit && !allowRequest(ctx, origin)) {
                 forbidden(ctx, request);
                 return;
             }
@@ -95,13 +96,20 @@ public class CorsHandler extends ChannelDuplexHandler {
         ctx.fireChannelRead(msg);
     }
 
-    private boolean allowRequest(String origin) {
+    private boolean allowRequest(ChannelHandlerContext ctx, String origin) {
         if (origin == null) {
             // Not a CORS Request, allow it to proceed.
             return true;
         }
-        // A rule was matched from the configs, so allow it.
-        return config != null;
+        if (config != null) {
+            // A rule was matched from the configs, so allow it.
+            return true;
+        }
+
+        String scheme = ctx.channel().pipeline().get(SslHandler.class) != null? "https" : "http";
+        String host = scheme + "://" + request.headers().get(HttpHeaderNames.HOST);
+        // If it's the same origin, allow it to proceed.
+        return origin.equalsIgnoreCase(host);
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
