@@ -74,6 +74,16 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders,
+                           int initialBufferSize, boolean allowDuplicateContentLengths) {
+        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, validateHeaders,
+                                          initialBufferSize, allowDuplicateContentLengths),
+             new HttpServerResponseEncoder());
+    }
+
+    /**
      * Upgrades to another protocol from HTTP. Removes the {@link HttpRequestDecoder} and
      * {@link HttpResponseEncoder} from the pipeline.
      */
@@ -103,6 +113,12 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         @Override
         protected void decode(final ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             super.decode(context, buffer);
+        }
+
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
+                                 boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths) {
+            super(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize,
+                  allowDuplicateContentLengths);
         }
 
         @Override
