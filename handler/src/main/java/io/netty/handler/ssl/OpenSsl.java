@@ -27,6 +27,7 @@ import io.netty.internal.tcnative.SessionTicketKey;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -63,6 +64,7 @@ public final class OpenSsl {
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
+    static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
 
     // self-signed certificate for netty.io and the matching private-key
     private static final String CERT = "-----BEGIN CERTIFICATE-----\n" +
@@ -203,6 +205,13 @@ public final class OpenSsl {
             boolean tlsv13Supported = false;
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
+            if (IS_BORINGSSL) {
+                EXTRA_SUPPORTED_TLS_1_3_CIPHERS = new String [] { "TLS_AES_128_GCM_SHA256",
+                        "TLS_AES_256_GCM_SHA384" ,
+                        "TLS_CHACHA20_POLY1305_SHA256" };
+            }  else {
+                EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
+            }
 
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
@@ -248,10 +257,8 @@ public final class OpenSsl {
                         if (IS_BORINGSSL) {
                             // Currently BoringSSL does not include these when calling SSL.getCiphers() even when these
                             // are supported.
+                            Collections.addAll(availableOpenSslCipherSuites, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
                             Collections.addAll(availableOpenSslCipherSuites,
-                                               "TLS_AES_128_GCM_SHA256",
-                                               "TLS_AES_256_GCM_SHA384" ,
-                                               "TLS_CHACHA20_POLY1305_SHA256",
                                                "AEAD-AES128-GCM-SHA256",
                                                "AEAD-AES256-GCM-SHA384",
                                                "AEAD-CHACHA20-POLY1305-SHA256");
@@ -398,6 +405,7 @@ public final class OpenSsl {
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
             IS_BORINGSSL = false;
+            EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
         }
     }
 

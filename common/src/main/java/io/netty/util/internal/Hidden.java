@@ -87,6 +87,10 @@ class Hidden {
                     "io.netty.util.concurrent.SingleThreadEventExecutor",
                     "takeTask");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
+                    "verify");
+
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
