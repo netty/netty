@@ -15,16 +15,23 @@
  */
 package io.netty.channel.uring;
 
-public enum EventType {
-    ACCEPT(13),
-    READ(22),
-    WRITE(23);
-    private final int op;
-    EventType(int op) {
-        this.op = op;
-    }
+import io.netty.util.internal.PlatformDependent;
 
-    public int getOp() {
-        return op;
-    }
+public class RingBuffer {
+  private final IOUringSubmissionQueue ioUringSubmissionQueue;
+  private final IOUringCompletionQueue ioUringCompletionQueue;
+
+  public RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
+    this.ioUringSubmissionQueue = ioUringSubmissionQueue;
+    this.ioUringCompletionQueue = ioUringCompletionQueue;
+  }
+
+  public IOUringSubmissionQueue getIoUringSubmissionQueue() {
+    return this.ioUringSubmissionQueue;
+  }
+
+  public IOUringCompletionQueue getIoUringCompletionQueue() {
+    return this.ioUringCompletionQueue;
+  }
+
 }

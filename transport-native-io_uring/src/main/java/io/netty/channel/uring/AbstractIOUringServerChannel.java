@@ -80,10 +80,11 @@ public class AbstractIOUringServerChannel extends AbstractIOUringChannel impleme
             event.setId(eventId);
             event.setOp(EventType.ACCEPT);
 
-            if (socket.acceptEvent(getIoUring(), eventId, acceptedAddress) == 0) {
-                ioUringEventLoop.addNewEvent(event);
-                Native.ioUringSubmit(getIoUring());
-            }
+            //Todo
+            // if (socket.acceptEvent(getIoUring(), eventId, acceptedAddress) == 0) {
+            //     ioUringEventLoop.addNewEvent(event);
+            //     Native.ioUringSubmit(getIoUring());
+            // }
         }
     }
 }

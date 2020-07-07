@@ -18,8 +18,8 @@ package io.netty.channel.uring;
 import org.junit.Test;
 
 import java.io.FileInputStream;
+
 import java.io.File;
-import sun.misc.SharedSecrets;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -29,30 +29,35 @@ import static org.junit.Assert.*;
 public class NativeTest {
 
     @Test
-    public void test_io_uring() {
-        long uring = Native.ioUringSetup(32);
-
-        long fd = Native.createFile();
-        System.out.println("Fd: " + fd);
+    public void canWriteFile() {
+        //Todo add read operation test
+        final long eventId = 1;
 
         ByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
         UnpooledUnsafeDirectByteBuf directByteBufPooled = new UnpooledUnsafeDirectByteBuf(allocator, 500, 1000);
-
-        System.out.println("MemoryAddress: " + directByteBufPooled.hasMemoryAddress());
         String inputString = "Hello World!";
         byte[] byteArrray = inputString.getBytes();
         directByteBufPooled.writeBytes(byteArrray);
 
-        Native.ioUringWrite(uring, fd, 1, directByteBufPooled.memoryAddress(), directByteBufPooled.readerIndex(),
-                directByteBufPooled.writerIndex());
+        int fd = (int) Native.createFile();
+        System.out.println("Filedescriptor: " + fd);
 
-        Native.ioUringSubmit(uring);
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
 
-        long cqe = Native.ioUringWaitCqe(uring);
+        assertNotNull(ringBuffer);
+        assertNotNull(submissionQueue);
+        assertNotNull(completionQueue);
 
-        // ystem.out.println("Res: " + Native.ioUringGetRes(cqe));
-        assertEquals(12, Native.ioUringGetRes(cqe));
+        assertTrue(submissionQueue.add(eventId, EventType.WRITE, fd, directByteBufPooled.memoryAddress(),
+        directByteBufPooled.readerIndex(), directByteBufPooled.writerIndex()));
+        submissionQueue.submit();
 
-        Native.ioUringClose(uring);
+        IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
+
+        assertNotNull(ioUringCqe);
+        assertEquals(inputString.length(), ioUringCqe.getRes());
+        assertEquals(1, ioUringCqe.getEventId());
     }
 }
