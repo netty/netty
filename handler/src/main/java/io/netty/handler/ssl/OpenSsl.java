@@ -23,7 +23,6 @@ import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
-import io.netty.internal.tcnative.SessionTicketKey;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -111,31 +110,6 @@ public final class OpenSsl {
     static {
         Throwable cause = null;
 
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-        logger.info("HELLLO");
-
         if (SystemPropertyUtil.getBoolean("io.netty.handler.ssl.noOpenSsl", false)) {
             cause = new UnsupportedOperationException(
                     "OpenSSL was explicit disabled with -Dio.netty.handler.ssl.noOpenSsl=true");
@@ -146,7 +120,7 @@ public final class OpenSsl {
         } else {
             // Test if netty-tcnative is in the classpath first.
             try {
-                Class.forName("io.netty.internal.tcnative.SessionTicketKey", false, OpenSsl.class.getClassLoader());
+                Class.forName("io.netty.internal.tcnative.SSLContext", false, OpenSsl.class.getClassLoader());
             } catch (ClassNotFoundException t) {
                 cause = t;
                 logger.debug(
@@ -612,7 +586,7 @@ public final class OpenSsl {
         libNames.add(staticLibName + "_" + arch);
         libNames.add(staticLibName);
 
-        NativeLibraryLoader.loadFirstAvailable(SessionTicketKey.class.getClassLoader(),
+        NativeLibraryLoader.loadFirstAvailable(SSLContext.class.getClassLoader(),
             libNames.toArray(new String[0]));
     }
 
