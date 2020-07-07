@@ -30,34 +30,24 @@ import java.util.Locale;
 
 public final class Native {
 
+    private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 32);
     static {
         loadNativeLibrary();
     }
 
-    public static native long ioUringSetup(int entries);
+    public static RingBuffer createRingBuffer(int ringSize) {
+        //Todo throw Exception if it's null
+        return ioUringSetup(ringSize);
+    }
 
-    public static native int ioUringRead(long io_uring, long fd, long eventId, long bufferAddress, int pos, int limit);
+    public static RingBuffer createRingBuffer() {
+        //Todo throw Exception if it's null
+        return ioUringSetup(DEFAULT_RING_SIZE);
+    }
 
-    public static native int ioUringWrite(long io_uring, long fd, long eventId, long bufferAddress, int pos, int limit);
+    private static native RingBuffer ioUringSetup(int entries);
 
-    public static native int ioUringAccept(long io_uring, long fd, byte[] addr);
-
-    // return id
-    public static native long ioUringWaitCqe(long io_uring);
-
-    public static native long ioUringDeleteCqe(long io_uring, long cqeAddress);
-
-    public static native long ioUringGetEventId(long cqeAddress);
-
-    public static native int ioUringGetRes(long cqeAddress);
-
-    public static native long ioUringClose(long io_uring);
-
-    public static native long ioUringSubmit(long io_uring);
-
-    public static native long ioUringGetSQE(long io_uring);
-
-    public static native long ioUringGetQC(long io_uring);
+    public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     // for testing(it is only temporary)
     public static native long createFile();
@@ -66,9 +56,9 @@ public final class Native {
         // utility
     }
 
-    // From epoll native library
+    // From io_uring native library
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+        String name = PlatformDependent.normalizedOs().toLowerCase(Locale.UK).trim();
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
@@ -78,13 +68,13 @@ public final class Native {
         try {
             NativeLibraryLoader.load(sharedLibName, cl);
         } catch (UnsatisfiedLinkError e1) {
-            // try {
-            // NativeLibraryLoader.load(staticLibName, cl);
-            // System.out.println("Failed to load io_uring");
-            // } catch (UnsatisfiedLinkError e2) {
-            // ThrowableUtil.addSuppressed(e1, e2);
-            // throw e1;
-            // }
+            try {
+                NativeLibraryLoader.load(staticLibName, cl);
+                System.out.println("Failed to load io_uring");
+            } catch (UnsatisfiedLinkError e2) {
+                ThrowableUtil.addSuppressed(e1, e2);
+                throw e1;
+            }
         }
     }
 }

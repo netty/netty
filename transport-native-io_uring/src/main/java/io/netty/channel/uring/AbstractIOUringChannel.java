@@ -83,11 +83,12 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             event.setId(eventId);
             event.setOp(EventType.READ);
 
-            int error = socket.readEvent(ioUring, eventId, byteBuf.memoryAddress(), byteBuf.writerIndex(),
-                    byteBuf.capacity());
-            if (error == 0) {
-                ioUringEventLoop.addNewEvent(event);
-            }
+            //Todo
+            //int error = socket.readEvent(ioUring, eventId, byteBuf.memoryAddress(), byteBuf.writerIndex(),
+            //       byteBuf.capacity());
+            // if (error == 0) {
+            //     ioUringEventLoop.addNewEvent(event);
+            // }
         }
     }
 
@@ -171,7 +172,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             long eventId = ioUringEventLoop.incrementEventIdCounter();
             event.setId(eventId);
             event.setOp(EventType.WRITE);
-            socket.writeEvent(ioUring, eventId, buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
+            //socket.writeEvent(ioUring, eventId, buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
         }
     }
 

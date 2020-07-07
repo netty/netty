@@ -15,16 +15,26 @@
  */
 package io.netty.channel.uring;
 
-public enum EventType {
-    ACCEPT(13),
-    READ(22),
-    WRITE(23);
-    private final int op;
-    EventType(int op) {
-        this.op = op;
+public class IOUringCqe {
+    private final long eventId;
+    private final int res;
+    private final long flags;
+
+    public IOUringCqe(long eventId, int res, long flags) {
+        this.eventId = eventId;
+        this.res = res;
+        this.flags = flags;
     }
 
-    public int getOp() {
-        return op;
+    public long getEventId() {
+        return this.eventId;
+    }
+
+    public int getRes() {
+        return this.res;
+    }
+
+    public long getFlags() {
+        return this.flags;
     }
 }

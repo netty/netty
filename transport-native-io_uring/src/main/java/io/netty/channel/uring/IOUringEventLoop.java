@@ -27,8 +27,6 @@ import java.util.concurrent.Executor;
 
 class IOUringEventLoop extends SingleThreadEventLoop {
 
-    // C pointer
-    private final long io_uring;
 
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     // events should be unique to identify which event type that was
@@ -38,7 +36,6 @@ class IOUringEventLoop extends SingleThreadEventLoop {
     protected IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp,
             final int maxPendingTasks, final RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        this.io_uring = Native.ioUringSetup(32);
     }
 
     public long incrementEventIdCounter() {
@@ -53,24 +50,25 @@ class IOUringEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
+        //Todo
         for (;;) {
             // wait until an event has finished
-            final long cqe = Native.ioUringWaitCqe(io_uring);
-            final Event event = events.get(Native.ioUringGetEventId(cqe));
-            final int ret = Native.ioUringGetRes(cqe);
-            switch (event.getOp()) {
-                case ACCEPT:
-                    // serverChannel is necessary to call newChildchannel
-                    // create a new accept event
-                    break;
-                case READ:
-                    // need to save the Bytebuf before I execute the read operation
-                    // fireChannelRead(byteBuf)
-                    break;
-                case WRITE:
-                    // you have to store Bytebuf to continue writing
-                    break;
-            }
+            //final long cqe = Native.ioUringWaitCqe(io_uring);
+            //final Event event = events.get(Native.ioUringGetEventId(cqe));
+            //final int ret = Native.ioUringGetRes(cqe);
+            // switch (event.getOp()) {
+            //     case ACCEPT:
+            //         // serverChannel is necessary to call newChildchannel
+            //         // create a new accept event
+            //         break;
+            //     case READ:
+            //         // need to save the Bytebuf before I execute the read operation
+            //         // fireChannelRead(byteBuf)
+            //         break;
+            //     case WRITE:
+            //         // you have to store Bytebuf to continue writing
+            //         break;
+            // }
             // processing Tasks
         }
     }
