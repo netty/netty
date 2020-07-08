@@ -238,11 +238,16 @@ final class PoolChunk<T> implements PoolChunkMetric {
         queue.offer(handle);
 
         //insert first page of run
-        runsAvailMap.put(runOffset, handle);
+        insertAvailRun0(runOffset, handle);
         if (pages > 1) {
             //insert last page of run
-            runsAvailMap.put(lastPage(runOffset, pages), handle);
+            insertAvailRun0(lastPage(runOffset, pages), handle);
         }
+    }
+
+    private void insertAvailRun0(int runOffset, Long handle) {
+        Long pre = runsAvailMap.put(runOffset, handle);
+        assert pre == null;
     }
 
     private void removeAvailRun(long handle) {
@@ -294,7 +299,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache cache) {
-        long handle;
+        final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
             handle = allocateSubpage(sizeIdx);
@@ -371,6 +376,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private int runFirstBestFit(int pageIdx) {
+        if (freeBytes == chunkSize) {
+            return arena.nPSizes - 1;
+        }
         for (int i = pageIdx; i < arena.nPSizes; i++) {
             PriorityQueue<Long> queue = runsAvail[i];
             if (queue != null && !queue.isEmpty()) {
@@ -406,7 +414,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     /**
-     * Create / initialize a new PoolSubpage of normCapacity Any PoolSubpage created / initialized here is added to
+     * Create / initialize a new PoolSubpage of normCapacity. Any PoolSubpage created / initialized here is added to
      * subpage pool in the PoolArena that owns this PoolChunk
      *
      * @param sizeIdx sizeIdx of normalized size
@@ -439,8 +447,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     /**
      * Free a subpage or a run of pages When a subpage is freed from PoolSubpage, it might be added back to subpage pool
-     * of the owning PoolArena If the subpage pool in PoolArena has at least one other PoolSubpage of given elemSize, we
-     * can completely free the owning Page so it is available for subsequent allocations
+     * of the owning PoolArena. If the subpage pool in PoolArena has at least one other PoolSubpage of given elemSize,
+     * we can completely free the owning Page so it is available for subsequent allocations
      *
      * @param handle handle to free
      */
