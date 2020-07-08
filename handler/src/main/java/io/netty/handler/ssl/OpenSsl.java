@@ -119,7 +119,7 @@ public final class OpenSsl {
         } else {
             // Test if netty-tcnative is in the classpath first.
             try {
-                Class.forName("io.netty.internal.tcnative.SSL", false, OpenSsl.class.getClassLoader());
+                Class.forName("io.netty.internal.tcnative.SSLContext", false, OpenSsl.class.getClassLoader());
             } catch (ClassNotFoundException t) {
                 cause = t;
                 logger.debug(
@@ -556,7 +556,7 @@ public final class OpenSsl {
         libNames.add(staticLibName + "_" + arch);
         libNames.add(staticLibName);
 
-        NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
+        NativeLibraryLoader.loadFirstAvailable(SSLContext.class.getClassLoader(),
             libNames.toArray(new String[0]));
     }
 
