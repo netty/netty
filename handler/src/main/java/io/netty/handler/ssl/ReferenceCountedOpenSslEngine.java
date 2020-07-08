@@ -936,6 +936,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             // In practice this means the destination buffer doesn't have enough space for OpenSSL
                             // to write encrypted data to. This is an OVERFLOW condition.
                             // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                            if (bytesProduced > 0) {
+                                // If we produced something we should report this back and let the user call
+                                // wrap again.
+                                return newResult(NEED_WRAP, bytesConsumed, bytesProduced);
+                            }
                             return newResult(BUFFER_OVERFLOW, status, bytesConsumed, bytesProduced);
                         } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
                                 sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
