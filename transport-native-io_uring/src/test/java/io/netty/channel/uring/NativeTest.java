@@ -25,22 +25,21 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import static org.junit.Assert.*;
+import io.netty.buffer.ByteBuf;
 
 public class NativeTest {
 
     @Test
     public void canWriteFile() {
-        //Todo add read operation test
         final long eventId = 1;
 
         ByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
-        UnpooledUnsafeDirectByteBuf directByteBufPooled = new UnpooledUnsafeDirectByteBuf(allocator, 500, 1000);
+        ByteBuf writeEventByteBuf = allocator.directBuffer(100);
         String inputString = "Hello World!";
         byte[] byteArrray = inputString.getBytes();
-        directByteBufPooled.writeBytes(byteArrray);
+        writeEventByteBuf.writeBytes(byteArrray);
 
         int fd = (int) Native.createFile();
-        System.out.println("Filedescriptor: " + fd);
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
@@ -50,14 +49,30 @@ public class NativeTest {
         assertNotNull(submissionQueue);
         assertNotNull(completionQueue);
 
-        assertTrue(submissionQueue.add(eventId, EventType.WRITE, fd, directByteBufPooled.memoryAddress(),
-        directByteBufPooled.readerIndex(), directByteBufPooled.writerIndex()));
+        assertTrue(submissionQueue.add(eventId, EventType.WRITE, fd, writeEventByteBuf.memoryAddress(),
+        writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
         submissionQueue.submit();
 
         IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-
         assertNotNull(ioUringCqe);
         assertEquals(inputString.length(), ioUringCqe.getRes());
         assertEquals(1, ioUringCqe.getEventId());
+        writeEventByteBuf.release();
+
+        ByteBuf readEventByteBuf = allocator.directBuffer(100);
+        assertTrue(submissionQueue.add(eventId + 1, EventType.READ, fd, readEventByteBuf.memoryAddress(),
+        readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
+        submissionQueue.submit();
+
+        ioUringCqe = completionQueue.ioUringWaitCqe();
+        assertEquals(2, ioUringCqe.getEventId());
+        assertEquals(inputString.length(), ioUringCqe.getRes());
+
+        readEventByteBuf.writerIndex(ioUringCqe.getRes());
+        byte[] dataRead = new byte[inputString.length()];
+        readEventByteBuf.readBytes(dataRead);
+
+        assertEquals(inputString, new String(dataRead));
+        readEventByteBuf.release();
     }
 }
