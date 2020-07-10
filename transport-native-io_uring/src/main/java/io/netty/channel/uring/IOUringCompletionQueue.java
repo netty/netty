@@ -19,6 +19,8 @@ import io.netty.util.internal.PlatformDependent;
 
 public class IOUringCompletionQueue {
 
+  //these offsets are used to access specific properties
+  //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)
   private final int CQE_USER_DATA_FIELD = 0;
   private final int CQE_RES_FIELD = 8;
   private final int CQE_FLAGS_FIELD = 12;
@@ -27,7 +29,7 @@ public class IOUringCompletionQueue {
 
   private final int IORING_ENTER_GETEVENTS = 1;
 
-  // (k -> kernel)
+  //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
   private final long kHeadAddress;
   private final long kTailAddress;
   private final long kringMaskAddress;
@@ -83,6 +85,7 @@ public class IOUringCompletionQueue {
         return ioUringCqe;
     }
 
+    //IORING_ENTER_GETEVENTS -> wait until an event is completely processed
     int ret = Native.ioUringEnter(ringFd, 0, 1, IORING_ENTER_GETEVENTS);
     if (ret < 0) {
         //Todo throw exception!
@@ -129,7 +132,6 @@ public class IOUringCompletionQueue {
   public long getRingAddress() {
     return this.ringAddress;
   }
-
 
   //Todo Integer.toUnsignedLong -> maven checkstyle error
   public static long toUnsignedLong(int x) {

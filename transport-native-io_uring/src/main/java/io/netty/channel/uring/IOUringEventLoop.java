@@ -27,7 +27,6 @@ import java.util.concurrent.Executor;
 
 class IOUringEventLoop extends SingleThreadEventLoop {
 
-
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     // events should be unique to identify which event type that was
     private long eventIdCounter;
