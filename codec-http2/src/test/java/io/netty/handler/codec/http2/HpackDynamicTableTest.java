@@ -103,4 +103,28 @@ public class HpackDynamicTableTest {
         assertEquals(0, table.length());
         assertEquals(0, table.size());
     }
+
+    @Test
+    public void testAdd() {
+        HpackDynamicTable table = new HpackDynamicTable(100);
+        assertEquals(0, table.size());
+        HpackHeaderField entry1 = new HpackHeaderField("foo", "bar"); //size:3+3+32=38
+        HpackHeaderField entry2 = new HpackHeaderField("hello", "world");
+        table.add(entry1); //success
+        assertEquals(entry1.size(), table.size());
+        table.setCapacity(32); //entry1 is removed from table
+        assertEquals(0, table.size());
+        assertEquals(0, table.length());
+        table.add(entry1); //fail quietly
+        assertEquals(0, table.size());
+        assertEquals(0, table.length());
+        table.setCapacity(64);
+        table.add(entry1); //success
+        assertEquals(entry1.size(), table.size());
+        assertEquals(1, table.length());
+        table.add(entry2); //entry2 is added, but entry1 is removed from table
+        assertEquals(entry2.size(), table.size());
+        assertEquals(1, table.length());
+        assertEquals(entry2, table.getEntry(1));
+    }
 }
