@@ -109,7 +109,7 @@ final class HpackDynamicTable {
             remove();
         }
         hpackHeaderFields[head++] = header;
-        size += header.size();
+        size += headerSize;
         if (head == hpackHeaderFields.length) {
             head = 0;
         }
