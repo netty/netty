@@ -429,6 +429,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     /**
      * Default tiny cache size - default 0
+     *
+     * @deprecated Tiny caches have been merged into small caches.
      */
     @Deprecated
     public static int defaultTinyCacheSize() {

@@ -68,7 +68,10 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
 
     /**
      * Return the size of the tiny cache.
+     *
+     * @deprecated Tiny caches have been merged into small caches.
      */
+    @Deprecated
     public int tinyCacheSize() {
         return allocator.tinyCacheSize();
     }

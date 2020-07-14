@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.buffer.PoolChunk.*;
+import static io.netty.buffer.PoolChunk.isSubpage;
 import static java.lang.Math.max;
 
 abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {

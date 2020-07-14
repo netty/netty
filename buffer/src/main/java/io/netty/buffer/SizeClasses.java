@@ -104,6 +104,7 @@ abstract class SizeClasses implements SizeClassesMetric {
         int group = log2(chunkSize) + 1 - LOG2_QUANTUM;
 
         //generate size classes
+        //[index, log2Group, log2Delta, nDelta, isMultiPageSize, isSubPage, log2DeltaLookup]
         sizeClasses = new short[group << LOG2_SIZE_CLASS_GROUP][7];
         nSizes = sizeClasses();
 

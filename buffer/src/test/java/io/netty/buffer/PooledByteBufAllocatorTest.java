@@ -33,7 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
-import static io.netty.buffer.PoolChunk.*;
+import static io.netty.buffer.PoolChunk.runOffset;
+import static io.netty.buffer.PoolChunk.runPages;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
