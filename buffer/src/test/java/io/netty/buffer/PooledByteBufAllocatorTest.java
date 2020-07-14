@@ -293,6 +293,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         assertEquals(0, runOffset(b.handle));
         assertEquals(20, runPages(b.handle));
+
+        b5.release();
     }
 
     @Test
@@ -309,26 +311,30 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         for (int i = 0; i < 5; i++) {
             bufs[i].release();
-            bufs[i] = null;
         }
 
         //make sure we always allocate runs with small offset
         for (int i = 0; i < 5; i++) {
-            PooledByteBuf<ByteBuffer> buf = unwrapIfNeeded(allocator.buffer(size));
-            assertEquals(runOffset(buf.handle), i * 5);
+            ByteBuf buf = allocator.buffer(size);
+            PooledByteBuf<ByteBuffer> unwrapedBuf = unwrapIfNeeded(buf);
+            assertEquals(runOffset(unwrapedBuf.handle), i * 5);
             bufs[i] = buf;
         }
 
         //release at reverse order
         for (int i = 10 - 1; i >= 5; i--) {
             bufs[i].release();
-            bufs[i] = null;
         }
 
         for (int i = 5; i < 10; i++) {
-            PooledByteBuf<ByteBuffer> buf = unwrapIfNeeded(allocator.buffer(size));
-            assertEquals(runOffset(buf.handle), i * 5);
+            ByteBuf buf = allocator.buffer(size);
+            PooledByteBuf<ByteBuffer> unwrapedBuf = unwrapIfNeeded(buf);
+            assertEquals(runOffset(unwrapedBuf.handle), i * 5);
             bufs[i] = buf;
+        }
+
+        for (int i = 0; i < 10; i++) {
+            bufs[i].release();
         }
     }
 
