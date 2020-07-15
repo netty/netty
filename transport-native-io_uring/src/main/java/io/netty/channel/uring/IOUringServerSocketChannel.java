@@ -17,14 +17,19 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.unix.Socket;
+
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 public class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
-    IOUringServerSocketChannel(Channel parent, LinuxSocket fd, boolean active, long ioUring) {
-        super(parent, fd, active, ioUring);
+    private final IOUringServerSocketChannelConfig config;
+
+    public IOUringServerSocketChannel() {
+        super(Socket.newSocketStream().getFd());
+        this.config = new IOUringServerSocketChannelConfig(this);
     }
+
 
     @Override
     public void doBind(SocketAddress localAddress) throws Exception {
@@ -32,13 +37,19 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     }
 
     @Override
+    public IOUringServerSocketChannelConfig config() {
+        return config;
+    }
+
+    @Override
     public boolean isOpen() {
         return false;
     }
 
+
     @Override
-    public ServerSocketChannelConfig config() {
-        return null;
+    Channel newChildChannel(int fd, IOUringSubmissionQueue submissionQueue) throws Exception {
+        return new IOUringSocketChannel(this, new LinuxSocket(fd));
     }
 
     @Override

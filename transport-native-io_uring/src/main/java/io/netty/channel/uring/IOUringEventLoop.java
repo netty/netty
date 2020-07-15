@@ -31,10 +31,11 @@ class IOUringEventLoop extends SingleThreadEventLoop {
     // events should be unique to identify which event type that was
     private long eventIdCounter;
     private final LongObjectHashMap<Event> events = new LongObjectHashMap<Event>();
+    private final RingBuffer ringBuffer;
 
-    protected IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp,
-            final int maxPendingTasks, final RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
+    protected IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
+        super(parent, executor, addTaskWakesUp);
+        ringBuffer = Native.createRingBuffer(32);
     }
 
     public long incrementEventIdCounter() {
@@ -70,5 +71,9 @@ class IOUringEventLoop extends SingleThreadEventLoop {
             // }
             // processing Tasks
         }
+    }
+
+    public RingBuffer getRingBuffer() {
+        return ringBuffer;
     }
 }
