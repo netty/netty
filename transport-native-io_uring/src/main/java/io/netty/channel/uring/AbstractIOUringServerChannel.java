@@ -24,17 +24,16 @@ import io.netty.channel.unix.FileDescriptor;
 
 import java.net.SocketAddress;
 
-public class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
+public abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
     private volatile SocketAddress local;
 
-    AbstractIOUringServerChannel(final Channel parent, final LinuxSocket fd, final boolean active, final long ioUring) {
-        super(parent, fd, active, ioUring);
+   AbstractIOUringServerChannel(int fd) {
+        super(null, new LinuxSocket(fd));
     }
 
-    @Override
-    public ChannelConfig config() {
-        return null;
+    AbstractIOUringServerChannel(LinuxSocket fd) {
+        super(null, fd);
     }
 
     @Override
@@ -62,29 +61,35 @@ public class AbstractIOUringServerChannel extends AbstractIOUringChannel impleme
         return null;
     }
 
+    public AbstractIOUringChannel getChannel() {
+        return this;
+    }
+
+    abstract Channel newChildChannel(int fd, IOUringSubmissionQueue submissionQueue) throws Exception;
+
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         private final byte[] acceptedAddress = new byte[26];
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                final ChannelPromise promise) {
+                            final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
         public void uringEventExecution() {
             final IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
 
             long eventId = ioUringEventLoop.incrementEventIdCounter();
             final Event event = new Event();
             event.setId(eventId);
             event.setOp(EventType.ACCEPT);
+            event.setAbstractIOUringChannel(getChannel());
 
-            //Todo
-            // if (socket.acceptEvent(getIoUring(), eventId, acceptedAddress) == 0) {
-            //     ioUringEventLoop.addNewEvent(event);
-            //     Native.ioUringSubmit(getIoUring());
-            // }
+            //todo get network addresses
+            submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().getFd(), 0, 0, 0);
+            ioUringEventLoop.addNewEvent(event);
         }
     }
 }

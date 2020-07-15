@@ -42,13 +42,11 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
     final LinuxSocket socket;
     protected volatile boolean active;
     boolean uringInReadyPending;
-    private final long ioUring;
 
-    AbstractIOUringChannel(final Channel parent, LinuxSocket fd, boolean active, final long ioUring) {
+    AbstractIOUringChannel(final Channel parent, LinuxSocket fd) {
         super(parent);
         this.socket = checkNotNull(fd, "fd");
-        this.active = active;
-        this.ioUring = ioUring;
+        this.active = true;
     }
 
     public boolean isOpen() {
@@ -75,6 +73,8 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
     public void doReadBytes(ByteBuf byteBuf) {
         IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+        IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+
         unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
 
         if (byteBuf.hasMemoryAddress()) {
@@ -82,13 +82,10 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             final Event event = new Event();
             event.setId(eventId);
             event.setOp(EventType.READ);
-
-            //Todo
-            //int error = socket.readEvent(ioUring, eventId, byteBuf.memoryAddress(), byteBuf.writerIndex(),
-            //       byteBuf.capacity());
-            // if (error == 0) {
-            //     ioUringEventLoop.addNewEvent(event);
-            // }
+            event.setReadBuffer(byteBuf);
+            event.setAbstractIOUringChannel(this);
+            submissionQueue.add(eventId, EventType.READ, socket.getFd(), byteBuf.memoryAddress(),
+                                byteBuf.writerIndex(), byteBuf.capacity());
         }
     }
 
@@ -145,34 +142,25 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        Object msg = in.current();
-        if (msg == null) {
-            // nothing left to write
-            return;
-        }
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            int readableBytes = buf.readableBytes();
-            while (readableBytes > 0) {
-                doWriteBytes(buf);
-
-                // have to move it to the eventloop
-                int newReadableBytes = buf.readableBytes();
-                in.progress(readableBytes - newReadableBytes);
-                readableBytes = newReadableBytes;
+        if (in.size() == 1) {
+            Object msg = in.current();
+            if (msg instanceof ByteBuf) {
+                doWriteBytes((ByteBuf) msg);
             }
-            in.remove();
         }
     }
 
     protected final void doWriteBytes(ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress()) {
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
             final Event event = new Event();
             long eventId = ioUringEventLoop.incrementEventIdCounter();
             event.setId(eventId);
             event.setOp(EventType.WRITE);
-            //socket.writeEvent(ioUring, eventId, buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
+            event.setAbstractIOUringChannel(this);
+            submissionQueue.add(eventId, EventType.WRITE, socket.getFd(), buf.memoryAddress(), buf.readerIndex(),
+                                buf.writerIndex());
         }
     }
 
@@ -205,7 +193,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                final ChannelPromise promise) {
+                            final ChannelPromise promise) {
         }
 
         final void executeUringReadOperator() {
@@ -222,7 +210,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         throw new UnsupportedOperationException("unsupported message type");
@@ -243,9 +231,8 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
         }
     }
 
-    public long getIoUring() {
-        return ioUring;
-    }
+    @Override
+    public abstract IOUringChannelConfig config();
 
     @Override
     protected SocketAddress localAddress0() {
@@ -255,5 +242,9 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
     @Override
     protected SocketAddress remoteAddress0() {
         return null;
+    }
+
+    public LinuxSocket getSocket() {
+        return socket;
     }
 }

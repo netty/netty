@@ -15,8 +15,30 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
+
 public class Event {
     private long id;
+
+    private ByteBuf readBuffer;
+    private AbstractIOUringChannel abstractIOUringChannel;
+    private EventType op;
+
+    public AbstractIOUringChannel getAbstractIOUringChannel() {
+        return abstractIOUringChannel;
+    }
+
+    public void setAbstractIOUringChannel(AbstractIOUringChannel abstractIOUringChannel) {
+        this.abstractIOUringChannel = abstractIOUringChannel;
+    }
+
+    public ByteBuf getReadBuffer() {
+        return readBuffer;
+    }
+
+    public void setReadBuffer(ByteBuf readBuffer) {
+        this.readBuffer = readBuffer;
+    }
 
     public long getId() {
         return id;
@@ -33,6 +55,5 @@ public class Event {
     public void setOp(final EventType op) {
         this.op = op;
     }
-
-    private EventType op;
 }
+
