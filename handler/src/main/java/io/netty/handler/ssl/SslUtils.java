@@ -110,18 +110,23 @@ final class SslUtils {
 
     static {
         boolean tlsv13Supported = false;
+        Throwable cause = null;
         try {
-            SSLContext context = SSLContext.getInstance("TLS", "SunJSSE");
-            context.init(null, new TrustManager[] {  }, null);
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[0], null);
             for (String supported: context.getSupportedSSLParameters().getProtocols()) {
                 if (PROTOCOL_TLS_V1_3.equals(supported)) {
                     tlsv13Supported = true;
                     break;
                 }
             }
-            logger.debug("JDK SSLEngine supports TLSv1.3: {}", tlsv13Supported);
         } catch (Throwable error) {
-            logger.debug("Unable to detect if JDK SSLEngine supports TLSv1.3, assuming no", error);
+            cause = error;
+        }
+        if (cause == null) {
+            logger.debug("JDK SSLEngine supports TLSv1.3: {}", tlsv13Supported);
+        } else {
+            logger.debug("Unable to detect if JDK SSLEngine supports TLSv1.3, assuming no", cause);
         }
         TLSV1_3_SUPPORTED = tlsv13Supported;
 

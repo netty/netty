@@ -2338,7 +2338,7 @@ public abstract class SSLEngineTest {
                 assertTrue(hs == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING
                         || hs == SSLEngineResult.HandshakeStatus.NEED_UNWRAP);
             } else {
-                assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, result.getHandshakeStatus());
+                assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, hs);
             }
 
             int produced = result.bytesProduced();
