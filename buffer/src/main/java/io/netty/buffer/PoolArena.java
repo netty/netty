@@ -157,21 +157,24 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
          * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
          */
         final PoolSubpage<T> head = smallSubpagePools[sizeIdx];
+        final boolean needsNormalAllocation;
         synchronized (head) {
             final PoolSubpage<T> s = head.next;
-            if (s != head) {
+            needsNormalAllocation = s == head;
+            if (!needsNormalAllocation) {
                 assert s.doNotDestroy && s.elemSize == sizeIdx2size(sizeIdx);
                 long handle = s.allocate();
                 assert handle >= 0;
                 s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
-                incSmallAllocation();
-                return;
             }
         }
 
-        synchronized (this) {
-            allocateNormal(buf, reqCapacity, sizeIdx, cache);
+        if (needsNormalAllocation) {
+            synchronized (this) {
+                allocateNormal(buf, reqCapacity, sizeIdx, cache);
+            }
         }
+
         incSmallAllocation();
     }
 
