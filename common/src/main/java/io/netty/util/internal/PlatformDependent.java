@@ -1055,6 +1055,8 @@ public final class PlatformDependent {
                     case 'g': case 'G':
                         maxDirectMemory *= 1024 * 1024 * 1024;
                         break;
+                    default:
+                        break;
                 }
                 break;
             }

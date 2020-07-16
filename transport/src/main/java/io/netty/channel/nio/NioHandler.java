@@ -625,6 +625,8 @@ public final class NioHandler implements IoHandler {
                     invokeChannelUnregistered(task, k, null);
                 }
                 break;
+            default:
+                 break;
             }
         }
     }
