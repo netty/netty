@@ -17,7 +17,6 @@ package io.netty.handler.ssl;
 
 import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 import com.amazon.corretto.crypto.provider.SelfTestStatus;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,7 +43,7 @@ public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
 
-            if (PlatformDependent.javaVersion() >= 11) {
+            if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true });
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false });
             }

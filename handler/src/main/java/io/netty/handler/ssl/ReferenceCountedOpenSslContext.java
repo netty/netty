@@ -215,10 +215,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
+            boolean tlsv13Supported = OpenSsl.isTlsv13Supported();
+
             try {
                 int protocolOpts = SSL.SSL_PROTOCOL_SSLV3 | SSL.SSL_PROTOCOL_TLSV1 |
                                    SSL.SSL_PROTOCOL_TLSV1_1 | SSL.SSL_PROTOCOL_TLSV1_2;
-                if (OpenSsl.isTlsv13Supported()) {
+                if (tlsv13Supported) {
                     protocolOpts |= SSL.SSL_PROTOCOL_TLSV1_3;
                 }
                 ctx = SSLContext.make(protocolOpts, mode);
@@ -226,7 +228,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 throw new SSLException("failed to create an SSL_CTX", e);
             }
 
-            boolean tlsv13Supported = OpenSsl.isTlsv13Supported();
             StringBuilder cipherBuilder = new StringBuilder();
             StringBuilder cipherTLSv13Builder = new StringBuilder();
 

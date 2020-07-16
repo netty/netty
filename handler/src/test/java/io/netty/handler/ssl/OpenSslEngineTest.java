@@ -83,7 +83,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, false });
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, true });
 
-            if (OpenSsl.isTlsv13Supported()) {
+            if (SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, false });
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, true });
 
