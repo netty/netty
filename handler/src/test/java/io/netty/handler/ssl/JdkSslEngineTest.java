@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -148,7 +147,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
 
-                if (PlatformDependent.javaVersion() >= 11) {
+                if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
                 }
