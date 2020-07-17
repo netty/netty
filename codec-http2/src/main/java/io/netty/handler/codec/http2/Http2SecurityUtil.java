@@ -51,8 +51,12 @@ public final class Http2SecurityUtil {
             .asList(
             /* openssl = ECDHE-ECDSA-AES128-GCM-SHA256 */
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+
+            /* REQUIRED BY HTTP/2 SPEC */
             /* openssl = ECDHE-RSA-AES128-GCM-SHA256 */
             "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            /* REQUIRED BY HTTP/2 SPEC */
+
             /* openssl = ECDHE-ECDSA-AES256-GCM-SHA384 */
             "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
             /* openssl = ECDHE-RSA-AES256-GCM-SHA384 */
