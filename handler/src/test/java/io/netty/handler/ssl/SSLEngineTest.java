@@ -2332,15 +2332,13 @@ public abstract class SSLEngineTest {
             encryptedClientToServer.flip();
 
             assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            SSLEngineResult.HandshakeStatus hs = result.getHandshakeStatus();
             // Need an UNWRAP to read the response of the close_notify
-            if ((PlatformDependent.javaVersion() >= 12 && sslClientProvider() == SslProvider.JDK)
-                    || Conscrypt.isEngineSupported(client)) {
-                // This is a workaround for a possible JDK12+ bug.
-                //
-                // See http://mail.openjdk.java.net/pipermail/security-dev/2019-February/019406.html.
-                assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, result.getHandshakeStatus());
+            if (sslClientProvider() == SslProvider.JDK || Conscrypt.isEngineSupported(client)) {
+                assertTrue(hs == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING
+                        || hs == SSLEngineResult.HandshakeStatus.NEED_UNWRAP);
             } else {
-                assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, result.getHandshakeStatus());
+                assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, hs);
             }
 
             int produced = result.bytesProduced();

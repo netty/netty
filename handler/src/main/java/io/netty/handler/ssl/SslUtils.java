@@ -23,7 +23,8 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -33,7 +34,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.TrustManager;
 
 import static java.util.Arrays.asList;
 
@@ -41,6 +44,8 @@ import static java.util.Arrays.asList;
  * Constants for SSL packets.
  */
 final class SslUtils {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslUtils.class);
+
     // See https://tools.ietf.org/html/rfc8446#appendix-B.4
     static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<String>(
             asList("TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
@@ -101,8 +106,31 @@ final class SslUtils {
     static final String[] DEFAULT_TLSV13_CIPHER_SUITES;
     static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
 
+    private static final boolean TLSV1_3_SUPPORTED;
+
     static {
-        if (PlatformDependent.javaVersion() >= 11) {
+        boolean tlsv13Supported = false;
+        Throwable cause = null;
+        try {
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[0], null);
+            for (String supported: context.getSupportedSSLParameters().getProtocols()) {
+                if (PROTOCOL_TLS_V1_3.equals(supported)) {
+                    tlsv13Supported = true;
+                    break;
+                }
+            }
+        } catch (Throwable error) {
+            cause = error;
+        }
+        if (cause == null) {
+            logger.debug("JDK SSLEngine supports TLSv1.3: {}", tlsv13Supported);
+        } else {
+            logger.debug("Unable to detect if JDK SSLEngine supports TLSv1.3, assuming no", cause);
+        }
+        TLSV1_3_SUPPORTED = tlsv13Supported;
+
+        if (TLSV1_3_SUPPORTED) {
             DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
         } else {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
@@ -126,6 +154,13 @@ final class SslUtils {
         Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
         DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
+    }
+
+    /**
+     * Returns {@code true} if the JDK itself supports TLSv1.3, {@code false} otherwise.
+     */
+    static boolean isTLSv13SupportedByJDK() {
+        return TLSV1_3_SUPPORTED;
     }
 
     /**

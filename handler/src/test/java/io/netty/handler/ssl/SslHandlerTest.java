@@ -1116,37 +1116,37 @@ public class SslHandlerTest {
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv12() throws Throwable {
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2, true);
+        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2, true);
     }
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv13() throws Throwable {
-        assumeTrue(OpenSsl.isTlsv13Supported());
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3, true);
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3, true);
     }
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv12AndNoKey() throws Throwable {
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2, false);
+        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2, false);
     }
 
     @Test(timeout = 5000L)
     public void testSessionTicketsWithTLSv13AndNoKey() throws Throwable {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3, false);
+        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3, false);
     }
 
-    private static void testSessionTickets(String protocol, boolean withKey) throws Throwable {
+    private static void testSessionTickets(SslProvider provider, String protocol, boolean withKey) throws Throwable {
         assumeTrue(OpenSsl.isAvailable());
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(provider)
                 .protocols(protocol)
                 .build();
 
         final SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(provider)
                 .protocols(protocol)
                 .build();
 
