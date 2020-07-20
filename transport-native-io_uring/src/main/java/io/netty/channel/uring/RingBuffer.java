@@ -15,13 +15,12 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
 
-public class RingBuffer {
+class RingBuffer {
   private final IOUringSubmissionQueue ioUringSubmissionQueue;
   private final IOUringCompletionQueue ioUringCompletionQueue;
 
-  public RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
+  RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
     this.ioUringSubmissionQueue = ioUringSubmissionQueue;
     this.ioUringCompletionQueue = ioUringCompletionQueue;
   }

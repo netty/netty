@@ -21,13 +21,13 @@ public class IOUringCompletionQueue {
 
   //these offsets are used to access specific properties
   //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)
-  private final int CQE_USER_DATA_FIELD = 0;
-  private final int CQE_RES_FIELD = 8;
-  private final int CQE_FLAGS_FIELD = 12;
+  private static final int CQE_USER_DATA_FIELD = 0;
+  private static final int CQE_RES_FIELD = 8;
+  private static final int CQE_FLAGS_FIELD = 12;
 
-  private final int CQE_SIZE = 16;
+  private static final int CQE_SIZE = 16;
 
-  private final int IORING_ENTER_GETEVENTS = 1;
+  private static final int IORING_ENTER_GETEVENTS = 1;
 
   //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
   private final long kHeadAddress;
@@ -55,12 +55,10 @@ public class IOUringCompletionQueue {
     this.ringFd = ringFd;
   }
 
-  private IOUringCqe peek() {
+  public IOUringCqe peek() {
     long cqe = 0;
-    long head = toUnsignedLong(PlatformDependent.getInt(kHeadAddress));
+    long head = toUnsignedLong(PlatformDependent.getIntVolatalile(kHeadAddress));
 
-    //aquire memory barrier https://openjdk.java.net/jeps/171
-    PlatformDependent.loadFence();
     if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
         long index = head & toUnsignedLong(PlatformDependent.getInt(kringMaskAddress));
         cqe = index * CQE_SIZE + completionQueueArrayAddress;
@@ -70,8 +68,7 @@ public class IOUringCompletionQueue {
         long flags = toUnsignedLong(PlatformDependent.getInt(cqe + CQE_FLAGS_FIELD));
 
         //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-        PlatformDependent.storeFence();
-        PlatformDependent.putInt(kHeadAddress, (int) (head + 1));
+        PlatformDependent.putIntOrdered(kHeadAddress, (int) (head + 1));
 
         return new IOUringCqe(eventId, res, flags);
     }

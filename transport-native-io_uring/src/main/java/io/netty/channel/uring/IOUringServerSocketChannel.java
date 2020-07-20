@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 
 import java.net.InetSocketAddress;
@@ -26,14 +27,8 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     private final IOUringServerSocketChannelConfig config;
 
     public IOUringServerSocketChannel() {
-        super(Socket.newSocketStream().getFd());
+        super(Socket.newSocketStreamBlocking().getFd());
         this.config = new IOUringServerSocketChannelConfig(this);
-    }
-
-
-    @Override
-    public void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
     }
 
     @Override
@@ -42,13 +37,7 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     }
 
     @Override
-    public boolean isOpen() {
-        return false;
-    }
-
-
-    @Override
-    Channel newChildChannel(int fd, IOUringSubmissionQueue submissionQueue) throws Exception {
+    Channel newChildChannel(int fd) throws Exception {
         return new IOUringSocketChannel(this, new LinuxSocket(fd));
     }
 
@@ -65,5 +54,17 @@ public class IOUringServerSocketChannel extends AbstractIOUringServerChannel imp
     @Override
     public InetSocketAddress localAddress() {
         return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public void doBind(SocketAddress localAddress) throws Exception {
+        super.doBind(localAddress);
+        socket.listen(500);
+        active = true;
+    }
+
+    @Override
+    public FileDescriptor fd() {
+        return super.fd();
     }
 }

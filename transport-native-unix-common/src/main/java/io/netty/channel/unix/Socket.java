@@ -397,6 +397,11 @@ public class Socket extends FileDescriptor {
         return new Socket(newSocketStream0());
     }
 
+    public static Socket newSocketStreamBlocking() {
+        System.out.println("newSocketStreamBlocking");
+        return new Socket(newSocketStreamBlocking(isIPv6Preferred()));
+    }
+
     public static Socket newSocketDgram() {
         return new Socket(newSocketDgram0());
     }
@@ -417,6 +422,15 @@ public class Socket extends FileDescriptor {
 
     protected static int newSocketStream0(boolean ipv6) {
         int res = newSocketStreamFd(ipv6);
+        if (res < 0) {
+            throw new ChannelException(newIOException("newSocketStream", res));
+        }
+        return res;
+    }
+
+    //only temporary
+    protected static int newSocketStreamBlocking(boolean ipv6) {
+        int res = newSocketStreamFdBlocking(ipv6);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketStream", res));
         }
@@ -471,6 +485,7 @@ public class Socket extends FileDescriptor {
     private static native int sendFd(int socketFd, int fd);
 
     private static native int newSocketStreamFd(boolean ipv6);
+    private static native int newSocketStreamFdBlocking(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);
     private static native int newSocketDomainFd();
 

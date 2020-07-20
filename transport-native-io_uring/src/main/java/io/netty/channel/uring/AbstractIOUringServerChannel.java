@@ -16,19 +16,15 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.unix.FileDescriptor;
 
 import java.net.SocketAddress;
 
-public abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
+abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
-    private volatile SocketAddress local;
-
-   AbstractIOUringServerChannel(int fd) {
+    AbstractIOUringServerChannel(int fd) {
         super(null, new LinuxSocket(fd));
     }
 
@@ -42,30 +38,15 @@ public abstract class AbstractIOUringServerChannel extends AbstractIOUringChanne
     }
 
     @Override
-    protected SocketAddress localAddress0() {
-        return null;
-    }
-
-    @Override
-    protected SocketAddress remoteAddress0() {
-        return null;
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileDescriptor fd() {
-        return null;
     }
 
     public AbstractIOUringChannel getChannel() {
         return this;
     }
 
-    abstract Channel newChildChannel(int fd, IOUringSubmissionQueue submissionQueue) throws Exception;
+    abstract Channel newChildChannel(int fd) throws Exception;
 
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         private final byte[] acceptedAddress = new byte[26];
@@ -87,9 +68,11 @@ public abstract class AbstractIOUringServerChannel extends AbstractIOUringChanne
             event.setOp(EventType.ACCEPT);
             event.setAbstractIOUringChannel(getChannel());
 
-            //todo get network addresses
+            //Todo get network addresses
             submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().getFd(), 0, 0, 0);
             ioUringEventLoop.addNewEvent(event);
+            submissionQueue.submit();
         }
     }
 }
+

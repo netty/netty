@@ -17,7 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 
-public class Event {
+final class Event {
     private long id;
 
     private ByteBuf readBuffer;
@@ -56,4 +56,3 @@ public class Event {
         this.op = op;
     }
 }
-

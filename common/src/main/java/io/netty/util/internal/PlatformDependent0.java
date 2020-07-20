@@ -529,6 +529,14 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(address);
     }
 
+    static int getIntVolatile(long address) {
+        return UNSAFE.getIntVolatile(null, address);
+    }
+
+    static void putIntOrdered(long adddress, int newValue) {
+       UNSAFE.putOrderedInt(null, adddress, newValue);
+    }
+
     static long getLong(long address) {
         return UNSAFE.getLong(address);
     }

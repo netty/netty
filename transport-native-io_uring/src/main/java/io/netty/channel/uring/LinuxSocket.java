@@ -25,18 +25,7 @@ public class LinuxSocket extends Socket {
         this.fd = fd;
     }
 
-    //Todo
-
-    // public int readEvent(long ring, long eventId, long bufferAddress, int pos, int limit) {
-    //     return Native.ioUringRead(ring, fd, eventId, bufferAddress, pos, limit);
-    // }
-
-    // public int writeEvent(long ring, long eventId, long bufferAddress, int pos, int limit) {
-    //     return Native.ioUringWrite(ring, fd, eventId, bufferAddress, pos, limit);
-    // }
-
-    // public int acceptEvent(long ring, long eventId, byte[] addr) {
-    //     return Native.ioUringAccept(ring, eventId, addr);
-    // }
-
+    public int getFd() {
+        return fd;
+    }
 }

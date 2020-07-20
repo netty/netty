@@ -471,18 +471,6 @@ public final class PlatformDependent {
         return new ConcurrentHashMap<K, V>(map);
     }
 
-    public static void loadFence() {
-        PlatformDependent0.loadFence();
-    }
-
-    public static void storeFence() {
-        PlatformDependent0.storeFence();
-    }
-
-    public static void fullFence() {
-        PlatformDependent0.fullFence();
-    }
-
     /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
@@ -521,6 +509,14 @@ public final class PlatformDependent {
 
     public static int getInt(long address) {
         return PlatformDependent0.getInt(address);
+    }
+
+    public static int getIntVolatalile(long address) {
+        return PlatformDependent0.getIntVolatile(address);
+    }
+
+    public static void putIntOrdered(long adddress, int newValue) {
+       PlatformDependent0.putIntOrdered(adddress, newValue);
     }
 
     public static long getLong(long address) {

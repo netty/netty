@@ -15,12 +15,12 @@
  */
 package io.netty.channel.uring;
 
-public class IOUringCqe {
+class IOUringCqe {
     private final long eventId;
     private final int res;
     private final long flags;
 
-    public IOUringCqe(long eventId, int res, long flags) {
+    IOUringCqe(long eventId, int res, long flags) {
         this.eventId = eventId;
         this.res = res;
         this.flags = flags;

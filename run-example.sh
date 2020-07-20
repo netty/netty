@@ -1,5 +1,6 @@
 #!/bin/bash -e
 EXAMPLE_MAP=(
+  'uring:io.netty.example.uring.EchoIOUringServer'
   'discard-client:io.netty.example.discard.DiscardClient'
   'discard-server:io.netty.example.discard.DiscardServer'
   'echo-client:io.netty.example.echo.EchoClient'

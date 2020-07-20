@@ -69,6 +69,11 @@ static int nettyNonBlockingSocket(int domain, int type, int protocol) {
 #endif
 }
 
+//only temporary
+static int nettyBlockingSocket(int domain, int type, int protocol) {
+    return socket(domain, type, protocol);
+}
+
 int netty_unix_socket_ipAddressLength(const struct sockaddr_storage* addr) {
     if (addr->ss_family == AF_INET) {
         return 4;
@@ -613,6 +618,17 @@ static jint netty_unix_socket_newSocketStreamFd(JNIEnv* env, jclass clazz, jbool
     return _socket(env, clazz, domain, SOCK_STREAM);
 }
 
+//only temporary
+static jint netty_unix_socket_newSocketStreamFd_blocking(JNIEnv* env, jclass clazz, jboolean ipv6) {
+    int domain = ipv6 == JNI_TRUE ? AF_INET6 : AF_INET;
+
+    int fd = nettyBlockingSocket(domain, SOCK_STREAM, 0);
+    if (fd == -1) {
+        return -errno;
+    }
+    return fd;
+}
+
 static jint netty_unix_socket_newSocketDomainFd(JNIEnv* env, jclass clazz) {
     int fd = nettyNonBlockingSocket(PF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
@@ -979,6 +995,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "localAddress", "(I)[B", (void *) netty_unix_socket_localAddress },
   { "newSocketDgramFd", "(Z)I", (void *) netty_unix_socket_newSocketDgramFd },
   { "newSocketStreamFd", "(Z)I", (void *) netty_unix_socket_newSocketStreamFd },
+  { "newSocketStreamFdBlocking", "(Z)I", (void *) netty_unix_socket_newSocketStreamFd_blocking }, //temporary
   { "newSocketDomainFd", "()I", (void *) netty_unix_socket_newSocketDomainFd },
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BII)I", (void *) netty_unix_socket_sendTo },
   { "sendToAddress", "(IZJII[BII)I", (void *) netty_unix_socket_sendToAddress },
