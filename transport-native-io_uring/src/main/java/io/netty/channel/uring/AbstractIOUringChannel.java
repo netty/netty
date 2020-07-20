@@ -24,8 +24,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -36,17 +38,26 @@ import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
-public abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
-    private volatile SocketAddress local;
+abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     protected volatile boolean active;
     boolean uringInReadyPending;
 
+    private volatile SocketAddress local;
+    private volatile SocketAddress remote;
+
     AbstractIOUringChannel(final Channel parent, LinuxSocket fd) {
         super(parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
+
+        if (active) {
+            // Directly cache the remote and local addresses
+            // See https://github.com/netty/netty/issues/2359
+            this.local = fd.localAddress();
+            this.remote = fd.remoteAddress();
+        }
     }
 
     public boolean isOpen() {
@@ -61,6 +72,11 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
+    }
+
+    @Override
+    public FileDescriptor fd() {
+        return socket;
     }
 
     @Override
@@ -86,6 +102,8 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             event.setAbstractIOUringChannel(this);
             submissionQueue.add(eventId, EventType.READ, socket.getFd(), byteBuf.memoryAddress(),
                                 byteBuf.writerIndex(), byteBuf.capacity());
+            ioUringEventLoop.addNewEvent(event);
+            submissionQueue.submit();
         }
     }
 
@@ -128,6 +146,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
     @Override
     protected void doClose() throws Exception {
+        socket.close();
     }
 
     // Channel/ChannelHandlerContext.read() was called
@@ -140,9 +159,15 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
         }
     }
 
+    public void executeReadEvent() {
+        final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
+        unsafe.executeUringReadOperator();
+    }
+
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        if (in.size() == 1) {
+        //Todo write until there is nothing left in the buffer
+        if (in.size() >= 1) {
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
                 doWriteBytes((ByteBuf) msg);
@@ -150,7 +175,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
         }
     }
 
-    protected final void doWriteBytes(ByteBuf buf) throws Exception {
+    protected final void doWriteBytes(ByteBuf buf) {
         if (buf.hasMemoryAddress()) {
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
@@ -161,6 +186,8 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             event.setAbstractIOUringChannel(this);
             submissionQueue.add(eventId, EventType.WRITE, socket.getFd(), buf.memoryAddress(), buf.readerIndex(),
                                 buf.writerIndex());
+            ioUringEventLoop.addNewEvent(event);
+            submissionQueue.submit();
         }
     }
 
@@ -174,26 +201,23 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
             }
         };
 
-        /**
-         * Create a new {@link } instance.
-         *
-         * @param handle The handle to wrap with EPOLL specific logic.
-         */
-        IOUringRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
             return new IOUringRecvByteAllocatorHandle(handle);
         }
 
         @Override
         public IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
-                allocHandle = newEpollHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
+                allocHandle = newIOUringHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
             }
             return allocHandle;
         }
 
+        //Todo
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
                             final ChannelPromise promise) {
+            promise.setFailure(new Exception());
         }
 
         final void executeUringReadOperator() {
@@ -217,7 +241,7 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
     }
 
     @Override
-    public void doBind(final SocketAddress localAddress) throws Exception {
+    public void doBind(final SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) local);
         }
@@ -236,12 +260,12 @@ public abstract class AbstractIOUringChannel extends AbstractChannel implements 
 
     @Override
     protected SocketAddress localAddress0() {
-        return null;
+        return local;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return null;
+        return remote;
     }
 
     public LinuxSocket getSocket() {

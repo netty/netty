@@ -15,7 +15,7 @@
  */
 package io.netty.channel.uring;
 
-public enum EventType {
+enum EventType {
     ACCEPT(13),
     READ(22),
     WRITE(23);

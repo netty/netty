@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Socket;
 import org.junit.Test;
 
 import java.io.FileInputStream;

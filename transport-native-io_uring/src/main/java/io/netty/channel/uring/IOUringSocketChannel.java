@@ -21,7 +21,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -44,11 +46,6 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
     }
 
     @Override
-    public IOUringSocketChannelConfig config() {
-        return config;
-    }
-
-    @Override
     protected AbstractUringUnsafe newUnsafe() {
         return new AbstractUringUnsafe() {
 
@@ -67,7 +64,8 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
     }
 
     @Override
-    public void doBind(SocketAddress localAddress) throws Exception {
+    public IOUringSocketChannelConfig config() {
+        return config;
     }
 
     @Override
@@ -117,17 +115,17 @@ public class IOUringSocketChannel extends AbstractIOUringChannel implements Sock
 
     @Override
     public FileDescriptor fd() {
-        return null;
+        return super.fd();
     }
 
     @Override
     protected SocketAddress localAddress0() {
-        return null;
+        return super.localAddress0();
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return null;
+        return super.remoteAddress0();
     }
 
     @Override

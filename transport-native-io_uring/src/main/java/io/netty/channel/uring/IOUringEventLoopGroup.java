@@ -27,31 +27,41 @@ import io.netty.util.concurrent.RejectedExecutionHandlers;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
-public class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
+public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
 
-
+    /**
+     * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
+     */
     public IOUringEventLoopGroup() {
         this(0);
     }
 
-
+    /**
+     * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
+     */
     public IOUringEventLoopGroup(int nThreads) {
         this(nThreads, (ThreadFactory) null);
     }
 
-
+    /**
+     * Create a new instance using the default number of threads and the given {@link ThreadFactory}.
+     */
     @SuppressWarnings("deprecation")
     public IOUringEventLoopGroup(ThreadFactory threadFactory) {
         this(0, threadFactory, 0);
     }
 
-
+    /**
+     * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
+     */
     @SuppressWarnings("deprecation")
     public IOUringEventLoopGroup(int nThreads, SelectStrategyFactory selectStrategyFactory) {
         this(nThreads, (ThreadFactory) null, selectStrategyFactory);
     }
 
-
+    /**
+     * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
+     */
     @SuppressWarnings("deprecation")
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         this(nThreads, threadFactory, 0);
@@ -61,17 +71,33 @@ public class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
         this(nThreads, executor, DefaultSelectStrategyFactory.INSTANCE);
     }
 
+    /**
+     * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
+     */
     @SuppressWarnings("deprecation")
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory,
                                  SelectStrategyFactory selectStrategyFactory) {
         this(nThreads, threadFactory, 0, selectStrategyFactory);
     }
 
+    /**
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
+     * maximal amount of epoll events to handle per epollWait(...).
+     *
+     * @deprecated Use {@link #IOUringEventLoopGroup(int)} or {@link #IOUringEventLoopGroup(int, ThreadFactory)}
+     */
     @Deprecated
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce) {
         this(nThreads, threadFactory, maxEventsAtOnce, DefaultSelectStrategyFactory.INSTANCE);
     }
 
+    /**
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
+     * maximal amount of epoll events to handle per epollWait(...).
+     *
+     * @deprecated Use {@link #IOUringEventLoopGroup(int)}, {@link #IOUringEventLoopGroup(int, ThreadFactory)}, or
+     * {@link #IOUringEventLoopGroup(int, SelectStrategyFactory)}
+     */
     @Deprecated
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                  SelectStrategyFactory selectStrategyFactory) {
@@ -101,6 +127,9 @@ public class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
               selectStrategyFactory, rejectedExecutionHandler, queueFactory);
     }
 
+    /**
+     * @deprecated This method will be removed in future releases, and is not guaranteed to have any impacts.
+     */
     @Deprecated
     public void setIoRatio(int ioRatio) {
         if (ioRatio <= 0 || ioRatio > 100) {
@@ -108,9 +137,14 @@ public class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
         }
     }
 
+    //Todo
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        //EventLoopTaskQueueFactory queueFactory = args.length == 4? (EventLoopTaskQueueFactory) args[3] : null;
+     //EventLoopTaskQueueFactory queueFactory = args.length == 4? (EventLoopTaskQueueFactory) args[3] : null;
+//        return new IOUringEventLoop(this, executor, (Integer) args[0],
+//                ((SelectStrategyFactory) args[1]).newSelectStrategy(),
+//                (RejectedExecutionHandler) args[2], queueFactory);
+
         return new IOUringEventLoop(this, executor, false);
     }
 }
