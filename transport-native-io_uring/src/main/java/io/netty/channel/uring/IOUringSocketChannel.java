@@ -32,7 +32,7 @@ import io.netty.channel.unix.FileDescriptor;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-public class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
+public final class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
 
     IOUringSocketChannel(final Channel parent, final LinuxSocket fd) {

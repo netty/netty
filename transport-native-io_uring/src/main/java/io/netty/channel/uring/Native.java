@@ -15,19 +15,14 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.io.IOException;
 import java.util.Locale;
 
-public final class Native {
+final class Native {
 
     private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 32);
     static {
@@ -50,7 +45,7 @@ public final class Native {
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     // for testing(it is only temporary)
-    public static native long createFile();
+    public static native int createFile();
 
     private Native() {
         // utility

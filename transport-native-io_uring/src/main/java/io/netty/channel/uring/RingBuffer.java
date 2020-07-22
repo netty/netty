@@ -16,7 +16,7 @@
 package io.netty.channel.uring;
 
 
-class RingBuffer {
+final class RingBuffer {
   private final IOUringSubmissionQueue ioUringSubmissionQueue;
   private final IOUringCompletionQueue ioUringCompletionQueue;
 

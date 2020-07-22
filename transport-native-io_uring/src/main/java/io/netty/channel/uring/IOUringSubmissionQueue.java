@@ -17,7 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.PlatformDependent;
 
-public class IOUringSubmissionQueue {
+final class IOUringSubmissionQueue {
 
     private static final int SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
@@ -53,7 +53,7 @@ public class IOUringSubmissionQueue {
     private final long ringAddress;
     private final int ringFd;
 
-    public IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
+    IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                                   long fFlagsAdress, long kDroppedAddress, long arrayAddress,
                                   long submissionQueueArrayAddress, int ringSize,
                                   long ringAddress, int ringFd) {

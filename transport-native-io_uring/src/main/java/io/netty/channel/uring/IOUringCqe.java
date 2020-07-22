@@ -15,7 +15,7 @@
  */
 package io.netty.channel.uring;
 
-class IOUringCqe {
+final class IOUringCqe {
     private final long eventId;
     private final int res;
     private final long flags;

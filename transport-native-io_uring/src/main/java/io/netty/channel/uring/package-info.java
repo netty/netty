@@ -14,6 +14,7 @@
  * under the License.
  */
 /**
- * io_uring
+ * io_uring is a high I/O performance scalable interface for fully
+ * asynchronous Linux syscalls <a href="https://kernel.dk/io_uring.pdf">io_uring doc</a>
  */
 package io.netty.channel.uring;

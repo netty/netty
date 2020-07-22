@@ -17,7 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.PlatformDependent;
 
-public class IOUringCompletionQueue {
+final class IOUringCompletionQueue {
 
   //these offsets are used to access specific properties
   //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)
@@ -42,7 +42,7 @@ public class IOUringCompletionQueue {
   private final long ringAddress;
   private final int ringFd;
 
-  public IOUringCompletionQueue(long kHeadAddress, long kTailAddress, long kringMaskAddress, long kringEntries,
+  IOUringCompletionQueue(long kHeadAddress, long kTailAddress, long kringMaskAddress, long kringEntries,
       long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress, int ringFd) {
     this.kHeadAddress = kHeadAddress;
     this.kTailAddress = kTailAddress;
