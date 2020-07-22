@@ -15,16 +15,10 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.unix.Socket;
 import org.junit.Test;
-
-import java.io.FileInputStream;
-
-import java.io.File;
-
+import java.nio.charset.Charset;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 
@@ -37,8 +31,7 @@ public class NativeTest {
         ByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
         ByteBuf writeEventByteBuf = allocator.directBuffer(100);
         String inputString = "Hello World!";
-        byte[] byteArrray = inputString.getBytes();
-        writeEventByteBuf.writeBytes(byteArrray);
+        writeEventByteBuf.writeCharSequence(inputString, Charset.forName("UTF-8"));
 
         int fd = (int) Native.createFile();
 
@@ -73,7 +66,7 @@ public class NativeTest {
         byte[] dataRead = new byte[inputString.length()];
         readEventByteBuf.readBytes(dataRead);
 
-        assertEquals(inputString, new String(dataRead));
+        assertArrayEquals(inputString.getBytes(), dataRead);
         readEventByteBuf.release();
     }
 }

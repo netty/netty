@@ -151,7 +151,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     // Channel/ChannelHandlerContext.read() was called
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if (!uringInReadyPending) {
             uringInReadyPending = true;

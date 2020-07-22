@@ -25,14 +25,14 @@ import java.util.concurrent.Executor;
 
 import static io.netty.channel.unix.Errors.*;
 
-class IOUringEventLoop extends SingleThreadEventLoop {
+final class IOUringEventLoop extends SingleThreadEventLoop {
 
     // events should be unique to identify which event type that was
     private long eventIdCounter;
     private final LongObjectHashMap<Event> events = new LongObjectHashMap<Event>();
     private RingBuffer ringBuffer;
 
-    protected IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
+    IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
         ringBuffer = Native.createRingBuffer(32);
     }

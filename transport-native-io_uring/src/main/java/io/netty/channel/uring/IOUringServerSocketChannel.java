@@ -23,7 +23,7 @@ import io.netty.channel.unix.Socket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-public class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
+public final class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
     private final IOUringServerSocketChannelConfig config;
 
     public IOUringServerSocketChannel() {

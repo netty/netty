@@ -32,8 +32,7 @@ import static io.netty.channel.ChannelOption.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
 public class IOUringServerChannelConfig extends IOUringChannelConfig implements ServerSocketChannelConfig {
-      private volatile int backlog = NetUtil.SOMAXCONN;
-    private volatile int pendingFastOpenRequestsThreshold;
+    private volatile int backlog = NetUtil.SOMAXCONN;
 
     IOUringServerChannelConfig(AbstractIOUringServerChannel channel) {
         super(channel);

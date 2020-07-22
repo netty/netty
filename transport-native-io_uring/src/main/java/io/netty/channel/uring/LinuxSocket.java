@@ -17,10 +17,10 @@ package io.netty.channel.uring;
 
 import io.netty.channel.unix.Socket;
 
-public class LinuxSocket extends Socket {
+final class LinuxSocket extends Socket {
     private final int fd;
 
-    public LinuxSocket(final int fd) {
+    LinuxSocket(final int fd) {
         super(fd);
         this.fd = fd;
     }
