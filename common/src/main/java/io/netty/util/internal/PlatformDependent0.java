@@ -53,6 +53,11 @@ final class PlatformDependent0 {
     private static final Object INTERNAL_UNSAFE;
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
 
+    // See https://github.com/oracle/graal/blob/master/sdk/src/org.graalvm.nativeimage/src/org/graalvm/nativeimage/
+    // ImageInfo.java
+    private static final boolean RUNNING_IN_NATIVE_IMAGE = SystemPropertyUtil.contains(
+            "org.graalvm.nativeimage.imagecode");
+
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -283,7 +288,7 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         int version = javaVersion();
-                        if (version >= 9) {
+                        if (unsafeStaticFieldOffsetSupported() && version >= 9) {
                             // Java9/10 use all lowercase and later versions all uppercase.
                             String fieldName = version >= 11 ? "UNALIGNED" : "unaligned";
                             // On Java9 and later we try to directly access the field as we can do this without
@@ -397,6 +402,10 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
+
+    private static boolean unsafeStaticFieldOffsetSupported() {
+        return !RUNNING_IN_NATIVE_IMAGE;
     }
 
     static boolean isExplicitNoUnsafe() {
