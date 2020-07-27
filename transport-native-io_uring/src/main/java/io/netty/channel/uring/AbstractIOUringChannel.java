@@ -32,6 +32,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.UnresolvedAddressException;
@@ -164,6 +165,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         unsafe.executeUringReadOperator();
     }
 
+    //Channel/ChannelHandlerContext.write
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         //Todo write until there is nothing left in the buffer
@@ -238,6 +240,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         throw new UnsupportedOperationException("unsupported message type");
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        ((IOUringEventLoop) eventLoop()).add(this);
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        ((IOUringEventLoop) eventLoop()).remove(this);
     }
 
     @Override
