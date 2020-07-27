@@ -19,8 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.LongObjectHashMap;
 
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import static io.netty.channel.unix.Errors.*;
@@ -30,6 +33,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
     // events should be unique to identify which event type that was
     private long eventIdCounter;
     private final LongObjectHashMap<Event> events = new LongObjectHashMap<Event>();
+    private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private RingBuffer ringBuffer;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
@@ -42,6 +46,38 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         System.out.println(" incrementEventIdCounter EventId: " + eventId);
         eventIdCounter++;
         return eventId;
+    }
+
+    public void add(AbstractIOUringChannel ch) {
+        System.out.println("Add Channel: " + ch.socket.intValue());
+        int fd = ch.socket.intValue();
+
+        channels.put(fd, ch);
+    }
+
+    public void remove(AbstractIOUringChannel ch) {
+        System.out.println("Remove Channel: " + ch.socket.intValue());
+        int fd = ch.socket.intValue();
+
+        AbstractIOUringChannel old = channels.remove(fd);
+        if (old != null && old != ch) {
+            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+            channels.put(fd, old);
+
+            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
+            assert !ch.isOpen();
+        }
+    }
+
+    private void closeAll() {
+        System.out.println("CloseAll IOUringEvenloop");
+        // Using the intermediate collection to prevent ConcurrentModificationException.
+        // In the `close()` method, the channel is deleted from `channels` map.
+        AbstractIOUringChannel[] localChannels = channels.values().toArray(new AbstractIOUringChannel[0]);
+
+        for (AbstractIOUringChannel ch : localChannels) {
+            ch.unsafe().close(ch.unsafe().voidPromise());
+        }
     }
 
     public void addNewEvent(Event event) {
@@ -73,7 +109,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                             final ChannelPipeline pipeline = event.getAbstractIOUringChannel().pipeline();
 
                             allocHandle.lastBytesRead(ioUringCqe.getRes());
-                            if (allocHandle.lastBytesRead() != -1) {
+                            if (allocHandle.lastBytesRead() > 0) {
                                 allocHandle.incMessagesRead(1);
                                 try {
                                     pipeline.fireChannelRead(abstractIOUringServerChannel
@@ -96,8 +132,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         ringBuffer.getIoUringSubmissionQueue().submit();
                         break;
                     case READ:
-                        System.out.println("Eventlloop Read Res: " + ioUringCqe.getRes());
-                        System.out.println("Eventloop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
+                        System.out.println("EventLoop Read Res: " + ioUringCqe.getRes());
+                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
                         ByteBuf byteBuf = event.getReadBuffer();
                         int localReadAmount = ioUringCqe.getRes();
                         if (localReadAmount > 0) {
@@ -126,8 +162,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         event.getAbstractIOUringChannel().executeReadEvent();
                         break;
                     case WRITE:
-                        System.out.println("Eventloop Write Res: " + ioUringCqe.getRes());
-                        System.out.println("Eventloop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
+                        System.out.println("EventLoop Write Res: " + ioUringCqe.getRes());
+                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
+                        System.out.println("EventLoop Pipeline: " + event.getAbstractIOUringChannel().eventLoop());
                         //remove bytes
                         int localFlushAmount = ioUringCqe.getRes();
                         if (localFlushAmount > 0) {
@@ -135,13 +172,22 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         }
                         break;
                     }
-                } else {
-                    System.out.println("Event is null!!!! ");
                 }
             }
             //run tasks
             if (hasTasks()) {
                 runAllTasks();
+            }
+
+            try {
+                if (isShuttingDown()) {
+                    closeAll();
+                    if (confirmShutdown()) {
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                System.out.println("Exception error " + t);
             }
             try {
                 Thread.sleep(10);

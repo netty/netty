@@ -21,6 +21,8 @@ final class Event {
     private long id;
 
     private ByteBuf readBuffer;
+
+    //Todo use fd instead
     private AbstractIOUringChannel abstractIOUringChannel;
     private EventType op;
 

@@ -605,18 +605,6 @@ final class PlatformDependent0 {
         UNSAFE.putObject(o, offset, x);
     }
 
-    static void loadFence() {
-        UNSAFE.loadFence();
-    }
-
-    static void storeFence() {
-        UNSAFE.storeFence();
-    }
-
-    static void fullFence() {
-        UNSAFE.fullFence();
-    }
-
     static void copyMemory(long srcAddr, long dstAddr, long length) {
         // Manual safe-point polling is only needed prior Java9:
         // See https://bugs.openjdk.java.net/browse/JDK-8149596

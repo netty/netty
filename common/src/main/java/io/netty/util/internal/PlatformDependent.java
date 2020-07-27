@@ -511,7 +511,7 @@ public final class PlatformDependent {
         return PlatformDependent0.getInt(address);
     }
 
-    public static int getIntVolatalile(long address) {
+    public static int getIntVolatile(long address) {
         return PlatformDependent0.getIntVolatile(address);
     }
 
