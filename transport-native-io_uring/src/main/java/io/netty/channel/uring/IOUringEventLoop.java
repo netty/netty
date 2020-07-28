@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
@@ -163,12 +164,19 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         break;
                     case WRITE:
                         System.out.println("EventLoop Write Res: " + ioUringCqe.getRes());
-                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
+                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().intValue());
                         System.out.println("EventLoop Pipeline: " + event.getAbstractIOUringChannel().eventLoop());
+                        ChannelOutboundBuffer channelOutboundBuffer = event
+                                .getAbstractIOUringChannel().unsafe().outboundBuffer();
                         //remove bytes
                         int localFlushAmount = ioUringCqe.getRes();
                         if (localFlushAmount > 0) {
-                            event.getAbstractIOUringChannel().unsafe().outboundBuffer().removeBytes(localFlushAmount);
+                            channelOutboundBuffer.removeBytes(localFlushAmount);
+                        }
+                        try {
+                            event.getAbstractIOUringChannel().doWrite(channelOutboundBuffer);
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                         break;
                     }

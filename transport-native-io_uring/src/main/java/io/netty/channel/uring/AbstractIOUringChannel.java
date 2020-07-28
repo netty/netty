@@ -165,10 +165,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         unsafe.executeUringReadOperator();
     }
 
-    //Channel/ChannelHandlerContext.write
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        //Todo write until there is nothing left in the buffer
         if (in.size() >= 1) {
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
