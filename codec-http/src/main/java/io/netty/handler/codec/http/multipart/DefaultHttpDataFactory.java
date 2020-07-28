@@ -170,6 +170,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         MemoryAttribute attribute = new MemoryAttribute(name);
         attribute.setMaxSize(maxSize);
+        List<HttpData> list = getList(request);
+        list.add(attribute);
         return attribute;
     }
 
@@ -191,6 +193,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         MemoryAttribute attribute = new MemoryAttribute(name, definedSize);
         attribute.setMaxSize(maxSize);
+        List<HttpData> list = getList(request);
+        list.add(attribute);
         return attribute;
     }
 
@@ -234,6 +238,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             MemoryAttribute attribute = new MemoryAttribute(name, value, charset);
             attribute.setMaxSize(maxSize);
             checkHttpDataSize(attribute);
+            List<HttpData> list = getList(request);
+            list.add(attribute);
             return attribute;
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
@@ -266,6 +272,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
                 contentTransferEncoding, charset, size);
         fileUpload.setMaxSize(maxSize);
         checkHttpDataSize(fileUpload);
+        List<HttpData> list = getList(request);
+        list.add(fileUpload);
         return fileUpload;
     }
 

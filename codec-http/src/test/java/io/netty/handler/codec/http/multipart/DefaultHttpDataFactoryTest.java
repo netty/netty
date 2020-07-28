@@ -29,12 +29,12 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class DefaultHttpDataFactoryTest {
+
     // req1 equals req2
     private static final HttpRequest req1 = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
     private static final HttpRequest req2 = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
@@ -161,5 +161,86 @@ public class DefaultHttpDataFactoryTest {
         file2.release();
         assertEquals(0, attribute2.refCnt());
         assertEquals(0, file2.refCnt());
+    }
+
+    @Test
+    public void cleanAllHttpDataShouldReleaseAllDiskAttributes() throws Exception {
+        cleanAllHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory());
+    }
+
+    @Test
+    public void cleanRequestHttpDataShouldReleaseAllDiskAttributes() throws Exception {
+        cleanRequestHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory());
+    }
+
+    @Test
+    public void cleanAllHttpDataShouldReleaseAllMixedAttributes() throws Exception {
+        cleanAllHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE));
+    }
+
+    @Test
+    public void cleanRequestHttpDataShouldReleaseAllMixedAttributes() throws Exception {
+        cleanRequestHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE));
+    }
+
+    @Test
+    public void cleanAllHttpDataShouldReleaseAllMemoryAttributes() throws Exception {
+        cleanAllHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory(false));
+    }
+
+    @Test
+    public void cleanRequestHttpDataShouldReleaseAllMemoryAttributes() throws Exception {
+        cleanRequestHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory(false));
+    }
+
+    private void cleanAllHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
+        cleanShouldReleaseAllAttributes(factory, new Runnable() {
+            @Override
+            public void run() {
+                factory.cleanAllHttpData();
+            }
+        });
+    }
+
+    private void cleanRequestHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
+        cleanShouldReleaseAllAttributes(factory, new Runnable() {
+            @Override
+            public void run() {
+                factory.cleanRequestHttpData(req1);
+            }
+        });
+    }
+
+    private void cleanShouldReleaseAllAttributes(final HttpDataFactory factory, final Runnable cleanup)
+            throws Exception {
+        final Attribute attribute1 = factory.createAttribute(req1, "attribute1");
+        attribute1.setValue("value1");
+        final Attribute attribute2 = factory.createAttribute(req1, "attribute2", 0);
+        attribute2.setValue("value2");
+        final Attribute attribute3 = factory.createAttribute(req1, "attribute3", "value3");
+        final FileUpload file = factory.createFileUpload(req1, "file", "file.txt",
+                DEFAULT_TEXT_CONTENT_TYPE, IDENTITY.toString(), UTF_8, 123);
+        file.setContent(Unpooled.copiedBuffer("file content", UTF_8));
+
+        assertNotNull(attribute1.getByteBuf());
+        assertNotNull(attribute2.getByteBuf());
+        assertNotNull(attribute3.getByteBuf());
+        assertNotNull(file.getByteBuf());
+        assertEquals(1, attribute1.refCnt());
+        assertEquals(1, attribute2.refCnt());
+        assertEquals(1, attribute3.refCnt());
+        assertEquals(1, file.refCnt());
+
+        cleanup.run();
+
+        // Make sure that all attributes have been cleaned up
+        assertNull(attribute1.getByteBuf());
+        assertNull(attribute2.getByteBuf());
+        assertNull(attribute3.getByteBuf());
+        assertNull(file.getByteBuf());
+        assertEquals(0, attribute1.refCnt());
+        assertEquals(0, attribute2.refCnt());
+        assertEquals(0, attribute3.refCnt());
+        assertEquals(0, file.refCnt());
     }
 }
