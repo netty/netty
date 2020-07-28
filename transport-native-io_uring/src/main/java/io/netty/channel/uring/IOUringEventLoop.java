@@ -103,7 +103,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                             ioUringCqe.getRes() != ERRNO_EWOULDBLOCK_NEGATIVE) {
                             AbstractIOUringServerChannel abstractIOUringServerChannel =
                                     (AbstractIOUringServerChannel) event.getAbstractIOUringChannel();
-                            System.out.println("EventLoop Fd: " + abstractIOUringServerChannel.getSocket().getFd());
+                            System.out.println("EventLoop Fd: " + abstractIOUringServerChannel.getSocket().intValue());
                             final IOUringRecvByteAllocatorHandle allocHandle =
                                     (IOUringRecvByteAllocatorHandle) event.getAbstractIOUringChannel().unsafe()
                                                                           .recvBufAllocHandle();
@@ -125,7 +125,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         long eventId = incrementEventIdCounter();
                         event.setId(eventId);
                         ringBuffer.getIoUringSubmissionQueue()
-                                  .add(eventId, EventType.ACCEPT, event.getAbstractIOUringChannel().getSocket().getFd(),
+                                  .add(eventId, EventType.ACCEPT, event.getAbstractIOUringChannel()
+                                       .getSocket().intValue(),
                                        0,
                                        0,
                                        0);
@@ -134,7 +135,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         break;
                     case READ:
                         System.out.println("EventLoop Read Res: " + ioUringCqe.getRes());
-                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().getFd());
+                        System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().intValue());
                         ByteBuf byteBuf = event.getReadBuffer();
                         int localReadAmount = ioUringCqe.getRes();
                         if (localReadAmount > 0) {

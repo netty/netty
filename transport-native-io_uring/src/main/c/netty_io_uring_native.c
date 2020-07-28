@@ -79,18 +79,20 @@ static int io_uring_mmap(int fd, struct io_uring_params *p,
 	sq->ring_sz = p->sq_off.array + p->sq_entries * sizeof(unsigned);
 	cq->ring_sz = p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 
-	if (p->features & IORING_FEAT_SINGLE_MMAP) {
-		if (cq->ring_sz > sq->ring_sz)
+	if ((p->features & IORING_FEAT_SINGLE_MMAP) == 1) {
+		if (cq->ring_sz > sq->ring_sz) {
 			sq->ring_sz = cq->ring_sz;
+		}
 		cq->ring_sz = sq->ring_sz;
 	}
 	sq->ring_ptr = mmap(0, sq->ring_sz, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQ_RING);
-	if (sq->ring_ptr == MAP_FAILED)
+	if (sq->ring_ptr == MAP_FAILED) {
 		return -errno;
+    }
 
-	if (p->features & IORING_FEAT_SINGLE_MMAP) {
-		cq->ring_ptr = sq->ring_ptr;
+	if ((p->features & IORING_FEAT_SINGLE_MMAP) == 1) {
+	    cq->ring_ptr = sq->ring_ptr;
 	} else {
 		cq->ring_ptr = mmap(0, cq->ring_sz, PROT_READ | PROT_WRITE,
 				MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_CQ_RING);
@@ -136,7 +138,7 @@ void setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
     int ret;
 
     ret = io_uring_mmap(ring_fd, p, &io_uring_ring->sq, &io_uring_ring->cq);
-    if (!ret) {
+    if (ret == 0) {
         io_uring_ring->flags = p->flags;
         io_uring_ring->ring_fd = ring_fd;
     } else {

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -31,17 +32,18 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
-public class IOUringServerChannelConfig extends IOUringChannelConfig implements ServerSocketChannelConfig {
+public class IOUringServerChannelConfig extends DefaultChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
 
     IOUringServerChannelConfig(AbstractIOUringServerChannel channel) {
+
         super(channel);
     }
 
     @Override
     public boolean isReuseAddress() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isReuseAddress();
+            return ((AbstractIOUringChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -50,7 +52,7 @@ public class IOUringServerChannelConfig extends IOUringChannelConfig implements 
     @Override
     public IOUringServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            ((IOUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
+            ((AbstractIOUringChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -60,7 +62,7 @@ public class IOUringServerChannelConfig extends IOUringChannelConfig implements 
     @Override
     public int getReceiveBufferSize() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getReceiveBufferSize();
+            return ((AbstractIOUringChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -69,7 +71,7 @@ public class IOUringServerChannelConfig extends IOUringChannelConfig implements 
     @Override
     public IOUringServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            ((IOUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            ((AbstractIOUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);

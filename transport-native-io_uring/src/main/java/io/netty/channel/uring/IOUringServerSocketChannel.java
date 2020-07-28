@@ -38,7 +38,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
 
     @Override
     Channel newChildChannel(int fd) throws Exception {
-        return new IOUringSocketChannel(this, new LinuxSocket(fd));
+        return new IOUringSocketChannel(this, new Socket(fd));
     }
 
     @Override
@@ -59,6 +59,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     @Override
     public void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
+        //Todo set config option
         socket.listen(500);
         active = true;
     }

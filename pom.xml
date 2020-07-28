@@ -430,6 +430,7 @@
     <module>transport-native-unix-common</module>
     <module>transport-native-epoll</module>
     <module>transport-native-kqueue</module>
+    <module>transport-native-io_uring</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
@@ -445,7 +446,6 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
-    <module>transport-native-io_uring</module>
   </modules>
 
   <dependencyManagement>

@@ -19,16 +19,17 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.unix.Socket;
 
 import java.net.SocketAddress;
 
 abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
     AbstractIOUringServerChannel(int fd) {
-        super(null, new LinuxSocket(fd));
+        super(null, new Socket(fd));
     }
 
-    AbstractIOUringServerChannel(LinuxSocket fd) {
+    AbstractIOUringServerChannel(Socket fd) {
         super(null, fd);
     }
 
@@ -69,7 +70,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             event.setAbstractIOUringChannel(getChannel());
 
             //Todo get network addresses
-            submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().getFd(), 0, 0, 0);
+            submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().intValue(), 0, 0, 0);
             ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
         }

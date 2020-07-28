@@ -56,12 +56,11 @@ final class IOUringCompletionQueue {
   }
 
   public IOUringCqe peek() {
-    long cqe = 0;
     long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
 
     if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
         long index = head & toUnsignedLong(PlatformDependent.getInt(kringMaskAddress));
-        cqe = index * CQE_SIZE + completionQueueArrayAddress;
+        long cqe = index * CQE_SIZE + completionQueueArrayAddress;
 
         long eventId = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
         int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);

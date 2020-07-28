@@ -28,6 +28,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -35,7 +36,7 @@ import java.net.SocketAddress;
 public final class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
 
-    IOUringSocketChannel(final Channel parent, final LinuxSocket fd) {
+    IOUringSocketChannel(final Channel parent, final Socket fd) {
         super(parent, fd);
         this.config = new IOUringSocketChannelConfig(this);
     }
@@ -83,16 +84,19 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel implement
         return null;
     }
 
+    //Todo
     @Override
     public boolean isOutputShutdown() {
         return false;
     }
 
+    //Todo
     @Override
     public ChannelFuture shutdownOutput() {
         return null;
     }
 
+    //Todo
     @Override
     public ChannelFuture shutdownOutput(ChannelPromise promise) {
         return null;
@@ -103,11 +107,13 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel implement
         return false;
     }
 
+    //Todo
     @Override
     public ChannelFuture shutdown() {
         return null;
     }
 
+    //Todo
     @Override
     public ChannelFuture shutdown(ChannelPromise promise) {
         return null;
@@ -116,16 +122,6 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel implement
     @Override
     public FileDescriptor fd() {
         return super.fd();
-    }
-
-    @Override
-    protected SocketAddress localAddress0() {
-        return super.localAddress0();
-    }
-
-    @Override
-    protected SocketAddress remoteAddress0() {
-        return super.remoteAddress0();
     }
 
     @Override
