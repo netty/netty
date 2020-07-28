@@ -28,6 +28,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -41,23 +42,23 @@ import static io.netty.util.internal.ObjectUtil.*;
 
 abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    final LinuxSocket socket;
+    final Socket socket;
     protected volatile boolean active;
     boolean uringInReadyPending;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractIOUringChannel(final Channel parent, LinuxSocket fd) {
+    AbstractIOUringChannel(final Channel parent, Socket socket) {
         super(parent);
-        this.socket = checkNotNull(fd, "fd");
+        this.socket = checkNotNull(socket, "fd");
         this.active = true;
 
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
-            this.local = fd.localAddress();
-            this.remote = fd.remoteAddress();
+            this.local = socket.localAddress();
+            this.remote = socket.remoteAddress();
         }
     }
 
@@ -101,7 +102,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             event.setOp(EventType.READ);
             event.setReadBuffer(byteBuf);
             event.setAbstractIOUringChannel(this);
-            submissionQueue.add(eventId, EventType.READ, socket.getFd(), byteBuf.memoryAddress(),
+            submissionQueue.add(eventId, EventType.READ, socket.intValue(), byteBuf.memoryAddress(),
                                 byteBuf.writerIndex(), byteBuf.capacity());
             ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
@@ -147,9 +148,11 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doClose() throws Exception {
+        System.out.println("DoClose Socket: " + socket.intValue());
         socket.close();
     }
 
+    //deregister
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
@@ -184,7 +187,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             event.setId(eventId);
             event.setOp(EventType.WRITE);
             event.setAbstractIOUringChannel(this);
-            submissionQueue.add(eventId, EventType.WRITE, socket.getFd(), buf.memoryAddress(), buf.readerIndex(),
+            submissionQueue.add(eventId, EventType.WRITE, socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
                                 buf.writerIndex());
             ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
@@ -213,11 +216,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             return allocHandle;
         }
 
-        //Todo
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
                             final ChannelPromise promise) {
-            promise.setFailure(new Exception());
+            promise.setFailure(new UnsupportedOperationException());
         }
 
         final void executeUringReadOperator() {
@@ -266,7 +268,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    public abstract IOUringChannelConfig config();
+    public abstract DefaultChannelConfig config();
 
     @Override
     protected SocketAddress localAddress0() {
@@ -278,7 +280,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return remote;
     }
 
-    public LinuxSocket getSocket() {
+    public Socket getSocket() {
         return socket;
     }
 }

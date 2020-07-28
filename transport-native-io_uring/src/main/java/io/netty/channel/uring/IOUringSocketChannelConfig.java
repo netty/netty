@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -25,7 +26,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 import java.io.IOException;
 
 
-public class IOUringSocketChannelConfig extends IOUringChannelConfig implements SocketChannelConfig {
+public class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
         private volatile boolean allowHalfClosure;
 
     /**
