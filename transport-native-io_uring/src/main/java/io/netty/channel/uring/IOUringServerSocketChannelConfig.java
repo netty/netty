@@ -21,5 +21,12 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
 
     IOUringServerSocketChannelConfig(AbstractIOUringServerChannel channel) {
         super(channel);
+        setReuseAddress(true);
+    }
+
+    @Override
+    public IOUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        super.setReuseAddress(reuseAddress);
+        return this;
     }
 }
