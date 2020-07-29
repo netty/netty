@@ -73,10 +73,6 @@ static char* exceptionMessage(char* msg, int error) {
             free(strerrbuf);
         }
         strerrbuf = calloc(buflen, sizeof(char));
-        if (strerrbuf == NULL) {
-            break; // Buffer memory allocation failed for some reason. Give up on getting an error message string.
-        }
-        errno = 0;
         result = strerror_r_xsi(error, strerrbuf, buflen);
         if (result == -1) {
             result = errno;
