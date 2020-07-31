@@ -36,6 +36,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server using the newer HTTP2
@@ -47,10 +48,10 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
  */
 public final class Http2FrameClient {
 
-    static final boolean SSL = System.getProperty("ssl") != null;
-    static final String HOST = System.getProperty("host", "127.0.0.1");
-    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
-    static final String PATH = System.getProperty("path", "/");
+    static final boolean SSL = SystemPropertyUtil.get("ssl") != null;
+    static final String HOST = SystemPropertyUtil.get("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(SystemPropertyUtil.get("port", SSL? "8443" : "8080"));
+    static final String PATH = SystemPropertyUtil.get("path", "/");
 
     private Http2FrameClient() {
     }

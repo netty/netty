@@ -36,6 +36,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
@@ -46,9 +47,9 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  */
 public final class Http2Server {
 
-    static final boolean SSL = System.getProperty("ssl") != null;
+    static final boolean SSL = SystemPropertyUtil.get("ssl") != null;
 
-    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
+    static final int PORT = Integer.parseInt(SystemPropertyUtil.get("port", SSL? "8443" : "8080"));
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
