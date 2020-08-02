@@ -216,7 +216,12 @@ abstract class DnsResolveContext<T> {
                 public void operationComplete(Future<List<T>> future) {
                     Throwable cause = future.cause();
                     if (cause == null) {
-                        promise.trySuccess(future.getNow());
+                        final List<T> result = future.getNow();
+                        if (!promise.trySuccess(result)) {
+                            for (T item : result) {
+                                ReferenceCountUtil.safeRelease(item);
+                            }
+                        }
                     } else {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
                             promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
@@ -966,7 +971,12 @@ abstract class DnsResolveContext<T> {
         if (finalResult != null) {
             if (!promise.isDone()) {
                 // Found at least one resolved record.
-                DnsNameResolver.trySuccess(promise, filterResults(finalResult));
+                final List<T> result = filterResults(finalResult);
+                if (!DnsNameResolver.trySuccess(promise, result)) {
+                    for (T item : result) {
+                        ReferenceCountUtil.safeRelease(item);
+                    }
+                }
             }
             return;
         }
