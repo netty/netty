@@ -920,13 +920,15 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    static <T> void trySuccess(Promise<T> promise, T result) {
-        if (!promise.trySuccess(result)) {
+    static <T> boolean trySuccess(Promise<T> promise, T result) {
+        final boolean notifiedRecords = promise.trySuccess(result);
+        if (!notifiedRecords) {
             // There is nothing really wrong with not be able to notify the promise as we may have raced here because
             // of multiple queries that have been executed. Log it with trace level anyway just in case the user
             // wants to better understand what happened.
             logger.trace("Failed to notify success ({}) to a promise: {}", result, promise);
         }
+        return notifiedRecords;
     }
 
     private static void tryFailure(Promise<?> promise, Throwable cause) {
