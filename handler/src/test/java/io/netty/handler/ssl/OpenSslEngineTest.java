@@ -1148,29 +1148,37 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testExtractMasterkeyWorksCorrectly() throws Exception {
+        if (protocolCipherCombo != ProtocolCipherCombo.tlsv12()) {
+            return;
+        }
         SelfSignedCertificate cert = new SelfSignedCertificate();
         serverSslCtx = wrapContext(SslContextBuilder.forServer(cert.key(), cert.cert())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .sslProvider(SslProvider.OPENSSL).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         clientSslCtx = wrapContext(SslContextBuilder.forClient()
                 .trustManager(cert.certificate())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .sslProvider(SslProvider.OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
+        final String enabledCipher = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256";
         try {
             //lets set the cipher suite to a specific one with DHE
             assumeTrue("The diffie hellman cipher is not supported on your runtime.",
                     Arrays.asList(clientEngine.getSupportedCipherSuites())
-                            .contains("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"));
+                            .contains(enabledCipher));
 
             //https://www.ietf.org/rfc/rfc5289.txt
             //For cipher suites ending with _SHA256, the PRF is the TLS PRF
             //[RFC5246] with SHA-256 as the hash function.  The MAC is HMAC
             //[RFC2104] with SHA-256 as the hash function.
-            clientEngine.setEnabledCipherSuites(new String[] { "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256" });
-            serverEngine.setEnabledCipherSuites(new String[] { "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256" });
+            clientEngine.setEnabledCipherSuites(new String[] { enabledCipher });
+            serverEngine.setEnabledCipherSuites(new String[] { enabledCipher });
 
             int appBufferMax = clientEngine.getSession().getApplicationBufferSize();
             int netBufferMax = clientEngine.getSession().getPacketBufferSize();
@@ -1186,8 +1194,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ByteBuffer cTOs = ByteBuffer.allocate(netBufferMax);
             ByteBuffer sTOc = ByteBuffer.allocate(netBufferMax);
 
-            ByteBuffer clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes());
-            ByteBuffer serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes());
+            ByteBuffer clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes(CharsetUtil.US_ASCII));
+            ByteBuffer serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes(CharsetUtil.US_ASCII));
 
             // This implementation is largely imitated from
             // https://docs.oracle.com/javase/8/docs/technotes/
