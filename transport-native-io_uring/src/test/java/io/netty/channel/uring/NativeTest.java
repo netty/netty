@@ -15,12 +15,14 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.FileDescriptor;
 import org.junit.Test;
 import java.nio.charset.Charset;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
+import org.junit.experimental.theories.suppliers.TestedOn;
 
 public class NativeTest {
 
@@ -33,7 +35,7 @@ public class NativeTest {
         String inputString = "Hello World!";
         writeEventByteBuf.writeCharSequence(inputString, Charset.forName("UTF-8"));
 
-        int fd = (int) Native.createFile();
+        int fd = Native.createFile();
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
@@ -68,5 +70,97 @@ public class NativeTest {
 
         assertArrayEquals(inputString.getBytes(), dataRead);
         readEventByteBuf.release();
+    }
+
+    @Test
+    public void timeoutTest() {
+
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+
+        assertNotNull(ringBuffer);
+        assertNotNull(submissionQueue);
+        assertNotNull(completionQueue);
+
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                    final IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
+                    assertEquals(-62, ioUringCqe.getRes());
+                    assertEquals(1, ioUringCqe.getEventId());
+            }
+        };
+        thread.start();
+        try {
+            Thread.sleep(80);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        submissionQueue.addTimeout(0, 1);
+        submissionQueue.submit();
+    }
+
+    @Test
+    public void eventfdTest() throws InterruptedException {
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+
+        assertNotNull(ringBuffer);
+        assertNotNull(submissionQueue);
+        assertNotNull(completionQueue);
+
+        final FileDescriptor eventFd = Native.newEventFd();
+        assertTrue(submissionQueue.addPoll(eventFd.intValue(), 1));
+        submissionQueue.submit();
+
+        new Thread() {
+            @Override
+            public void run() {
+                    Native.eventFdWrite(eventFd.intValue(), 1L);
+            }
+        }.start();
+
+        IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
+        assertEquals(1, ioUringCqe.getRes());
+        assertEquals(1, ioUringCqe.getEventId());
+    }
+
+    //eventfd signal doesnt work when ioUringWaitCqe and eventFdWrite are executed in a thread
+    //created this test to reproduce this "weird" bug
+    @Test(timeout = 8000)
+    public void eventfdNoSignal() throws InterruptedException {
+
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+
+        assertNotNull(ringBuffer);
+        assertNotNull(submissionQueue);
+        assertNotNull(completionQueue);
+
+        Thread waitingCqe = new Thread() {
+            @Override
+            public void run() {
+                IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
+                assertEquals(1, ioUringCqe.getRes());
+                assertEquals(1, ioUringCqe.getEventId());
+            }
+        };
+        waitingCqe.start();
+        final FileDescriptor eventFd = Native.newEventFd();
+        assertTrue(submissionQueue.addPoll(eventFd.intValue(), 1));
+        submissionQueue.submit();
+
+        new Thread() {
+            @Override
+            public void run() {
+                    Native.eventFdWrite(eventFd.intValue(), 1L);
+            }
+        }.start();
+
+        waitingCqe.join();
     }
 }

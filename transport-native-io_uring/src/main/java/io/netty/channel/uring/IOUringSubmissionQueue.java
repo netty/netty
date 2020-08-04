@@ -15,12 +15,17 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
+
+import java.nio.ByteBuffer;
 
 final class IOUringSubmissionQueue {
 
     private static final int SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
+    private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
+    private static final int POLLIN = 1;
 
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L21
@@ -34,6 +39,9 @@ final class IOUringSubmissionQueue {
     private static final int SQE_RW_FLAGS_FIELD = 28;
     private static final int SQE_USER_DATA_FIELD = 32;
     private static final int SQE_PAD_FIELD = 40;
+
+    private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
+    private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
@@ -56,6 +64,9 @@ final class IOUringSubmissionQueue {
     private static final int SOCK_NONBLOCK = 2048;
     private static final int SOCK_CLOEXEC = 524288;
 
+    private final ByteBuffer timeoutMemory;
+    private final long timeoutMemoryAddress;
+
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                                   long fFlagsAdress, long kDroppedAddress, long arrayAddress,
                                   long submissionQueueArrayAddress, int ringSize,
@@ -71,6 +82,9 @@ final class IOUringSubmissionQueue {
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
+
+        timeoutMemory = Buffer.allocateDirectWithNativeOrder(KERNEL_TIMESPEC_SIZE);
+        timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
     }
 
     public long getSqe() {
@@ -117,6 +131,26 @@ final class IOUringSubmissionQueue {
         System.out.println("BufferAddress: " + PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
         System.out.println("Length: " + PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
         System.out.println("Offset: " + PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
+    }
+
+    public boolean addTimeout(long nanoSeconds, long eventId) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setTimeout(nanoSeconds);
+        setData(sqe, eventId, EventType.TIMEOUT, -1, timeoutMemoryAddress, 1, 0);
+        return true;
+    }
+
+    public boolean addPoll(int fd, long eventId) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, eventId, EventType.POLL, fd, 0, 0, 0);
+        PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, POLLIN);
+        return true;
     }
 
     //Todo ring buffer errors for example if submission queue is full
@@ -170,6 +204,22 @@ final class IOUringSubmissionQueue {
         if (ret < 0) {
             throw new RuntimeException("ioUringEnter syscall");
         }
+    }
+
+    private void setTimeout(long timeoutNanoSeconds) {
+        long seconds, nanoSeconds;
+
+        //Todo
+        if (timeoutNanoSeconds == 0) {
+            seconds = 0;
+            nanoSeconds = 0;
+        } else {
+            seconds = timeoutNanoSeconds / 1000000000L;
+            nanoSeconds = timeoutNanoSeconds % 1000;
+        }
+
+        PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
+        PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
     }
 
     public void setSqeHead(long sqeHead) {

@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -43,6 +44,18 @@ final class Native {
     private static native RingBuffer ioUringSetup(int entries);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
+
+    public static native int ioUringRegisterEventFd(int ringFd, int eventFd);
+
+    public static native int ioUringUnregisterEventFd(int ringFd);
+
+    public static native void eventFdWrite(int fd, long value);
+
+    public static FileDescriptor newEventFd() {
+        return new FileDescriptor(eventFd());
+    }
+
+    private static native int eventFd();
 
     // for testing(it is only temporary)
     public static native int createFile();
