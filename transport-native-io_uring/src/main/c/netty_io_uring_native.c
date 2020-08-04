@@ -55,6 +55,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/eventfd.h>
 
 static jmethodID ringBufferMethodId = NULL;
 static jmethodID ioUringSubmissionQueueMethodId = NULL;
@@ -152,6 +153,63 @@ static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint 
     return sys_io_uring_enter(ring_fd, to_submit, min_complete, flags, NULL);
 }
 
+static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
+    jint eventFD = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+
+    if (eventFD < 0) {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd() failed: ", errno);
+    }
+    return eventFD;
+}
+
+static jint netty_io_uring_register_event_fd(JNIEnv *env, jclass class1, jint ring_fd, jint event_fd) {
+    int ret;
+    ret = sys_io_uring_register(ring_fd, IORING_REGISTER_EVENTFD,
+					&event_fd, 1);
+	if (ret < 0) {
+		return -errno;
+    }
+
+	return 0;
+}
+
+static jint netty_io_uring_unregister_event_fd(JNIEnv *env, jclass class1, jint ring_fd) {
+    int ret;
+
+	ret = sys_io_uring_register(ring_fd, IORING_UNREGISTER_EVENTFD,
+					NULL, 0);
+	if (ret < 0) {
+		return -errno;
+    }
+
+	return 0;
+}
+
+static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
+    uint64_t val;
+
+    for (;;) {
+        jint ret = eventfd_write(fd, (eventfd_t) value);
+
+        if (ret < 0) {
+            // We need to read before we can write again, let's try to read and then write again and if this
+            // fails we will bail out.
+            //
+            // See http://man7.org/linux/man-pages/man2/eventfd.2.html.
+            if (errno == EAGAIN) {
+                if (eventfd_read(fd, &val) == 0 || errno == EAGAIN) {
+                    // Try again
+                    continue;
+                }
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_read(...) failed: ", errno);
+            } else {
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", errno);
+            }
+        }
+        break;
+    }
+}
+
 static int nettyBlockingSocket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
@@ -209,9 +267,14 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv *env) {
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod method_table[] = {
-    {"ioUringSetup", "(I)Lio/netty/channel/uring/RingBuffer;", (void *)netty_io_uring_setup},
-    {"createFile", "()I", (void *)netty_create_file},
-    {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter}};
+    {"ioUringSetup", "(I)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
+    {"createFile", "()I", (void *) netty_create_file},
+    {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
+    {"eventFd", "()I", (void *) netty_epoll_native_eventFd},
+    { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
+    {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
+    {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
+    };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);
 // JNI Method Registration Table End

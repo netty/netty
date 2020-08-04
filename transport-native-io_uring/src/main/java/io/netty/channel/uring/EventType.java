@@ -18,7 +18,9 @@ package io.netty.channel.uring;
 enum EventType {
     ACCEPT(13),
     READ(22),
-    WRITE(23);
+    WRITE(23),
+    TIMEOUT(11),
+    POLL(6);
     private final int op;
     EventType(int op) {
         this.op = op;
