@@ -156,7 +156,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     throw new IOException("Out of size: " + (size + localsize) +
                             " > " + definedSize);
                 }
-                int written = 0;
                 if (file == null) {
                     file = tempFile();
                 }
@@ -164,9 +163,13 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                     fileChannel = accessFile.getChannel();
                 }
-                buffer.getBytes(buffer.readerIndex(), fileChannel, fileChannel.position(), localsize);
+                long currentPosition = fileChannel.position();
+                int written = buffer.getBytes(buffer.readerIndex(), fileChannel, currentPosition, localsize);
+                if (written > 0) {
+                    fileChannel.position(currentPosition + written);
+                    buffer.readerIndex(buffer.readerIndex() + written);
+                }
                 size += localsize;
-                buffer.readerIndex(buffer.readerIndex() + written);
             } finally {
                 // Release the buffer as it was retained before and we not need a reference to it at all
                 // See https://github.com/netty/netty/issues/1516
