@@ -16,14 +16,10 @@ import static org.mockito.Mockito.when;
 
 public class Http2StreamChannelBootstrapTest {
 
-    private final Http2StreamChannelBootstrap bootstrap;
-
-    public Http2StreamChannelBootstrapTest() {
-        bootstrap = new Http2StreamChannelBootstrap(mock(Channel.class));
-    }
-
     @Test
     public void open0FailsPromiseOnHttp2MultiplexHandlerError() {
+        Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(mock(Channel.class));
+
         Http2MultiplexHandler handler = new Http2MultiplexHandler(mock(ChannelHandler.class));
         EventExecutor executor = mock(EventExecutor.class);
         when(executor.inEventLoop()).thenReturn(true);
