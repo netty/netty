@@ -120,7 +120,8 @@ public final class OpenSsl {
         } else {
             // Test if netty-tcnative is in the classpath first.
             try {
-                Class.forName("io.netty.internal.tcnative.SSLContext", false, PlatformDependent.getClassLoader(OpenSsl.class));
+                Class.forName("io.netty.internal.tcnative.SSLContext", false,
+                        PlatformDependent.getClassLoader(OpenSsl.class));
             } catch (ClassNotFoundException t) {
                 cause = t;
                 logger.debug(
