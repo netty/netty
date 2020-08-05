@@ -193,7 +193,7 @@ public class DefaultHttpDataFactoryTest {
         cleanRequestHttpDataShouldReleaseAllAttributes(new DefaultHttpDataFactory(false));
     }
 
-    private void cleanAllHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
+    private static void cleanAllHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
         cleanShouldReleaseAllAttributes(factory, new Runnable() {
             @Override
             public void run() {
@@ -202,7 +202,7 @@ public class DefaultHttpDataFactoryTest {
         });
     }
 
-    private void cleanRequestHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
+    private static void cleanRequestHttpDataShouldReleaseAllAttributes(final HttpDataFactory factory) throws Exception {
         cleanShouldReleaseAllAttributes(factory, new Runnable() {
             @Override
             public void run() {
@@ -211,7 +211,7 @@ public class DefaultHttpDataFactoryTest {
         });
     }
 
-    private void cleanShouldReleaseAllAttributes(final HttpDataFactory factory, final Runnable cleanup)
+    private static void cleanShouldReleaseAllAttributes(final HttpDataFactory factory, final Runnable cleanup)
             throws Exception {
         final Attribute attribute1 = factory.createAttribute(req1, "attribute1");
         attribute1.setValue("value1");
