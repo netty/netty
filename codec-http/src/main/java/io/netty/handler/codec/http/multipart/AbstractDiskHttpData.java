@@ -163,11 +163,15 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                     fileChannel = accessFile.getChannel();
                 }
-                long currentPosition = fileChannel.position();
-                int written = buffer.getBytes(buffer.readerIndex(), fileChannel, currentPosition, localsize);
-                if (written > 0) {
-                    fileChannel.position(currentPosition + written);
-                    buffer.readerIndex(buffer.readerIndex() + written);
+                int totalWritten = 0;
+                while (totalWritten < localsize) {
+                    long currentPosition = fileChannel.position();
+                    int written = buffer.getBytes(buffer.readerIndex(), fileChannel, currentPosition, localsize);
+                    if (written > 0) {
+                        totalWritten += written;
+                        fileChannel.position(currentPosition + written);
+                        buffer.readerIndex(buffer.readerIndex() + written);
+                    }
                 }
                 size += localsize;
             } finally {
