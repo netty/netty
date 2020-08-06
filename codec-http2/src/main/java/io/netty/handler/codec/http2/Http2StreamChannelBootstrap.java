@@ -124,7 +124,11 @@ public final class Http2StreamChannelBootstrap {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        open0(finalCtx, promise);
+                        if (channel.isActive()) {
+                            open0(finalCtx, promise);
+                        } else {
+                            promise.setFailure(new ClosedChannelException());
+                        }
                     }
                 });
             }
