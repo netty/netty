@@ -280,4 +280,20 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         return this;
     }
+
+    @Override
+    public boolean release() {
+        if (byteBuf != null) {
+            return super.release();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean release(final int decrement) {
+        if (byteBuf != null) {
+            return super.release(decrement);
+        }
+        return false;
+    }
 }
