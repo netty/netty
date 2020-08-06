@@ -122,7 +122,13 @@ public final class Http2StreamChannelBootstrap {
                 open0(ctx, promise);
             } else {
                 final ChannelHandlerContext finalCtx = ctx;
-                executor.execute(() -> open0(finalCtx, promise));
+                executor.execute(() -> {
+                    if (channel.isActive()) {
+                        open0(finalCtx, promise);
+                    } else {
+                        promise.setFailure(new ClosedChannelException());
+                    }
+                });
             }
         } catch (Throwable cause) {
             promise.setFailure(cause);
