@@ -103,7 +103,7 @@ public final class Http2FrameClient {
             headers.method("GET");
             headers.path(PATH);
             headers.scheme(SSL? "https" : "http");
-            final Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(headers);
+            final Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(headers, true);
             streamChannel.writeAndFlush(headersFrame);
             System.out.println("Sent HTTP/2 GET request to " + PATH);
 

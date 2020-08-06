@@ -138,4 +138,21 @@ public class Http2StreamChannelBootstrapTest {
             }
         }
     }
+
+    @Test
+    public void open0FailsPromiseOnHttp2MultiplexHandlerError() {
+        Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(mock(Channel.class));
+
+        Http2MultiplexHandler handler = new Http2MultiplexHandler(mock(ChannelHandler.class));
+        EventExecutor executor = mock(EventExecutor.class);
+        when(executor.inEventLoop()).thenReturn(true);
+        ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.executor()).thenReturn(executor);
+        when(ctx.handler()).thenReturn(handler);
+
+        Promise<Http2StreamChannel> promise = new DefaultPromise(mock(EventExecutor.class));
+        bootstrap.open0(ctx, promise);
+        assertThat(promise.isDone(), is(true));
+        assertThat(promise.cause(), is(instanceOf(IllegalStateException.class)));
+    }
 }
