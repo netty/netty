@@ -184,12 +184,12 @@ public class NettyBlockHoundIntegrationTest {
 
     @Test
     public void testTrustManagerVerify() throws Exception {
-        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
         testTrustManagerVerify("TLSv1.2");
     }
 
     @Test
     public void testTrustManagerVerifyTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
         testTrustManagerVerify("TLSv1.3");
     }
 
