@@ -113,16 +113,19 @@ public class DiskFileUploadTest {
     public void testAddContents() throws Exception {
         DiskFileUpload f1 = new DiskFileUpload("file1", "file1", "application/json", null, null, 0);
         try {
-            String json = "{\"foo\":\"bar\"}";
-            byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
-            f1.addContent(Unpooled.wrappedBuffer(bytes), true);
-            assertEquals(json, f1.getString());
-            assertArrayEquals(bytes, f1.get());
+            byte[] jsonBytes = new byte[4096];
+            PlatformDependent.threadLocalRandom().nextBytes(jsonBytes);
+
+            f1.addContent(Unpooled.wrappedBuffer(jsonBytes, 0, 1024), false);
+            f1.addContent(Unpooled.wrappedBuffer(jsonBytes, 1024, jsonBytes.length - 1024), true);
+            assertArrayEquals(jsonBytes, f1.get());
+
             File file = f1.getFile();
-            assertEquals((long) bytes.length, file.length());
+            assertEquals(jsonBytes.length, file.length());
+
             FileInputStream fis = new FileInputStream(file);
             try {
-                byte[] buf = new byte[bytes.length];
+                byte[] buf = new byte[jsonBytes.length];
                 int offset = 0;
                 int read = 0;
                 int len = buf.length;
@@ -133,7 +136,7 @@ public class DiskFileUploadTest {
                         break;
                     }
                 }
-                assertArrayEquals(bytes, buf);
+                assertArrayEquals(jsonBytes, buf);
             } finally {
                 fis.close();
             }
