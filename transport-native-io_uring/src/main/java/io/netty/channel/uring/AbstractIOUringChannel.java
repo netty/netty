@@ -33,7 +33,6 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.UnresolvedAddressException;
@@ -200,7 +199,18 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             @Override
             public void run() {
-                uringEventExecution();
+                IOUringEventLoop eventLoop = (IOUringEventLoop) eventLoop();
+                long eventId = eventLoop.incrementEventIdCounter();
+                Event event = new Event();
+                event.setOp(EventType.POLL_LINK);
+
+                event.setId(eventId);
+                event.setAbstractIOUringChannel(AbstractIOUringChannel.this);
+                eventLoop.getRingBuffer().getIoUringSubmissionQueue()
+                         .addPoll(eventId, socket.intValue(), event.getOp());
+                ((IOUringEventLoop) eventLoop()).addNewEvent(event);
+
+                uringEventExecution(); //flush and submit SQE
             }
         };
 

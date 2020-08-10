@@ -102,8 +102,9 @@ public class NativeTest {
         submissionQueue.submit();
     }
 
+    //Todo clean
     @Test
-    public void eventfdTest() throws InterruptedException {
+    public void eventfdTest() {
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
@@ -113,7 +114,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPoll(eventFd.intValue(), 1));
+        assertTrue(submissionQueue.addPoll(1, eventFd.intValue(), EventType.POLL_EVENTFD));
         submissionQueue.submit();
 
         new Thread() {
@@ -128,6 +129,7 @@ public class NativeTest {
         assertEquals(1, ioUringCqe.getEventId());
     }
 
+    //Todo clean
     //eventfd signal doesnt work when ioUringWaitCqe and eventFdWrite are executed in a thread
     //created this test to reproduce this "weird" bug
     @Test(timeout = 8000)
@@ -151,7 +153,7 @@ public class NativeTest {
         };
         waitingCqe.start();
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPoll(eventFd.intValue(), 1));
+        assertTrue(submissionQueue.addPoll(1, eventFd.intValue(), EventType.POLL_EVENTFD));
         submissionQueue.submit();
 
         new Thread() {

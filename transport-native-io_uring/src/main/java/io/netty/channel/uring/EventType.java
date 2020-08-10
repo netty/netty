@@ -20,8 +20,11 @@ enum EventType {
     READ(22),
     WRITE(23),
     TIMEOUT(11),
-    POLL(6);
+    POLL_EVENTFD(6),
+    POLL_LINK(6);
+
     private final int op;
+
     EventType(int op) {
         this.op = op;
     }

@@ -59,10 +59,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         eventfd = Native.newEventFd();
         long eventId = incrementEventIdCounter();
         Event event = new Event();
-        event.setOp(EventType.POLL);
+        event.setOp(EventType.POLL_EVENTFD);
         event.setId(eventId);
         addNewEvent(event);
-        ringBuffer.getIoUringSubmissionQueue().addPoll(eventfd.intValue(), eventId);
+        ringBuffer.getIoUringSubmissionQueue().addPoll(eventId, eventfd.intValue(), event.getOp());
         ringBuffer.getIoUringSubmissionQueue().submit();
     }
 
@@ -195,16 +195,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                     pipeline.fireChannelReadComplete();
                 }
             }
-            long eventId = incrementEventIdCounter();
-            event.setId(eventId);
-            submissionQueue
-                    .add(eventId, EventType.ACCEPT, event.getAbstractIOUringChannel()
-                                                         .getSocket().intValue(),
-                         0,
-                         0,
-                         0);
-            addNewEvent(event);
-            submissionQueue.submit();
+
+            //Todo refactoring method name
+            event.getAbstractIOUringChannel().executeReadEvent();
         break;
         case READ:
             System.out.println("EventLoop Read Res: " + res);
@@ -260,14 +253,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             }
 
         break;
-        case POLL:
+        case POLL_EVENTFD:
             pendingWakeup = false;
             //Todo eventId is already used
-            eventId = incrementEventIdCounter();
+            long eventId = incrementEventIdCounter();
             event.setId(eventId);
+            event.setOp(EventType.POLL_EVENTFD);
             addNewEvent(event);
-            submissionQueue.addPoll(eventfd.intValue(), eventId);
-
+            submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
+        case POLL_LINK:
+            //Todo error handling error
+            System.out.println("POLL_LINK Res: " + res);
         break;
         }
         this.events.remove(event.getId());
