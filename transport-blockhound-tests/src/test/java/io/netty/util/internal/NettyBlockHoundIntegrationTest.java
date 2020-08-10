@@ -61,8 +61,8 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class NettyBlockHoundIntegrationTest {
 
@@ -130,24 +130,53 @@ public class NettyBlockHoundIntegrationTest {
     // Tests copied from io.netty.handler.ssl.SslHandlerTest
     @Test
     public void testHandshakeWithExecutorThatExecuteDirectory() throws Exception {
-        testHandshakeWithExecutor(Runnable::run);
+        testHandshakeWithExecutor(Runnable::run, "TLSv1.2");
+    }
+
+    @Test
+    public void testHandshakeWithExecutorThatExecuteDirectoryTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testHandshakeWithExecutor(Runnable::run, "TLSv1.3");
     }
 
     @Test
     public void testHandshakeWithImmediateExecutor() throws Exception {
-        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE);
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, "TLSv1.2");
+    }
+
+    @Test
+    public void testHandshakeWithImmediateExecutorTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, "TLSv1.3");
     }
 
     @Test
     public void testHandshakeWithImmediateEventExecutor() throws Exception {
-        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE);
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, "TLSv1.2");
+    }
+
+    @Test
+    public void testHandshakeWithImmediateEventExecutorTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, "TLSv1.3");
     }
 
     @Test
     public void testHandshakeWithExecutor() throws Exception {
         ExecutorService executorService = Executors.newCachedThreadPool();
         try {
-            testHandshakeWithExecutor(executorService);
+            testHandshakeWithExecutor(executorService, "TLSv1.2");
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    @Test
+    public void testHandshakeWithExecutorTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try {
+            testHandshakeWithExecutor(executorService, "TLSv1.3");
         } finally {
             executorService.shutdown();
         }
@@ -155,15 +184,30 @@ public class NettyBlockHoundIntegrationTest {
 
     @Test
     public void testTrustManagerVerify() throws Exception {
+        testTrustManagerVerify("TLSv1.2");
+    }
+
+    @Test
+    public void testTrustManagerVerifyTLSv13() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testTrustManagerVerify("TLSv1.3");
+    }
+
+    private static void testTrustManagerVerify(String tlsVersion) throws Exception {
         final SslContext sslClientCtx =
                 SslContextBuilder.forClient()
-                                 .trustManager(ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"))
+                                 .protocols(tlsVersion)
+                                 .trustManager(ResourcesUtil.getFile(
+                                         NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
                                  .build();
 
         final SslContext sslServerCtx =
-                SslContextBuilder.forServer(ResourcesUtil.getFile(getClass(), "localhost_server.pem"),
-                                            ResourcesUtil.getFile(getClass(), "localhost_server.key"),
+                SslContextBuilder.forServer(ResourcesUtil.getFile(
+                        NettyBlockHoundIntegrationTest.class, "localhost_server.pem"),
+                                            ResourcesUtil.getFile(
+                                                    NettyBlockHoundIntegrationTest.class, "localhost_server.key"),
                                             null)
+                                 .protocols(tlsVersion)
                                  .build();
 
         final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
@@ -172,8 +216,7 @@ public class NettyBlockHoundIntegrationTest {
         testHandshake(sslClientCtx, clientSslHandler, serverSslHandler);
     }
 
-    private static void testHandshakeWithExecutor(Executor executor) throws Exception {
-        String tlsVersion = "TLSv1.2";
+    private static void testHandshakeWithExecutor(Executor executor, String tlsVersion) throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
@@ -223,8 +266,8 @@ public class NettyBlockHoundIntegrationTest {
                     }).connect(sc.localAddress());
             cc = future.syncUninterruptibly().channel();
 
-            assertTrue(clientSslHandler.handshakeFuture().await().isSuccess());
-            assertTrue(serverSslHandler.handshakeFuture().await().isSuccess());
+            clientSslHandler.handshakeFuture().await().sync();
+            serverSslHandler.handshakeFuture().await().sync();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
