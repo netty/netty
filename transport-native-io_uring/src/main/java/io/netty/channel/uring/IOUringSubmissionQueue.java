@@ -26,6 +26,7 @@ final class IOUringSubmissionQueue {
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
     private static final int POLLIN = 1;
+    private static final int IOSQE_IO_LINK = 4;
 
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L21
@@ -103,13 +104,19 @@ final class IOUringSubmissionQueue {
         //Todo cleaner
         //set sqe(submission queue) properties
         PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) type.getOp());
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
         PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, (short) 0);
         PlatformDependent.putInt(sqe + SQE_FD_FIELD, fd);
         PlatformDependent.putLong(sqe + SQE_OFFSET_FIELD, offset);
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, eventId);
+
+        //poll<link>read or accept operation
+        if (type == EventType.READ || type == EventType.ACCEPT || type == EventType.POLL_LINK) {
+            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
+        } else {
+           PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
+        }
 
         //c union set Rw-Flags or accept_flags
         if (type != EventType.ACCEPT) {
@@ -143,12 +150,12 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
-    public boolean addPoll(int fd, long eventId) {
+    public boolean addPoll(long eventId, int fd, EventType eventType) {
         long sqe = getSqe();
         if (sqe == 0) {
             return false;
         }
-        setData(sqe, eventId, EventType.POLL, fd, 0, 0, 0);
+        setData(sqe, eventId, eventType, fd, 0, 0, 0);
         PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, POLLIN);
         return true;
     }
@@ -264,6 +271,10 @@ final class IOUringSubmissionQueue {
 
     public long getSqeHead() {
         return this.sqeHead;
+    }
+
+    public int getRingFd() {
+        return ringFd;
     }
 
     public long getSqeTail() {
