@@ -97,7 +97,7 @@
         <testJvm />
       </properties>
     </profile>
-    <!-- JDK14 -->
+    <!-- JDK15 -->
     <profile>
       <id>java15</id>
       <activation>
@@ -118,6 +118,7 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
+    <!-- JDK14 -->
     <profile>
       <id>java14</id>
       <activation>
