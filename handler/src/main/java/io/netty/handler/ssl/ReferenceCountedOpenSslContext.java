@@ -260,9 +260,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             int options = SSLContext.getOptions(ctx) |
                           SSL.SSL_OP_NO_SSLv2 |
                           SSL.SSL_OP_NO_SSLv3 |
-                          // Disable TLSv1.3 by default for now. Even if TLSv1.3 is not supported this will
-                          // work fine as in this case SSL_OP_NO_TLSv1_3 will be 0.
-                          SSL.SSL_OP_NO_TLSv1_3 |
 
                           SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
 

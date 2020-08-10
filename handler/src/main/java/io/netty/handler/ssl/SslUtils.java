@@ -106,10 +106,13 @@ final class SslUtils {
     static final String[] DEFAULT_TLSV13_CIPHER_SUITES;
     static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
 
-    private static final boolean TLSV1_3_SUPPORTED;
+    private static final boolean TLSV1_3_JDK_SUPPORTED;
+    private static final boolean TLSV1_3_JDK_DEFAULT_ENABLED;
 
     static {
         boolean tlsv13Supported = false;
+        boolean tlsv13Enabled = false;
+
         Throwable cause = null;
         try {
             SSLContext context = SSLContext.getInstance("TLS");
@@ -117,6 +120,12 @@ final class SslUtils {
             for (String supported: context.getSupportedSSLParameters().getProtocols()) {
                 if (PROTOCOL_TLS_V1_3.equals(supported)) {
                     tlsv13Supported = true;
+                    break;
+                }
+            }
+            for (String enabled: context.getDefaultSSLParameters().getProtocols()) {
+                if (PROTOCOL_TLS_V1_3.equals(enabled)) {
+                    tlsv13Enabled = true;
                     break;
                 }
             }
@@ -128,9 +137,9 @@ final class SslUtils {
         } else {
             logger.debug("Unable to detect if JDK SSLEngine supports TLSv1.3, assuming no", cause);
         }
-        TLSV1_3_SUPPORTED = tlsv13Supported;
-
-        if (TLSV1_3_SUPPORTED) {
+        TLSV1_3_JDK_SUPPORTED = tlsv13Supported;
+        TLSV1_3_JDK_DEFAULT_ENABLED = tlsv13Enabled;
+        if (TLSV1_3_JDK_SUPPORTED) {
             DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
         } else {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
@@ -153,14 +162,21 @@ final class SslUtils {
 
         Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
-        DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
+        DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     /**
      * Returns {@code true} if the JDK itself supports TLSv1.3, {@code false} otherwise.
      */
     static boolean isTLSv13SupportedByJDK() {
-        return TLSV1_3_SUPPORTED;
+        return TLSV1_3_JDK_SUPPORTED;
+    }
+
+    /**
+     * Returns {@code true} if the JDK itself supports TLSv1.3 and enabled it by default, {@code false} otherwise.
+     */
+    static boolean isTLSv13EnabledByJDK() {
+        return TLSV1_3_JDK_DEFAULT_ENABLED;
     }
 
     /**
