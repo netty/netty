@@ -56,12 +56,14 @@ final class JdkAlpnSslUtils {
                     AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                     lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocol",
                             MethodType.methodType(String.class)));
-            getHandshakeApplicationProtocol.invokeExact(engine);
+            // Invoke and specify the return type so the compiler doesnt try to use void
+            String getHandshakeApplicationProtocolRes = (String) getHandshakeApplicationProtocol.invokeExact(engine);
 
             getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                     lookup.findVirtual(SSLEngine.class, "getApplicationProtocol",
                             MethodType.methodType(String.class)));
-            getApplicationProtocol.invokeExact(engine);
+            // Invoke and specify the return type so the compiler doesnt try to use void
+            String getApplicationProtocolRes = (String) getApplicationProtocol.invokeExact(engine);
 
             setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                     lookup.findVirtual(SSLParameters.class, "setApplicationProtocols",
@@ -79,7 +81,11 @@ final class JdkAlpnSslUtils {
                     AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                             lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocolSelector",
                                     MethodType.methodType(BiFunction.class)));
-            getHandshakeApplicationProtocolSelector.invokeExact(engine);
+            // Invoke and specify the return type so the compiler doesnt try to use void
+            @SuppressWarnings("unchecked")
+            BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelectorRes =
+                    (BiFunction<SSLEngine, List<String>, String>)
+                            getHandshakeApplicationProtocolSelector.invokeExact(engine);
         } catch (Throwable t) {
             int version = PlatformDependent.javaVersion();
             if (version >= 9) {
