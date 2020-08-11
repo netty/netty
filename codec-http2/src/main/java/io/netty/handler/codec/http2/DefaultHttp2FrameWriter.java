@@ -274,7 +274,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         try {
             verifyStreamId(streamId, STREAM_ID);
-            verifyStreamId(streamDependency, STREAM_DEPENDENCY);
+            verifyStreamOrConnectionId(streamDependency, STREAM_DEPENDENCY);
             verifyWeight(weight);
 
             ByteBuf buf = ctx.alloc().buffer(PRIORITY_FRAME_LENGTH);
@@ -602,11 +602,11 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     private static void verifyStreamId(int streamId, String argumentName) {
-        checkPositive(streamId, "streamId");
+        checkPositive(streamId, argumentName);
     }
 
     private static void verifyStreamOrConnectionId(int streamId, String argumentName) {
-        checkPositiveOrZero(streamId, "streamId");
+        checkPositiveOrZero(streamId, argumentName);
     }
 
     private static void verifyWeight(short weight) {
