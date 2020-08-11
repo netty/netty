@@ -72,17 +72,12 @@ public class FlowControlHandler implements ChannelHandler {
 
     private ChannelConfig config;
 
-    private int readRequestCount;
+    private boolean shouldConsume;
 
     public FlowControlHandler() {
         this(true);
     }
 
-    /**
-     * @param releaseMessages If {@code false}, the handler won't release the buffered messages
-     *                        when the handler is removed.
-     *
-     */
     public FlowControlHandler(boolean releaseMessages) {
         this.releaseMessages = releaseMessages;
     }
@@ -142,7 +137,7 @@ public class FlowControlHandler implements ChannelHandler {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be
             // relayed to downstream to keep the flow going.
-            ++readRequestCount;
+            shouldConsume = true;
             ctx.read();
         }
     }
@@ -158,8 +153,8 @@ public class FlowControlHandler implements ChannelHandler {
         // We just received one message. Do we need to relay it regardless
         // of the auto reading configuration? The answer is yes if this
         // method was called as a result of a prior read() call.
-        int minConsume = Math.min(readRequestCount, queue.size());
-        readRequestCount -= minConsume;
+        int minConsume = shouldConsume ? 1 : 0;
+        shouldConsume = false;
 
         dequeue(ctx, minConsume);
     }
