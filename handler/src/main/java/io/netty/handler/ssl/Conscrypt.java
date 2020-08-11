@@ -28,60 +28,51 @@ import java.lang.invoke.MethodType;
 final class Conscrypt {
     // This class exists to avoid loading other conscrypt related classes using features only available in JDK8+,
     // because we need to maintain JDK6+ runtime compatibility.
-    private static final MethodHandle IS_CONSCRYPT_SSLENGINE = loadIsConscryptEngine();
-    private static final boolean CAN_INSTANCE_PROVIDER = canInstanceProvider();
 
-    private static MethodHandle loadIsConscryptEngine() {
-        try {
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
+    private static final MethodHandle IS_CONSCRYPT_SSLENGINE;
 
-            Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
-                    ConscryptAlpnSslEngine.class.getClassLoader());
-            return lookup.findStatic(conscryptClass, "isConscrypt",
-                    MethodType.methodType(boolean.class, SSLEngine.class));
-        } catch (Throwable ignore) {
-            // Conscrypt was not loaded.
-            return null;
+    static {
+        MethodHandle isConscryptSSLEngine = null;
+
+        if ((PlatformDependent.javaVersion() >= 8 &&
+                // Only works on Java14 and earlier for now
+                // See https://github.com/google/conscrypt/issues/838
+                PlatformDependent.javaVersion() < 15) || PlatformDependent.isAndroid()) {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
+                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                lookup.findConstructor(providerClass, MethodType.methodType(void.class)).invoke();
+
+                Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
+                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                isConscryptSSLEngine = lookup.findStatic(conscryptClass, "isConscrypt",
+                        MethodType.methodType(boolean.class, SSLEngine.class));
+            } catch (Throwable ignore) {
+                // ignore
+            }
         }
-    }
-
-    private static boolean canInstanceProvider() {
-        try {
-            Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
-                    ConscryptAlpnSslEngine.class.getClassLoader());
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
-            lookup.findConstructor(providerClass, MethodType.methodType(void.class)).invoke();
-            return true;
-        } catch (Throwable ignore) {
-            return false;
-        }
+        IS_CONSCRYPT_SSLENGINE = isConscryptSSLEngine;
     }
 
     /**
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null &&
-                // Only works on Java14 and earlier for now
-                // See https://github.com/google/conscrypt/issues/838
-                (PlatformDependent.javaVersion() < 15 || PlatformDependent.isAndroid());
+        return IS_CONSCRYPT_SSLENGINE != null;
     }
 
+    /**
+     * Returns {@code true} if the passed in {@link SSLEngine} is handled by Conscrypt, {@code false} otherwise.
+     */
     static boolean isEngineSupported(SSLEngine engine) {
-        return isAvailable() && isConscryptEngine(engine);
-    }
-
-    private static boolean isConscryptEngine(SSLEngine engine) {
-        if (IS_CONSCRYPT_SSLENGINE != null) {
-            try {
-                return (boolean) IS_CONSCRYPT_SSLENGINE.invokeExact(engine);
-            } catch (IllegalAccessException ignore) {
-                return false;
-            } catch (Throwable cause) {
-                throw new RuntimeException(cause);
-            }
+        try {
+            return IS_CONSCRYPT_SSLENGINE != null && (boolean) IS_CONSCRYPT_SSLENGINE.invokeExact(engine);
+        } catch (IllegalAccessException ignore) {
+            return false;
+        } catch (Throwable ex) {
+            throw new RuntimeException(ex);
         }
-        return false;
     }
 
     private Conscrypt() { }
