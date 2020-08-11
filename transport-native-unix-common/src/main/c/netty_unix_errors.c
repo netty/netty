@@ -35,7 +35,7 @@ static jmethodID closedChannelExceptionMethodId = NULL;
  Note: `strerrbuf` must be initialized to all zeros prior to calling this function.
  XSI or GNU functions do not have such a requirement, but our wrappers do.
  */
-#if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+#if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 || __APPLE__) && ! _GNU_SOURCE
     static inline int strerror_r_xsi(int errnum, char *strerrbuf, size_t buflen) {
         return strerror_r(errnum, strerrbuf, buflen);
     }
