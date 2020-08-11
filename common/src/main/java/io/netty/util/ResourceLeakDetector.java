@@ -330,9 +330,9 @@ public class ResourceLeakDetector<T> {
             extends WeakReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
 
         @SuppressWarnings("unchecked") // generics and updaters do not mix.
-        private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, Record> headUpdater =
+        private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, TraceRecord> headUpdater =
                 (AtomicReferenceFieldUpdater)
-                        AtomicReferenceFieldUpdater.newUpdater(DefaultResourceLeak.class, Record.class, "head");
+                        AtomicReferenceFieldUpdater.newUpdater(DefaultResourceLeak.class, TraceRecord.class, "head");
 
         @SuppressWarnings("unchecked") // generics and updaters do not mix.
         private static final AtomicIntegerFieldUpdater<DefaultResourceLeak<?>> droppedRecordsUpdater =
@@ -340,7 +340,7 @@ public class ResourceLeakDetector<T> {
                         AtomicIntegerFieldUpdater.newUpdater(DefaultResourceLeak.class, "droppedRecords");
 
         @SuppressWarnings("unused")
-        private volatile Record head;
+        private volatile TraceRecord head;
         @SuppressWarnings("unused")
         private volatile int droppedRecords;
 
@@ -361,7 +361,7 @@ public class ResourceLeakDetector<T> {
             trackedHash = System.identityHashCode(referent);
             allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.
-            headUpdater.set(this, new Record(Record.BOTTOM));
+            headUpdater.set(this, new TraceRecord(TraceRecord.BOTTOM));
             this.allLeaks = allLeaks;
         }
 
@@ -404,9 +404,9 @@ public class ResourceLeakDetector<T> {
         private void record0(Object hint) {
             // Check TARGET_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
             if (TARGET_RECORDS > 0) {
-                Record oldHead;
-                Record prevHead;
-                Record newHead;
+                TraceRecord oldHead;
+                TraceRecord prevHead;
+                TraceRecord newHead;
                 boolean dropped;
                 do {
                     if ((prevHead = oldHead = headUpdater.get(this)) == null) {
@@ -422,7 +422,7 @@ public class ResourceLeakDetector<T> {
                     } else {
                         dropped = false;
                     }
-                    newHead = hint != null ? new Record(prevHead, hint) : new Record(prevHead);
+                    newHead = hint != null ? new TraceRecord(prevHead, hint) : new TraceRecord(prevHead);
                 } while (!headUpdater.compareAndSet(this, oldHead, newHead));
                 if (dropped) {
                     droppedRecordsUpdater.incrementAndGet(this);
@@ -491,7 +491,7 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public String toString() {
-            Record oldHead = headUpdater.getAndSet(this, null);
+            TraceRecord oldHead = headUpdater.getAndSet(this, null);
             if (oldHead == null) {
                 // Already closed
                 return EMPTY_STRING;
@@ -507,10 +507,10 @@ public class ResourceLeakDetector<T> {
 
             int i = 1;
             Set<String> seen = new HashSet<>(present);
-            for (; oldHead != Record.BOTTOM; oldHead = oldHead.next) {
+            for (; oldHead != TraceRecord.BOTTOM; oldHead = oldHead.next) {
                 String s = oldHead.toString();
                 if (seen.add(s)) {
-                    if (oldHead.next == Record.BOTTOM) {
+                    if (oldHead.next == TraceRecord.BOTTOM) {
                         buf.append("Created at:").append(NEWLINE).append(s);
                     } else {
                         buf.append('#').append(i++).append(':').append(NEWLINE).append(s);
@@ -570,30 +570,30 @@ public class ResourceLeakDetector<T> {
         } while (!excludedMethods.compareAndSet(oldMethods, newMethods));
     }
 
-    private static final class Record extends Throwable {
+    private static final class TraceRecord extends Throwable {
         private static final long serialVersionUID = 6065153674892850720L;
 
-        private static final Record BOTTOM = new Record();
+        private static final TraceRecord BOTTOM = new TraceRecord();
 
         private final String hintString;
-        private final Record next;
+        private final TraceRecord next;
         private final int pos;
 
-        Record(Record next, Object hint) {
+        TraceRecord(TraceRecord next, Object hint) {
             // This needs to be generated even if toString() is never called as it may change later on.
             hintString = hint instanceof ResourceLeakHint ? ((ResourceLeakHint) hint).toHintString() : hint.toString();
             this.next = next;
             this.pos = next.pos + 1;
         }
 
-        Record(Record next) {
+        TraceRecord(TraceRecord next) {
            hintString = null;
            this.next = next;
            this.pos = next.pos + 1;
         }
 
         // Used to terminate the stack
-        private Record() {
+        private TraceRecord() {
             hintString = null;
             next = null;
             pos = -1;
