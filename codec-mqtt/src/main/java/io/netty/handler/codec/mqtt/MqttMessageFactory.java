@@ -38,7 +38,7 @@ public final class MqttMessageFactory {
             case SUBSCRIBE:
                 return new MqttSubscribeMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttMessageIdAndPropertiesVariableHeader) variableHeader,
                         (MqttSubscribePayload) payload);
 
             case SUBACK:
@@ -50,12 +50,13 @@ public final class MqttMessageFactory {
             case UNSUBACK:
                 return new MqttUnsubAckMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader);
+                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttUnsubAckPayload) payload);
 
             case UNSUBSCRIBE:
                 return new MqttUnsubscribeMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttMessageIdAndPropertiesVariableHeader) variableHeader,
                         (MqttUnsubscribePayload) payload);
 
             case PUBLISH:
@@ -65,16 +66,23 @@ public final class MqttMessageFactory {
                         (ByteBuf) payload);
 
             case PUBACK:
+                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
                 return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBREC:
             case PUBREL:
             case PUBCOMP:
+                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
                 return new MqttMessage(mqttFixedHeader, variableHeader);
 
             case PINGREQ:
             case PINGRESP:
-            case DISCONNECT:
                 return new MqttMessage(mqttFixedHeader);
+
+            case DISCONNECT:
+            case AUTH:
+                //Having MqttReasonCodeAndPropertiesVariableHeader
+                return new MqttMessage(mqttFixedHeader,
+                        (MqttReasonCodeAndPropertiesVariableHeader) variableHeader);
 
             default:
                 throw new IllegalArgumentException("unknown message type: " + mqttFixedHeader.messageType());

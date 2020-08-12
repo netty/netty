@@ -33,7 +33,8 @@ public enum MqttMessageType {
     UNSUBACK(11),
     PINGREQ(12),
     PINGRESP(13),
-    DISCONNECT(14);
+    DISCONNECT(14),
+    AUTH(15);
 
     private final int value;
 
