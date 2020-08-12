@@ -87,19 +87,6 @@ public final class Errors {
         }
     }
 
-    static final class NativeConnectException extends ConnectException {
-        private static final long serialVersionUID = -5532328671712318161L;
-        private final int expectedErr;
-        NativeConnectException(String method, int expectedErr) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
-            this.expectedErr = expectedErr;
-        }
-
-        int expectedErr() {
-            return expectedErr;
-        }
-    }
-
     static {
         for (int i = 0; i < ERRORS.length; i++) {
             // This is ok as strerror returns 'Unknown error i' when the message is not known.
