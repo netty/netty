@@ -29,12 +29,59 @@ static jclass portUnreachableExceptionClass = NULL;
 static jclass closedChannelExceptionClass = NULL;
 static jmethodID closedChannelExceptionMethodId = NULL;
 
+/**
+ Our `strerror_r` wrapper makes sure that the function is XSI compliant,
+ even on platforms where the GNU variant is exposed.
+ Note: `strerrbuf` must be initialized to all zeros prior to calling this function.
+ XSI or GNU functions do not have such a requirement, but our wrappers do.
+ */
+#if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 || __APPLE__) && ! _GNU_SOURCE
+    static inline int strerror_r_xsi(int errnum, char *strerrbuf, size_t buflen) {
+        return strerror_r(errnum, strerrbuf, buflen);
+    }
+#else
+    static inline int strerror_r_xsi(int errnum, char *strerrbuf, size_t buflen) {
+        char* tmp = strerror_r(errnum, strerrbuf, buflen);
+        if (strerrbuf[0] == '\0') {
+            // Our output buffer was not used. Copy from tmp.
+            strncpy(strerrbuf, tmp, buflen - 1); // Use (buflen - 1) to avoid overwriting terminating \0.
+        }
+        if (errno != 0) {
+            return -1;
+        }
+        return 0;
+    }
+#endif
+
 /** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
 static char* exceptionMessage(char* msg, int error) {
-    // strerror is returning a constant, so no need to free anything coming from strerror
-    // error may be negative because some functions return negative values. we should make sure it is always
-    // positive when passing to standard library functions.
-    return netty_unix_util_prepend(msg, strerror(error < 0 ? -error : error));
+    if (error < 0) {
+        // Error may be negative because some functions return negative values. We should make sure it is always
+        // positive when passing to standard library functions.
+        error = -error;
+    }
+
+    int buflen = 32;
+    char* strerrbuf = NULL;
+    int result = 0;
+    do {
+        buflen = buflen * 2;
+        if (buflen >= 2048) {
+            break; // Limit buffer growth.
+        }
+        if (strerrbuf != NULL) {
+            free(strerrbuf);
+        }
+        strerrbuf = calloc(buflen, sizeof(char));
+        result = strerror_r_xsi(error, strerrbuf, buflen);
+        if (result == -1) {
+            result = errno;
+        }
+    } while (result == ERANGE);
+
+    char* combined = netty_unix_util_prepend(msg, strerrbuf);
+    free(strerrbuf);
+    return combined;
 }
 
 // Exported C methods
