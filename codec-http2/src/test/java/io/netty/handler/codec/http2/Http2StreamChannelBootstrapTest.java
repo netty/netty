@@ -95,28 +95,13 @@ public class Http2StreamChannelBootstrapTest {
             clientChannel = cb.connect(serverAddress).sync().channel();
             assertTrue(serverChannelLatch.await(3, SECONDS));
 
-            final CountDownLatch closeLatch = new CountDownLatch(1);
-            final Channel clientChannelToClose = clientChannel;
-            group.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        closeLatch.await();
-                        clientChannelToClose.close().syncUninterruptibly();
-                    } catch (InterruptedException e) {
-                        logger.error(e);
-                    }
-                }
-            });
-
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             Promise<Http2StreamChannel> promise = clientChannel.eventLoop().newPromise();
+            clientChannel.close().sync();
             bootstrap.open(promise);
-            assertThat(promise.isDone(), is(false));
-            closeLatch.countDown();
 
             exceptionRule.expect(ExecutionException.class);
-            exceptionRule.expectCause(IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
+            exceptionRule.expectCause(IsInstanceOf.instanceOf(ClosedChannelException.class));
             promise.get(3, SECONDS);
         } finally {
             safeClose(clientChannel);
