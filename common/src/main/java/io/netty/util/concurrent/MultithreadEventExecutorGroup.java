@@ -25,6 +25,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link EventExecutorGroup} implementation that handles their tasks with multiple threads at
@@ -166,7 +167,10 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
         readonlyChildren = Collections.unmodifiableList(Arrays.asList(children));
     }
 
-    private final AtomicInteger idx = new AtomicInteger();
+    // Use a 'long' counter to avoid non-round-robin behaviour at the 32-bit overflow boundary.
+    // The 64-bit long solves this by placing the overflow so far into the future, that no system
+    // will encounter this in practice.
+    private final AtomicLong idx = new AtomicLong();
 
     /**
      * The {@link EventExecutor}s that are used by this {@link MultithreadEventExecutorGroup}.
@@ -182,9 +186,9 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
     @Override
     public EventExecutor next() {
         if (powerOfTwo) {
-            return children[idx.getAndIncrement() & children.length - 1];
+            return children[(int) idx.getAndIncrement() & children.length - 1];
         }
-        return children[Math.abs(idx.getAndIncrement() % children.length)];
+        return children[(int) Math.abs(idx.getAndIncrement() % children.length)];
     }
 
     private static boolean isPowerOfTwo(int val) {
