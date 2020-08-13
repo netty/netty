@@ -726,7 +726,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
-            if (close || cause instanceof IOException) {
+
+            // If oom will close the read event, release connection.
+            // See https://github.com/netty/netty/issues/10434
+            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
                 shutdownInput(false);
             }
         }
