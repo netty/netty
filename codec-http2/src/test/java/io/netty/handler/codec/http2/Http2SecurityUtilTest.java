@@ -30,19 +30,20 @@ import javax.net.ssl.SSLException;
 public class Http2SecurityUtilTest {
 
     @Test
-    public void testTLSv13CiphersIncluded() throws SSLException  {
+    public void testTLSv13CiphersIncluded() throws SSLException {
         Assume.assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
-        SslContext content = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).protocols("TLSv1.3")
-                .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE).build();
-        SSLEngine engine = content.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertTrue(engine.getEnabledCipherSuites().length > 0);
+        testCiphersIncluded("TLSv1.3");
     }
 
     @Test
     public void testTLSv12CiphersIncluded() throws SSLException  {
-        SslContext content = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).protocols("TLSv1.2")
+        testCiphersIncluded("TLSv1.2");
+    }
+
+    private static void testCiphersIncluded(String protocol) throws SSLException  {
+        SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).protocols(protocol)
                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE).build();
-        SSLEngine engine = content.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertTrue(engine.getEnabledCipherSuites().length > 0);
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        Assert.assertTrue("No " + protocol + " ciphers found", engine.getEnabledCipherSuites().length > 0);
     }
 }
