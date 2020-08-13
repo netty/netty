@@ -1785,6 +1785,58 @@ public class DnsNameResolverTest {
         }
     }
 
+    @Test
+    public void testNsLoopFailsResolveWithAuthoritativeDnsServerCache() throws Exception {
+        testNsLoopFailsResolve(new DefaultAuthoritativeDnsServerCache());
+    }
+
+    @Test
+    public void testNsLoopFailsResolveWithoutAuthoritativeDnsServerCache() throws Exception {
+        testNsLoopFailsResolve(NoopAuthoritativeDnsServerCache.INSTANCE);
+    }
+
+    private void testNsLoopFailsResolve(AuthoritativeDnsServerCache authoritativeDnsServerCache) throws Exception {
+        final String domain = "netty.io";
+        final String ns1Name = "ns1." + domain;
+        final String ns2Name = "ns2." + domain;
+
+        TestDnsServer testDnsServer = new TestDnsServer(new HashSet<String>(
+                Collections.singletonList(domain))) {
+
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                // Just always return NS records only without any additional records (glue records).
+                // Because of this the resolver will never be able to resolve and so fail eventually at some
+                // point.
+                for (QuestionRecord record: message.getQuestionRecords()) {
+                    if (record.getDomainName().equals(domain)) {
+                        message.getAdditionalRecords().clear();
+                        message.getAnswerRecords().clear();
+                        message.getAuthorityRecords().add(TestDnsServer.newNsRecord(domain, ns1Name));
+                        message.getAuthorityRecords().add(TestDnsServer.newNsRecord(domain, ns2Name));
+                    }
+                }
+                return message;
+            }
+        };
+        testDnsServer.start();
+        DnsNameResolverBuilder builder = newResolver();
+
+        final DnsNameResolver resolver = builder.resolveCache(NoopDnsCache.INSTANCE)
+                .authoritativeDnsServerCache(authoritativeDnsServerCache)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(testDnsServer.localAddress())).build();
+
+        try {
+            assertThat(resolver.resolve(domain).await().cause(),
+                    Matchers.<Throwable>instanceOf(UnknownHostException.class));
+            assertThat(resolver.resolveAll(domain).await().cause(),
+                    Matchers.<Throwable>instanceOf(UnknownHostException.class));
+        } finally {
+            resolver.close();
+            testDnsServer.stop();
+        }
+    }
+
     private static InetSocketAddress unresolved(InetSocketAddress address) {
         return InetSocketAddress.createUnresolved(address.getHostString(), address.getPort());
     }
