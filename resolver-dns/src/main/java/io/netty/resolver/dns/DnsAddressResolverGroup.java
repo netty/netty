@@ -50,14 +50,14 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this(new DnsNameResolverBuilder());
+        this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this(new DnsNameResolverBuilder());
+        this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
     }
 
@@ -72,7 +72,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
         // we don't really need to pass channelFactory and nameServerProvider separately,
         // but still keep this to ensure backward compatibility with (potentially) override methods
-        return newResolver((EventLoop) executor,
+        EventLoop loop = dnsResolverBuilder.eventLoop;
+        return newResolver(loop == null ? (EventLoop) executor : loop,
                 dnsResolverBuilder.channelFactory(),
                 dnsResolverBuilder.nameServerProvider());
     }
@@ -102,9 +103,11 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                                                         ChannelFactory<? extends DatagramChannel> channelFactory,
                                                         DnsServerAddressStreamProvider nameServerProvider)
             throws Exception {
+        DnsNameResolverBuilder builder = dnsResolverBuilder.copy();
+
         // once again, channelFactory and nameServerProvider are most probably set in builder already,
         // but I do reassign them again to avoid corner cases with override methods
-        return dnsResolverBuilder.eventLoop(eventLoop)
+        return builder.eventLoop(eventLoop)
                 .channelFactory(channelFactory)
                 .nameServerProvider(nameServerProvider)
                 .build();

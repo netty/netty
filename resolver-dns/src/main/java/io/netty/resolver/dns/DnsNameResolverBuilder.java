@@ -36,7 +36,7 @@ import static java.util.Objects.requireNonNull;
  * A {@link DnsNameResolver} builder.
  */
 public final class DnsNameResolverBuilder {
-    private EventLoop eventLoop;
+    volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
