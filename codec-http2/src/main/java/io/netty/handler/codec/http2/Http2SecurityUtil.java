@@ -43,9 +43,9 @@ public final class Http2SecurityUtil {
     public static final List<String> CIPHERS;
 
     /**
-     * <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla Modern Cipher
-     * Suites</a> minus the following cipher suites that are black listed by the
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">HTTP/2 RFC</a>.
+     * <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29"
+     * >Mozilla Modern Cipher Suites Intermediate compatibility</a> minus the following cipher suites that are black
+     * listed by the <a href="https://tools.ietf.org/html/rfc7540#appendix-A">HTTP/2 RFC</a>.
      */
     private static final List<String> CIPHERS_JAVA_MOZILLA_MODERN_SECURITY = Collections.unmodifiableList(Arrays
             .asList(
@@ -64,7 +64,12 @@ public final class Http2SecurityUtil {
             /* openssl = ECDHE-ECDSA-CHACHA20-POLY1305 */
             "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
             /* openssl = ECDHE-RSA-CHACHA20-POLY1305 */
-            "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+            "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+
+            /* TLS 1.3 ciphers */
+            "TLS_AES_128_GCM_SHA256",
+            "TLS_AES_256_GCM_SHA384",
+            "TLS_CHACHA20_POLY1305_SHA256"
             ));
 
     static {
