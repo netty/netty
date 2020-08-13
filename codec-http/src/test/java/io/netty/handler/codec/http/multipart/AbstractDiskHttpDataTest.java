@@ -23,12 +23,12 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.UUID;
 
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
 
 /**
  * {@link AbstractDiskHttpData} test cases
@@ -57,12 +57,8 @@ public class AbstractDiskHttpDataTest {
             ByteBuf buf2 = test.getChunk(1024);
             assertEquals(buf2.readerIndex(), 0);
             assertEquals(buf2.writerIndex(), 1024);
-            try {
-                assertArrayEquals(ByteBufUtil.getBytes(buf1), ByteBufUtil.getBytes(buf2));
-            } catch (AssertionError e) {
-                return;
-            }
-            fail("The arrays are equal");
+            assertFalse("Arrays should not be equal",
+                    Arrays.equals(ByteBufUtil.getBytes(buf1), ByteBufUtil.getBytes(buf2)));
         } finally {
             test.delete();
         }
