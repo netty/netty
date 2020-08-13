@@ -113,6 +113,11 @@
       <artifactId>netty-codec-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-smtp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>com.google.protobuf</groupId>
