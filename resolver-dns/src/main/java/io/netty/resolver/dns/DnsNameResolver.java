@@ -819,7 +819,8 @@ public class DnsNameResolver extends InetNameResolver {
         // It was not A/AAAA question or there was no entry in /etc/hosts.
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs).resolve(promise);
+        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs, maxQueriesPerResolve)
+                .resolve(promise);
         return promise;
     }
 
@@ -1068,7 +1069,8 @@ public class DnsNameResolver extends InetNameResolver {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         new DnsAddressResolveContext(this, originalPromise, hostname, additionals, nameServerAddrs,
-                                     resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible)
+                                     maxQueriesPerResolve, resolveCache,
+                                     authoritativeDnsServerCache, completeEarlyIfPossible)
                 .resolve(promise);
     }
 
