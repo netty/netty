@@ -88,7 +88,6 @@ abstract class DnsResolveContext<T> {
     private final String hostname;
     private final int dnsClass;
     private final DnsRecordType[] expectedTypes;
-    private final int maxAllowedQueries;
     final DnsRecord[] additionals;
 
     private final Set<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> queriesInProgress =
@@ -102,7 +101,7 @@ abstract class DnsResolveContext<T> {
 
     DnsResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
                       String hostname, int dnsClass, DnsRecordType[] expectedTypes,
-                      DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs) {
+                      DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs, int allowedQueries) {
         assert expectedTypes.length > 0;
 
         this.parent = parent;
@@ -113,8 +112,7 @@ abstract class DnsResolveContext<T> {
         this.additionals = additionals;
 
         this.nameServerAddrs = requireNonNull(nameServerAddrs, "nameServerAddrs");
-        maxAllowedQueries = parent.maxQueriesPerResolve();
-        allowedQueries = maxAllowedQueries;
+        this.allowedQueries = allowedQueries;
     }
 
     static final class DnsResolveContextException extends RuntimeException {
@@ -156,7 +154,7 @@ abstract class DnsResolveContext<T> {
                                                      String hostname,
                                                      int dnsClass, DnsRecordType[] expectedTypes,
                                                      DnsRecord[] additionals,
-                                                     DnsServerAddressStream nameServerAddrs);
+                                                     DnsServerAddressStream nameServerAddrs, int allowedQueries);
 
     /**
      * Converts the given {@link DnsRecord} into {@code T}.
@@ -258,7 +256,8 @@ abstract class DnsResolveContext<T> {
 
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
         DnsResolveContext<T> nextContext = newResolverContext(parent, originalPromise, hostname, dnsClass,
-                                                              expectedTypes, additionals, nameServerAddrs);
+                                                              expectedTypes, additionals, nameServerAddrs,
+                parent.maxQueriesPerResolve());
         nextContext.internalResolve(hostname, nextPromise);
     }
 
@@ -488,8 +487,13 @@ abstract class DnsResolveContext<T> {
         DnsCache resolveCache = resolveCache();
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
                 parent.resolvedInternetProtocolFamiliesUnsafe())) {
+
             new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
-                                         parent.newNameServerAddressStream(nameServerName), resolveCache,
+                                         parent.newNameServerAddressStream(nameServerName),
+                                         // Resolving the unresolved nameserver must be limited by allowedQueries
+                                         // so we eventually fail
+                                         allowedQueries,
+                                         resolveCache,
                                          redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
                     .resolve(resolverPromise);
         }
@@ -964,6 +968,7 @@ abstract class DnsResolveContext<T> {
         }
 
         // No resolved address found.
+        final int maxAllowedQueries = parent.maxQueriesPerResolve();
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
