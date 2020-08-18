@@ -58,10 +58,24 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             promise.setFailure(new UnsupportedOperationException());
         }
 
+        private void addPoll(IOUringEventLoop ioUringEventLoop) {
+            long eventId = ioUringEventLoop.incrementEventIdCounter();
+            Event event = new Event();
+            event.setOp(EventType.POLL_LINK);
+
+            event.setId(eventId);
+            event.setAbstractIOUringChannel(AbstractIOUringServerChannel.this);
+            ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue()
+                    .addPoll(eventId, socket.intValue(), event.getOp());
+            ((IOUringEventLoop) eventLoop()).addNewEvent(event);
+        }
+
         @Override
         public void uringEventExecution() {
             final IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+
+            addPoll(ioUringEventLoop);
 
             long eventId = ioUringEventLoop.incrementEventIdCounter();
             final Event event = new Event();
@@ -72,6 +86,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             //Todo get network addresses
             submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().intValue(), 0, 0, 0);
             ioUringEventLoop.addNewEvent(event);
+
             submissionQueue.submit();
         }
     }
