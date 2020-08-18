@@ -112,7 +112,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, eventId);
 
         //poll<link>read or accept operation
-        if (type == EventType.READ || type == EventType.ACCEPT || type == EventType.POLL_LINK) {
+        if (type == EventType.POLL_LINK) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
@@ -198,6 +198,7 @@ final class IOUringSubmissionQueue {
             toSubmit--;
         }
 
+        //release
         PlatformDependent.putIntOrdered(kTailAddress, (int) kTail);
 
         return (int) (kTail - kHead);
