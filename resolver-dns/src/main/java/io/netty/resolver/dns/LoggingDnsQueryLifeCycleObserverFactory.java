@@ -60,18 +60,18 @@ public final class LoggingDnsQueryLifeCycleObserverFactory implements DnsQueryLi
      */
     public LoggingDnsQueryLifeCycleObserverFactory(Class<?> classContext, LogLevel level) {
         this.level = checkAndConvertLevel(level);
-        logger = InternalLoggerFactory.getInstance(classContext);
+        logger = InternalLoggerFactory.getInstance(checkNotNull(classContext, "classContext"));
     }
 
     /**
      * Create {@link DnsQueryLifecycleObserver} instances that log events to a logger with the given name context,
      * at the given log level.
-     * @param nameContext The name context for the logger to use.
+     * @param name The name for the logger to use.
      * @param level The log level to use for logging resolver events.
      */
-    public LoggingDnsQueryLifeCycleObserverFactory(String nameContext, LogLevel level) {
+    public LoggingDnsQueryLifeCycleObserverFactory(String name, LogLevel level) {
         this.level = checkAndConvertLevel(level);
-        logger = InternalLoggerFactory.getInstance(nameContext);
+        logger = InternalLoggerFactory.getInstance(checkNotNull(name, "name"));
     }
 
     private static InternalLogLevel checkAndConvertLevel(LogLevel level) {
