@@ -272,7 +272,6 @@ public class DnsNameResolver extends InetNameResolver {
      * @param resolvedAddressTypes the preferred address types
      * @param recursionDesired if recursion desired flag must be set
      * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
-     * @param traceEnabled if trace is enabled
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
@@ -296,7 +295,6 @@ public class DnsNameResolver extends InetNameResolver {
             ResolvedAddressTypes resolvedAddressTypes,
             boolean recursionDesired,
             int maxQueriesPerResolve,
-            boolean traceEnabled,
             int maxPayloadSize,
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
@@ -306,7 +304,7 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn) {
         this(eventLoop, channelFactory, resolveCache,
              new AuthoritativeDnsServerCacheAdapter(authoritativeDnsServerCache), dnsQueryLifecycleObserverFactory,
-             queryTimeoutMillis, resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled,
+             queryTimeoutMillis, resolvedAddressTypes, recursionDesired, maxQueriesPerResolve,
              maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver, dnsServerAddressStreamProvider,
              searchDomains, ndots, decodeIdn);
     }
@@ -324,7 +322,6 @@ public class DnsNameResolver extends InetNameResolver {
      * @param resolvedAddressTypes the preferred address types
      * @param recursionDesired if recursion desired flag must be set
      * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
-     * @param traceEnabled if trace is enabled
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
@@ -348,7 +345,6 @@ public class DnsNameResolver extends InetNameResolver {
             ResolvedAddressTypes resolvedAddressTypes,
             boolean recursionDesired,
             int maxQueriesPerResolve,
-            boolean traceEnabled,
             int maxPayloadSize,
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
@@ -358,7 +354,7 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn) {
         this(eventLoop, channelFactory, null, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
-             maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
+             maxQueriesPerResolve, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
     }
 
@@ -374,7 +370,6 @@ public class DnsNameResolver extends InetNameResolver {
             ResolvedAddressTypes resolvedAddressTypes,
             boolean recursionDesired,
             int maxQueriesPerResolve,
-            boolean traceEnabled,
             int maxPayloadSize,
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
@@ -397,11 +392,7 @@ public class DnsNameResolver extends InetNameResolver {
                 requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = requireNonNull(resolveCache, "resolveCache");
         this.cnameCache = requireNonNull(cnameCache, "cnameCache");
-        this.dnsQueryLifecycleObserverFactory = traceEnabled ?
-                dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
-                        new TraceDnsQueryLifeCycleObserverFactory() :
-                        new BiDnsQueryLifecycleObserverFactory(new TraceDnsQueryLifeCycleObserverFactory(),
-                                                               dnsQueryLifecycleObserverFactory) :
+        this.dnsQueryLifecycleObserverFactory =
                 requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
         this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
