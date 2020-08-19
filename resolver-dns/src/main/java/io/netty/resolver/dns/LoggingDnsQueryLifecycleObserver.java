@@ -26,13 +26,13 @@ import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-final class TraceDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
+final class LoggingDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
     private final InternalLogger logger;
     private final InternalLogLevel level;
     private final DnsQuestion question;
     private InetSocketAddress dnsServerAddress;
 
-    TraceDnsQueryLifecycleObserver(DnsQuestion question, InternalLogger logger, InternalLogLevel level) {
+    LoggingDnsQueryLifecycleObserver(DnsQuestion question, InternalLogger logger, InternalLogLevel level) {
         this.question = checkNotNull(question, "question");
         this.logger = checkNotNull(logger, "logger");
         this.level = checkNotNull(level, "level");
