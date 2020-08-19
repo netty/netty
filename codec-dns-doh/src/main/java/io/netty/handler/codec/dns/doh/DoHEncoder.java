@@ -85,7 +85,7 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
         // DoH queries must be done on top of HTTPS (HTTP + TLS)
         // Reference: https://tools.ietf.org/html/rfc8484#section-5
         if (!url.getProtocol().equalsIgnoreCase("https")) {
-            throw new IllegalArgumentException("Protocol is not HTTPS");
+            throw new IllegalArgumentException("Only HTTPS Protocol is allowed, but we got: " + url.getProtocol());
         }
     }
 
