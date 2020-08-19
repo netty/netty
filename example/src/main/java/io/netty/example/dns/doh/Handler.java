@@ -29,14 +29,14 @@ import io.netty.util.NetUtil;
 final class Handler extends SimpleChannelInboundHandler<DefaultDnsResponse> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, DefaultDnsResponse msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, DefaultDnsResponse msg) {
         if (msg.count(DnsSection.QUESTION) > 0) {
             DnsQuestion question = msg.recordAt(DnsSection.QUESTION, 0);
             System.out.printf("name: %s%n", question.name());
         }
         for (int i = 0, count = msg.count(DnsSection.ANSWER); i < count; i++) {
             DnsRecord record = msg.recordAt(DnsSection.ANSWER, i);
-            if (record.type() == DnsRecordType.A) {
+            if (record.type() == DnsRecordType.A || record.type() == DnsRecordType.AAAA) {
                 //just print the IP after query
                 DnsRawRecord raw = (DnsRawRecord) record;
                 System.out.println(NetUtil.bytesToIpAddress(ByteBufUtil.getBytes(raw.content())));

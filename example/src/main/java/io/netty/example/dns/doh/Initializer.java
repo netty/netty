@@ -21,7 +21,7 @@ import io.netty.handler.ssl.SslContext;
 
 import java.net.URL;
 
-class Initializer extends ChannelInitializer<SocketChannel> {
+final class Initializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
     private final URL url;

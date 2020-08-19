@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class DoHClient {
 
-    private static final String QUERY_DOMAIN = "netty.io";
+    private static final String QUERY_DOMAIN = "www.google.com";
 
     private DoHClient() {
     }
@@ -60,16 +60,20 @@ public final class DoHClient {
                     .channel(NioSocketChannel.class)
                     .handler(new Initializer(sslContext, url));
 
-            Channel ch = b.connect(url.getHost(), url.getDefaultPort()).sync().channel();
+            Channel channel = b.connect(url.getHost(), url.getDefaultPort()).sync().channel();
 
             // Wait for application protocol negotiation to finish
-            ch.pipeline().get(ALPNHandler.class).promise().sync();
+            channel.pipeline().get(ALPNHandler.class).promise().sync();
 
             // RFC 8484 recommends ID 0 [https://tools.ietf.org/html/rfc8484#section-4.1]
-            DnsQuery query = new DefaultDnsQuery(0, DnsOpCode.QUERY);
-            query.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-            ch.writeAndFlush(query).sync();
-            ch.closeFuture().await(10, TimeUnit.SECONDS);
+            DnsQuery dnsQueryA = new DefaultDnsQuery(0, DnsOpCode.QUERY);
+            dnsQueryA.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
+            channel.writeAndFlush(dnsQueryA).sync();
+
+            DnsQuery queryAAAA = new DefaultDnsQuery(0, DnsOpCode.QUERY);
+            queryAAAA.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.AAAA));
+            channel.writeAndFlush(queryAAAA).sync();
+            channel.closeFuture().await(10, TimeUnit.SECONDS);
         } finally {
             group.shutdownGracefully();
         }
