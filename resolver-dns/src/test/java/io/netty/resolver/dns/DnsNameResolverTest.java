@@ -922,7 +922,7 @@ public class DnsNameResolverTest {
                     group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                     NoopDnsCache.INSTANCE, nsCache, NoopDnsQueryLifecycleObserverFactory.INSTANCE, 3000,
                     ipv4Preferred ? ResolvedAddressTypes.IPV4_ONLY : ResolvedAddressTypes.IPV6_ONLY, true,
-                    10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
+                    10, 4096, false, HostsFileEntriesResolver.DEFAULT,
                     new SequentialDnsServerAddressStreamProvider(dnsServer2.localAddress(), dnsServer3.localAddress()),
                     DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
                 @Override
@@ -1268,7 +1268,7 @@ public class DnsNameResolverTest {
         final DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 NoopDnsCache.INSTANCE, nsCache, lifecycleObserverFactory, 3000, ResolvedAddressTypes.IPV4_ONLY, true,
-                10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
+                10, 4096, false, HostsFileEntriesResolver.DEFAULT,
                 new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()),
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
             @Override
@@ -1425,7 +1425,7 @@ public class DnsNameResolverTest {
         final DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 cache, authoritativeDnsServerCache, NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000,
-                ResolvedAddressTypes.IPV4_ONLY, true, 10, true, 4096,
+                ResolvedAddressTypes.IPV4_ONLY, true, 10, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
                 new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
@@ -1587,7 +1587,7 @@ public class DnsNameResolverTest {
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 NoopDnsCache.INSTANCE, authoritativeDnsServerCache,
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
-                true, 10, true, 4096,
+                true, 10, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
                 new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
@@ -1724,7 +1724,7 @@ public class DnsNameResolverTest {
                 loop, new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 cache, authoritativeDnsServerCache,
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
-                true, 10, true, 4096,
+                true, 10, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
                 new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
@@ -2532,7 +2532,6 @@ public class DnsNameResolverTest {
                 null, // resolvedAddressTypes, see https://github.com/netty/netty/pull/8445
                 true, // recursionDesired
                 1, // maxQueriesPerResolve
-                false, // traceEnabled
                 4096, // maxPayloadSize
                 true, // optResourceEnabled
                 HostsFileEntriesResolver.DEFAULT, // hostsFileEntriesResolver

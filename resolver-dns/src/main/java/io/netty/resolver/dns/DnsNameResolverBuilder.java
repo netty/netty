@@ -319,18 +319,6 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets if this resolver should generate the detailed trace information in an exception message so that
-     * it is easier to understand the cause of resolution failure.
-     *
-     * @param traceEnabled true if trace is enabled
-     * @return {@code this}
-     */
-    public DnsNameResolverBuilder traceEnabled(boolean traceEnabled) {
-        this.traceEnabled = traceEnabled;
-        return this;
-    }
-
-    /**
      * Sets the capacity of the datagram packet buffer (in bytes).  The default value is {@code 4096} bytes.
      *
      * @param maxPayloadSize the capacity of the datagram packet buffer
@@ -482,7 +470,6 @@ public final class DnsNameResolverBuilder {
                 resolvedAddressTypes,
                 recursionDesired,
                 maxQueriesPerResolve,
-                traceEnabled,
                 maxPayloadSize,
                 optResourceEnabled,
                 hostsFileEntriesResolver,
@@ -540,7 +527,6 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.resolvedAddressTypes(resolvedAddressTypes);
         copiedBuilder.recursionDesired(recursionDesired);
         copiedBuilder.maxQueriesPerResolve(maxQueriesPerResolve);
-        copiedBuilder.traceEnabled(traceEnabled);
         copiedBuilder.maxPayloadSize(maxPayloadSize);
         copiedBuilder.optResourceEnabled(optResourceEnabled);
         copiedBuilder.hostsFileEntriesResolver(hostsFileEntriesResolver);

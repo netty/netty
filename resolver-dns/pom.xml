@@ -64,6 +64,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-protocol-dns</artifactId>
       <scope>test</scope>
