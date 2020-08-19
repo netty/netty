@@ -39,7 +39,7 @@ import org.junit.Test;
 
 import java.net.URL;
 
-public class DoHEncoderTest {
+public class DoHQueryEncoderTest {
 
     @Test
     public void testEncode() throws Exception {
@@ -52,7 +52,7 @@ public class DoHEncoderTest {
 
         URL url = new URL("https://localhost/dns-query");
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new DoHEncoder(false, url),
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new DoHQueryEncoder(false, url),
                 new DoHDecoder());
 
         // Query

@@ -35,11 +35,11 @@ import java.util.List;
 /**
  * Encodes {@link DnsQuery} into {@link FullHttpRequest}
  */
-public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
+public final class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
     private final boolean http2;
-    private final boolean get;
+    private final boolean httpGET;
     private final URL url;
 
     /**
@@ -49,7 +49,7 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
      * @param url DoH Upstream Server
      * @throws IllegalArgumentException If URL Protocol is not HTTPS
      */
-    public DoHEncoder(URL url) throws IllegalArgumentException {
+    public DoHQueryEncoder(URL url) throws IllegalArgumentException {
         this(DnsRecordEncoder.DEFAULT, true, true, url);
     }
 
@@ -61,7 +61,7 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
      * @param url     DoH Upstream Server
      * @throws IllegalArgumentException If URL Protocol is not HTTPS
      */
-    public DoHEncoder(boolean httpGET, URL url) throws IllegalArgumentException {
+    public DoHQueryEncoder(boolean httpGET, URL url) throws IllegalArgumentException {
         this(DnsRecordEncoder.DEFAULT, true, httpGET, url);
     }
 
@@ -75,11 +75,11 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
      * @param url           DoH Upstream Server
      * @throws IllegalArgumentException If URL Protocol is not HTTPS
      */
-    public DoHEncoder(DnsRecordEncoder recordEncoder, boolean useHTTP2, boolean httpGET, URL url)
+    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean useHTTP2, boolean httpGET, URL url)
             throws IllegalArgumentException {
         this.encoder = new DnsQueryEncoder(recordEncoder);
         this.http2 = useHTTP2;
-        this.get = httpGET;
+        this.httpGET = httpGET;
         this.url = url;
 
         // DoH queries must be done on top of HTTPS (HTTP + TLS)
@@ -95,7 +95,7 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
         encoder.encode(msg, byteBuf);
 
         FullHttpRequest fullHttpRequest;
-        if (get) {
+        if (httpGET) {
             ByteBuf dnsQueryBuf = Base64.encode(byteBuf, Base64Dialect.URL_SAFE);
 
             /*
@@ -113,7 +113,7 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
                     .add(HttpHeaderNames.CONTENT_LENGTH, byteBuf.readableBytes());
         }
 
-        // HTTP `HOST` and `ACCEPT` is common in both GET and POST methods.
+        // HTTP `HOST`, `ACCEPT` and `CACHE_CONTROL` is common in both GET and POST methods.
         fullHttpRequest.headers()
                 .add(HttpHeaderNames.HOST, url.getHost())
                 .add(HttpHeaderNames.ACCEPT, "application/dns-message")

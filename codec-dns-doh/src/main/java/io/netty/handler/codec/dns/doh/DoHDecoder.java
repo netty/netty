@@ -44,7 +44,8 @@ import java.net.URL;
 import java.util.List;
 
 /**
- * Decode {@link DnsQuery} from {@link FullHttpRequest} or {@link FullHttpResponse}.
+ * Decode {@link DnsQuery} from {@link FullHttpRequest}
+ * or {@link DnsResponse} from {@link FullHttpResponse}.
  */
 public final class DoHDecoder extends MessageToMessageDecoder<HttpObject> {
 

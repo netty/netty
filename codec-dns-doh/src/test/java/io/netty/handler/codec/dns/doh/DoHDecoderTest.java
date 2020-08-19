@@ -40,7 +40,7 @@ public class DoHDecoderTest {
     public void testDecoder() throws Exception {
 
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                new DoHEncoder(new URL("https://localhost/dns-query")),
+                new DoHQueryEncoder(new URL("https://localhost/dns-query")),
                 new DoHDecoder()
         );
 

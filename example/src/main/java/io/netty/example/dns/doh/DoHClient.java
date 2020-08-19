@@ -42,7 +42,7 @@ public final class DoHClient {
     }
 
     public static void main(String[] args) throws Exception {
-        URL url = new URL("https://dns.google/dns-query");
+        URL url = new URL("https://cloudflare-dns.com/dns-query");
         EventLoopGroup group = new NioEventLoopGroup();
 
         try {

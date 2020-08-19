@@ -17,7 +17,7 @@ package io.netty.example.dns.doh;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.dns.doh.DoHDecoder;
-import io.netty.handler.codec.dns.doh.DoHEncoder;
+import io.netty.handler.codec.dns.doh.DoHQueryEncoder;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -67,7 +67,7 @@ final class ALPNHandler extends ApplicationProtocolNegotiationHandler {
 
             ctx.pipeline().addLast(http2Handler,
                     new HttpObjectAggregator(1024 * 64, true),
-                    new DoHEncoder(url),
+                    new DoHQueryEncoder(url),
                     new DoHDecoder(),
                     new Handler());
             promise.setSuccess(null);
@@ -75,7 +75,7 @@ final class ALPNHandler extends ApplicationProtocolNegotiationHandler {
             ctx.pipeline().addLast(
                     new HttpClientCodec(),
                     new HttpObjectAggregator(1024 * 64, true),
-                    new DoHEncoder(url),
+                    new DoHQueryEncoder(url),
                     new DoHDecoder(),
                     new Handler());
             promise.setSuccess(null);
