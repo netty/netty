@@ -163,21 +163,21 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                     fileChannel = accessFile.getChannel();
                 }
-                int totalWritten = 0;
+                int remaining = localsize;
                 long position = fileChannel.position();
                 int index = buffer.readerIndex();
-                while (totalWritten < localsize) {
-                    int written = buffer.getBytes(index, fileChannel, position, localsize - totalWritten);
+                while (remaining > 0) {
+                    int written = buffer.getBytes(index, fileChannel, position, remaining);
                     if (written < 0) {
                         break;
                     }
-                    totalWritten += written;
+                    remaining -= written;
                     position += written;
                     index += written;
                 }
                 fileChannel.position(position);
                 buffer.readerIndex(index);
-                size += localsize;
+                size += localsize - remaining;
             } finally {
                 // Release the buffer as it was retained before and we not need a reference to it at all
                 // See https://github.com/netty/netty/issues/1516
