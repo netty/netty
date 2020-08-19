@@ -116,7 +116,8 @@ public final class DoHEncoder extends MessageToMessageEncoder<DnsQuery> {
         // HTTP `HOST` and `ACCEPT` is common in both GET and POST methods.
         fullHttpRequest.headers()
                 .add(HttpHeaderNames.HOST, url.getHost())
-                .add(HttpHeaderNames.ACCEPT, "application/dns-message");
+                .add(HttpHeaderNames.ACCEPT, "application/dns-message")
+                .add(HttpHeaderNames.CACHE_CONTROL, "no-cache");
 
         // If we're using HTTP/2 (h2) then we'll add "x-http2-scheme:https" header
         if (http2) {
