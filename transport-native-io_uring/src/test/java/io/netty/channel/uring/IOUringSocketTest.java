@@ -15,26 +15,21 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.tests.SocketTest;
+import org.junit.BeforeClass;
 
-final class RingBuffer {
-  private final IOUringSubmissionQueue ioUringSubmissionQueue;
-  private final IOUringCompletionQueue ioUringCompletionQueue;
+import static org.junit.Assume.assumeTrue;
 
-  RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
-    this.ioUringSubmissionQueue = ioUringSubmissionQueue;
-    this.ioUringCompletionQueue = ioUringCompletionQueue;
-  }
+public class IOUringSocketTest extends SocketTest<Socket> {
 
-  public IOUringSubmissionQueue getIoUringSubmissionQueue() {
-    return this.ioUringSubmissionQueue;
-  }
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
-  public IOUringCompletionQueue getIoUringCompletionQueue() {
-    return this.ioUringCompletionQueue;
-  }
-
-  public void close() {
-      Native.ioUringExit(this);
-  }
-
+    @Override
+    protected Socket newSocket() {
+        return Socket.newSocketStream();
+    }
 }

@@ -15,19 +15,52 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
+
+import java.io.IOException;
+import java.nio.channels.Selector;
 import java.util.Locale;
 
-final class Native {
+import static io.netty.channel.unix.Socket.isIPv6Preferred;
 
+
+final class Native {
     private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 32);
-    static {
-        loadNativeLibrary();
+
+     static {
+        Selector selector = null;
+        try {
+            // We call Selector.open() as this will under the hood cause IOUtil to be loaded.
+            // This is a workaround for a possible classloader deadlock that could happen otherwise:
+            //
+            // See https://github.com/netty/netty/issues/10187
+            selector = Selector.open();
+        } catch (IOException ignore) {
+            // Just ignore
+        }
+        try {
+            // First, try calling a side-effect free JNI method to see if the library was already
+            // loaded by the application.
+            Native.createFile();
+        } catch (UnsatisfiedLinkError ignore) {
+            // The library was not previously loaded, load it now.
+            loadNativeLibrary();
+        } finally {
+            try {
+                if (selector != null) {
+                    selector.close();
+                }
+            } catch (IOException ignore) {
+                // Just ignore
+            }
+        }
         Socket.initialize();
     }
 
@@ -55,10 +88,16 @@ final class Native {
         return new FileDescriptor(eventFd());
     }
 
+    public static native void ioUringExit(RingBuffer ringBuffer);
+
     private static native int eventFd();
 
     // for testing(it is only temporary)
     public static native int createFile();
+
+    public static Socket newSocketStream() {
+        return Socket.newSocketStream();
+    }
 
     private Native() {
         // utility

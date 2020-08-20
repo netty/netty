@@ -64,6 +64,21 @@ static jclass ringBufferClass = NULL;
 static jclass ioUringCompletionQueueClass = NULL;
 static jclass ioUringSubmissionQueueClass = NULL;
 
+static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env) {
+    netty_unix_limits_JNI_OnUnLoad(env);
+    netty_unix_errors_JNI_OnUnLoad(env);
+    netty_unix_filedescriptor_JNI_OnUnLoad(env);
+    netty_unix_socket_JNI_OnUnLoad(env);
+    netty_unix_buffer_JNI_OnUnLoad(env);
+
+    ringBufferMethodId = NULL;
+    ioUringSubmissionQueueMethodId = NULL;
+    ioUringCommpletionQueueMethodId = NULL;
+    ringBufferClass = NULL;
+    ioUringCompletionQueueClass = NULL;
+    ioUringSubmissionQueueClass = NULL;
+}
+
 void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq) {
     munmap(sq->ring_ptr, sq->ring_sz);
     if (cq->ring_ptr && cq->ring_ptr != sq->ring_ptr) {
@@ -210,6 +225,43 @@ static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, 
     }
 }
 
+static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass class, jobject ringBuffer) {
+     // Find the id of the Java method to be called
+
+    jmethodID submissionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringSubmissionQueue", "()Lio/netty/channel/uring/IOUringSubmissionQueue;");
+    jmethodID completionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringCompletionQueue", "()Lio/netty/channel/uring/IOUringCompletionQueue;");
+
+    jobject submissionQueue = (*env)->CallObjectMethod(env, ringBuffer, submissionQueueMethodId);
+    jobject completionQueue = (*env)->CallObjectMethod(env, ringBuffer, completionQueueMethodId);
+
+    jmethodID submissionQueueArrayAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getSubmissionQueueArrayAddress", "()J");
+    jmethodID submissionQueueKringEntriesAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getKRingEntriesAddress", "()J");
+    jmethodID submissionQueueRingFdMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingFd", "()I");
+    jmethodID submissionQueueRingAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingAddress", "()J");
+    jmethodID submissionQueueRingSizeMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingSize", "()I");
+
+    jmethodID completionQueueRingAddressMethodId = (*env)->GetMethodID(env, ioUringCompletionQueueClass, "getRingAddress", "()J");
+    jmethodID completionQueueRingSizeMethodId = (*env)->GetMethodID(env, ioUringCompletionQueueClass, "getRingSize", "()I");
+
+    jlong submissionQueueArrayAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueArrayAddressMethodId);
+    jlong submissionQueueKringEntriesAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueKringEntriesAddressMethodId);
+    jint submissionQueueRingFd = (*env)->CallIntMethod(env, submissionQueue, submissionQueueRingFdMethodId);
+    jlong submissionQueueRingAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueRingAddressMethodId);
+    jint submissionQueueRingSize = (*env)->CallIntMethod(env, submissionQueue, submissionQueueRingSizeMethodId);
+
+    jlong completionQueueRingAddress = (*env)->CallLongMethod(env, completionQueue, completionQueueRingAddressMethodId);
+    jint completionQueueRingSize = (*env)->CallIntMethod(env, completionQueue, completionQueueRingSizeMethodId);
+
+    unsigned submissionQueueKringEntries = *((unsigned int *) submissionQueueKringEntriesAddress);
+
+    munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueKringEntries * sizeof(struct io_uring_sqe));
+    munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
+	if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
+		munmap((void *)completionQueueRingAddress, completionQueueRingSize);
+	}
+	close(submissionQueueRingFd);
+}
+
 static int nettyBlockingSocket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
@@ -261,17 +313,14 @@ static jint netty_create_file(JNIEnv *env, jclass class) {
     return open("io-uring-test.txt", O_RDWR | O_TRUNC | O_CREAT, 0644);
 }
 
-static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv *env) {
-    // Todo OnUnLoad
-}
-
 // JNI Method Registration Table Begin
 static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(I)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
+    {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
     {"eventFd", "()I", (void *) netty_epoll_native_eventFd},
-    { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
+    {"eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
     {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
     {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
     };
@@ -280,6 +329,12 @@ static const jint method_table_size =
 // JNI Method Registration Table End
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+    int ret = JNI_ERR;
+    int limitsOnLoadCalled = 0;
+    int errorsOnLoadCalled = 0;
+    int filedescriptorOnLoadCalled = 0;
+    int socketOnLoadCalled = 0;
+    int bufferOnLoadCalled = 0;
     JNIEnv *env;
     char *nettyClassName = NULL;
 
@@ -316,22 +371,27 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
+    limitsOnLoadCalled = 1;
 
     if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
+    errorsOnLoadCalled = 1;
 
     if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
+    filedescriptorOnLoadCalled = 1;
 
     if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
+    socketOnLoadCalled = 1;
 
     if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
+    bufferOnLoadCalled = 1;
 
     NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/RingBuffer",
                 nettyClassName, done);
@@ -354,9 +414,45 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     NETTY_GET_METHOD(env, ioUringCompletionQueueClass,
                    ioUringCommpletionQueueMethodId, "<init>", "(JJJJJJIJI)V",
                    done);
-
-    done:
+    ret = NETTY_JNI_VERSION;
+done:
     //unload
+    free(nettyClassName);
 
-    return NETTY_JNI_VERSION;
+    if (ret == JNI_ERR) {
+        if (limitsOnLoadCalled == 1) {
+            netty_unix_limits_JNI_OnUnLoad(env);
+        }
+        if (errorsOnLoadCalled == 1) {
+            netty_unix_errors_JNI_OnUnLoad(env);
+        }
+        if (filedescriptorOnLoadCalled == 1) {
+            netty_unix_filedescriptor_JNI_OnUnLoad(env);
+        }
+        if (socketOnLoadCalled == 1) {
+            netty_unix_socket_JNI_OnUnLoad(env);
+        }
+        if (bufferOnLoadCalled == 1) {
+            netty_unix_buffer_JNI_OnUnLoad(env);
+        }
+
+        ringBufferMethodId = NULL;
+        ioUringSubmissionQueueMethodId = NULL;
+        ioUringCommpletionQueueMethodId = NULL;
+        ringBufferClass = NULL;
+        ioUringCompletionQueueClass = NULL;
+        ioUringSubmissionQueueClass = NULL;
+
+    }
+    return ret;
+}
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
+    // Todo OnUnLoad
+    JNIEnv* env;
+    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
+        // Something is wrong but nothing we can do about this :(
+        return;
+    }
+    netty_io_uring_native_JNI_OnUnLoad(env);
 }
