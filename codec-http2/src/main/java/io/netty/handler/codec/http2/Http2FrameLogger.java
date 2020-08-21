@@ -42,20 +42,24 @@ public class Http2FrameLogger {
     private final InternalLogLevel level;
 
     public Http2FrameLogger(LogLevel level) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
     }
 
     public Http2FrameLogger(LogLevel level, String name) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(name));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(requireNonNull(name, "name")));
     }
 
     public Http2FrameLogger(LogLevel level, Class<?> clazz) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(clazz));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(requireNonNull(clazz, "clazz")));
     }
 
     private Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        this.level = requireNonNull(level, "level");
-        this.logger = requireNonNull(logger, "logger");
+        this.level = level;
+        this.logger = logger;
+    }
+
+    private static InternalLogLevel checkAndConvertLevel(LogLevel level) {
+        return requireNonNull(level, "level").toInternalLevel();
     }
 
     public boolean isEnabled() {
