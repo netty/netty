@@ -69,21 +69,28 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     }
 
     @Override
-    public int compareTo(IpSubnetFilterRule o) {
-        return getNetworkAddress().compareTo(o.getNetworkAddress());
+    public int compareTo(IpSubnetFilterRule ipSubnetFilterRule) {
+        if (filterRule instanceof Ip4SubnetFilterRule) {
+            return Integer.valueOf(((Ip4SubnetFilterRule) filterRule).networkAddress)
+                    .compareTo(((Ip4SubnetFilterRule) ipSubnetFilterRule.filterRule).networkAddress);
+        } else {
+            return ((Ip6SubnetFilterRule) filterRule).networkAddress
+                    .compareTo(((Ip6SubnetFilterRule) ipSubnetFilterRule.filterRule).networkAddress);
+        }
     }
 
-    private BigInteger getNetworkAddress() {
+    public int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
-            return ((Ip4SubnetFilterRule) filterRule).networkAddressAsBigInteger;
+            return Integer.valueOf(((Ip4SubnetFilterRule) filterRule).networkAddress)
+                    .compareTo(Ip4SubnetFilterRule.ipToInt((Inet4Address) inetSocketAddress.getAddress()));
         } else {
-            return ((Ip6SubnetFilterRule) filterRule).networkAddress;
+            return ((Ip6SubnetFilterRule) filterRule).networkAddress
+                    .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress()));
         }
     }
 
     private static final class Ip4SubnetFilterRule implements IpFilterRule {
 
-        private final BigInteger networkAddressAsBigInteger;
         private final int networkAddress;
         private final int subnetMask;
         private final IpFilterRuleType ruleType;
@@ -96,7 +103,6 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
             networkAddress = ipToInt(ipAddress) & subnetMask;
-            networkAddressAsBigInteger = BigInteger.valueOf(networkAddress);
             this.ruleType = ruleType;
         }
 

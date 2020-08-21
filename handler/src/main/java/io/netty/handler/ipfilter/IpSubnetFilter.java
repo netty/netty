@@ -22,7 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,35 +37,33 @@ import java.util.List;
 @Sharable
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
-    private final List<IpSubnetFilterRule> rules = new ArrayList<IpSubnetFilterRule>();
+    private final List<IpSubnetFilterRule> rules;
 
     public IpSubnetFilter(IpSubnetFilterRule... rules) {
-        ObjectUtil.checkNotNull(rules, "rules");
+        this.rules = Arrays.asList(ObjectUtil.checkNotNull(rules, "rules"));
 
-        // Iterate over rules and check for `null` and add them to List
-        for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
+        // Iterate over rules and check for `null` rule.
+        for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
-            this.rules.add(ipSubnetFilterRule);
         }
 
-        Collections.sort(this.rules, new IpSubnetFilterRuleComparator());
+        Collections.sort(this.rules);
     }
 
     public IpSubnetFilter(List<IpSubnetFilterRule> rules) {
-        ObjectUtil.checkNotNull(rules, "rules");
+        this.rules = ObjectUtil.checkNotNull(rules, "rules");
 
-        // Iterate over rules and check for `null` and add them to List
-        for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
+        // Iterate over rules and check for `null` rule.
+        for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
-            this.rules.add(ipSubnetFilterRule);
         }
 
-        Collections.sort(this.rules, new IpSubnetFilterRuleComparator());
+        Collections.sort(this.rules);
     }
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-        int indexOf = Collections.binarySearch(this.rules, remoteAddress, new IpSubnetFilterRuleComparator());
+        int indexOf = Collections.binarySearch(this.rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
         if (indexOf >= 0) {
             return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
         }
