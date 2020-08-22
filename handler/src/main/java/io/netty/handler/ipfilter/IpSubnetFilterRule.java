@@ -31,7 +31,6 @@ import java.net.UnknownHostException;
  */
 public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubnetFilterRule> {
 
-
     private final IpFilterRule filterRule;
     private final String ipAddress;
 
@@ -83,17 +82,25 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         }
     }
 
-    public int compareTo(InetSocketAddress inetSocketAddress) {
+    /**
+     * It'll compare IP address with {@link Ip4SubnetFilterRule#networkAddress} or
+     * {@link Ip6SubnetFilterRule#networkAddress}.
+     * @param inetSocketAddress {@link InetSocketAddress} to match
+     * @return 0 if IP Address match else difference index.
+     * @see Integer#compareTo(Integer)
+     * @see BigInteger#compareTo(BigInteger)
+     */
+    int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
-            Ip4SubnetFilterRule ip4SubnetFilterRule = ((Ip4SubnetFilterRule) filterRule);
+            Ip4SubnetFilterRule ip4SubnetFilterRule = (Ip4SubnetFilterRule) filterRule;
             return Integer.valueOf(ip4SubnetFilterRule.networkAddress)
                     .compareTo(Ip4SubnetFilterRule.ipToInt(
                             (Inet4Address) inetSocketAddress.getAddress()) & ip4SubnetFilterRule.subnetMask);
         } else {
             Ip6SubnetFilterRule ip6SubnetFilterRule = (Ip6SubnetFilterRule) filterRule;
-            return (ip6SubnetFilterRule.networkAddress
+            return ip6SubnetFilterRule.networkAddress
                     .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress())
-                            .and(ip6SubnetFilterRule.networkAddress)));
+                            .and(ip6SubnetFilterRule.networkAddress));
         }
     }
 
@@ -138,8 +145,8 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             assert octets.length == 4;
 
             return (octets[0] & 0xff) << 24 |
-                    (octets[1] & 0xff) << 16 |
-                    (octets[2] & 0xff) << 8 |
+                   (octets[1] & 0xff) << 16 |
+                   (octets[2] & 0xff) << 8 |
                     octets[3] & 0xff;
         }
 
@@ -154,7 +161,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
              *
              * Also see https://github.com/netty/netty/issues/2767
              */
-            return (int) ((-1L << 32 - cidrPrefix) & 0xffffffff);
+            return (int) ((-1L << 32 - cidrPrefix));
         }
     }
 

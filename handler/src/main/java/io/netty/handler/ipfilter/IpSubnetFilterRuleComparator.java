@@ -28,17 +28,6 @@ final class IpSubnetFilterRuleComparator implements Comparator<Object> {
 
     @Override
     public int compare(Object o1, Object o2) {
-        /*
-         * We'll try to use `matches` method, if IP address successfully matches then
-         * return 0 because we found the result.
-         *
-         * If `matches` returns false, we'll compare the IP address (as Integer) with
-         * `networkAddress` to find the difference.
-         */
-        if (((IpSubnetFilterRule) o1).matches((InetSocketAddress) o2)) {
-            return 0;
-        } else {
-            return ((IpSubnetFilterRule) o1).compareTo((InetSocketAddress) o2);
-        }
+        return ((IpSubnetFilterRule) o1).compareTo((InetSocketAddress) o2);
     }
 }

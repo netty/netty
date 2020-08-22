@@ -30,12 +30,16 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
+ * <p>
  * This class allows one to filter new {@link Channel}s based on the
  * {@link IpSubnetFilter}s passed to its constructor. If no rules are provided, all connections
  * will be accepted.
+ * </p>
  * <p>
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
- * {@link #channelRejected(ChannelHandlerContext, SocketAddress)}.
+ * {@link #channelRejected(ChannelHandlerContext, SocketAddress)}. </p>
+ * <p> This filter uses Binary Search for faster filtering so it's a good practice to remove
+ * overlapping subnet rules and also entries should be arranged in incremental order.</p>
  */
 @Sharable
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
@@ -69,7 +73,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     /**
      * <ol>
      *     <li> Sort the list </li>
-     *     <li> Remove over-lapping CIDR </li>
+     *     <li> Remove over-lapping subnet </li>
      *     <li> Sort the list again </li>
      * </ol>
      */
@@ -105,6 +109,6 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
         rules.removeAll(toRemove);
         toRemove.clear();
-        Collections.sort(rules);
+        Collections.sort(rules); // Re-sort just to be sure
     }
 }
