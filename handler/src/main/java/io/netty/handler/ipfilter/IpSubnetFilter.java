@@ -45,13 +45,49 @@ import java.util.NoSuchElementException;
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final List<IpSubnetFilterRule> rules;
+    private final boolean acceptIfNotFound;
 
+    /**
+     * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array. </p>
+     * <p> {@code acceptIfNotFound} is set to {@code true} </p>
+     *
+     * @param rules {@link IpSubnetFilterRule} as array
+     */
     public IpSubnetFilter(IpSubnetFilterRule... rules) {
-        this(Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
+        this(true, Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
     }
 
+    /**
+     * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array
+     * and specify if we'll accept a connection if we don't find it in the rule(s). </p>
+     *
+     * @param acceptIfNotFound {@code true} if we'll accept connection if not found in rule(s).
+     * @param rules            {@link IpSubnetFilterRule} as array
+     */
+    public IpSubnetFilter(boolean acceptIfNotFound, IpSubnetFilterRule... rules) {
+        this(acceptIfNotFound, Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
+    }
+
+    /**
+     * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as {@link List}. </p>
+     * <p> {@code acceptIfNotFound} is set to {@code true} </p>
+     *
+     * @param rules {@link IpSubnetFilterRule} as {@link List}
+     */
     public IpSubnetFilter(List<IpSubnetFilterRule> rules) {
+        this(true, rules);
+    }
+
+    /**
+     * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as {@link List}
+     * and specify if we'll accept a connection if we don't find it in the rule(s). </p>
+     *
+     * @param acceptIfNotFound {@code true} if we'll accept connection if not found in rule(s).
+     * @param rules            {@link IpSubnetFilterRule} as {@link List}
+     */
+    public IpSubnetFilter(boolean acceptIfNotFound, List<IpSubnetFilterRule> rules) {
         this.rules = ObjectUtil.checkNotNull(rules, "rules");
+        this.acceptIfNotFound = acceptIfNotFound;
 
         // Iterate over rules and check for `null` rule.
         for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
@@ -67,7 +103,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         if (indexOf >= 0) {
             return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
         }
-        return true;
+        return acceptIfNotFound;
     }
 
     /**
