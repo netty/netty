@@ -22,9 +22,12 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * This class allows one to filter new {@link Channel}s based on the
@@ -40,14 +43,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     private final List<IpSubnetFilterRule> rules;
 
     public IpSubnetFilter(IpSubnetFilterRule... rules) {
-        this.rules = Arrays.asList(ObjectUtil.checkNotNull(rules, "rules"));
-
-        // Iterate over rules and check for `null` rule.
-        for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
-            ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
-        }
-
-        Collections.sort(this.rules);
+        this(Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
     }
 
     public IpSubnetFilter(List<IpSubnetFilterRule> rules) {
@@ -58,7 +54,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
         }
 
-        Collections.sort(this.rules);
+        sortAndFilter();
     }
 
     @Override
@@ -68,5 +64,47 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
         }
         return true;
+    }
+
+    /**
+     * <ol>
+     *     <li> Sort the list </li>
+     *     <li> Remove over-lapping CIDR </li>
+     *     <li> Sort the list again </li>
+     * </ol>
+     */
+    private void sortAndFilter() {
+        Collections.sort(this.rules);
+        Iterator<IpSubnetFilterRule> iterator = rules.iterator();
+        List<IpSubnetFilterRule> toRemove = new ArrayList<IpSubnetFilterRule>();
+
+        try {
+            IpSubnetFilterRule parentRule = null;
+            while (iterator.hasNext()) {
+
+                // If parentRule is null, take first element out of Iterator.
+                if (parentRule == null) {
+                    parentRule = iterator.next();
+                }
+
+                // Take one more element out of Iterator, this will be childRule.
+                IpSubnetFilterRule childRule = iterator.next();
+
+                // If parentRule matches childRule, schedule that Rule for deletion.
+                if (parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
+                    toRemove.add(childRule);
+                } else {
+                    // If parentRule does not matches childRule, this childRule will become new parentRule
+                    // and we'll do the same again
+                    parentRule = childRule;
+                }
+            }
+        } catch (NoSuchElementException ex) {
+            // Ignore
+        }
+
+        rules.removeAll(toRemove);
+        toRemove.clear();
+        Collections.sort(rules);
     }
 }

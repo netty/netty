@@ -31,10 +31,13 @@ import java.net.UnknownHostException;
  */
 public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubnetFilterRule> {
 
+
     private final IpFilterRule filterRule;
+    private final String ipAddress;
 
     public IpSubnetFilterRule(String ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
         try {
+            this.ipAddress = ipAddress;
             filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("ipAddress", e);
@@ -42,6 +45,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     }
 
     public IpSubnetFilterRule(InetAddress ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
+        this.ipAddress = ipAddress.getHostAddress();
         filterRule = selectFilterRule(ipAddress, cidrPrefix, ruleType);
     }
 
@@ -81,12 +85,20 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
 
     public int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
-            return Integer.valueOf(((Ip4SubnetFilterRule) filterRule).networkAddress)
-                    .compareTo(Ip4SubnetFilterRule.ipToInt((Inet4Address) inetSocketAddress.getAddress()));
+            Ip4SubnetFilterRule ip4SubnetFilterRule = ((Ip4SubnetFilterRule) filterRule);
+            return Integer.valueOf(ip4SubnetFilterRule.networkAddress)
+                    .compareTo(Ip4SubnetFilterRule.ipToInt(
+                            (Inet4Address) inetSocketAddress.getAddress()) & ip4SubnetFilterRule.subnetMask);
         } else {
-            return ((Ip6SubnetFilterRule) filterRule).networkAddress
-                    .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress()));
+            Ip6SubnetFilterRule ip6SubnetFilterRule = (Ip6SubnetFilterRule) filterRule;
+            return (ip6SubnetFilterRule.networkAddress
+                    .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress())
+                            .and(ip6SubnetFilterRule.networkAddress)));
         }
+    }
+
+    String getIpAddress() {
+        return ipAddress;
     }
 
     private static final class Ip4SubnetFilterRule implements IpFilterRule {
