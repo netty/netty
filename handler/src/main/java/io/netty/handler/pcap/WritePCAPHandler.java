@@ -59,6 +59,15 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
 
             InetSocketAddress srcAddr;
             InetSocketAddress dstAddr;
+            /*
+             * When `isWrite` it true, it means we're sending data from Netty to somewhere else.
+             * In this case, source address will be `localAddress` and destination address will
+             * be `remoteAddress`.
+             *
+             * When `isWrite` is false, it means we're reading data from somewhere else in Netty.
+             * In this case, source address will be `remoteAddress` and destination address will
+             * be `localAddress`.
+             */
             if (isWrite) {
                 srcAddr = (InetSocketAddress) ctx.channel().localAddress();
                 dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
@@ -77,16 +86,20 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
                             tcpBuf,
                             ipv4ToInt(srcAddr.getAddress()),
                             ipv4ToInt(dstAddr.getAddress()));
+
+                    ByteBuf ethernetBuf = ctx.alloc().buffer();
+                    EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
                 } else {
                     IPPacket.createTCPv6(ipBuf,
                             tcpBuf,
                             srcAddr.getAddress().getAddress(),
                             dstAddr.getAddress().getAddress());
-                }
 
-                ByteBuf ethernetBuf = ctx.alloc().buffer();
-                EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-                pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+                    ByteBuf ethernetBuf = ctx.alloc().buffer();
+                    EthernetPacket.createIPv6(ethernetBuf, ipBuf);
+                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+                }
             } else {
                 ByteBuf udpBuf = ctx.alloc().buffer();
                 UDPPacket.createPacket(udpBuf,
@@ -100,16 +113,20 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
                             udpBuf,
                             ipv4ToInt(srcAddr.getAddress()),
                             ipv4ToInt(dstAddr.getAddress()));
+
+                    ByteBuf ethernetBuf = ctx.alloc().buffer();
+                    EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
                 } else {
                     IPPacket.createUDPv6(ipBuf,
                             udpBuf,
                             srcAddr.getAddress().getAddress(),
                             dstAddr.getAddress().getAddress());
-                }
 
-                ByteBuf ethernetBuf = ctx.alloc().buffer();
-                EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-                pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+                    ByteBuf ethernetBuf = ctx.alloc().buffer();
+                    EthernetPacket.createIPv6(ethernetBuf, ipBuf);
+                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+                }
             }
         }
     }
