@@ -31,6 +31,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import static io.netty.channel.unix.Errors.*;
 
 final class IOUringEventLoop extends SingleThreadEventLoop {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
+
+    //Todo set config ring buffer size
+    private final int ringSize = 32;
+
+    //just temporary -> Todo use ErrorsStaticallyReferencedJniMethods like in Epoll
+    private final int SOCKET_ERROR_EPIPE = -32;
+    private static long ETIME = -62;
 
     // events should be unique to identify which event type that was
     private long eventIdCounter;
@@ -171,12 +179,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (event.getOp()) {
         case ACCEPT:
-            System.out.println("EventLoop Accept Res: " + res);
+            logger.info("EventLoop Accept filedescriptor: {}", res);
+            event.getAbstractIOUringChannel().setUringInReadyPending(false);
             if (res != -1 && res != ERRNO_EAGAIN_NEGATIVE &&
                 res != ERRNO_EWOULDBLOCK_NEGATIVE) {
                 AbstractIOUringServerChannel abstractIOUringServerChannel =
                         (AbstractIOUringServerChannel) event.getAbstractIOUringChannel();
-                System.out.println("EventLoop Fd: " + abstractIOUringServerChannel.getSocket().intValue());
+                logger.info("server filedescriptor Fd: {}", abstractIOUringServerChannel.getSocket().intValue());
                 final IOUringRecvByteAllocatorHandle allocHandle =
                         (IOUringRecvByteAllocatorHandle) event.getAbstractIOUringChannel().unsafe()
                                                               .recvBufAllocHandle();
@@ -186,8 +195,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 if (allocHandle.lastBytesRead() > 0) {
                     allocHandle.incMessagesRead(1);
                     try {
-                        pipeline.fireChannelRead(abstractIOUringServerChannel
-                                                         .newChildChannel(allocHandle.lastBytesRead()));
+                        final Channel childChannel =
+                                abstractIOUringServerChannel.newChildChannel(allocHandle.lastBytesRead());
+                        pipeline.fireChannelRead(childChannel);
+                        pollRdHup((AbstractIOUringChannel) childChannel);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -263,8 +274,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
         case POLL_LINK:
             //Todo error handling error
-            System.out.println("POLL_LINK Res: " + res);
-        break;
+            logger.info("POLL_LINK Res: {}", res);
+            break;
+        case POLL_RDHUP:
+            if (!event.getAbstractIOUringChannel().isActive()) {
+               event.getAbstractIOUringChannel().shutdownInput(true);
+            }
+            break;
         }
         this.events.remove(event.getId());
     }
@@ -279,5 +295,18 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }
+    }
+
+   //to be notified when the filedesciptor is closed
+    private void pollRdHup(AbstractIOUringChannel channel) {
+        //all childChannels should poll POLLRDHUP
+        long eventId = incrementEventIdCounter();
+        Event event = new Event();
+        event.setOp(EventType.POLL_RDHUP);
+        event.setId(eventId);
+        event.setAbstractIOUringChannel(channel);
+        addNewEvent(event);
+        ringBuffer.getIoUringSubmissionQueue().addPoll(eventId, channel.socket.intValue(), event.getOp());
+        ringBuffer.getIoUringSubmissionQueue().submit();
     }
 }
