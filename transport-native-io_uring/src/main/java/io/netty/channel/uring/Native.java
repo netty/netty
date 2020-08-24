@@ -23,6 +23,8 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.Selector;
@@ -32,6 +34,7 @@ import static io.netty.channel.unix.Socket.isIPv6Preferred;
 
 
 final class Native {
+   private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
     private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 32);
 
      static {
@@ -117,7 +120,7 @@ final class Native {
         } catch (UnsatisfiedLinkError e1) {
             try {
                 NativeLibraryLoader.load(staticLibName, cl);
-                System.out.println("Failed to load io_uring");
+                logger.info("Failed to load io_uring");
             } catch (UnsatisfiedLinkError e2) {
                 ThrowableUtil.addSuppressed(e1, e2);
                 throw e1;

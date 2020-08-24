@@ -30,6 +30,7 @@ import java.util.Map;
 
 public final class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
     private final IOUringServerSocketChannelConfig config;
+    private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public IOUringServerSocketChannel() {
         super(Socket.newSocketStream().intValue());

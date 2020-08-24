@@ -52,7 +52,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
 
     private static final long AWAKE = -1L;
     private static final long NONE = Long.MAX_VALUE;
-    private static long ETIME = -62;
 
     // nextWakeupNanos is:
     //    AWAKE            when EL is awake
@@ -77,24 +76,25 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         addNewEvent(event);
         ringBuffer.getIoUringSubmissionQueue().addPoll(eventId, eventfd.intValue(), event.getOp());
         ringBuffer.getIoUringSubmissionQueue().submit();
+        logger.info("New EventLoop: {}", this.toString());
     }
 
     public long incrementEventIdCounter() {
         long eventId = eventIdCounter;
-        System.out.println(" incrementEventIdCounter EventId: " + eventId);
+        logger.info("incrementEventIdCounter EventId: {}", eventId);
         eventIdCounter++;
         return eventId;
     }
 
     public void add(AbstractIOUringChannel ch) {
-        System.out.println("Add Channel: " + ch.socket.intValue());
+        logger.info("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
         channels.put(fd, ch);
     }
 
     public void remove(AbstractIOUringChannel ch) {
-        System.out.println("Remove Channel: " + ch.socket.intValue());
+        logger.info("Remove Channel: {}", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
         AbstractIOUringChannel old = channels.remove(fd);
@@ -108,7 +108,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        System.out.println("CloseAll IOUringEvenloop");
+        logger.info("CloseAll IOUringEvenloop");
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractIOUringChannel[] localChannels = channels.values().toArray(new AbstractIOUringChannel[0]);
@@ -127,12 +127,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
         final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         for (;;) {
+            logger.info("Run IOUringEventLoop {}", this.toString());
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
             if (curDeadlineNanos == -1L) {
                 curDeadlineNanos = NONE; // nothing on the calendar
             }
             nextWakeupNanos.set(curDeadlineNanos);
-            long ioStartTime = 0;
 
             if (!hasTasks()) {
                 try {
@@ -146,11 +146,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         submissionQueue.addTimeout(curDeadlineNanos, eventId);
                     }
                     final IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
+                    logger.info("ioUringWaitCqe {}", this.toString());
                     if (ioUringCqe != null) {
                         final Event event = events.get(ioUringCqe.getEventId());
-                        System.out.println("Completion EventId: " + ioUringCqe.getEventId());
-                        ioStartTime = System.nanoTime();
+
                         if (event != null) {
+                            logger.info("EventType Incoming: " + event.getOp().name());
                             processEvent(ioUringCqe.getRes(), event);
                         }
                     }
@@ -162,7 +163,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 }
             }
 
-            //Todo ioRatio?
             if (hasTasks()) {
                 runAllTasks();
             }
@@ -175,7 +175,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                     }
                 }
             } catch (Throwable t) {
-                System.out.println("Exception error " + t);
+                logger.info("Exception error: {}", t);
             }
         }
     }
@@ -214,37 +214,53 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
 
             //Todo refactoring method name
             event.getAbstractIOUringChannel().executeReadEvent();
-        break;
+            break;
         case READ:
-            System.out.println("EventLoop Read Res: " + res);
-            System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().intValue());
-            ByteBuf byteBuf = event.getReadBuffer();
+            boolean close = false;
+            ByteBuf byteBuf = null;
             int localReadAmount = res;
-            if (localReadAmount > 0) {
-                byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
-            }
-
             final IOUringRecvByteAllocatorHandle allocHandle =
                     (IOUringRecvByteAllocatorHandle) event.getAbstractIOUringChannel().unsafe()
                                                           .recvBufAllocHandle();
             final ChannelPipeline pipeline = event.getAbstractIOUringChannel().pipeline();
+            try {
+                logger.info("EventLoop Read Res: {}", res);
+                logger.info("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
+                event.getAbstractIOUringChannel().setUringInReadyPending(false);
+                byteBuf = event.getReadBuffer();
+                if (localReadAmount > 0) {
+                    byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+                }
 
-            allocHandle.lastBytesRead(localReadAmount);
-            if (allocHandle.lastBytesRead() <= 0) {
-                // nothing was read, release the buffer.
-                byteBuf.release();
+                allocHandle.lastBytesRead(localReadAmount);
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read, release the buffer.
+                    byteBuf.release();
+                    byteBuf = null;
+                    close = allocHandle.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        event.getAbstractIOUringChannel().shutdownInput(false);
+                    }
+                    allocHandle.readComplete();
+                    pipeline.fireChannelReadComplete();
+                    break;
+                }
+
+                allocHandle.incMessagesRead(1);
+                pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                break;
-            }
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
 
-            allocHandle.incMessagesRead(1);
-            //readPending = false;
-            pipeline.fireChannelRead(byteBuf);
-            byteBuf = null;
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            event.getAbstractIOUringChannel().executeReadEvent();
-        break;
+                logger.info("READ autoRead {}", event.getAbstractIOUringChannel().config().isAutoRead());
+                if (event.getAbstractIOUringChannel().config().isAutoRead()) {
+                    event.getAbstractIOUringChannel().executeReadEvent();
+                }
+            } catch (Throwable t) {
+                handleReadException(event.getAbstractIOUringChannel(), pipeline, byteBuf, t, close, allocHandle);
+            }
+            break;
         case WRITE:
             //localFlushAmount -> res
             logger.info("EventLoop Write Res: {}", res);
@@ -273,7 +289,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 prevDeadlineNanos = NONE;
             }
 
-        break;
+            break;
         case POLL_EVENTFD:
             pendingWakeup = false;
             //Todo eventId is already used
@@ -291,8 +307,21 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                event.getAbstractIOUringChannel().shutdownInput(true);
             }
             break;
+        case POLL_OUT:
+            logger.info("POLL_OUT Res: {}", res);
+            break;
         }
         this.events.remove(event.getId());
+    }
+
+    @Override
+    protected void cleanup() {
+        try {
+            eventfd.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ringBuffer.close();
     }
 
     public RingBuffer getRingBuffer() {
@@ -304,6 +333,28 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         if (!inEventLoop && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventfd.intValue(), 1L);
+        }
+    }
+
+    private void handleReadException(AbstractIOUringChannel channel, ChannelPipeline pipeline, ByteBuf byteBuf,
+                                     Throwable cause, boolean close,
+                                     IOUringRecvByteAllocatorHandle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
+            }
+        }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
+        if (close || cause instanceof IOException) {
+            channel.shutdownInput(false);
+        } else {
+            if (channel.config().isAutoRead()) {
+                channel.executeReadEvent();
+            }
         }
     }
 

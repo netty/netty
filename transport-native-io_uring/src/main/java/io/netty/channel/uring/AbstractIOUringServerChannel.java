@@ -59,6 +59,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
         }
 
         private void addPoll(IOUringEventLoop ioUringEventLoop) {
+
             long eventId = ioUringEventLoop.incrementEventIdCounter();
             Event event = new Event();
             event.setOp(EventType.POLL_LINK);

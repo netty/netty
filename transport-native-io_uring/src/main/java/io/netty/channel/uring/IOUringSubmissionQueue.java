@@ -17,6 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 
@@ -73,9 +75,9 @@ final class IOUringSubmissionQueue {
     private final long timeoutMemoryAddress;
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
-                                  long fFlagsAdress, long kDroppedAddress, long arrayAddress,
-                                  long submissionQueueArrayAddress, int ringSize,
-                                  long ringAddress, int ringFd) {
+                           long fFlagsAdress, long kDroppedAddress, long arrayAddress,
+                           long submissionQueueArrayAddress, int ringSize,
+                           long ringAddress, int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kRingMaskAddress = kRingMaskAddress;
@@ -122,7 +124,7 @@ final class IOUringSubmissionQueue {
         if (type == EventType.POLL_LINK || type == EventType.POLL_OUT) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
-           PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
+            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
         }
 
         //c union set Rw-Flags or accept_flags
@@ -140,11 +142,11 @@ final class IOUringSubmissionQueue {
             offsetIndex += 8;
         }
 
-        System.out.println("OPField: " + PlatformDependent.getByte(sqe + SQE_OP_CODE_FIELD));
-        System.out.println("UserDataField: " + PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
-        System.out.println("BufferAddress: " + PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
-        System.out.println("Length: " + PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
-        System.out.println("Offset: " + PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
+        logger.info("OPField: {}", type.name());
+        logger.info("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
+        logger.info("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
+        logger.info("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
+        logger.info("Offset: {}", PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
     }
 
     public boolean addTimeout(long nanoSeconds, long eventId) {
