@@ -20,8 +20,13 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 public final class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
     private final IOUringServerSocketChannelConfig config;
@@ -38,12 +43,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
 
     @Override
     Channel newChildChannel(int fd) throws Exception {
-        return new IOUringSocketChannel(this, new Socket(fd));
-    }
-
-    @Override
-    public ServerSocketChannel parent() {
-        return (ServerSocketChannel) super.parent();
+        return new IOUringSocketChannel(this, new LinuxSocket(fd));
     }
 
     @Override
@@ -59,8 +59,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     @Override
     public void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
-        //Todo set config option
-        socket.listen(500);
+        socket.listen(config.getBacklog());
         active = true;
     }
 

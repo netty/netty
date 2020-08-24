@@ -41,14 +41,14 @@ import static io.netty.util.internal.ObjectUtil.*;
 
 abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    final Socket socket;
+    final LinuxSocket socket;
     protected volatile boolean active;
     boolean uringInReadyPending;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractIOUringChannel(final Channel parent, Socket socket) {
+    AbstractIOUringChannel(final Channel parent, LinuxSocket socket) {
         super(parent);
         this.socket = checkNotNull(socket, "fd");
         this.active = true;
@@ -56,6 +56,17 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
+            this.local = socket.localAddress();
+            this.remote = socket.remoteAddress();
+        }
+    }
+
+    protected AbstractIOUringChannel(final Channel parent, LinuxSocket socket, boolean active) {
+        super(parent);
+        this.socket = checkNotNull(socket, "fd");
+        this.active = active;
+
+        if (active) {
             this.local = socket.localAddress();
             this.remote = socket.remoteAddress();
         }
