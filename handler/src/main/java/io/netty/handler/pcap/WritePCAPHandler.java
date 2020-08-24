@@ -31,22 +31,30 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        writePacket(ctx, msg);
+        writePacket(ctx, msg, false);
         super.channelRead(ctx, msg);
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        writePacket(ctx, msg);
+        writePacket(ctx, msg, true);
         super.write(ctx, msg, promise);
     }
 
-    private void writePacket(ChannelHandlerContext ctx, Object msg) throws IOException {
+    private void writePacket(ChannelHandlerContext ctx, Object msg, boolean isWrite) throws IOException {
         if (msg instanceof ByteBuf) {
             // Copy the ByteBuf
             ByteBuf packet = ((ByteBuf) msg).copy();
-            InetSocketAddress dstAddr = (InetSocketAddress) ctx.channel().localAddress();
-            InetSocketAddress srcAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+            InetSocketAddress dstAddr;
+            InetSocketAddress srcAddr;
+
+            if (isWrite) {
+                srcAddr = (InetSocketAddress) ctx.channel().localAddress();
+                dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+            } else {
+                srcAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                dstAddr = (InetSocketAddress) ctx.channel().localAddress();
+            }
 
             if (protocol == Protocol.TCP) {
                 ByteBuf tcpBuf = TCPPacket.createPacket(ctx.alloc().buffer(), packet, dstAddr.getPort(), srcAddr.getPort());
