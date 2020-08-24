@@ -155,8 +155,24 @@ final class IOUringSubmissionQueue {
         if (sqe == 0) {
             return false;
         }
+        int pollMask;
+        switch (eventType) {
+            case POLL_EVENTFD:
+            case POLL_LINK:
+                pollMask = POLLIN;
+                break;
+            case POLL_OUT:
+                pollMask = POLLOUT;
+                break;
+            case POLL_RDHUP:
+                pollMask = POLLRDHUP;
+                break;
+            default:
+                //Todo exeception
+                return false;
+        }
         setData(sqe, eventId, eventType, fd, 0, 0, 0);
-        PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, POLLIN);
+        PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
         return true;
     }
 
