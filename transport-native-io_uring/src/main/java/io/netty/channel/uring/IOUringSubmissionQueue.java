@@ -21,11 +21,15 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 final class IOUringSubmissionQueue {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringSubmissionQueue.class);
 
     private static final int SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
     private static final int POLLIN = 1;
+    private static final int POLLRDHUP = 8192;
+    private static final int POLLOUT = 4;
+
     private static final int IOSQE_IO_LINK = 4;
 
     //these offsets are used to access specific properties
@@ -97,6 +101,9 @@ final class IOUringSubmissionQueue {
             sqe = SQE_SIZE * index + submissionQueueArrayAddress;
             sqeTail = next;
         }
+        if (sqe == 0) {
+            logger.info("sqe is null");
+        }
         return sqe;
     }
 
@@ -112,7 +119,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, eventId);
 
         //poll<link>read or accept operation
-        if (type == EventType.POLL_LINK) {
+        if (type == EventType.POLL_LINK || type == EventType.POLL_OUT) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
@@ -182,9 +189,6 @@ final class IOUringSubmissionQueue {
         if (sqe == 0) {
             return false;
         }
-        System.out.println("fd " + fd);
-        System.out.println("BufferAddress + pos: " + (bufferAddress + pos));
-        System.out.println("limit + pos " + (limit - pos));
         setData(sqe, eventId, type, fd, bufferAddress + pos, limit - pos, 0);
         return true;
     }
@@ -194,10 +198,10 @@ final class IOUringSubmissionQueue {
         long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
         long kRingMask = toUnsignedLong(PlatformDependent.getInt(kRingMaskAddress));
 
-        System.out.println("Ktail: " + kTail);
-        System.out.println("Ktail: " + kHead);
-        System.out.println("SqeHead: " + sqeHead);
-        System.out.println("SqeTail: " + sqeTail);
+        logger.info("Ktail: {}", kTail);
+        logger.info("Ktail: {}", kHead);
+        logger.info("SqeHead: {}", sqeHead);
+        logger.info("SqeTail: {}", sqeTail);
 
         if (sqeHead == sqeTail) {
             return (int) (kTail - kHead);
@@ -222,7 +226,7 @@ final class IOUringSubmissionQueue {
 
     public void submit() {
         int submitted = flushSqe();
-        System.out.println("Submitted: " + submitted);
+        logger.info("Submitted: {}", submitted);
 
         int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
         if (ret < 0) {
