@@ -36,7 +36,12 @@ import java.net.SocketAddress;
 public final class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
 
-    IOUringSocketChannel(final Channel parent, final Socket fd) {
+    public IOUringSocketChannel() {
+       super(null, LinuxSocket.newSocketStream(), false);
+       this.config = new IOUringSocketChannelConfig(this);
+    }
+
+    IOUringSocketChannel(final Channel parent, final LinuxSocket fd) {
         super(parent, fd);
         this.config = new IOUringSocketChannelConfig(this);
     }

@@ -32,6 +32,7 @@
 #include <unistd.h>
 
 #include "syscall.h"
+#include "netty_io_uring_linuxsocket.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -228,20 +229,23 @@ static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, 
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass class, jobject ringBuffer) {
      // Find the id of the Java method to be called
 
+    jclass ringBufferClass = (*env)->GetObjectClass(env, ringBuffer);
     jmethodID submissionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringSubmissionQueue", "()Lio/netty/channel/uring/IOUringSubmissionQueue;");
     jmethodID completionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringCompletionQueue", "()Lio/netty/channel/uring/IOUringCompletionQueue;");
 
     jobject submissionQueue = (*env)->CallObjectMethod(env, ringBuffer, submissionQueueMethodId);
     jobject completionQueue = (*env)->CallObjectMethod(env, ringBuffer, completionQueueMethodId);
+    jclass submissionQueueClass = (*env)->GetObjectClass(env, submissionQueue);
+    jclass completionQueueClass = (*env)->GetObjectClass(env, completionQueue);
 
-    jmethodID submissionQueueArrayAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getSubmissionQueueArrayAddress", "()J");
-    jmethodID submissionQueueKringEntriesAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getKRingEntriesAddress", "()J");
-    jmethodID submissionQueueRingFdMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingFd", "()I");
-    jmethodID submissionQueueRingAddressMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingAddress", "()J");
-    jmethodID submissionQueueRingSizeMethodId = (*env)->GetMethodID(env, ioUringSubmissionQueueClass, "getRingSize", "()I");
+    jmethodID submissionQueueArrayAddressMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getSubmissionQueueArrayAddress", "()J");
+    jmethodID submissionQueueKringEntriesAddressMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getKRingEntriesAddress", "()J");
+    jmethodID submissionQueueRingFdMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingFd", "()I");
+    jmethodID submissionQueueRingAddressMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingAddress", "()J");
+    jmethodID submissionQueueRingSizeMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingSize", "()I");
 
-    jmethodID completionQueueRingAddressMethodId = (*env)->GetMethodID(env, ioUringCompletionQueueClass, "getRingAddress", "()J");
-    jmethodID completionQueueRingSizeMethodId = (*env)->GetMethodID(env, ioUringCompletionQueueClass, "getRingSize", "()I");
+    jmethodID completionQueueRingAddressMethodId = (*env)->GetMethodID(env, completionQueueClass, "getRingAddress", "()J");
+    jmethodID completionQueueRingSizeMethodId = (*env)->GetMethodID(env, completionQueueClass, "getRingSize", "()I");
 
     jlong submissionQueueArrayAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueArrayAddressMethodId);
     jlong submissionQueueKringEntriesAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueKringEntriesAddressMethodId);
@@ -273,7 +277,8 @@ static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries) {
     int ring_fd = sys_io_uring_setup((int)entries, &p);
 
     //Todo
-    if (ring_fd < -1) {
+    if (ring_fd < 0) {
+      printf("RingFd error: %d\n", ring_fd);
       //throw Exception
       return NULL;
     }
@@ -335,6 +340,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     int filedescriptorOnLoadCalled = 0;
     int socketOnLoadCalled = 0;
     int bufferOnLoadCalled = 0;
+    int linuxsocketOnLoadCalled = 0;
     JNIEnv *env;
     char *nettyClassName = NULL;
 
@@ -393,6 +399,11 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     bufferOnLoadCalled = 1;
 
+    if (netty_io_uring_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
+        goto done;
+    }
+    linuxsocketOnLoadCalled = 1;
+
     NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/RingBuffer",
                 nettyClassName, done);
     NETTY_LOAD_CLASS(env, ringBufferClass, nettyClassName, done);
@@ -434,6 +445,9 @@ done:
         }
         if (bufferOnLoadCalled == 1) {
             netty_unix_buffer_JNI_OnUnLoad(env);
+        }
+        if (linuxsocketOnLoadCalled == 1) {
+            netty_io_uring_linuxsocket_JNI_OnUnLoad(env);
         }
 
         ringBufferMethodId = NULL;

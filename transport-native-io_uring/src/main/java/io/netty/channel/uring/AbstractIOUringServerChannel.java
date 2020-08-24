@@ -26,10 +26,10 @@ import java.net.SocketAddress;
 abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
     AbstractIOUringServerChannel(int fd) {
-        super(null, new Socket(fd));
+        super(null, new LinuxSocket(fd));
     }
 
-    AbstractIOUringServerChannel(Socket fd) {
+    AbstractIOUringServerChannel(LinuxSocket fd) {
         super(null, fd);
     }
 
