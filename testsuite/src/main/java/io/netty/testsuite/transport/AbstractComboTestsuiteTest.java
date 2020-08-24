@@ -52,15 +52,18 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
 
     protected void run() throws Throwable {
         List<TestsuitePermutation.BootstrapComboFactory<SB, CB>> combos = newFactories();
-        for (ByteBufAllocator allocator: newAllocators()) {
+        int counter = 0;
+        for (ByteBufAllocator allocator : newAllocators()) {
             int i = 0;
-            for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e: combos) {
+            logger.info("Allocator Counter: {}", counter);
+            for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e : combos) {
+                logger.info("combo counter: {}", i);
                 sb = e.newServerInstance();
                 cb = e.newClientInstance();
                 configure(sb, cb, allocator);
                 logger.info(String.format(
                         "Running: %s %d of %d (%s + %s) with %s",
-                        testName.getMethodName(), ++ i, combos.size(), sb, cb, StringUtil.simpleClassName(allocator)));
+                        testName.getMethodName(), ++i, combos.size(), sb, cb, StringUtil.simpleClassName(allocator)));
                 try {
                     Method m = getClass().getMethod(
                             TestUtils.testMethodName(testName), sbClazz, cbClazz);
@@ -69,6 +72,7 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
                     throw ex.getCause();
                 }
             }
+            counter++;
         }
     }
 
