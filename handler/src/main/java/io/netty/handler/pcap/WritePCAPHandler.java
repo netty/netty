@@ -77,57 +77,67 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
             }
 
             if (protocol == Protocol.TCP) {
-                ByteBuf tcpBuf = ctx.alloc().buffer();
-                TCPPacket.createPacket(tcpBuf, packet, dstAddr.getPort(), srcAddr.getPort());
-
-                ByteBuf ipBuf = ctx.alloc().buffer();
-                if (dstAddr.getAddress() instanceof Inet4Address) {
-                    IPPacket.createTCPv4(ipBuf,
-                            tcpBuf,
-                            ipv4ToInt(srcAddr.getAddress()),
-                            ipv4ToInt(dstAddr.getAddress()));
-
-                    ByteBuf ethernetBuf = ctx.alloc().buffer();
-                    EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
-                } else {
-                    IPPacket.createTCPv6(ipBuf,
-                            tcpBuf,
-                            srcAddr.getAddress().getAddress(),
-                            dstAddr.getAddress().getAddress());
-
-                    ByteBuf ethernetBuf = ctx.alloc().buffer();
-                    EthernetPacket.createIPv6(ethernetBuf, ipBuf);
-                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
-                }
+                handleTCP(ctx, srcAddr, dstAddr, packet);
             } else {
-                ByteBuf udpBuf = ctx.alloc().buffer();
-                UDPPacket.createPacket(udpBuf,
-                        packet,
-                        dstAddr.getPort(),
-                        srcAddr.getPort());
-
-                ByteBuf ipBuf = ctx.alloc().buffer();
-                if (dstAddr.getAddress() instanceof Inet4Address) {
-                    IPPacket.createUDPv4(ipBuf,
-                            udpBuf,
-                            ipv4ToInt(srcAddr.getAddress()),
-                            ipv4ToInt(dstAddr.getAddress()));
-
-                    ByteBuf ethernetBuf = ctx.alloc().buffer();
-                    EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
-                } else {
-                    IPPacket.createUDPv6(ipBuf,
-                            udpBuf,
-                            srcAddr.getAddress().getAddress(),
-                            dstAddr.getAddress().getAddress());
-
-                    ByteBuf ethernetBuf = ctx.alloc().buffer();
-                    EthernetPacket.createIPv6(ethernetBuf, ipBuf);
-                    pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
-                }
+                handleUDP(ctx, srcAddr, dstAddr, packet);
             }
+        }
+    }
+
+    private void handleTCP(ChannelHandlerContext ctx, InetSocketAddress srcAddr, InetSocketAddress dstAddr,
+                           ByteBuf packet) throws IOException {
+        ByteBuf tcpBuf = ctx.alloc().buffer();
+        TCPPacket.createPacket(tcpBuf, packet, dstAddr.getPort(), srcAddr.getPort());
+
+        ByteBuf ipBuf = ctx.alloc().buffer();
+        if (dstAddr.getAddress() instanceof Inet4Address) {
+            IPPacket.createTCPv4(ipBuf,
+                    tcpBuf,
+                    ipv4ToInt(srcAddr.getAddress()),
+                    ipv4ToInt(dstAddr.getAddress()));
+
+            ByteBuf ethernetBuf = ctx.alloc().buffer();
+            EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+        } else {
+            IPPacket.createTCPv6(ipBuf,
+                    tcpBuf,
+                    srcAddr.getAddress().getAddress(),
+                    dstAddr.getAddress().getAddress());
+
+            ByteBuf ethernetBuf = ctx.alloc().buffer();
+            EthernetPacket.createIPv6(ethernetBuf, ipBuf);
+            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+        }
+    }
+
+    private void handleUDP(ChannelHandlerContext ctx, InetSocketAddress srcAddr, InetSocketAddress dstAddr,
+                           ByteBuf packet) throws IOException {
+        ByteBuf udpBuf = ctx.alloc().buffer();
+        UDPPacket.createPacket(udpBuf,
+                packet,
+                dstAddr.getPort(),
+                srcAddr.getPort());
+
+        ByteBuf ipBuf = ctx.alloc().buffer();
+        if (dstAddr.getAddress() instanceof Inet4Address) {
+            IPPacket.createUDPv4(ipBuf,
+                    udpBuf,
+                    ipv4ToInt(srcAddr.getAddress()),
+                    ipv4ToInt(dstAddr.getAddress()));
+
+            ByteBuf ethernetBuf = ctx.alloc().buffer();
+            EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+        } else {
+            IPPacket.createUDPv6(ipBuf,
+                    udpBuf,
+                    srcAddr.getAddress().getAddress(),
+                    dstAddr.getAddress().getAddress());
+
+            ByteBuf ethernetBuf = ctx.alloc().buffer();
+            EthernetPacket.createIPv6(ethernetBuf, ipBuf);
+            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
         }
     }
 
