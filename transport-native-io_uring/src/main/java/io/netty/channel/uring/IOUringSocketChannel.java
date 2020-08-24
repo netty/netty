@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
@@ -29,11 +30,13 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
+import io.netty.channel.uring.AbstractIOUringStreamChannel.IOUringStreamUnsafe;
+
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-public final class IOUringSocketChannel extends AbstractIOUringChannel implements SocketChannel {
+public final class IOUringSocketChannel extends AbstractIOUringStreamChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
 
     public IOUringSocketChannel() {
@@ -53,75 +56,12 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel implement
 
     @Override
     protected AbstractUringUnsafe newUnsafe() {
-        return new AbstractUringUnsafe() {
-
-            @Override
-            public void uringEventExecution() {
-                final ChannelConfig config = config();
-
-                final ByteBufAllocator allocator = config.getAllocator();
-                final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-                allocHandle.reset(config);
-
-                ByteBuf byteBuf = allocHandle.allocate(allocator);
-                doReadBytes(byteBuf);
-            }
-        };
+        return new IOUringStreamUnsafe();
     }
 
     @Override
     public IOUringSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return false;
-    }
-
-    @Override
-    public ChannelFuture shutdownInput() {
-        return null;
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(ChannelPromise promise) {
-        return null;
-    }
-
-    //Todo
-    @Override
-    public boolean isOutputShutdown() {
-        return false;
-    }
-
-    //Todo
-    @Override
-    public ChannelFuture shutdownOutput() {
-        return null;
-    }
-
-    //Todo
-    @Override
-    public ChannelFuture shutdownOutput(ChannelPromise promise) {
-        return null;
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return false;
-    }
-
-    //Todo
-    @Override
-    public ChannelFuture shutdown() {
-        return null;
-    }
-
-    //Todo
-    @Override
-    public ChannelFuture shutdown(ChannelPromise promise) {
-        return null;
     }
 
     @Override

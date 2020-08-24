@@ -44,6 +44,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     final LinuxSocket socket;
     protected volatile boolean active;
     boolean uringInReadyPending;
+    boolean inputClosedSeenErrorOnRead;
+
+    //can only submit one write operation at a time
+    private boolean writeable = true;
+    /**
+     * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -158,8 +168,51 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doClose() throws Exception {
-        System.out.println("DoClose Socket: " + socket.intValue());
-        socket.close();
+        if (parent() == null) {
+            logger.info("ServerSocket Close: {}", this.socket.intValue());
+        }
+        active = false;
+        // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
+        // socket which has not even been connected yet. This has been observed to block during unit tests.
+        //inputClosedSeenErrorOnRead = true;
+        try {
+            ChannelPromise promise = connectPromise;
+            if (promise != null) {
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                promise.tryFailure(new ClosedChannelException());
+                connectPromise = null;
+            }
+
+            ScheduledFuture<?> future = connectTimeoutFuture;
+            if (future != null) {
+                future.cancel(false);
+                connectTimeoutFuture = null;
+            }
+
+            if (isRegistered()) {
+                // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
+                // if SO_LINGER is used.
+                //
+                // See https://github.com/netty/netty/issues/7159
+                EventLoop loop = eventLoop();
+                if (loop.inEventLoop()) {
+                    doDeregister();
+                } else {
+                    loop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                doDeregister();
+                            } catch (Throwable cause) {
+                                pipeline().fireExceptionCaught(cause);
+                            }
+                        }
+                    });
+                }
+            }
+        } finally {
+            socket.close();
+        }
     }
 
     //deregister
@@ -210,17 +263,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             @Override
             public void run() {
-                IOUringEventLoop eventLoop = (IOUringEventLoop) eventLoop();
-                long eventId = eventLoop.incrementEventIdCounter();
-                Event event = new Event();
-                event.setOp(EventType.POLL_LINK);
-
-                event.setId(eventId);
-                event.setAbstractIOUringChannel(AbstractIOUringChannel.this);
-                eventLoop.getRingBuffer().getIoUringSubmissionQueue()
-                         .addPoll(eventId, socket.intValue(), event.getOp());
-                ((IOUringEventLoop) eventLoop()).addNewEvent(event);
-
                 uringEventExecution(); //flush and submit SQE
             }
         };
@@ -288,6 +330,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+    public void setUringInReadyPending(boolean uringInReadyPending) {
+        this.uringInReadyPending = uringInReadyPending;
+    }
+
     @Override
     public abstract DefaultChannelConfig config();
 
@@ -303,5 +349,48 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     public Socket getSocket() {
         return socket;
+    }
+
+    void shutdownInput(boolean rdHup) {
+        logger.info("shutdownInput Fd: {}", this.socket.intValue());
+        if (!socket.isInputShutdown()) {
+            if (isAllowHalfClosure(config())) {
+                try {
+                    socket.shutdown(true, false);
+                } catch (IOException ignored) {
+                    // We attempted to shutdown and failed, which means the input has already effectively been
+                    // shutdown.
+                    fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
+                    return;
+                } catch (NotYetConnectedException ignore) {
+                    // We attempted to shutdown and failed, which means the input has already effectively been
+                    // shutdown.
+                }
+                pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+            } else {
+                close(voidPromise());
+            }
+        } else if (!rdHup) {
+            inputClosedSeenErrorOnRead = true;
+            pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        }
+    }
+
+    private static boolean isAllowHalfClosure(ChannelConfig config) {
+        return config instanceof SocketChannelConfig &&
+               ((SocketChannelConfig) config).isAllowHalfClosure();
+    }
+
+    private void fireEventAndClose(Object evt) {
+        pipeline().fireUserEventTriggered(evt);
+        close(voidPromise());
+    }
+
+    final boolean shouldBreakIoUringInReady(ChannelConfig config) {
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    }
+
+    public void setWriteable(boolean writeable) {
+        this.writeable = writeable;
     }
 }
