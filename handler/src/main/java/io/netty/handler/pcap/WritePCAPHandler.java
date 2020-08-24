@@ -19,25 +19,26 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DatagramPacket;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public final class WritePCAPHandler extends ChannelDuplexHandler {
 
-    private final Protocol protocol;
-    private final PCapFileWriter pCapFileWriter;
+    private final PCapWriter pCapWriter;
 
-    public WritePCAPHandler(Protocol protocol, String destinationFile) throws IOException {
-        this(protocol, new File(destinationFile));
-    }
-
-    public WritePCAPHandler(Protocol protocol, File destinationFile) throws IOException {
-        this.protocol = protocol;
-        this.pCapFileWriter = new PCapFileWriter(destinationFile);
+    /**
+     * Create new {@link WritePCAPHandler} Instance
+     *
+     * @param outputStream OutputStream where Pcap data will be written
+     * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
+     */
+    public WritePCAPHandler(OutputStream outputStream) throws IOException {
+        this.pCapWriter = new PCapWriter(outputStream);
     }
 
     @Override
@@ -54,11 +55,9 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
 
     private void writePacket(ChannelHandlerContext ctx, Object msg, boolean isWrite) throws IOException {
         if (msg instanceof ByteBuf) {
-            // Duplicate the ByteBuf
-            ByteBuf packet = ((ByteBuf) msg).duplicate();
-
             InetSocketAddress srcAddr;
             InetSocketAddress dstAddr;
+
             /*
              * When `isWrite` it true, it means we're sending data from Netty to somewhere else.
              * In this case, source address will be `localAddress` and destination address will
@@ -76,75 +75,75 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
                 dstAddr = (InetSocketAddress) ctx.channel().localAddress();
             }
 
-            if (protocol == Protocol.TCP) {
-                handleTCP(ctx, srcAddr, dstAddr, packet);
-            } else {
-                handleUDP(ctx, srcAddr, dstAddr, packet);
-            }
+            handleTCP(ctx, srcAddr, dstAddr, ((ByteBuf) msg).duplicate());
+        } else if (msg instanceof DatagramPacket) {
+            handleUDP(ctx, ((DatagramPacket) msg).duplicate());
         }
     }
 
     private void handleTCP(ChannelHandlerContext ctx, InetSocketAddress srcAddr, InetSocketAddress dstAddr,
                            ByteBuf packet) throws IOException {
         ByteBuf tcpBuf = ctx.alloc().buffer();
-        TCPPacket.createPacket(tcpBuf, packet, dstAddr.getPort(), srcAddr.getPort());
+        TCPPacket.writePacket(tcpBuf, packet, dstAddr.getPort(), srcAddr.getPort());
 
         ByteBuf ipBuf = ctx.alloc().buffer();
-        if (dstAddr.getAddress() instanceof Inet4Address) {
-            IPPacket.createTCPv4(ipBuf,
+        if (srcAddr.getAddress() instanceof Inet4Address) {
+            IPPacket.writeTCPv4(ipBuf,
                     tcpBuf,
                     ipv4ToInt(srcAddr.getAddress()),
                     ipv4ToInt(dstAddr.getAddress()));
 
             ByteBuf ethernetBuf = ctx.alloc().buffer();
-            EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+            EthernetPacket.writeIPv4(ethernetBuf, ipBuf);
+            pCapWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
         } else {
-            IPPacket.createTCPv6(ipBuf,
+            IPPacket.writeTCPv6(ipBuf,
                     tcpBuf,
                     srcAddr.getAddress().getAddress(),
                     dstAddr.getAddress().getAddress());
 
             ByteBuf ethernetBuf = ctx.alloc().buffer();
-            EthernetPacket.createIPv6(ethernetBuf, ipBuf);
-            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+            EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
+            pCapWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
         }
     }
 
-    private void handleUDP(ChannelHandlerContext ctx, InetSocketAddress srcAddr, InetSocketAddress dstAddr,
-                           ByteBuf packet) throws IOException {
+    private void handleUDP(ChannelHandlerContext ctx, DatagramPacket datagramPacket) throws IOException {
+        InetSocketAddress srcAddr = datagramPacket.sender();
+        InetSocketAddress dstAddr = datagramPacket.recipient();
+
         ByteBuf udpBuf = ctx.alloc().buffer();
-        UDPPacket.createPacket(udpBuf,
-                packet,
-                dstAddr.getPort(),
-                srcAddr.getPort());
+        UDPPacket.writePacket(udpBuf,
+                datagramPacket.content(),
+                srcAddr.getPort(),
+                dstAddr.getPort());
 
         ByteBuf ipBuf = ctx.alloc().buffer();
-        if (dstAddr.getAddress() instanceof Inet4Address) {
-            IPPacket.createUDPv4(ipBuf,
+        if (srcAddr.getAddress() instanceof Inet4Address) {
+            IPPacket.writeUDPv4(ipBuf,
                     udpBuf,
                     ipv4ToInt(srcAddr.getAddress()),
                     ipv4ToInt(dstAddr.getAddress()));
 
             ByteBuf ethernetBuf = ctx.alloc().buffer();
-            EthernetPacket.createIPv4(ethernetBuf, ipBuf);
-            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+            EthernetPacket.writeIPv4(ethernetBuf, ipBuf);
+            pCapWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
         } else {
-            IPPacket.createUDPv6(ipBuf,
+            IPPacket.writeUDPv6(ipBuf,
                     udpBuf,
                     srcAddr.getAddress().getAddress(),
                     dstAddr.getAddress().getAddress());
 
             ByteBuf ethernetBuf = ctx.alloc().buffer();
-            EthernetPacket.createIPv6(ethernetBuf, ipBuf);
-            pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
+            EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
+            pCapWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
         }
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        this.pCapFileWriter.close();
-        super.close(ctx, promise);
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        this.pCapWriter.close();
+        super.handlerRemoved(ctx);
     }
 
     private int ipv4ToInt(InetAddress inetAddress) {

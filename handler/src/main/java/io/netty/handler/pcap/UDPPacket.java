@@ -24,14 +24,14 @@ final class UDPPacket {
     }
 
     /**
-     * Create UDP Packet
+     * Write UDP Packet
      *
      * @param byteBuf ByteBuf where Packet data will be set
      * @param payload Payload of this Packet
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    static void createPacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
+    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
         byteBuf.writeShort(srcPort); // Source Port
         byteBuf.writeShort(dstPort); // Destination Port
         byteBuf.writeShort(8 + payload.readableBytes()); // UDP Header Length + Payload Length

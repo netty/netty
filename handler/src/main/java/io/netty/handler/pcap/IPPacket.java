@@ -24,55 +24,55 @@ final class IPPacket {
     }
 
     /**
-     * Create IPv4 Packet for UDP Packet
+     * Write IPv4 Packet for UDP Packet
      *
      * @param byteBuf    ByteBuf where IP Packet data will be set
      * @param payload    Payload of UDP
      * @param srcAddress Source IPv4 Address
      * @param dstAddress Destination IPv4 Address
      */
-    static void createUDPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        createPacketv4(byteBuf, payload, 17, srcAddress, dstAddress);
+    static void writeUDPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
+        writePacketv4(byteBuf, payload, 17, srcAddress, dstAddress);
     }
 
     /**
-     * Create IPv6 Packet for UDP Packet
+     * Write IPv6 Packet for UDP Packet
      *
      * @param byteBuf    ByteBuf where IP Packet data will be set
      * @param payload    Payload of UDP
      * @param srcAddress Source IPv6 Address
      * @param dstAddress Destination IPv6 Address
      */
-    static void createUDPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        createPacketv6(byteBuf, payload, 17, srcAddress, dstAddress);
+    static void writeUDPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
+        writePacketv6(byteBuf, payload, 17, srcAddress, dstAddress);
     }
 
     /**
-     * Create IPv4 Packet for TCP Packet
+     * Write IPv4 Packet for TCP Packet
      *
      * @param byteBuf    ByteBuf where IP Packet data will be set
      * @param payload    Payload of TCP
      * @param srcAddress Source IPv4 Address
      * @param dstAddress Destination IPv4 Address
      */
-    static void createTCPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        createPacketv4(byteBuf, payload, 6, srcAddress, dstAddress);
+    static void writeTCPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
+        writePacketv4(byteBuf, payload, 6, srcAddress, dstAddress);
     }
 
     /**
-     * Create IPv6 Packet for TCP Packet
+     * Write IPv6 Packet for TCP Packet
      *
      * @param byteBuf    ByteBuf where IP Packet data will be set
      * @param payload    Payload of TCP
      * @param srcAddress Source IPv6 Address
      * @param dstAddress Destination IPv6 Address
      */
-    static void createTCPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        createPacketv6(byteBuf, payload, 6, srcAddress, dstAddress);
+    static void writeTCPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
+        writePacketv6(byteBuf, payload, 6, srcAddress, dstAddress);
     }
 
-    private static void createPacketv4(ByteBuf byteBuf, ByteBuf payload, int protocol, int srcAddress,
-                                       int dstAddress) {
+    private static void writePacketv4(ByteBuf byteBuf, ByteBuf payload, int protocol, int srcAddress,
+                                      int dstAddress) {
         byteBuf.writeByte(0x45);      //  Version + IHL
         byteBuf.writeByte(0x00);      //  DSCP
         byteBuf.writeShort(payload.readableBytes() + 20); // Length
@@ -86,8 +86,8 @@ final class IPPacket {
         byteBuf.writeBytes(payload);  // Payload of L4
     }
 
-    private static void createPacketv6(ByteBuf byteBuf, ByteBuf payload, int protocol, byte[] srcAddress,
-                                       byte[] dstAddress) {
+    private static void writePacketv6(ByteBuf byteBuf, ByteBuf payload, int protocol, byte[] srcAddress,
+                                      byte[] dstAddress) {
         byteBuf.writeInt(6 << 28);          // Version  + Traffic class + Flow label
         byteBuf.writeShort(payload.readableBytes()); // Payload length
         byteBuf.writeByte(protocol & 0xff); // Next header

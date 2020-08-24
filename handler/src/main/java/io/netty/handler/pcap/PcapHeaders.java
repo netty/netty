@@ -24,10 +24,10 @@ final class PcapHeaders {
     }
 
     /**
-     * Generate Pcap Global Header
+     * Write Pcap Global Header
      * @param byteBuf byteBuf ByteBuf where we'll write header data
      */
-    static void generateGlobalHeader(ByteBuf byteBuf) {
+    static void writeGlobalHeader(ByteBuf byteBuf) {
         byteBuf.writeInt(0xa1b2c3d4); // magic_number
         byteBuf.writeShort(2);        // version_major
         byteBuf.writeShort(4);        // version_minor
@@ -38,7 +38,7 @@ final class PcapHeaders {
     }
 
     /**
-     * Generate Pcap Packet Header
+     * Write Pcap Packet Header
      *
      * @param byteBuf ByteBuf where we'll write header data
      * @param ts_sec   timestamp seconds
@@ -46,7 +46,7 @@ final class PcapHeaders {
      * @param incl_len number of octets of packet saved in file
      * @param orig_len actual length of packet
      */
-    static void generatePacketHeader(ByteBuf byteBuf, int ts_sec, int ts_usec, int incl_len, int orig_len) {
+    static void writePacketHeader(ByteBuf byteBuf, int ts_sec, int ts_usec, int incl_len, int orig_len) {
         byteBuf.writeInt(ts_sec);
         byteBuf.writeInt(ts_usec);
         byteBuf.writeInt(incl_len);

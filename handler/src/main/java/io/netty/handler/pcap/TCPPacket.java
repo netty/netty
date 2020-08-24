@@ -24,14 +24,14 @@ final class TCPPacket {
     }
 
     /**
-     * Create TCP Packet
+     * Write TCP Packet
      *
      * @param byteBuf ByteBuf where Packet data will be set
      * @param payload Payload of this Packet
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    static void createPacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
+    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
         byteBuf.writeShort(dstPort); // Destination Port
         byteBuf.writeShort(srcPort); // Source Port
         byteBuf.writeInt(0);         // Sequence Number

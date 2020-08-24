@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 
 final class EthernetPacket {
 
+    /**
+     * AA:BB:CC:DD:EE:FF
+     */
     private static final byte[] DUMMY_ADDRESS = new byte[]{-86, -69, -52, -35, -18, -1};
 
     private EthernetPacket() {
@@ -26,27 +29,27 @@ final class EthernetPacket {
     }
 
     /**
-     * Create IPv4 Ethernet Packet. It uses a dummy MAC address for both source and destination.
+     * Write IPv4 Ethernet Packet. It uses a dummy MAC address for both source and destination.
      *
      * @param byteBuf    ByteBuf where Ethernet Packet data will be set
      * @param payload    Payload of IPv4
      */
-    static void createIPv4(ByteBuf byteBuf, ByteBuf payload) {
-        EthernetPacket.createPacket(byteBuf, payload, DUMMY_ADDRESS, DUMMY_ADDRESS, 0x0800);
+    static void writeIPv4(ByteBuf byteBuf, ByteBuf payload) {
+        EthernetPacket.writePacket(byteBuf, payload, DUMMY_ADDRESS, DUMMY_ADDRESS, 0x0800);
     }
 
     /**
-     * Create IPv6 Ethernet Packet. It uses a dummy MAC address for both source and destination.
+     * Write IPv6 Ethernet Packet. It uses a dummy MAC address for both source and destination.
      *
      * @param byteBuf    ByteBuf where Ethernet Packet data will be set
      * @param payload    Payload of IPv6
      */
-    static void createIPv6(ByteBuf byteBuf, ByteBuf payload) {
-        EthernetPacket.createPacket(byteBuf, payload, DUMMY_ADDRESS, DUMMY_ADDRESS, 0x86dd);
+    static void writeIPv6(ByteBuf byteBuf, ByteBuf payload) {
+        EthernetPacket.writePacket(byteBuf, payload, DUMMY_ADDRESS, DUMMY_ADDRESS, 0x86dd);
     }
 
     /**
-     * Create IPv6 Ethernet Packet
+     * Write IPv6 Ethernet Packet
      *
      * @param byteBuf    ByteBuf where Ethernet Packet data will be set
      * @param payload    Payload of IPv6
@@ -54,8 +57,8 @@ final class EthernetPacket {
      * @param dstAddress Destination MAC Address
      * @param type Type of Frame
      */
-    private static void createPacket(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress,
-                                        int type) {
+    private static void writePacket(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress,
+                                    int type) {
         byteBuf.writeBytes(dstAddress); // Destination MAC Address
         byteBuf.writeBytes(srcAddress); // Source MAC Address
         byteBuf.writeShort(type);       // Frame Type (IPv4 or IPv6)
