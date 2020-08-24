@@ -164,5 +164,13 @@ public class NativeTest {
         }.start();
 
         waitingCqe.join();
+
+        ringBuffer.close();
+    }
+
+    @Test
+    public void ioUringExitTest() {
+        RingBuffer ringBuffer = Native.createRingBuffer();
+        ringBuffer.close();
     }
 }

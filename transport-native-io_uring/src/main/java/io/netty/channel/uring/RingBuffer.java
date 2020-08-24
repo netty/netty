@@ -34,6 +34,7 @@ final class RingBuffer {
   }
 
   public void close() {
+      getIoUringSubmissionQueue().release();
       Native.ioUringExit(this);
   }
 

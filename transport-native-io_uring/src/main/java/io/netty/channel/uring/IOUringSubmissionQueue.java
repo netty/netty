@@ -230,6 +230,11 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
     }
 
+    //delete memory
+    public void release() {
+        Buffer.free(timeoutMemory);
+    }
+
     public void setSqeHead(long sqeHead) {
         this.sqeHead = sqeHead;
     }
