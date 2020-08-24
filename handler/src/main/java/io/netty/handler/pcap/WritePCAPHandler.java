@@ -19,10 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.pcap.packet.EthernetPacket;
-import io.netty.handler.pcap.packet.IPPacket;
-import io.netty.handler.pcap.packet.TCPPacket;
-import io.netty.handler.pcap.packet.UDPPacket;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,11 +54,11 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
 
     private void writePacket(ChannelHandlerContext ctx, Object msg, boolean isWrite) throws IOException {
         if (msg instanceof ByteBuf) {
-            // Copy the ByteBuf
-            ByteBuf packet = ((ByteBuf) msg).copy();
-            InetSocketAddress dstAddr;
-            InetSocketAddress srcAddr;
+            // Duplicate the ByteBuf
+            ByteBuf packet = ((ByteBuf) msg).duplicate();
 
+            InetSocketAddress srcAddr;
+            InetSocketAddress dstAddr;
             if (isWrite) {
                 srcAddr = (InetSocketAddress) ctx.channel().localAddress();
                 dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
@@ -72,50 +68,48 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
             }
 
             if (protocol == Protocol.TCP) {
-                ByteBuf tcpBuf = TCPPacket.createPacket(ctx.alloc().buffer(), packet, dstAddr.getPort(), srcAddr.getPort());
+                ByteBuf tcpBuf = ctx.alloc().buffer();
+                TCPPacket.createPacket(tcpBuf, packet, dstAddr.getPort(), srcAddr.getPort());
 
-                ByteBuf ipBuf;
+                ByteBuf ipBuf = ctx.alloc().buffer();
                 if (dstAddr.getAddress() instanceof Inet4Address) {
-                    ipBuf = IPPacket.createTCP4(ctx.alloc().buffer(),
-                            tcpBuf, ipv4ToInt(srcAddr.getAddress()),
+                    IPPacket.createTCPv4(ipBuf,
+                            tcpBuf,
+                            ipv4ToInt(srcAddr.getAddress()),
                             ipv4ToInt(dstAddr.getAddress()));
                 } else {
-                    ipBuf = IPPacket.createTCP6(ctx.alloc().buffer(),
-                            tcpBuf, srcAddr.getAddress().getAddress(),
+                    IPPacket.createTCPv6(ipBuf,
+                            tcpBuf,
+                            srcAddr.getAddress().getAddress(),
                             dstAddr.getAddress().getAddress());
                 }
 
-                ByteBuf ethernetBuf = EthernetPacket.createIPv4(ctx.alloc().buffer(),
-                        ipBuf,
-                        EthernetPacket.DUMMY_ADDRESS,
-                        EthernetPacket.DUMMY_ADDRESS);
-
-                pCapFileWriter.writePacket(ethernetBuf);
+                ByteBuf ethernetBuf = ctx.alloc().buffer();
+                EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+                pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
             } else {
-                ByteBuf udpBuf = UDPPacket.createPacket(ctx.alloc().buffer(),
+                ByteBuf udpBuf = ctx.alloc().buffer();
+                UDPPacket.createPacket(udpBuf,
                         packet,
                         dstAddr.getPort(),
                         srcAddr.getPort());
 
-                ByteBuf ipBuf;
+                ByteBuf ipBuf = ctx.alloc().buffer();
                 if (dstAddr.getAddress() instanceof Inet4Address) {
-                    ipBuf = IPPacket.createUDPv4(ctx.alloc().buffer(),
+                    IPPacket.createUDPv4(ipBuf,
                             udpBuf,
                             ipv4ToInt(srcAddr.getAddress()),
                             ipv4ToInt(dstAddr.getAddress()));
                 } else {
-                    ipBuf = IPPacket.createUDPv6(ctx.alloc().buffer(),
+                    IPPacket.createUDPv6(ipBuf,
                             udpBuf,
                             srcAddr.getAddress().getAddress(),
                             dstAddr.getAddress().getAddress());
                 }
 
-                ByteBuf ethernetBuf = EthernetPacket.createIPv4(ctx.alloc().buffer(),
-                        ipBuf,
-                        EthernetPacket.DUMMY_ADDRESS,
-                        EthernetPacket.DUMMY_ADDRESS);
-
-                pCapFileWriter.writePacket(ethernetBuf);
+                ByteBuf ethernetBuf = ctx.alloc().buffer();
+                EthernetPacket.createIPv4(ethernetBuf, ipBuf);
+                pCapFileWriter.writePacket(ctx.alloc().buffer(), ethernetBuf);
             }
         }
     }

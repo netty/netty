@@ -17,13 +17,17 @@ package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
 
-public final class PcapHeaders {
+final class PcapHeaders {
+
+    private PcapHeaders() {
+        // Prevent outside initialization
+    }
 
     /**
      * Generate Pcap Global Header
      * @param byteBuf byteBuf ByteBuf where we'll write header data
      */
-    public static ByteBuf generateGlobalHeader(ByteBuf byteBuf) {
+    static void generateGlobalHeader(ByteBuf byteBuf) {
         byteBuf.writeInt(0xa1b2c3d4); // magic_number
         byteBuf.writeShort(2);        // version_major
         byteBuf.writeShort(4);        // version_minor
@@ -31,7 +35,6 @@ public final class PcapHeaders {
         byteBuf.writeInt(0);          // sigfigs
         byteBuf.writeInt(0xffff);     // snaplen
         byteBuf.writeInt(1);          // network
-        return byteBuf;
     }
 
     /**
@@ -43,11 +46,10 @@ public final class PcapHeaders {
      * @param incl_len number of octets of packet saved in file
      * @param orig_len actual length of packet
      */
-    public static ByteBuf generatePacketHeader(ByteBuf byteBuf, int ts_sec, int ts_usec, int incl_len, int orig_len) {
+    static void generatePacketHeader(ByteBuf byteBuf, int ts_sec, int ts_usec, int incl_len, int orig_len) {
         byteBuf.writeInt(ts_sec);
         byteBuf.writeInt(ts_usec);
         byteBuf.writeInt(incl_len);
         byteBuf.writeInt(orig_len);
-        return byteBuf;
     }
 }

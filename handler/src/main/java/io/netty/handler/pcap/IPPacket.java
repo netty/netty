@@ -13,11 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.pcap.packet;
+package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
 
-public final class IPPacket {
+final class IPPacket {
+
+    private IPPacket() {
+        // Prevent outside initialization
+    }
 
     /**
      * Create IPv4 Packet for UDP Packet
@@ -27,8 +31,8 @@ public final class IPPacket {
      * @param srcAddress Source IPv4 Address
      * @param dstAddress Destination IPv4 Address
      */
-    public static ByteBuf createUDPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        return createPacketV4(byteBuf, payload, 17, srcAddress, dstAddress);
+    static void createUDPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
+        createPacketv4(byteBuf, payload, 17, srcAddress, dstAddress);
     }
 
     /**
@@ -39,8 +43,8 @@ public final class IPPacket {
      * @param srcAddress Source IPv6 Address
      * @param dstAddress Destination IPv6 Address
      */
-    public static ByteBuf createUDPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        return createPacketV6(byteBuf, payload, 17, srcAddress, dstAddress);
+    static void createUDPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
+        createPacketv6(byteBuf, payload, 17, srcAddress, dstAddress);
     }
 
     /**
@@ -51,8 +55,8 @@ public final class IPPacket {
      * @param srcAddress Source IPv4 Address
      * @param dstAddress Destination IPv4 Address
      */
-    public static ByteBuf createTCP4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        return createPacketV4(byteBuf, payload, 6, srcAddress, dstAddress);
+    static void createTCPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
+        createPacketv4(byteBuf, payload, 6, srcAddress, dstAddress);
     }
 
     /**
@@ -63,12 +67,12 @@ public final class IPPacket {
      * @param srcAddress Source IPv6 Address
      * @param dstAddress Destination IPv6 Address
      */
-    public static ByteBuf createTCP6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        return createPacketV6(byteBuf, payload, 6, srcAddress, dstAddress);
+    static void createTCPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
+        createPacketv6(byteBuf, payload, 6, srcAddress, dstAddress);
     }
 
-    private static ByteBuf createPacketV4(ByteBuf byteBuf, ByteBuf payload, int protocol, int srcAddress,
-                                          int dstAddress) {
+    private static void createPacketv4(ByteBuf byteBuf, ByteBuf payload, int protocol, int srcAddress,
+                                       int dstAddress) {
         byteBuf.writeByte(0x45);      //  Version + IHL
         byteBuf.writeByte(0x00);      //  DSCP
         byteBuf.writeShort(payload.readableBytes() + 20); // Length
@@ -80,11 +84,10 @@ public final class IPPacket {
         byteBuf.writeInt(srcAddress); // Source IPv4 Address
         byteBuf.writeInt(dstAddress); // Destination IPv4 Address
         byteBuf.writeBytes(payload);  // Payload of L4
-        return byteBuf;
     }
 
-    private static ByteBuf createPacketV6(ByteBuf byteBuf, ByteBuf payload, int protocol, byte[] srcAddress,
-                                          byte[] dstAddress) {
+    private static void createPacketv6(ByteBuf byteBuf, ByteBuf payload, int protocol, byte[] srcAddress,
+                                       byte[] dstAddress) {
         byteBuf.writeInt(6 << 28);          // Version  + Traffic class + Flow label
         byteBuf.writeShort(payload.readableBytes()); // Payload length
         byteBuf.writeByte(protocol & 0xff); // Next header
@@ -92,6 +95,5 @@ public final class IPPacket {
         byteBuf.writeBytes(srcAddress);     // Source IPv6 Address
         byteBuf.writeBytes(dstAddress);     // Destination IPv6 Address
         byteBuf.writeBytes(payload);        // Payload of L4
-        return byteBuf;
     }
 }

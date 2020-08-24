@@ -13,11 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.pcap.packet;
+package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
 
-public final class TCPPacket {
+final class TCPPacket {
+
+    private TCPPacket() {
+        // Prevent outside initialization
+    }
+
     /**
      * Create TCP Packet
      *
@@ -26,7 +31,7 @@ public final class TCPPacket {
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    public static ByteBuf createPacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
+    static void createPacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
         byteBuf.writeShort(dstPort); // Destination Port
         byteBuf.writeShort(srcPort); // Source Port
         byteBuf.writeInt(0);         // Sequence Number
@@ -36,6 +41,5 @@ public final class TCPPacket {
         byteBuf.writeShort(0x0001);  // Checksum
         byteBuf.writeShort(0);       // Urgent Pointer
         byteBuf.writeBytes(payload); //  Payload of Data
-        return byteBuf;
     }
 }

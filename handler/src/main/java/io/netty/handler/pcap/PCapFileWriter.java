@@ -24,22 +24,23 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public final class PCapFileWriter implements Closeable {
+final class PCapFileWriter implements Closeable {
     private final long myStartTime = System.nanoTime();
     private final FileOutputStream fileOutputStream;
 
-    public PCapFileWriter(File file) throws IOException {
+    PCapFileWriter(File file) throws IOException {
         fileOutputStream = new FileOutputStream(file);
 
         ByteBuf byteBuf = Unpooled.buffer();
-        fileOutputStream.write(ByteBufUtil.getBytes( PcapHeaders.generateGlobalHeader(byteBuf)));
+        PcapHeaders.generateGlobalHeader(byteBuf);
+        fileOutputStream.write(ByteBufUtil.getBytes(byteBuf));
     }
 
-    public void writePacket(ByteBuf packet) throws IOException {
+    void writePacket(ByteBuf byteBuf, ByteBuf packet) throws IOException {
         long difference = System.nanoTime() - myStartTime;
 
-        ByteBuf byteBuf = PcapHeaders.generatePacketHeader(
-                Unpooled.buffer(),
+        PcapHeaders.generatePacketHeader(
+                byteBuf,
                 (int) (difference / 1000000000),
                 (int) difference / 1000000,
                 packet.readableBytes(),
