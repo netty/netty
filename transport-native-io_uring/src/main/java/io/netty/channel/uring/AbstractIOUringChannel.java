@@ -21,21 +21,31 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.concurrent.ScheduledFuture;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -63,12 +73,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         super(parent);
         this.socket = checkNotNull(socket, "fd");
         this.active = true;
+        this.uringInReadyPending = false;
 
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
             this.local = socket.localAddress();
             this.remote = socket.remoteAddress();
+        }
+
+        if (parent != null) {
+            logger.info("Create Channel Socket: {}", socket.intValue());
+        } else {
+            logger.info("Create Server Socket: {}", socket.intValue());
         }
     }
 
@@ -80,6 +97,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (active) {
             this.local = socket.localAddress();
             this.remote = socket.remoteAddress();
+        }
+
+        if (parent != null) {
+            logger.info("Create Channel Socket: {}", socket.intValue());
+        } else {
+            logger.info("Create Server Socket: {}", socket.intValue());
         }
     }
 
@@ -220,9 +243,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
+        logger.info("Begin Read");
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if (!uringInReadyPending) {
-            uringInReadyPending = true;
             unsafe.executeUringReadOperator();
         }
     }
@@ -292,6 +315,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         @Override
+        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
+                            final ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
         public IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
                 allocHandle = newIOUringHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
@@ -299,16 +328,11 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             return allocHandle;
         }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                            final ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
-        }
-
         final void executeUringReadOperator() {
-            if (!isActive()) {
+            if (uringInReadyPending || !isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
+            uringInReadyPending = true;
             eventLoop().execute(readRunnable);
         }
 
