@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -24,7 +25,10 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,7 +67,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
-        ringBuffer = Native.createRingBuffer(32);
+
+        ringBuffer = Native.createRingBuffer(ringSize);
         eventfd = Native.newEventFd();
         long eventId = incrementEventIdCounter();
         Event event = new Event();
@@ -241,23 +246,28 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             event.getAbstractIOUringChannel().executeReadEvent();
         break;
         case WRITE:
-            System.out.println("EventLoop Write Res: " + res);
-            System.out.println("EventLoop Fd: " + event.getAbstractIOUringChannel().getSocket().intValue());
-            System.out.println("EventLoop Pipeline: " + event.getAbstractIOUringChannel().eventLoop());
+            //localFlushAmount -> res
+            logger.info("EventLoop Write Res: {}", res);
+            logger.info("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
             ChannelOutboundBuffer channelOutboundBuffer = event
                     .getAbstractIOUringChannel().unsafe().outboundBuffer();
-            //remove bytes
-            int localFlushAmount = res;
-            if (localFlushAmount > 0) {
-                channelOutboundBuffer.removeBytes(localFlushAmount);
+            AbstractIOUringChannel channel = event.getAbstractIOUringChannel();
+
+            if (res == SOCKET_ERROR_EPIPE) {
+                event.getAbstractIOUringChannel().shutdownInput(false);
+                break;
             }
 
-            try {
-                event.getAbstractIOUringChannel().doWrite(channelOutboundBuffer);
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (res > 0) {
+                channelOutboundBuffer.removeBytes(res);
+                channel.setWriteable(true);
+                try {
+                    event.getAbstractIOUringChannel().doWrite(channelOutboundBuffer);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        break;
+            break;
         case TIMEOUT:
             if (res == ETIME) {
                 prevDeadlineNanos = NONE;

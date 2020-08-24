@@ -40,6 +40,7 @@ import java.nio.channels.UnresolvedAddressException;
 import static io.netty.util.internal.ObjectUtil.*;
 
 abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIOUringChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     protected volatile boolean active;
@@ -233,7 +234,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        if (in.size() >= 1) {
+        logger.info("IOUring doWrite message size: {}", in.size());
+        if (writeable && in.size() >= 1) {
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
                 doWriteBytes((ByteBuf) msg);
@@ -243,6 +245,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     protected final void doWriteBytes(ByteBuf buf) {
         if (buf.hasMemoryAddress()) {
+            //link poll<link>write operation
+            addPollOut();
+
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
             final Event event = new Event();
@@ -254,7 +259,22 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                                 buf.writerIndex());
             ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
+            writeable = false;
         }
+    }
+
+    //POLLOUT
+    private void addPollOut() {
+        IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+        IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+        final Event event = new Event();
+        long eventId = ioUringEventLoop.incrementEventIdCounter();
+        event.setId(eventId);
+        event.setOp(EventType.POLL_OUT);
+        event.setAbstractIOUringChannel(this);
+        submissionQueue.addPoll(eventId, socket.intValue(), EventType.POLL_OUT);
+        ioUringEventLoop.addNewEvent(event);
+        submissionQueue.submit();
     }
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
