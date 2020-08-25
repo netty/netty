@@ -173,7 +173,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 event = events.get(ioUringCqe.getEventId());
 
                 if (event != null) {
-                    System.err.println("EventType Incoming: " + event.getOp().name());
+                    logger.trace("EventType Incoming: " + event.getOp().name());
                     processEvent(ioUringCqe.getRes(), event);
                 }
 
