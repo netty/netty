@@ -104,7 +104,7 @@ final class IOUringSubmissionQueue {
             sqeTail = next;
         }
         if (sqe == 0) {
-            logger.info("sqe is null");
+            logger.trace("sqe is null");
         }
         return sqe;
     }
@@ -142,11 +142,11 @@ final class IOUringSubmissionQueue {
             offsetIndex += 8;
         }
 
-        logger.info("OPField: {}", type.name());
-        logger.info("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
-        logger.info("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
-        logger.info("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
-        logger.info("Offset: {}", PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
+        logger.trace("OPField: {}", type.name());
+        logger.trace("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
+        logger.trace("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
+        logger.trace("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
+        logger.trace("Offset: {}", PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
     }
 
     public boolean addTimeout(long nanoSeconds, long eventId) {
@@ -200,10 +200,10 @@ final class IOUringSubmissionQueue {
         long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
         long kRingMask = toUnsignedLong(PlatformDependent.getInt(kRingMaskAddress));
 
-        logger.info("Ktail: {}", kTail);
-        logger.info("Ktail: {}", kHead);
-        logger.info("SqeHead: {}", sqeHead);
-        logger.info("SqeTail: {}", sqeTail);
+        logger.trace("Ktail: {}", kTail);
+        logger.trace("Ktail: {}", kHead);
+        logger.trace("SqeHead: {}", sqeHead);
+        logger.trace("SqeTail: {}", sqeTail);
 
         if (sqeHead == sqeTail) {
             return (int) (kTail - kHead);
@@ -228,7 +228,7 @@ final class IOUringSubmissionQueue {
 
     public void submit() {
         int submitted = flushSqe();
-        logger.info("Submitted: {}", submitted);
+        logger.trace("Submitted: {}", submitted);
 
         int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
         if (ret < 0) {

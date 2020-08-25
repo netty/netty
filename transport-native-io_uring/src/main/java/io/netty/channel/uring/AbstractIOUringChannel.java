@@ -83,9 +83,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         if (parent != null) {
-            logger.info("Create Channel Socket: {}", socket.intValue());
+            logger.trace("Create Channel Socket: {}", socket.intValue());
         } else {
-            logger.info("Create Server Socket: {}", socket.intValue());
+            logger.trace("Create Server Socket: {}", socket.intValue());
         }
     }
 
@@ -100,9 +100,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         if (parent != null) {
-            logger.info("Create Channel Socket: {}", socket.intValue());
+            logger.trace("Create Channel Socket: {}", socket.intValue());
         } else {
-            logger.info("Create Server Socket: {}", socket.intValue());
+            logger.trace("Create Server Socket: {}", socket.intValue());
         }
     }
 
@@ -193,7 +193,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected void doClose() throws Exception {
         if (parent() == null) {
-            logger.info("ServerSocket Close: {}", this.socket.intValue());
+            logger.trace("ServerSocket Close: {}", this.socket.intValue());
         }
         active = false;
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
@@ -243,7 +243,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
-        logger.info("Begin Read");
+        logger.trace("Begin Read");
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if (!uringInReadyPending) {
             unsafe.executeUringReadOperator();
@@ -257,7 +257,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        logger.info("IOUring doWrite message size: {}", in.size());
+        logger.trace("IOUring doWrite message size: {}", in.size());
         if (writeable && in.size() >= 1) {
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
@@ -396,7 +396,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     void shutdownInput(boolean rdHup) {
-        logger.info("shutdownInput Fd: {}", this.socket.intValue());
+        logger.trace("shutdownInput Fd: {}", this.socket.intValue());
         if (!socket.isInputShutdown()) {
             if (isAllowHalfClosure(config())) {
                 try {
