@@ -46,6 +46,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
     private final List<IpSubnetFilterRule> rules;
     private final boolean acceptIfNotFound;
+    private IpFilterRuleType ipFilterRuleType;
 
     /**
      * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array. </p>
@@ -89,9 +90,35 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         this.rules = ObjectUtil.checkNotNull(rules, "rules");
         this.acceptIfNotFound = acceptIfNotFound;
 
+        int numAccept = 0;
+        int numReject = 0;
+
         // Iterate over rules and check for `null` rule.
         for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
+            if (ipSubnetFilterRule.ruleType() == IpFilterRuleType.ACCEPT) {
+                numAccept++;
+            } else {
+                numReject++;
+            }
+        }
+
+        /*
+         * If Number of accept rules are 0 and Number of reject rules is more than 0,
+         * then all rules are of "REJECT" type.
+         *
+         * In this case, we'll set `ipFilterRuleType` to `IpFilterRuleType.REJECT`
+         *
+         * If Number of accept rules are more than 0 and number of reject rules are 0,
+         * then all rules are of "ACCEPT" type.
+         *
+         */
+        if (numAccept == 0 && numReject > 0) {
+            ipFilterRuleType = IpFilterRuleType.REJECT;
+        } else if (numAccept > 0 && numReject == 0) {
+            ipFilterRuleType = IpFilterRuleType.ACCEPT;
+        } else {
+            ipFilterRuleType = null;
         }
 
         sortAndFilter();
@@ -101,7 +128,11 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
         int indexOf = Collections.binarySearch(this.rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
         if (indexOf >= 0) {
-            return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
+            if (ipFilterRuleType == null) {
+                return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
+            } else {
+                return this.ipFilterRuleType == IpFilterRuleType.ACCEPT;
+            }
         }
         return acceptIfNotFound;
     }
