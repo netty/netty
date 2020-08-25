@@ -133,7 +133,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 curDeadlineNanos = NONE; // nothing on the calendar
             }
             nextWakeupNanos.set(curDeadlineNanos);
+            IOUringCqe ioUringCqe;
 
+            // Only submit a timeout if there are no tasks to process and do a blocking operation
+            // on the completionQueue.
             if (!hasTasks()) {
                 try {
                     if (curDeadlineNanos != prevDeadlineNanos) {
@@ -145,22 +148,33 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         addNewEvent(event);
                         submissionQueue.addTimeout(curDeadlineNanos, eventId);
                     }
-                    final IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-                    logger.info("ioUringWaitCqe {}", this.toString());
-                    if (ioUringCqe != null) {
-                        final Event event = events.get(ioUringCqe.getEventId());
 
-                        if (event != null) {
-                            logger.info("EventType Incoming: " + event.getOp().name());
-                            processEvent(ioUringCqe.getRes(), event);
-                        }
-                    }
+                    // Block if there is nothing to process.
+                    ioUringCqe = completionQueue.ioUringWaitCqe();
                 } finally {
 
                     if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
                         pendingWakeup = true;
                     }
                 }
+            } else {
+                // Just poll as there are tasks to process so we don't want to block.
+                ioUringCqe = completionQueue.poll();
+            }
+
+            logger.info("ioUringWaitCqe {}", this.toString());
+            while (ioUringCqe != null) {
+                final Event event = events.get(ioUringCqe.getEventId());
+
+                if (event != null) {
+                    logger.info("EventType Incoming: " + event.getOp().name());
+                    processEvent(ioUringCqe.getRes(), event);
+                }
+
+                // Process one entry after the other until there are none left. This will ensure we process
+                // all of these before we try to consume tasks.
+                ioUringCqe = completionQueue.poll();
+                logger.info("ioUringWaitCqe {}", this.toString());
             }
 
             if (hasTasks()) {
@@ -298,6 +312,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             event.setOp(EventType.POLL_EVENTFD);
             addNewEvent(event);
             submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
+            // Submit so its picked up
+            submissionQueue.submit();
         case POLL_LINK:
             //Todo error handling error
             logger.info("POLL_LINK Res: {}", res);

@@ -55,7 +55,7 @@ final class IOUringCompletionQueue {
     this.ringFd = ringFd;
   }
 
-  public IOUringCqe peek() {
+  public IOUringCqe poll() {
     long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
 
     if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
@@ -75,7 +75,7 @@ final class IOUringCompletionQueue {
   }
 
   public IOUringCqe ioUringWaitCqe() {
-    IOUringCqe ioUringCqe = peek();
+    IOUringCqe ioUringCqe = poll();
 
     if (ioUringCqe != null) {
         return ioUringCqe;
@@ -87,7 +87,7 @@ final class IOUringCompletionQueue {
         //Todo throw exception!
         return null;
     } else if (ret == 0) {
-        ioUringCqe = peek();
+        ioUringCqe = poll();
 
         if (ioUringCqe != null) {
             return ioUringCqe;
