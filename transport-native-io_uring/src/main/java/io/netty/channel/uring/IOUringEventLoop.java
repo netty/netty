@@ -73,6 +73,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         logger.trace("New EventLoop: {}", this.toString());
     }
 
+    @Override
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        return newTaskQueue0(maxPendingTasks);
+    }
+
+    private static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
+        // This event loop never calls takeTask()
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
+                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
+    }
+
     public long incrementEventIdCounter() {
         long eventId = eventIdCounter;
         logger.trace("incrementEventIdCounter EventId: {}", eventId);
