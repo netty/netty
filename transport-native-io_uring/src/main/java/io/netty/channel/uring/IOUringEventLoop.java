@@ -75,25 +75,25 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         addNewEvent(event);
         ringBuffer.getIoUringSubmissionQueue().addPoll(eventId, eventfd.intValue(), event.getOp());
         ringBuffer.getIoUringSubmissionQueue().submit();
-        logger.info("New EventLoop: {}", this.toString());
+        logger.trace("New EventLoop: {}", this.toString());
     }
 
     public long incrementEventIdCounter() {
         long eventId = eventIdCounter;
-        logger.info("incrementEventIdCounter EventId: {}", eventId);
+        logger.trace("incrementEventIdCounter EventId: {}", eventId);
         eventIdCounter++;
         return eventId;
     }
 
     public void add(AbstractIOUringChannel ch) {
-        logger.info("Add Channel: {} ", ch.socket.intValue());
+        logger.trace("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
         channels.put(fd, ch);
     }
 
     public void remove(AbstractIOUringChannel ch) {
-        logger.info("Remove Channel: {}", ch.socket.intValue());
+        logger.trace("Remove Channel: {}", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
         AbstractIOUringChannel old = channels.remove(fd);
@@ -107,7 +107,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        logger.info("CloseAll IOUringEvenloop");
+        logger.trace("CloseAll IOUringEvenloop");
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractIOUringChannel[] localChannels = channels.values().toArray(new AbstractIOUringChannel[0]);
@@ -126,7 +126,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
         final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         for (;;) {
-            logger.info("Run IOUringEventLoop {}", this.toString());
+            logger.trace("Run IOUringEventLoop {}", this.toString());
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
             if (curDeadlineNanos == -1L) {
                 curDeadlineNanos = NONE; // nothing on the calendar
@@ -150,7 +150,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                     }
 
                     // Block if there is nothing to process.
-                    logger.debug("ioUringWaitCqe {}", this.toString());
+                    logger.trace("ioUringWaitCqe {}", this.toString());
                     ioUringCqe = completionQueue.ioUringWaitCqe();
                 } finally {
 
@@ -160,7 +160,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 }
             } else {
                 // Just poll as there are tasks to process so we don't want to block.
-                logger.debug("poll {}", this.toString());
+                logger.trace("poll {}", this.toString());
                 ioUringCqe = completionQueue.poll();
             }
 
@@ -168,14 +168,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 final Event event = events.get(ioUringCqe.getEventId());
 
                 if (event != null) {
-                    logger.debug("EventType Incoming: " + event.getOp().name());
+                    logger.trace("EventType Incoming: " + event.getOp().name());
                     processEvent(ioUringCqe.getRes(), event);
                 }
 
                 // Process one entry after the other until there are none left. This will ensure we process
                 // all of these before we try to consume tasks.
                 ioUringCqe = completionQueue.poll();
-                logger.debug("poll {}", this.toString());
+                logger.trace("poll {}", this.toString());
             }
 
             if (hasTasks()) {
@@ -199,13 +199,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (event.getOp()) {
         case ACCEPT:
-            logger.info("EventLoop Accept filedescriptor: {}", res);
+            logger.trace("EventLoop Accept filedescriptor: {}", res);
             event.getAbstractIOUringChannel().setUringInReadyPending(false);
             if (res != -1 && res != ERRNO_EAGAIN_NEGATIVE &&
                 res != ERRNO_EWOULDBLOCK_NEGATIVE) {
                 AbstractIOUringServerChannel abstractIOUringServerChannel =
                         (AbstractIOUringServerChannel) event.getAbstractIOUringChannel();
-                logger.info("server filedescriptor Fd: {}", abstractIOUringServerChannel.getSocket().intValue());
+                logger.trace("server filedescriptor Fd: {}", abstractIOUringServerChannel.getSocket().intValue());
                 final IOUringRecvByteAllocatorHandle allocHandle =
                         (IOUringRecvByteAllocatorHandle) event.getAbstractIOUringChannel().unsafe()
                                                               .recvBufAllocHandle();
@@ -239,8 +239,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                                                           .recvBufAllocHandle();
             final ChannelPipeline pipeline = event.getAbstractIOUringChannel().pipeline();
             try {
-                logger.info("EventLoop Read Res: {}", res);
-                logger.info("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
+                logger.trace("EventLoop Read Res: {}", res);
+                logger.trace("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
                 event.getAbstractIOUringChannel().setUringInReadyPending(false);
                 byteBuf = event.getReadBuffer();
                 if (localReadAmount > 0) {
@@ -268,7 +268,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
-                logger.info("READ autoRead {}", event.getAbstractIOUringChannel().config().isAutoRead());
+                logger.trace("READ autoRead {}", event.getAbstractIOUringChannel().config().isAutoRead());
                 if (event.getAbstractIOUringChannel().config().isAutoRead()) {
                     event.getAbstractIOUringChannel().executeReadEvent();
                 }
@@ -278,8 +278,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             break;
         case WRITE:
             //localFlushAmount -> res
-            logger.info("EventLoop Write Res: {}", res);
-            logger.info("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
+            logger.trace("EventLoop Write Res: {}", res);
+            logger.trace("EventLoop Fd: {}", event.getAbstractIOUringChannel().getSocket().intValue());
             ChannelOutboundBuffer channelOutboundBuffer = event
                     .getAbstractIOUringChannel().unsafe().outboundBuffer();
             AbstractIOUringChannel channel = event.getAbstractIOUringChannel();
@@ -318,7 +318,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             break;
         case POLL_LINK:
             //Todo error handling error
-            logger.info("POLL_LINK Res: {}", res);
+            logger.trace("POLL_LINK Res: {}", res);
             break;
         case POLL_RDHUP:
             if (!event.getAbstractIOUringChannel().isActive()) {
@@ -326,7 +326,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             }
             break;
         case POLL_OUT:
-            logger.info("POLL_OUT Res: {}", res);
+            logger.trace("POLL_OUT Res: {}", res);
             break;
         }
         this.events.remove(event.getId());
