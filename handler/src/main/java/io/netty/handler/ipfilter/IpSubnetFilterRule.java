@@ -114,7 +114,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     /**
      * Equivalent to {@link Integer#compare(int, int)}
      */
-    public static int compareInt(int x, int y) {
+    private static int compareInt(int x, int y) {
         return (x < y) ? -1 : ((x == y) ? 0 : 1);
     }
 
