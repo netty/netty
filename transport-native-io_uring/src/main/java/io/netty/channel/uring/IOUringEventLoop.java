@@ -62,7 +62,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
-    //private final FileDescriptor eventFd;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
@@ -146,10 +145,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                         event.setId(eventId);
                         event.setOp(EventType.TIMEOUT);
                         addNewEvent(event);
-                        submissionQueue.addTimeout(curDeadlineNanos, eventId);
+                        submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos), eventId);
+                        submissionQueue.submit();
                     }
 
                     // Block if there is nothing to process.
+                    logger.debug("ioUringWaitCqe {}", this.toString());
                     ioUringCqe = completionQueue.ioUringWaitCqe();
                 } finally {
 
@@ -159,22 +160,22 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 }
             } else {
                 // Just poll as there are tasks to process so we don't want to block.
+                logger.debug("poll {}", this.toString());
                 ioUringCqe = completionQueue.poll();
             }
 
-            logger.info("ioUringWaitCqe {}", this.toString());
             while (ioUringCqe != null) {
                 final Event event = events.get(ioUringCqe.getEventId());
 
                 if (event != null) {
-                    logger.info("EventType Incoming: " + event.getOp().name());
+                    logger.debug("EventType Incoming: " + event.getOp().name());
                     processEvent(ioUringCqe.getRes(), event);
                 }
 
                 // Process one entry after the other until there are none left. This will ensure we process
                 // all of these before we try to consume tasks.
                 ioUringCqe = completionQueue.poll();
-                logger.info("ioUringWaitCqe {}", this.toString());
+                logger.debug("poll {}", this.toString());
             }
 
             if (hasTasks()) {
@@ -314,6 +315,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
             // Submit so its picked up
             submissionQueue.submit();
+            break;
         case POLL_LINK:
             //Todo error handling error
             logger.info("POLL_LINK Res: {}", res);
