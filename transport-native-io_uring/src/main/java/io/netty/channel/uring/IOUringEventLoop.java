@@ -25,10 +25,12 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -68,13 +70,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
 
         ringBuffer = Native.createRingBuffer(ringSize);
         eventfd = Native.newEventFd();
-        long eventId = incrementEventIdCounter();
-        Event event = new Event();
-        event.setOp(EventType.POLL_EVENTFD);
-        event.setId(eventId);
-        addNewEvent(event);
-        ringBuffer.getIoUringSubmissionQueue().addPoll(eventId, eventfd.intValue(), event.getOp());
-        ringBuffer.getIoUringSubmissionQueue().submit();
         logger.trace("New EventLoop: {}", this.toString());
     }
 
@@ -125,6 +120,16 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
     protected void run() {
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
         final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+
+        // Lets add the eventfd related events before starting to do any real work.
+        long eventId = incrementEventIdCounter();
+        Event event = new Event();
+        event.setOp(EventType.POLL_EVENTFD);
+        event.setId(eventId);
+        addNewEvent(event);
+        submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
+        submissionQueue.submit();
+
         for (;;) {
             logger.trace("Run IOUringEventLoop {}", this.toString());
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
@@ -140,8 +145,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
                 try {
                     if (curDeadlineNanos != prevDeadlineNanos) {
                         prevDeadlineNanos = curDeadlineNanos;
-                        Event event = new Event();
-                        long eventId = incrementEventIdCounter();
+                        event = new Event();
+                        eventId = incrementEventIdCounter();
                         event.setId(eventId);
                         event.setOp(EventType.TIMEOUT);
                         addNewEvent(event);
@@ -165,10 +170,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             }
 
             while (ioUringCqe != null) {
-                final Event event = events.get(ioUringCqe.getEventId());
+                event = events.get(ioUringCqe.getEventId());
 
                 if (event != null) {
-                    logger.trace("EventType Incoming: " + event.getOp().name());
+                    System.err.println("EventType Incoming: " + event.getOp().name());
                     processEvent(ioUringCqe.getRes(), event);
                 }
 
@@ -196,6 +201,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
     }
 
     private void processEvent(final int res, final Event event) {
+        // Remove the id first so we not end up with invalid entries in any cases.
+        this.events.remove(event.getId());
+
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (event.getOp()) {
         case ACCEPT:
@@ -307,12 +315,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             break;
         case POLL_EVENTFD:
             pendingWakeup = false;
-            //Todo eventId is already used
-            long eventId = incrementEventIdCounter();
-            event.setId(eventId);
-            event.setOp(EventType.POLL_EVENTFD);
-            addNewEvent(event);
-            submissionQueue.addPoll(eventId, eventfd.intValue(), event.getOp());
+            // We need to consume the data as otherwise we would see another event in the completionQueue without
+            // an extra eventfd_write(....)
+            Native.eventFdRead(eventfd.intValue());
+            Event eventfdEvent = new Event();
+            eventfdEvent.setId(incrementEventIdCounter());
+            eventfdEvent.setOp(EventType.POLL_EVENTFD);
+            addNewEvent(eventfdEvent);
+            submissionQueue.addPoll(eventfdEvent.getId(), eventfd.intValue(), eventfdEvent.getOp());
             // Submit so its picked up
             submissionQueue.submit();
             break;
@@ -329,7 +339,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop {
             logger.trace("POLL_OUT Res: {}", res);
             break;
         }
-        this.events.remove(event.getId());
     }
 
     @Override

@@ -87,6 +87,8 @@ final class Native {
 
     public static native void eventFdWrite(int fd, long value);
 
+    public static native void eventFdRead(int fd);
+
     public static FileDescriptor newEventFd() {
         return new FileDescriptor(eventFd());
     }
