@@ -201,7 +201,17 @@ static jint netty_io_uring_unregister_event_fd(JNIEnv *env, jclass class1, jint 
 	return 0;
 }
 
-static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
+
+static void netty_io_uring_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
+    uint64_t eventfd_t;
+
+    if (eventfd_read(fd, &eventfd_t) != 0) {
+        // something is serious wrong
+        netty_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
+    }
+}
+
+static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
     uint64_t val;
 
     for (;;) {
@@ -325,7 +335,8 @@ static const JNINativeMethod method_table[] = {
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
     {"eventFd", "()I", (void *) netty_epoll_native_eventFd},
-    {"eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
+    {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
+    {"eventFdRead", "(I)V", (void *) netty_io_uring_eventFdRead },
     {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
     {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
     };
