@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * <p>
@@ -46,7 +45,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
     private final List<IpSubnetFilterRule> rules;
     private final boolean acceptIfNotFound;
-    private IpFilterRuleType ipFilterRuleType;
+    private final IpFilterRuleType ipFilterRuleType;
 
     /**
      * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array. </p>
@@ -149,29 +148,30 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         Iterator<IpSubnetFilterRule> iterator = rules.iterator();
         List<IpSubnetFilterRule> toRemove = new ArrayList<IpSubnetFilterRule>();
 
-        try {
-            IpSubnetFilterRule parentRule = null;
-            while (iterator.hasNext()) {
+        IpSubnetFilterRule parentRule = null;
+        while (iterator.hasNext()) {
 
-                // If parentRule is null, take first element out of Iterator.
-                if (parentRule == null) {
-                    parentRule = iterator.next();
-                }
-
-                // Take one more element out of Iterator, this will be childRule.
-                IpSubnetFilterRule childRule = iterator.next();
-
-                // If parentRule matches childRule, schedule that Rule for deletion.
-                if (parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
-                    toRemove.add(childRule);
-                } else {
-                    // If parentRule does not matches childRule, this childRule will become new parentRule
-                    // and we'll do the same again
-                    parentRule = childRule;
-                }
+            // If parentRule is null, take first element out of Iterator.
+            if (parentRule == null) {
+                parentRule = iterator.next();
             }
-        } catch (NoSuchElementException ex) {
-            // Ignore
+
+            // If we don't have any more rule, we're done now.
+            if (!iterator.hasNext()) {
+                break;
+            }
+
+            // Take one more element out of Iterator, this will be childRule.
+            IpSubnetFilterRule childRule = iterator.next();
+
+            // If parentRule matches childRule, schedule that Rule for deletion.
+            if (parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
+                toRemove.add(childRule);
+            } else {
+                // If parentRule does not matches childRule, this childRule will become new parentRule
+                // and we'll do the same again
+                parentRule = childRule;
+            }
         }
 
         rules.removeAll(toRemove);
