@@ -421,7 +421,6 @@ public final class NetUtil {
      */
     public static int ipv4AddressToInt(Inet4Address ipAddress) {
         byte[] octets = ipAddress.getAddress();
-        assert octets.length == 4;
 
         return  (octets[0] & 0xff) << 24 |
                 (octets[1] & 0xff) << 16 |
