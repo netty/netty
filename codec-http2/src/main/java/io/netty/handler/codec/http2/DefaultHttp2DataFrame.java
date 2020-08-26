@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -104,10 +104,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public ByteBuf content() {
-        if (content.refCnt() <= 0) {
-            throw new IllegalReferenceCountException(content.refCnt());
-        }
-        return content;
+        return ByteBufUtil.ensureAccessible(content);
     }
 
     @Override

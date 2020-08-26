@@ -16,7 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.nio.ByteBuffer;
@@ -158,11 +157,16 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     private static final class PooledNonRetainedDuplicateByteBuf extends UnpooledDuplicatedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
+        private final ByteBuf referenceCountDelegate;
 
-        PooledNonRetainedDuplicateByteBuf(ReferenceCounted referenceCountDelegate, AbstractByteBuf buffer) {
+        PooledNonRetainedDuplicateByteBuf(ByteBuf referenceCountDelegate, AbstractByteBuf buffer) {
             super(buffer);
             this.referenceCountDelegate = referenceCountDelegate;
+        }
+
+        @Override
+        boolean isAccessible0() {
+            return referenceCountDelegate.isAccessible();
         }
 
         @Override
@@ -234,12 +238,17 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     private static final class PooledNonRetainedSlicedByteBuf extends UnpooledSlicedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
+        private final ByteBuf referenceCountDelegate;
 
-        PooledNonRetainedSlicedByteBuf(ReferenceCounted referenceCountDelegate,
+        PooledNonRetainedSlicedByteBuf(ByteBuf referenceCountDelegate,
                                        AbstractByteBuf buffer, int index, int length) {
             super(buffer, index, length);
             this.referenceCountDelegate = referenceCountDelegate;
+        }
+
+        @Override
+        boolean isAccessible0() {
+            return referenceCountDelegate.isAccessible();
         }
 
         @Override

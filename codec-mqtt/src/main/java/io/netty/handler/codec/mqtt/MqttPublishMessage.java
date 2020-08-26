@@ -18,7 +18,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.util.IllegalReferenceCountException;
+import io.netty.buffer.ByteBufUtil;
 
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish">MQTTV3.1/publish</a>
@@ -44,11 +44,7 @@ public class MqttPublishMessage extends MqttMessage implements ByteBufHolder {
 
     @Override
     public ByteBuf content() {
-        final ByteBuf data = (ByteBuf) super.payload();
-        if (data.refCnt() <= 0) {
-            throw new IllegalReferenceCountException(data.refCnt());
-        }
-        return data;
+        return ByteBufUtil.ensureAccessible((ByteBuf) super.payload());
     }
 
     @Override

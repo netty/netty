@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
@@ -106,6 +107,24 @@ public final class ByteBufUtil {
     static byte[] threadLocalTempArray(int minLength) {
         return minLength <= MAX_TL_ARRAY_LEN ? BYTE_ARRAYS.get()
             : PlatformDependent.allocateUninitializedArray(minLength);
+    }
+
+    /**
+     * @return whether the specified buffer has a nonzero ref count
+     */
+    public static boolean isAccessible(ByteBuf buffer) {
+        return buffer.isAccessible();
+    }
+
+    /**
+     * @throws IllegalReferenceCountException if the buffer has a zero ref count
+     * @return the passed in buffer
+     */
+    public static ByteBuf ensureAccessible(ByteBuf buffer) {
+        if (!buffer.isAccessible()) {
+            throw new IllegalReferenceCountException(buffer.refCnt());
+        }
+        return buffer;
     }
 
     /**
