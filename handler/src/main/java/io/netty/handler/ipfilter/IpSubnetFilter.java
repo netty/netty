@@ -121,6 +121,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         }
 
         this.rules = sortAndFilter(rules);
+        rules.clear(); // Free-up old unsorted list
     }
 
     @Override
