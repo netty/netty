@@ -212,7 +212,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-
     private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
                                      Throwable cause, boolean close,
                                      IOUringRecvByteAllocatorHandle allocHandle) {

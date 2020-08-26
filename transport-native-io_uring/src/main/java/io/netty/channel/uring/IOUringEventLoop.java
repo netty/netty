@@ -219,7 +219,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             case IOUring.IO_POLL:
                 if (eventfd.intValue() == fd) {
                     pendingWakeup = false;
-                    // We need to consume the data as otherwise we would see another event in the completionQueue without
+                    // We need to consume the data as otherwise we would see another event
+                    // in the completionQueue without
                     // an extra eventfd_write(....)
                     Native.eventFdRead(eventfd.intValue());
                     submissionQueue.addPollLink(eventfd.intValue());

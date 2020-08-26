@@ -28,26 +28,22 @@ public class IOUringEventLoopTest {
             loop.submit(new Runnable() {
                 @Override
                 public void run() {
-
                 }
             }).sync();
 
             loop.submit(new Runnable() {
                 @Override
                 public void run() {
-
                 }
             }).sync();
             loop.submit(new Runnable() {
                 @Override
                 public void run() {
-
                 }
             }).sync();
             loop.submit(new Runnable() {
                 @Override
                 public void run() {
-
                 }
             }).sync();
         } finally {

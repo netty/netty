@@ -15,7 +15,12 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.*;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ServerChannel;
 
 import java.net.SocketAddress;
 
@@ -74,7 +79,6 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
                             final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
-
 
         @Override
         public void uringEventExecution() {

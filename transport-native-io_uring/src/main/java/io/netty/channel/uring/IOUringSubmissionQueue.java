@@ -118,7 +118,7 @@ final class IOUringSubmissionQueue {
 
         // Store the fd and event type in the user_data field
         int opMask = (((short) op) << 16) | (((short) pollMask) & 0xFFFF);
-        long uData = (long)fd << 32 | opMask & 0xFFFFFFFFL;
+        long uData = (long) fd << 32 | opMask & 0xFFFFFFFFL;
 
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
@@ -168,11 +168,9 @@ final class IOUringSubmissionQueue {
         return addPoll(fd, IOUring.POLLMASK_LINK);
     }
 
-
     public boolean addPollOut(int fd) {
         return addPoll(fd, IOUring.POLLMASK_OUT);
     }
-
 
     public boolean addPollRdHup(int fd) {
         return addPoll(fd, IOUring.POLLMASK_RDHUP);
@@ -211,7 +209,7 @@ final class IOUringSubmissionQueue {
         if (sqe == 0) {
             return false;
         }
-        setData(sqe, (byte) IOUring.OP_ACCEPT, 0, fd, 0,0,0);
+        setData(sqe, (byte) IOUring.OP_ACCEPT, 0, fd, 0, 0, 0);
         return true;
     }
 
