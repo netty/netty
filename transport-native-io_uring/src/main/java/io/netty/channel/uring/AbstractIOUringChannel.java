@@ -146,7 +146,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (byteBuf.hasMemoryAddress()) {
             readBuffer = byteBuf;
             submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
-                                byteBuf.writerIndex(), byteBuf.capacity());
+                                    byteBuf.writerIndex(), byteBuf.capacity());
             submissionQueue.submit();
         }
     }
@@ -164,6 +164,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
     }
+
     void readComplete(int localReadAmount) {
         boolean close = false;
         ByteBuf byteBuf = null;
@@ -190,7 +191,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 close = allocHandle.lastBytesRead() < 0;
                 if (close) {
                     // There is nothing left to read as we received an EOF.
-                   shutdownInput(false);
+                    shutdownInput(false);
                 }
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -275,6 +276,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     protected void doClose() throws Exception {
         if (parent() == null) {
             logger.trace("ServerSocket Close: {}", this.socket.intValue());
+            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+            submissionQueue.addPollRemove(socket.intValue());
+            submissionQueue.submit();
         }
         active = false;
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
@@ -359,7 +364,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
             submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
-                                buf.writerIndex());
+                                     buf.writerIndex());
             submissionQueue.submit();
             writeable = false;
         }

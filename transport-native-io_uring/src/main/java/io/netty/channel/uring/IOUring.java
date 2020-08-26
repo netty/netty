@@ -26,6 +26,7 @@ final class IOUring {
     static final int OP_ACCEPT = 13;
     static final int OP_READ = 22;
     static final int OP_WRITE = 23;
+    static final int OP_POLL_REMOVE = 7;
 
     static final int POLLMASK_LINK = 1;
     static final int POLLMASK_OUT = 4;

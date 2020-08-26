@@ -116,10 +116,14 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
 
-        // Store the fd and event type in the user_data field
-        int opMask = (((short) op) << 16) | (((short) pollMask) & 0xFFFF);
-        long uData = (long) fd << 32 | opMask & 0xFFFFFFFFL;
+        //user_data should be same as POLL_LINK fd
+        if (op == IOUring.OP_POLL_REMOVE) {
+            PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
+            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_LINK);
+            PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, pollLinkuData);
+        }
 
+        long uData = convertToUserData(op, fd, pollMask);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
         //poll<link>read or accept operation
@@ -213,6 +217,17 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
+    //fill the user_data which is associated with server poll link
+    public boolean addPollRemove(int fd) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, (byte) IOUring.OP_POLL_REMOVE, 0, fd, 0, 0, 0);
+
+        return true;
+    }
+
     private int flushSqe() {
         long kTail = toUnsignedLong(PlatformDependent.getInt(kTailAddress));
         long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
@@ -268,6 +283,11 @@ final class IOUringSubmissionQueue {
 
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
+    }
+
+    private long convertToUserData(byte op, int fd, int pollMask) {
+        int opMask = (((short) op) << 16) | (((short) pollMask) & 0xFFFF);
+        return (long) fd << 32 | opMask & 0xFFFFFFFFL;
     }
 
     //delete memory

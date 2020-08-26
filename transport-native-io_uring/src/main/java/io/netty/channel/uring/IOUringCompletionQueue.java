@@ -74,6 +74,7 @@ final class IOUringCompletionQueue {
               int opMask = (int) udata;
               short op = (short) (opMask >> 16);
               short mask = (short) opMask;
+
               i++;
               if (!callback.handle(fd, res, flags, op, mask)) {
                   break;
