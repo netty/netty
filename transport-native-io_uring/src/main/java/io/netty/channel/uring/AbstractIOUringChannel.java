@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -133,23 +134,104 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return loop instanceof IOUringEventLoop;
     }
 
+    private ByteBuf readBuffer;
+
     public void doReadBytes(ByteBuf byteBuf) {
+        assert readBuffer == null;
         IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
         IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
 
         unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
 
         if (byteBuf.hasMemoryAddress()) {
-            long eventId = ioUringEventLoop.incrementEventIdCounter();
-            final Event event = new Event();
-            event.setId(eventId);
-            event.setOp(EventType.READ);
-            event.setReadBuffer(byteBuf);
-            event.setAbstractIOUringChannel(this);
-            submissionQueue.add(eventId, EventType.READ, socket.intValue(), byteBuf.memoryAddress(),
+            readBuffer = byteBuf;
+            submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
                                 byteBuf.writerIndex(), byteBuf.capacity());
-            ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
+        }
+    }
+
+    void writeComplete(int res) {
+        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+
+        if (res > 0) {
+            channelOutboundBuffer.removeBytes(res);
+            setWriteable(true);
+            try {
+                doWrite(channelOutboundBuffer);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    void readComplete(int localReadAmount) {
+        boolean close = false;
+        ByteBuf byteBuf = null;
+        final IOUringRecvByteAllocatorHandle allocHandle =
+                (IOUringRecvByteAllocatorHandle) unsafe()
+                        .recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        try {
+            logger.trace("EventLoop Read Res: {}", localReadAmount);
+            logger.trace("EventLoop Fd: {}", fd().intValue());
+            setUringInReadyPending(false);
+            byteBuf = this.readBuffer;
+            this.readBuffer = null;
+
+            if (localReadAmount > 0) {
+                byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+            }
+
+            allocHandle.lastBytesRead(localReadAmount);
+            if (allocHandle.lastBytesRead() <= 0) {
+                // nothing was read, release the buffer.
+                byteBuf.release();
+                byteBuf = null;
+                close = allocHandle.lastBytesRead() < 0;
+                if (close) {
+                    // There is nothing left to read as we received an EOF.
+                   shutdownInput(false);
+                }
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+                return;
+            }
+
+            allocHandle.incMessagesRead(1);
+            pipeline.fireChannelRead(byteBuf);
+            byteBuf = null;
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            logger.trace("READ autoRead {}", config().isAutoRead());
+            if (config().isAutoRead()) {
+                executeReadEvent();
+            }
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, close, allocHandle);
+        }
+    }
+
+
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
+                                     Throwable cause, boolean close,
+                                     IOUringRecvByteAllocatorHandle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
+            }
+        }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
+        if (close || cause instanceof IOException) {
+            shutdownInput(false);
+        } else {
+            if (config().isAutoRead()) {
+                executeReadEvent();
+            }
         }
     }
 
@@ -236,6 +318,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         } finally {
             socket.close();
+            if (readBuffer != null) {
+                readBuffer.release();
+                readBuffer = null;
+            }
         }
     }
 
@@ -273,14 +359,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            final Event event = new Event();
-            long eventId = ioUringEventLoop.incrementEventIdCounter();
-            event.setId(eventId);
-            event.setOp(EventType.WRITE);
-            event.setAbstractIOUringChannel(this);
-            submissionQueue.add(eventId, EventType.WRITE, socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
+            submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
                                 buf.writerIndex());
-            ioUringEventLoop.addNewEvent(event);
             submissionQueue.submit();
             writeable = false;
         }
@@ -290,13 +370,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private void addPollOut() {
         IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
         IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-        final Event event = new Event();
-        long eventId = ioUringEventLoop.incrementEventIdCounter();
-        event.setId(eventId);
-        event.setOp(EventType.POLL_OUT);
-        event.setAbstractIOUringChannel(this);
-        submissionQueue.addPoll(eventId, socket.intValue(), EventType.POLL_OUT);
-        ioUringEventLoop.addNewEvent(event);
+        submissionQueue.addPollOut(socket.intValue());
         submissionQueue.submit();
     }
 

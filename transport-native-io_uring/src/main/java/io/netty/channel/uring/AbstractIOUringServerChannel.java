@@ -15,11 +15,7 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.unix.Socket;
+import io.netty.channel.*;
 
 import java.net.SocketAddress;
 
@@ -49,6 +45,27 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
 
     abstract Channel newChildChannel(int fd) throws Exception;
 
+    void acceptComplete(int res) {
+        if (res >= 0) {
+            final IOUringRecvByteAllocatorHandle allocHandle =
+                    (IOUringRecvByteAllocatorHandle) unsafe()
+                            .recvBufAllocHandle();
+            final ChannelPipeline pipeline = pipeline();
+
+            allocHandle.incMessagesRead(1);
+            try {
+                final Channel childChannel = newChildChannel(res);
+                pipeline.fireChannelRead(childChannel);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+        }
+        //Todo refactoring method name
+        executeReadEvent();
+    }
+
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         private final byte[] acceptedAddress = new byte[26];
 
@@ -58,36 +75,15 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             promise.setFailure(new UnsupportedOperationException());
         }
 
-        private void addPoll(IOUringEventLoop ioUringEventLoop) {
-
-            long eventId = ioUringEventLoop.incrementEventIdCounter();
-            Event event = new Event();
-            event.setOp(EventType.POLL_LINK);
-
-            event.setId(eventId);
-            event.setAbstractIOUringChannel(AbstractIOUringServerChannel.this);
-            ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue()
-                    .addPoll(eventId, socket.intValue(), event.getOp());
-            ((IOUringEventLoop) eventLoop()).addNewEvent(event);
-        }
 
         @Override
         public void uringEventExecution() {
             final IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-
-            addPoll(ioUringEventLoop);
-
-            long eventId = ioUringEventLoop.incrementEventIdCounter();
-            final Event event = new Event();
-            event.setId(eventId);
-            event.setOp(EventType.ACCEPT);
-            event.setAbstractIOUringChannel(getChannel());
+            submissionQueue.addPollLink(socket.intValue());
 
             //Todo get network addresses
-            submissionQueue.add(eventId, EventType.ACCEPT, getChannel().getSocket().intValue(), 0, 0, 0);
-            ioUringEventLoop.addNewEvent(event);
-
+            submissionQueue.addAccept(fd().intValue());
             submissionQueue.submit();
         }
     }
