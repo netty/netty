@@ -36,7 +36,7 @@ import java.util.List;
  * </p>
  * <p>
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
- * {@link #channelRejected(ChannelHandlerContext, SocketAddress)}. </p>
+ * {@link AbstractRemoteAddressFilter#channelRejected(ChannelHandlerContext, SocketAddress)}. </p>
  * <p> This filter uses Binary Search for faster filtering so it's a good practice to remove
  * overlapping subnet rules and also entries should be arranged in incremental order.</p>
  */
@@ -91,6 +91,8 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
         int numAccept = 0;
         int numReject = 0;
+        int numIPv4 = 0;
+        int numIPv6 = 0;
 
         // Iterate over rules and check for `null` rule.
         for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
@@ -100,17 +102,24 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             } else {
                 numReject++;
             }
+
+            if (ipSubnetFilterRule.getFilterRule() instanceof IpSubnetFilterRule.Ip4SubnetFilterRule) {
+                numIPv4++;
+            } else {
+                numIPv6++;
+            }
         }
 
         /*
-         * If Number of accept rules are 0 and Number of reject rules is more than 0,
+         * If Number of ACCEPT rule is 0 and number of REJECT rules is more than 0,
          * then all rules are of "REJECT" type.
          *
-         * In this case, we'll set `ipFilterRuleType` to `IpFilterRuleType.REJECT`
+         * In this case, we'll set `ipFilterRuleType` to `IpFilterRuleType.REJECT`.
          *
-         * If Number of accept rules are more than 0 and number of reject rules are 0,
+         * If Number of ACCEPT rules are more than 0 and number of REJECT rules is 0,
          * then all rules are of "ACCEPT" type.
          *
+         * In this case, we'll set `ipFilterRuleType` to `IpFilterRuleType.ACCEPT`.
          */
         if (numAccept == 0 && numReject > 0) {
             ipFilterRuleType = IpFilterRuleType.REJECT;
@@ -120,18 +129,32 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             ipFilterRuleType = null;
         }
 
+        /*
+         * If Number of IPv4 rules are 0 and number of IPv6 rules more then 0,
+         * then all rules are of of "IPv6" type.
+         *
+         * If Number of IPv4 rule are more than 0 and number of of IPv6 rule is 0,
+         * then all rules are of of "IPv4" type.
+         *
+         * If these conditions are not met then we have mixed IPv4 and IPv6 and
+         * we cannot process that.
+         */
+        if (!(numIPv4 == 0 && numIPv6 > 0 || numIPv4 > 0 && numIPv6 == 0)) {
+            throw new IllegalArgumentException("Mixed IP version rules are not allowed." +
+                    " Number of IPv4 rules: " + numIPv4 + ", IPv6 rules: " + numIPv6);
+        }
+
         this.rules = sortAndFilter(rules);
-        rules.clear(); // Free-up old unsorted list
     }
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-        int indexOf = Collections.binarySearch(this.rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
+        int indexOf = Collections.binarySearch(rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
         if (indexOf >= 0) {
             if (ipFilterRuleType == null) {
-                return this.rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
+                return rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
             } else {
-                return this.ipFilterRuleType == IpFilterRuleType.ACCEPT;
+                return ipFilterRuleType == IpFilterRuleType.ACCEPT;
             }
         }
         return acceptIfNotFound;

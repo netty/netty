@@ -118,7 +118,11 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         return (x < y) ? -1 : ((x == y) ? 0 : 1);
     }
 
-    private static final class Ip4SubnetFilterRule implements IpFilterRule {
+    IpFilterRule getFilterRule() {
+        return filterRule;
+    }
+
+    static final class Ip4SubnetFilterRule implements IpFilterRule {
 
         private final int networkAddress;
         private final int subnetMask;
@@ -175,7 +179,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         }
     }
 
-    private static final class Ip6SubnetFilterRule implements IpFilterRule {
+    static final class Ip6SubnetFilterRule implements IpFilterRule {
 
         private static final BigInteger MINUS_ONE = BigInteger.valueOf(-1);
 

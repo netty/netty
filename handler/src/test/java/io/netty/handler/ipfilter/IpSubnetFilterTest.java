@@ -152,6 +152,7 @@ public class IpSubnetFilterTest {
         ipSubnetFilterRuleList.add(buildRejectIP("200.200.200.200", 32));
         ipSubnetFilterRuleList.add(buildRejectIP("108.0.0.0", 4));
         ipSubnetFilterRuleList.add(buildRejectIP("10.10.10.10", 8));
+        ipSubnetFilterRuleList.add(buildRejectIP("2001:db8:abcd:0000::", 52));
 
         // 1.0.0.0/8
         EmbeddedChannel ch1 = newEmbeddedInetChannel("1.1.1.1", new IpSubnetFilter(ipSubnetFilterRuleList));
@@ -182,8 +183,6 @@ public class IpSubnetFilterTest {
         EmbeddedChannel ch6 = newEmbeddedInetChannel("10.1.1.2", new IpSubnetFilter(ipSubnetFilterRuleList));
         Assert.assertFalse(ch6.isActive());
         Assert.assertTrue(ch6.close().isSuccess());
-
-        ipSubnetFilterRuleList.clear(); // Because we're done with the list
     }
 
     private static IpSubnetFilterRule buildRejectIP(String ipAddress, int mask) {
