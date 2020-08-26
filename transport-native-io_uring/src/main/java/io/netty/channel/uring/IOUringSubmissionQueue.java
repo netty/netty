@@ -28,9 +28,6 @@ final class IOUringSubmissionQueue {
     private static final int SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
-    private static final int POLLIN = 1;
-    private static final int POLLRDHUP = 8192;
-    private static final int POLLOUT = 4;
 
     private static final int IOSQE_IO_LINK = 4;
 
@@ -109,26 +106,31 @@ final class IOUringSubmissionQueue {
         return sqe;
     }
 
-    private void setData(long sqe, long eventId, EventType type, int fd, long bufferAddress, int length, long offset) {
+    private void setData(long sqe, byte op, int pollMask, int fd, long bufferAddress, int length, long offset) {
         //Todo cleaner
         //set sqe(submission queue) properties
-        PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) type.getOp());
+        PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, op);
         PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, (short) 0);
         PlatformDependent.putInt(sqe + SQE_FD_FIELD, fd);
         PlatformDependent.putLong(sqe + SQE_OFFSET_FIELD, offset);
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
-        PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, eventId);
+
+        // Store the fd and event type in the user_data field
+        int opMask = (((short) op) << 16) | (((short) pollMask) & 0xFFFF);
+        long uData = (long)fd << 32 | opMask & 0xFFFFFFFFL;
+
+        PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
         //poll<link>read or accept operation
-        if (type == EventType.POLL_LINK || type == EventType.POLL_OUT) {
+        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT || pollMask == IOUring.POLLMASK_LINK)) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
         }
 
         //c union set Rw-Flags or accept_flags
-        if (type != EventType.ACCEPT) {
+        if (op != IOUring.OP_ACCEPT) {
             PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, 0);
         } else {
             //accept_flags set NON_BLOCKING
@@ -142,56 +144,74 @@ final class IOUringSubmissionQueue {
             offsetIndex += 8;
         }
 
-        logger.trace("OPField: {}", type.name());
+        if (pollMask != 0) {
+            PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
+        }
+
         logger.trace("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
         logger.trace("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
         logger.trace("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
         logger.trace("Offset: {}", PlatformDependent.getLong(sqe + SQE_OFFSET_FIELD));
     }
 
-    public boolean addTimeout(long nanoSeconds, long eventId) {
+    public boolean addTimeout(long nanoSeconds) {
         long sqe = getSqe();
         if (sqe == 0) {
             return false;
         }
         setTimeout(nanoSeconds);
-        setData(sqe, eventId, EventType.TIMEOUT, -1, timeoutMemoryAddress, 1, 0);
+        setData(sqe, (byte) IOUring.IO_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
         return true;
     }
 
-    public boolean addPoll(long eventId, int fd, EventType eventType) {
+    public boolean addPollLink(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_LINK);
+    }
+
+
+    public boolean addPollOut(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_OUT);
+    }
+
+
+    public boolean addPollRdHup(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_RDHUP);
+    }
+
+    private boolean addPoll(int fd, int pollMask) {
         long sqe = getSqe();
         if (sqe == 0) {
             return false;
         }
-        int pollMask;
-        switch (eventType) {
-            case POLL_EVENTFD:
-            case POLL_LINK:
-                pollMask = POLLIN;
-                break;
-            case POLL_OUT:
-                pollMask = POLLOUT;
-                break;
-            case POLL_RDHUP:
-                pollMask = POLLRDHUP;
-                break;
-            default:
-                //Todo exeception
-                return false;
-        }
-        setData(sqe, eventId, eventType, fd, 0, 0, 0);
-        PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
+
+        setData(sqe, (byte) IOUring.IO_POLL, pollMask, fd, 0, 0, 0);
         return true;
     }
 
-    //Todo ring buffer errors for example if submission queue is full
-    public boolean add(long eventId, EventType type, int fd, long bufferAddress, int pos, int limit) {
+    public boolean addRead(int fd, long bufferAddress, int pos, int limit) {
         long sqe = getSqe();
         if (sqe == 0) {
             return false;
         }
-        setData(sqe, eventId, type, fd, bufferAddress + pos, limit - pos, 0);
+        setData(sqe, (byte) IOUring.OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
+        return true;
+    }
+
+    public boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, (byte) IOUring.OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
+        return true;
+    }
+
+    public boolean addAccept(int fd) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, (byte) IOUring.OP_ACCEPT, 0, fd, 0,0,0);
         return true;
     }
 

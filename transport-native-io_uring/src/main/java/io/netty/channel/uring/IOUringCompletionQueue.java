@@ -55,46 +55,54 @@ final class IOUringCompletionQueue {
     this.ringFd = ringFd;
   }
 
-  public IOUringCqe poll() {
-    long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
+  public int process(IOUringCompletionQueueCallback callback) {
+      int i = 0;
+      for (;;) {
+          long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
+          if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
+              long index = head & toUnsignedLong(PlatformDependent.getInt(kringMaskAddress));
+              long cqe = index * CQE_SIZE + completionQueueArrayAddress;
 
-    if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
-        long index = head & toUnsignedLong(PlatformDependent.getInt(kringMaskAddress));
-        long cqe = index * CQE_SIZE + completionQueueArrayAddress;
+              long udata = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
+              int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);
+              long flags = toUnsignedLong(PlatformDependent.getInt(cqe + CQE_FLAGS_FIELD));
 
-        long eventId = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
-        int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);
-        long flags = toUnsignedLong(PlatformDependent.getInt(cqe + CQE_FLAGS_FIELD));
+              //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
+              PlatformDependent.putIntOrdered(kHeadAddress, (int) (head + 1));
 
-        //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-        PlatformDependent.putIntOrdered(kHeadAddress, (int) (head + 1));
-
-        return new IOUringCqe(eventId, res, flags);
-    }
-    return null;
+              int fd = (int) (udata >> 32);
+              int opMask = (int) udata;
+              short op = (short) (opMask >> 16);
+              short mask = (short) opMask;
+              i++;
+              if (!callback.handle(fd, res, flags, op, mask)) {
+                  break;
+              }
+          } else {
+              if (i == 0) {
+                  return -1;
+              }
+              return i;
+          }
+      }
+      return i;
   }
 
-  public IOUringCqe ioUringWaitCqe() {
-    IOUringCqe ioUringCqe = poll();
+  interface IOUringCompletionQueueCallback {
+      boolean handle(int fd, int res, long flags, int op, int mask);
+  }
 
-    if (ioUringCqe != null) {
-        return ioUringCqe;
-    }
-
+  public boolean ioUringWaitCqe() {
     //IORING_ENTER_GETEVENTS -> wait until an event is completely processed
     int ret = Native.ioUringEnter(ringFd, 0, 1, IORING_ENTER_GETEVENTS);
     if (ret < 0) {
         //Todo throw exception!
-        return null;
+        return false;
     } else if (ret == 0) {
-        ioUringCqe = poll();
-
-        if (ioUringCqe != null) {
-            return ioUringCqe;
-        }
+        return true;
     }
     //Todo throw Exception!
-    return null;
+    return false;
   }
 
   public long getKHeadAddress() {
