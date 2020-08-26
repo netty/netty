@@ -16,11 +16,17 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import org.junit.Test;
+
+import java.io.File;
 import java.nio.charset.Charset;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+
 import static org.junit.Assert.*;
+
 import io.netty.buffer.ByteBuf;
 import org.junit.experimental.theories.suppliers.TestedOn;
 
@@ -46,7 +52,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         assertTrue(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
-        writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
+                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
         submissionQueue.submit();
 
         assertTrue(completionQueue.ioUringWaitCqe());
@@ -61,7 +67,7 @@ public class NativeTest {
 
         final ByteBuf readEventByteBuf = allocator.directBuffer(100);
         assertTrue(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
-        readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
+                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
         submissionQueue.submit();
 
         assertTrue(completionQueue.ioUringWaitCqe());
@@ -94,14 +100,14 @@ public class NativeTest {
         Thread thread = new Thread() {
             @Override
             public void run() {
-                    assertTrue(completionQueue.ioUringWaitCqe());
-                    completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
-                        @Override
-                        public boolean handle(int fd, int res, long flags, int op, int mask) {
-                            assertEquals(-62, res);
-                            return true;
-                        }
-                    });
+                assertTrue(completionQueue.ioUringWaitCqe());
+                completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        assertEquals(-62, res);
+                        return true;
+                    }
+                });
             }
         };
         thread.start();
@@ -133,7 +139,7 @@ public class NativeTest {
         new Thread() {
             @Override
             public void run() {
-                    Native.eventFdWrite(eventFd.intValue(), 1L);
+                Native.eventFdWrite(eventFd.intValue(), 1L);
             }
         }.start();
 
@@ -182,7 +188,7 @@ public class NativeTest {
         new Thread() {
             @Override
             public void run() {
-                    Native.eventFdWrite(eventFd.intValue(), 1L);
+                Native.eventFdWrite(eventFd.intValue(), 1L);
             }
         }.start();
 
@@ -195,5 +201,47 @@ public class NativeTest {
     public void ioUringExitTest() {
         RingBuffer ringBuffer = Native.createRingBuffer();
         ringBuffer.close();
+    }
+
+    @Test
+    public void ioUringPollRemoveTest() throws InterruptedException {
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+
+        FileDescriptor eventFd = Native.newEventFd();
+        submissionQueue.addPollLink(eventFd.intValue());
+        submissionQueue.submit();
+
+        Thread.sleep(10);
+
+        submissionQueue.addPollRemove(eventFd.intValue());
+        submissionQueue.submit();
+
+        Thread waitingCqe = new Thread() {
+            @Override
+            public void run() {
+                assertTrue(completionQueue.ioUringWaitCqe());
+                assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        assertEquals(IOUringEventLoop.ECANCELED, res);
+                        assertEquals(IOUring.IO_POLL, op);
+                        return true;
+                    }
+                }));
+                assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        assertEquals(0, res);
+                        assertEquals(IOUring.OP_POLL_REMOVE, op);
+                        return true;
+                    }
+                }));
+            }
+        };
+        waitingCqe.start();
+
+        waitingCqe.join();
     }
 }

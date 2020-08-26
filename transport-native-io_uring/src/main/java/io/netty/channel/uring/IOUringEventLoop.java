@@ -37,10 +37,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     //Todo set config ring buffer size
     private final int ringSize = 32;
+    private final int ENOENT = -2;
 
     //just temporary -> Todo use ErrorsStaticallyReferencedJniMethods like in Epoll
-    private final int SOCKET_ERROR_EPIPE = -32;
-    private static long ETIME = -62;
+    private static final int SOCKET_ERROR_EPIPE = -32;
+    private static final long ETIME = -62;
+    static final long ECANCELED = -125;
 
     // events should be unique to identify which event type that was
     private long eventIdCounter;
@@ -175,6 +177,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (op) {
             case IOUring.OP_ACCEPT:
+                //Todo error handle the res
+                if (res == ECANCELED) {
+                    logger.trace("POLL_LINK canceled");
+                    break;
+                }
                 AbstractIOUringServerChannel acceptChannel = (AbstractIOUringServerChannel) channels.get(fd);
                 if (acceptChannel == null) {
                     break;
@@ -217,6 +224,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
                 break;
             case IOUring.IO_POLL:
+                //Todo error handle the res
+                if (res == ECANCELED) {
+                    logger.trace("POLL_LINK canceled");
+                    break;
+                }
                 if (eventfd.intValue() == fd) {
                     pendingWakeup = false;
                     // We need to consume the data as otherwise we would see another event
@@ -238,7 +250,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         break;
                     }
                 }
-
+            case IOUring.OP_POLL_REMOVE:
+                if (res == ENOENT) {
+                    logger.trace("POLL_REMOVE OPERATION not permitted");
+                } else if (res == 0) {
+                    logger.trace("POLL_REMOVE OPERATION successful");
+                }
                 break;
         }
         return true;
