@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
 
 final class PCapWriter implements Closeable {
     private final long myStartTime = System.nanoTime();
@@ -36,8 +37,8 @@ final class PCapWriter implements Closeable {
         this.outputStream = outputStream;
 
         ByteBuf byteBuf = Unpooled.buffer();
-        io.netty.handler.codec.pcap.PcapHeaders.writeGlobalHeader(byteBuf);
-        byteBuf.readBytes(outputStream, 24); // Pcap Global Header size is of 24 Bytes
+        PcapHeaders.writeGlobalHeader(byteBuf);
+        byteBuf.readBytes(outputStream, byteBuf.readableBytes());
         byteBuf.release();
     }
 
@@ -51,15 +52,15 @@ final class PCapWriter implements Closeable {
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
         long difference = System.nanoTime() - myStartTime;
 
-        io.netty.handler.codec.pcap.PcapHeaders.writePacketHeader(
+        PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
-                (int) difference / 1000000000,
-                (int) difference / 1000000,
+                (int) TimeUnit.SECONDS.convert(difference, TimeUnit.NANOSECONDS),
+                (int) TimeUnit.MICROSECONDS.convert(difference, TimeUnit.NANOSECONDS),
                 packet.readableBytes(),
                 packet.readableBytes()
         );
 
-        packetHeaderBuf.readBytes(outputStream, 16); // Pcap Packet Header size is of 24 Bytes
+        packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
         packet.readBytes(outputStream, packet.readableBytes());
     }
 
