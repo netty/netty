@@ -31,8 +31,8 @@ public class NativeTest {
         final long eventId = 1;
 
         ByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
-        ByteBuf writeEventByteBuf = allocator.directBuffer(100);
-        String inputString = "Hello World!";
+        final ByteBuf writeEventByteBuf = allocator.directBuffer(100);
+        final String inputString = "Hello World!";
         writeEventByteBuf.writeCharSequence(inputString, Charset.forName("UTF-8"));
 
         int fd = Native.createFile();
@@ -45,26 +45,34 @@ public class NativeTest {
         assertNotNull(submissionQueue);
         assertNotNull(completionQueue);
 
-        assertTrue(submissionQueue.add(eventId, EventType.WRITE, fd, writeEventByteBuf.memoryAddress(),
+        assertTrue(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
         writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
         submissionQueue.submit();
 
-        IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-        assertNotNull(ioUringCqe);
-        assertEquals(inputString.length(), ioUringCqe.getRes());
-        assertEquals(1, ioUringCqe.getEventId());
-        writeEventByteBuf.release();
+        assertTrue(completionQueue.ioUringWaitCqe());
+        assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+            @Override
+            public boolean handle(int fd, int res, long flags, int op, int mask) {
+                assertEquals(inputString.length(), res);
+                writeEventByteBuf.release();
+                return true;
+            }
+        }));
 
-        ByteBuf readEventByteBuf = allocator.directBuffer(100);
-        assertTrue(submissionQueue.add(eventId + 1, EventType.READ, fd, readEventByteBuf.memoryAddress(),
+        final ByteBuf readEventByteBuf = allocator.directBuffer(100);
+        assertTrue(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
         readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
         submissionQueue.submit();
 
-        ioUringCqe = completionQueue.ioUringWaitCqe();
-        assertEquals(2, ioUringCqe.getEventId());
-        assertEquals(inputString.length(), ioUringCqe.getRes());
-
-        readEventByteBuf.writerIndex(ioUringCqe.getRes());
+        assertTrue(completionQueue.ioUringWaitCqe());
+        assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+            @Override
+            public boolean handle(int fd, int res, long flags, int op, int mask) {
+                assertEquals(inputString.length(), res);
+                readEventByteBuf.writerIndex(res);
+                return true;
+            }
+        }));
         byte[] dataRead = new byte[inputString.length()];
         readEventByteBuf.readBytes(dataRead);
 
@@ -86,9 +94,14 @@ public class NativeTest {
         Thread thread = new Thread() {
             @Override
             public void run() {
-                    final IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-                    assertEquals(-62, ioUringCqe.getRes());
-                    assertEquals(1, ioUringCqe.getEventId());
+                    assertTrue(completionQueue.ioUringWaitCqe());
+                    completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                        @Override
+                        public boolean handle(int fd, int res, long flags, int op, int mask) {
+                            assertEquals(-62, res);
+                            return true;
+                        }
+                    });
             }
         };
         thread.start();
@@ -98,7 +111,7 @@ public class NativeTest {
             e.printStackTrace();
         }
 
-        submissionQueue.addTimeout(0, 1);
+        submissionQueue.addTimeout(0);
         submissionQueue.submit();
     }
 
@@ -114,7 +127,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPoll(1, eventFd.intValue(), EventType.POLL_EVENTFD));
+        assertTrue(submissionQueue.addPollLink(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
@@ -124,9 +137,14 @@ public class NativeTest {
             }
         }.start();
 
-        IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-        assertEquals(1, ioUringCqe.getRes());
-        assertEquals(1, ioUringCqe.getEventId());
+        assertTrue(completionQueue.ioUringWaitCqe());
+        assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+            @Override
+            public boolean handle(int fd, int res, long flags, int op, int mask) {
+                assertEquals(1, res);
+                return true;
+            }
+        }));
     }
 
     //Todo clean
@@ -146,14 +164,19 @@ public class NativeTest {
         Thread waitingCqe = new Thread() {
             @Override
             public void run() {
-                IOUringCqe ioUringCqe = completionQueue.ioUringWaitCqe();
-                assertEquals(1, ioUringCqe.getRes());
-                assertEquals(1, ioUringCqe.getEventId());
+                assertTrue(completionQueue.ioUringWaitCqe());
+                assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        assertEquals(1, res);
+                        return true;
+                    }
+                }));
             }
         };
         waitingCqe.start();
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPoll(1, eventFd.intValue(), EventType.POLL_EVENTFD));
+        assertTrue(submissionQueue.addPollLink(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
