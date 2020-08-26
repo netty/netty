@@ -86,14 +86,14 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      * @param rules            {@link IpSubnetFilterRule} as {@link List}
      */
     public IpSubnetFilter(boolean acceptIfNotFound, List<IpSubnetFilterRule> rules) {
-        this.rules = ObjectUtil.checkNotNull(rules, "rules");
+        ObjectUtil.checkNotNull(rules, "rules");
         this.acceptIfNotFound = acceptIfNotFound;
 
         int numAccept = 0;
         int numReject = 0;
 
         // Iterate over rules and check for `null` rule.
-        for (IpSubnetFilterRule ipSubnetFilterRule : this.rules) {
+        for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
             if (ipSubnetFilterRule.ruleType() == IpFilterRuleType.ACCEPT) {
                 numAccept++;
@@ -120,7 +120,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             ipFilterRuleType = null;
         }
 
-        sortAndFilter();
+        this.rules = sortAndFilter(rules);
     }
 
     @Override
@@ -143,39 +143,31 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      *     <li> Sort the list again </li>
      * </ol>
      */
-    private void sortAndFilter() {
-        Collections.sort(this.rules);
+    @SuppressWarnings("ConstantConditions")
+    private static List<IpSubnetFilterRule> sortAndFilter(List<IpSubnetFilterRule> rules) {
+        Collections.sort(rules);
         Iterator<IpSubnetFilterRule> iterator = rules.iterator();
-        List<IpSubnetFilterRule> toRemove = new ArrayList<IpSubnetFilterRule>();
+        List<IpSubnetFilterRule> toKeep = new ArrayList<IpSubnetFilterRule>();
 
-        IpSubnetFilterRule parentRule = null;
+        IpSubnetFilterRule parentRule = iterator.hasNext() ? iterator.next() : null;
+        if (parentRule != null) {
+            toKeep.add(parentRule);
+        }
+
         while (iterator.hasNext()) {
 
-            // If parentRule is null, take first element out of Iterator.
-            if (parentRule == null) {
-                parentRule = iterator.next();
-            }
-
-            // If we don't have any more rule, we're done now.
-            if (!iterator.hasNext()) {
-                break;
-            }
-
-            // Take one more element out of Iterator, this will be childRule.
+            // Grab a potential child rule.
             IpSubnetFilterRule childRule = iterator.next();
 
-            // If parentRule matches childRule, schedule that Rule for deletion.
-            if (parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
-                toRemove.add(childRule);
-            } else {
-                // If parentRule does not matches childRule, this childRule will become new parentRule
-                // and we'll do the same again
+            // If parentRule matches childRule, then there's no need to keep the child rule.
+            // Otherwise, the rules are distinct and we need both.
+            if (!parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
+                toKeep.add(childRule);
+                // Then we'll keep the child rule around as the parent for the next round.
                 parentRule = childRule;
             }
         }
 
-        rules.removeAll(toRemove);
-        toRemove.clear();
-        Collections.sort(rules); // Re-sort just to be sure
+        return toKeep;
     }
 }
