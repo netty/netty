@@ -52,7 +52,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
 
     abstract Channel newChildChannel(int fd) throws Exception;
 
-    void acceptComplete(int res) {
+    boolean acceptComplete(int res) {
         if (res >= 0) {
             final IOUringRecvByteAllocatorHandle allocHandle =
                     (IOUringRecvByteAllocatorHandle) unsafe()
@@ -71,6 +71,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
         }
         //Todo refactoring method name
         executeReadEvent();
+        return res >= 0;
     }
 
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
