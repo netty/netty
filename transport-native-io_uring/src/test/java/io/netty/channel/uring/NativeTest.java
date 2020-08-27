@@ -16,10 +16,9 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
 import org.junit.Test;
 
-import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -28,14 +27,11 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import static org.junit.Assert.*;
 
 import io.netty.buffer.ByteBuf;
-import org.junit.experimental.theories.suppliers.TestedOn;
 
 public class NativeTest {
 
     @Test
     public void canWriteFile() {
-        final long eventId = 1;
-
         ByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
         final ByteBuf writeEventByteBuf = allocator.directBuffer(100);
         final String inputString = "Hello World!";
@@ -84,10 +80,12 @@ public class NativeTest {
 
         assertArrayEquals(inputString.getBytes(), dataRead);
         readEventByteBuf.release();
+
+        ringBuffer.close();
     }
 
     @Test
-    public void timeoutTest() {
+    public void timeoutTest() throws InterruptedException {
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
@@ -119,11 +117,14 @@ public class NativeTest {
 
         submissionQueue.addTimeout(0);
         submissionQueue.submit();
+
+        thread.join();
+        ringBuffer.close();
     }
 
     //Todo clean
     @Test
-    public void eventfdTest() {
+    public void eventfdTest() throws IOException {
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
@@ -151,6 +152,11 @@ public class NativeTest {
                 return true;
             }
         }));
+        try {
+            eventFd.close();
+        } finally {
+            ringBuffer.close();
+        }
     }
 
     //Todo clean
@@ -204,7 +210,7 @@ public class NativeTest {
     }
 
     @Test
-    public void ioUringPollRemoveTest() throws InterruptedException {
+    public void ioUringPollRemoveTest() throws Exception {
         RingBuffer ringBuffer = Native.createRingBuffer(32);
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
@@ -243,5 +249,10 @@ public class NativeTest {
         waitingCqe.start();
 
         waitingCqe.join();
+        try {
+            eventFd.close();
+        } finally {
+            ringBuffer.close();
+        }
     }
 }
