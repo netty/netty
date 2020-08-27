@@ -18,6 +18,9 @@ package io.netty.handler.ipfilter;
 import java.net.InetSocketAddress;
 import java.util.Comparator;
 
+/**
+ * This comparator is only used for searching.
+ */
 final class IpSubnetFilterRuleComparator implements Comparator<Object> {
 
     static final IpSubnetFilterRuleComparator INSTANCE = new IpSubnetFilterRuleComparator();

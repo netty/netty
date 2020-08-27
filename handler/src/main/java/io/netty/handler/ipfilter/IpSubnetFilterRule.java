@@ -102,8 +102,6 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
      *
      * @param inetSocketAddress {@link InetSocketAddress} to match
      * @return 0 if IP Address match else difference index.
-     * @see Integer#compareTo(Integer)
-     * @see BigInteger#compareTo(BigInteger)
      */
     int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
