@@ -78,6 +78,13 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         return ipAddress;
     }
 
+    /**
+     * {@link Ip4SubnetFilterRule} or {@link Ip6SubnetFilterRule}
+     */
+    IpFilterRule getFilterRule() {
+        return filterRule;
+    }
+
     @Override
     public int compareTo(IpSubnetFilterRule ipSubnetFilterRule) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
@@ -116,10 +123,6 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
      */
     private static int compareInt(int x, int y) {
         return (x < y) ? -1 : ((x == y) ? 0 : 1);
-    }
-
-    IpFilterRule getFilterRule() {
-        return filterRule;
     }
 
     static final class Ip4SubnetFilterRule implements IpFilterRule {
