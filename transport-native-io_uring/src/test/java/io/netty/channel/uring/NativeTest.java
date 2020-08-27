@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.channel.unix.FileDescriptor;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBufAllocator;

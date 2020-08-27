@@ -223,7 +223,7 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
-    //fill the adddress which is associated with server poll link user_data
+    //fill the address which is associated with server poll link user_data
     public boolean addPollRemove(int fd) {
         long sqe = getSqe();
         if (sqe == 0) {

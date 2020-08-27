@@ -181,140 +181,101 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     public boolean handle(int fd, int res, long flags, int op, int pollMask) {
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (op) {
-        case IOUring.OP_ACCEPT:
-            //Todo error handle the res
-            if (res == ECANCELED) {
-                logger.trace("POLL_LINK canceled");
-                break;
-            }
-            AbstractIOUringServerChannel acceptChannel = (AbstractIOUringServerChannel) channels.get(fd);
-            if (acceptChannel == null) {
-                break;
-            }
-            logger.trace("EventLoop Accept filedescriptor: {}", res);
-            acceptChannel.setUringInReadyPending(false);
-            if (res != -1 && res != ERRNO_EAGAIN_NEGATIVE &&
-                res != ERRNO_EWOULDBLOCK_NEGATIVE) {
-                logger.trace("server filedescriptor Fd: {}", fd);
-                if (acceptChannel.acceptComplete(res)) {
-                    // all childChannels should poll POLLRDHUP
-                    submissionQueue.addPollRdHup(res);
-                    submissionQueue.submit();
-                }
-            }
-            break;
-        case IOUring.OP_READ:
-            AbstractIOUringChannel readChannel = channels.get(fd);
-            if (readChannel == null) {
-                break;
-            }
-            readChannel.readComplete(res);
-            break;
-        case IOUring.OP_WRITE:
-            AbstractIOUringChannel writeChannel = channels.get(fd);
-            if (writeChannel == null) {
-                break;
-            }
-            //localFlushAmount -> res
-            logger.trace("EventLoop Write Res: {}", res);
-            logger.trace("EventLoop Fd: {}", fd);
-
-            if (res == SOCKET_ERROR_EPIPE) {
-                writeChannel.shutdownInput(false);
-            } else {
-                writeChannel.writeComplete(res);
-            }
-            break;
-        case IOUring.IO_TIMEOUT:
-            if (res == ETIME) {
-                prevDeadlineNanos = NONE;
-            }
-
-            break;
-        case IOUring.IO_POLL:
-            //Todo error handle the res
-            if (res == ECANCELED) {
-                logger.trace("POLL_LINK canceled");
-                break;
-            }
-            if (eventfd.intValue() == fd) {
-                pendingWakeup = false;
-                // We need to consume the data as otherwise we would see another event
-                // in the completionQueue without
-                // an extra eventfd_write(....)
-                Native.eventFdRead(eventfd.intValue());
-                submissionQueue.addPollInLink(eventfd.intValue());
-                // Submit so its picked up
-                submissionQueue.submit();
-            } else {
-                if (pollMask == IOUring.POLLMASK_RDHUP) {
-                    AbstractIOUringChannel channel = channels.get(fd);
-                    if (channel != null && !channel.isActive()) {
-                        channel.shutdownInput(true);
-                    }
-                } else if (pollMask == IOUring.POLLMASK_OUT) {
-                    //connect successful
-                    AbstractIOUringChannel ch = channels.get(fd);
-                    boolean wasActive = ch.isActive();
-                    try {
-                        if (ch.doFinishConnect()) {
-                            ch.fulfillConnectPromise(ch.getConnectPromise(), wasActive);
-                            ch.cancelTimeoutFuture();
-                        } else {
-                            //submit pollout
-                            submissionQueue.addPollOut(fd);
-                            submissionQueue.submit();
-                        }
-                    } catch (Throwable t) {
-                        AbstractUringUnsafe unsafe = (AbstractUringUnsafe) ch.unsafe();
-                        unsafe.fulfillConnectPromise(ch.getConnectPromise(), t, ch.getRequestedRemoteAddress());
-                    }
-                } else {
-                    //Todo error handling error
-                    logger.trace("POLL_LINK Res: {}", res);
-                }
-            }
-            break;
-        case IOUring.OP_POLL_REMOVE:
-            if (res == ENOENT) {
-                System.out.println(("POLL_REMOVE OPERATION not permitted"));
-            } else if (res == 0) {
-                System.out.println(("POLL_REMOVE OPERATION successful"));
-            }
-            break;
-        case IOUring.OP_CONNECT:
-            AbstractIOUringChannel channel = channels.get(fd);
-            System.out.println("Connect res: " + res);
-            if (res == 0) {
-                channel.fulfillConnectPromise(channel.getConnectPromise(), channel.active);
-                channel.cancelTimeoutFuture();
-                channel.computeRemote();
-                break;
-            }
-            if (res == -1 || res == -4) {
-                submissionQueue.addConnect(fd, channel.getRemoteAddressMemoryAddress(),
-                                           AbstractIOUringChannel.SOCK_ADDR_LEN);
-                submissionQueue.submit();
-                break;
-            }
-            if (res < 0) {
-                if (res == ERRNO_EINPROGRESS_NEGATIVE) {
-                    // connect not complete yet need to wait for poll_out event
-                    submissionQueue.addPollOut(fd);
-                    submissionQueue.submit();
+            case IOUring.OP_ACCEPT:
+                //Todo error handle the res
+                if (res == ECANCELED) {
+                    logger.trace("POLL_LINK canceled");
                     break;
                 }
-                try {
-                    channel.doClose();
-                } catch (Exception e) {
-                    //Todo error handling
-                }
+                // Fall-through
 
-                //Todo error handling
-                //AbstractIOUringChannel.throwConnectException("connect", res);
+            case IOUring.OP_READ:
+                AbstractIOUringChannel readChannel = channels.get(fd);
+                if (readChannel == null) {
+                    break;
+                }
+                ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
                 break;
-            }
-            break;
+
+            case IOUring.OP_WRITE:
+                AbstractIOUringChannel writeChannel = channels.get(fd);
+                if (writeChannel == null) {
+                    break;
+                }
+                //localFlushAmount -> res
+                logger.trace("EventLoop Write Res: {}", res);
+                logger.trace("EventLoop Fd: {}", fd);
+
+                if (res == SOCKET_ERROR_EPIPE) {
+                    writeChannel.shutdownInput(false);
+                } else {
+                    ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
+                }
+                break;
+
+            case IOUring.IO_TIMEOUT:
+                if (res == ETIME) {
+                    prevDeadlineNanos = NONE;
+                }
+                break;
+
+            case IOUring.IO_POLL:
+                //Todo error handle the res
+                if (res == ECANCELED) {
+                    logger.trace("POLL_LINK canceled");
+                    break;
+                }
+                if (eventfd.intValue() == fd) {
+                    pendingWakeup = false;
+                    // We need to consume the data as otherwise we would see another event
+                    // in the completionQueue without
+                    // an extra eventfd_write(....)
+                    Native.eventFdRead(eventfd.intValue());
+
+                    submissionQueue.addPollInLink(eventfd.intValue());
+                    // Submit so its picked up
+                    submissionQueue.submit();
+                } else {
+                    AbstractIOUringChannel channel = channels.get(fd);
+                    if (channel == null) {
+                        break;
+                    }
+                    switch (pollMask) {
+                        case IOUring.POLLMASK_IN_LINK:
+                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
+                            break;
+                        case IOUring.POLLMASK_OUT:
+                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
+                            break;
+                        case IOUring.POLLMASK_RDHUP:
+                            if (!channel.isActive()) {
+                                channel.shutdownInput(true);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                break;
+
+            case IOUring.OP_POLL_REMOVE:
+                if (res == ENOENT) {
+                    System.out.println(("POLL_REMOVE OPERATION not permitted"));
+                } else if (res == 0) {
+                    System.out.println(("POLL_REMOVE OPERATION successful"));
+                }
+                break;
+
+            case IOUring.OP_CONNECT:
+                AbstractIOUringChannel channel = channels.get(fd);
+                System.out.println("Connect res: " + res);
+                if (channel != null) {
+                    ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).connectComplete(res);
+                }
+                break;
+
+            default:
+                break;
         }
         return true;
     }

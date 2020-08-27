@@ -26,7 +26,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelConfig;
@@ -42,7 +41,6 @@ import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -70,13 +68,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     protected volatile boolean active;
-    boolean uringInReadyPending;
+    private boolean pollInScheduled = false;
+
+    //boolean uringInReadyPending;
     boolean inputClosedSeenErrorOnRead;
 
     static final int SOCK_ADDR_LEN = 128;
 
     //can only submit one write operation at a time
-    private boolean writeable = true;
+    private boolean writeScheduled = false;
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
      */
@@ -94,7 +94,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         super(parent);
         this.socket = checkNotNull(socket, "fd");
         this.active = true;
-        this.uringInReadyPending = false;
 
         if (active) {
             // Directly cache the remote and local addresses
@@ -173,107 +172,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return loop instanceof IOUringEventLoop;
     }
 
-    private ByteBuf readBuffer;
-
-    public void doReadBytes(ByteBuf byteBuf) {
-        assert readBuffer == null;
-        IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-        IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-
-        unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
-
-        if (byteBuf.hasMemoryAddress()) {
-            readBuffer = byteBuf;
-            submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
-                                    byteBuf.writerIndex(), byteBuf.capacity());
-            submissionQueue.submit();
-        }
-    }
-
-    void writeComplete(int res) {
-        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-
-        if (res > 0) {
-            channelOutboundBuffer.removeBytes(res);
-            setWriteable(true);
-            try {
-                doWrite(channelOutboundBuffer);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    void readComplete(int localReadAmount) {
-        boolean close = false;
-        ByteBuf byteBuf = null;
-        final IOUringRecvByteAllocatorHandle allocHandle =
-                (IOUringRecvByteAllocatorHandle) unsafe()
-                        .recvBufAllocHandle();
-        final ChannelPipeline pipeline = pipeline();
-        try {
-            logger.trace("EventLoop Read Res: {}", localReadAmount);
-            logger.trace("EventLoop Fd: {}", fd().intValue());
-            setUringInReadyPending(false);
-            byteBuf = this.readBuffer;
-            this.readBuffer = null;
-
-            if (localReadAmount > 0) {
-                byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
-            }
-
-            allocHandle.lastBytesRead(localReadAmount);
-            if (allocHandle.lastBytesRead() <= 0) {
-                // nothing was read, release the buffer.
-                byteBuf.release();
-                byteBuf = null;
-                close = allocHandle.lastBytesRead() < 0;
-                if (close) {
-                    // There is nothing left to read as we received an EOF.
-                    shutdownInput(false);
-                }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-                return;
-            }
-
-            allocHandle.incMessagesRead(1);
-            pipeline.fireChannelRead(byteBuf);
-            byteBuf = null;
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            logger.trace("READ autoRead {}", config().isAutoRead());
-            if (config().isAutoRead()) {
-                executeReadEvent();
-            }
-        } catch (Throwable t) {
-            handleReadException(pipeline, byteBuf, t, close, allocHandle);
-        }
-    }
-
-    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
-                                     Throwable cause, boolean close,
-                                     IOUringRecvByteAllocatorHandle allocHandle) {
-        if (byteBuf != null) {
-            if (byteBuf.isReadable()) {
-                pipeline.fireChannelRead(byteBuf);
-            } else {
-                byteBuf.release();
-            }
-        }
-        allocHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-        pipeline.fireExceptionCaught(cause);
-        if (close || cause instanceof IOException) {
-            shutdownInput(false);
-        } else {
-            if (config().isAutoRead()) {
-                executeReadEvent();
-            }
-        }
-    }
-
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
         return newDirectBuffer(buf, buf);
     }
@@ -311,15 +209,17 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     protected void doDisconnect() throws Exception {
     }
 
+    IOUringSubmissionQueue submissionQueue() {
+        IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+        return ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+    }
+
     @Override
     protected void doClose() throws Exception {
-        if (parent() == null) {
-            logger.trace("ServerSocket Close: {}", this.socket.intValue());
-            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            submissionQueue.addPollRemove(socket.intValue());
-            submissionQueue.submit();
-        }
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        submissionQueue.addPollRemove(socket.intValue());
+        submissionQueue.submit();
+
         active = false;
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
@@ -361,10 +261,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         } finally {
             socket.close();
-            if (readBuffer != null) {
-                readBuffer.release();
-                readBuffer = null;
-            }
         }
     }
 
@@ -374,20 +270,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     protected void doBeginRead() {
         System.out.println("Begin Read");
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
-        if (!uringInReadyPending) {
-            unsafe.executeUringReadOperator();
+        if (!pollInScheduled) {
+            unsafe.schedulePollIn();
         }
-    }
-
-    public void executeReadEvent() {
-        final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
-        unsafe.executeUringReadOperator();
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         logger.trace("IOUring doWrite message size: {}", in.size());
-        if (writeable && in.size() >= 1) {
+        if (!writeScheduled && in.size() >= 1) {
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
                 doWriteBytes((ByteBuf) msg);
@@ -405,7 +296,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
                                      buf.writerIndex());
             submissionQueue.submit();
-            writeable = false;
+            writeScheduled = true;
         }
     }
 
@@ -419,16 +310,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
         private IOUringRecvByteAllocatorHandle allocHandle;
-        private final Runnable readRunnable = new Runnable() {
 
-            @Override
-            public void run() {
-                uringEventExecution(); //flush and submit SQE
-            }
-        };
-
-        public void fulfillConnectPromise(ChannelPromise promise, Throwable t, SocketAddress remoteAddress) {
-            Throwable cause = annotateConnectException(t, remoteAddress);
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
@@ -439,6 +322,31 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             closeIfClosed();
         }
 
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+            active = true;
+
+            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // We still need to ensure we call fireChannelActive() in this case.
+            boolean active = isActive();
+
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && active) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
 
         IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
             return new IOUringRecvByteAllocatorHandle(handle);
@@ -452,15 +360,95 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             return allocHandle;
         }
 
-        final void executeUringReadOperator() {
-            if (uringInReadyPending || !isActive() || shouldBreakIoUringInReady(config())) {
+        void schedulePollIn() {
+            assert !pollInScheduled;
+            if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            uringInReadyPending = true;
-            eventLoop().execute(readRunnable);
+            pollInScheduled = true;
+            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+            submissionQueue.addPollInLink(socket.intValue());
+            submissionQueue.submit();
         }
 
-        public abstract void uringEventExecution();
+        final void readComplete(int res) {
+            pollInScheduled = false;
+            readComplete0(res);
+        }
+
+        abstract void readComplete0(int res);
+
+        abstract void pollIn(int res);
+
+        void pollOut(int res) {
+            // pending connect
+            if (connectPromise != null) {
+                // Note this method is invoked by the event loop only if the connection attempt was
+                // neither cancelled nor timed out.
+
+                assert eventLoop().inEventLoop();
+
+                boolean connectStillInProgress = false;
+                try {
+                    boolean wasActive = isActive();
+                    if (!doFinishConnect()) {
+                        connectStillInProgress = true;
+                        return;
+                    }
+                    computeRemote();
+                    fulfillConnectPromise(connectPromise, wasActive);
+                } catch (Throwable t) {
+                    fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+                } finally {
+                    if (!connectStillInProgress) {
+                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                        // See https://github.com/netty/netty/issues/1770
+                        if (connectTimeoutFuture != null) {
+                            connectTimeoutFuture.cancel(false);
+                        }
+                        connectPromise = null;
+                    }
+                }
+            }
+
+        }
+
+        void writeComplete(int res) {
+            writeScheduled = false;
+            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            if (res > 0) {
+                channelOutboundBuffer.removeBytes(res);
+                try {
+                    doWrite(channelOutboundBuffer);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+
+        void connectComplete(int res) {
+            if (res == 0) {
+                fulfillConnectPromise(connectPromise, active);
+            } else {
+                if (res == ERRNO_EINPROGRESS_NEGATIVE) {
+                    // connect not complete yet need to wait for poll_out event
+                    IOUringSubmissionQueue submissionQueue = submissionQueue();
+                    submissionQueue.addPollOut(fd().intValue());
+                    submissionQueue.submit();
+                } else {
+                /*
+                if (res == -1 || res == -4) {
+                    submissionQueue.addConnect(fd, channel.getRemoteAddressMemoryAddress(),
+                                           AbstractIOUringChannel.SOCK_ADDR_LEN);
+                    submissionQueue.submit();
+                    break;
+                }
+                */
+                }
+            }
+        }
 
         @Override
         public void connect(
@@ -522,32 +510,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    public void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-        active = true;
-
-        // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
-        // We still need to ensure we call fireChannelActive() in this case.
-        boolean active = isActive();
-
-        // trySuccess() will return false if a user cancelled the connection attempt.
-        boolean promiseSet = promise.trySuccess();
-
-        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-        // because what happened is what happened.
-        if (!wasActive && active) {
-            pipeline().fireChannelActive();
-        }
-
-        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-        if (!promiseSet) {
-            close(voidPromise());
-        }
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf) {
@@ -581,10 +543,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (addr.isUnresolved()) {
             throw new UnresolvedAddressException();
         }
-    }
-
-    public void setUringInReadyPending(boolean uringInReadyPending) {
-        this.uringInReadyPending = uringInReadyPending;
     }
 
     @Override
@@ -713,7 +671,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         connectPromise = null;
     }
 
-    boolean doFinishConnect() throws Exception {
+    private boolean doFinishConnect() throws Exception {
         if (socket.finishConnect()) {
             if (requestedRemoteAddress instanceof InetSocketAddress) {
                 remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
@@ -722,21 +680,20 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             return true;
         }
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        submissionQueue.addPollOut(fd().intValue());
+        submissionQueue.submit();
         return false;
     }
 
     void computeRemote() {
-         if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
-            }
+        if (requestedRemoteAddress instanceof InetSocketAddress) {
+            remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+        }
     }
 
     final boolean shouldBreakIoUringInReady(ChannelConfig config) {
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
-    }
-
-    public void setWriteable(boolean writeable) {
-        this.writeable = writeable;
     }
 
     public long getRemoteAddressMemoryAddress() {
