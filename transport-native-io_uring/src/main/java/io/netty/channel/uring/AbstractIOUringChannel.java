@@ -22,32 +22,47 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
+import static io.netty.channel.unix.Errors.*;
+import static io.netty.channel.unix.UnixChannelUtil.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
 abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
@@ -58,6 +73,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     boolean uringInReadyPending;
     boolean inputClosedSeenErrorOnRead;
 
+    static final int SOCK_ADDR_LEN = 128;
+
     //can only submit one write operation at a time
     private boolean writeable = true;
     /**
@@ -66,6 +83,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
+
+    private final ByteBuffer remoteAddressMemory;
+    private final long remoteAddressMemoryAddress;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -88,9 +108,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         } else {
             logger.trace("Create Server Socket: {}", socket.intValue());
         }
+
+        remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
+        remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
     }
 
-    protected AbstractIOUringChannel(final Channel parent, LinuxSocket socket, boolean active) {
+    AbstractIOUringChannel(final Channel parent, LinuxSocket socket, boolean active) {
         super(parent);
         this.socket = checkNotNull(socket, "fd");
         this.active = active;
@@ -105,6 +128,22 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         } else {
             logger.trace("Create Server Socket: {}", socket.intValue());
         }
+        remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
+        remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
+    }
+
+    AbstractIOUringChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(parent);
+        this.socket = checkNotNull(fd, "fd");
+        this.active = true;
+
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        this.remote = remote;
+        this.local = fd.localAddress();
+
+        remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
+        remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
     }
 
     public boolean isOpen() {
@@ -333,7 +372,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
-        logger.trace("Begin Read");
+        System.out.println("Begin Read");
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if (!uringInReadyPending) {
             unsafe.executeUringReadOperator();
@@ -374,7 +413,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private void addPollOut() {
         IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
         IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-        submissionQueue.addPollOut(socket.intValue());
+        submissionQueue.addPollOutLink(socket.intValue());
         submissionQueue.submit();
     }
 
@@ -388,14 +427,21 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         };
 
-        IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-            return new IOUringRecvByteAllocatorHandle(handle);
+        public void fulfillConnectPromise(ChannelPromise promise, Throwable t, SocketAddress remoteAddress) {
+            Throwable cause = annotateConnectException(t, remoteAddress);
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(cause);
+            closeIfClosed();
         }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                            final ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
+
+        IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+            return new IOUringRecvByteAllocatorHandle(handle);
         }
 
         @Override
@@ -415,6 +461,91 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         public abstract void uringEventExecution();
+
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                if (connectPromise != null) {
+                    throw new ConnectionPendingException();
+                }
+
+                doConnect(remoteAddress, localAddress);
+                InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
+                NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
+                socket.initAddress(address.address(), address.scopeId(), inetSocketAddress.getPort(),remoteAddressMemoryAddress);
+                IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+                final IOUringSubmissionQueue ioUringSubmissionQueue =
+                        ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+                ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
+                ioUringSubmissionQueue.submit();
+
+            } catch (Throwable t) {
+                closeIfClosed();
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
+                return;
+            }
+            connectPromise = promise;
+            requestedRemoteAddress = remoteAddress;
+            // Schedule connect timeout.
+            int connectTimeoutMillis = config().getConnectTimeoutMillis();
+            if (connectTimeoutMillis > 0) {
+                connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelPromise connectPromise = AbstractIOUringChannel.this.connectPromise;
+                        ConnectTimeoutException cause =
+                                new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                        if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                            close(voidPromise());
+                        }
+                    }
+                }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+            }
+
+            promise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isCancelled()) {
+                        if (connectTimeoutFuture != null) {
+                            connectTimeoutFuture.cancel(false);
+                        }
+                        connectPromise = null;
+                        close(voidPromise());
+                    }
+                }
+            });
+        }
+    }
+
+    public void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+        if (promise == null) {
+            // Closed via cancellation and the promise has been notified already.
+            return;
+        }
+        active = true;
+
+        // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+        // We still need to ensure we call fireChannelActive() in this case.
+        boolean active = isActive();
+
+        // trySuccess() will return false if a user cancelled the connection attempt.
+        boolean promiseSet = promise.trySuccess();
+
+        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+        // because what happened is what happened.
+        if (!wasActive && active) {
+            pipeline().fireChannelActive();
+        }
+
+        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+        if (!promiseSet) {
+            close(voidPromise());
+        }
     }
 
     @Override
@@ -473,6 +604,53 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return socket;
     }
 
+    /**
+     * Connect to the remote peer
+     */
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (localAddress instanceof InetSocketAddress) {
+            checkResolvable((InetSocketAddress) localAddress);
+        }
+
+        InetSocketAddress remoteSocketAddr = remoteAddress instanceof InetSocketAddress
+                ? (InetSocketAddress) remoteAddress : null;
+        if (remoteSocketAddr != null) {
+            checkResolvable(remoteSocketAddr);
+        }
+
+        if (remote != null) {
+            // Check if already connected before trying to connect. This is needed as connect(...) will not return -1
+            // and set errno to EISCONN if a previous connect(...) attempt was setting errno to EINPROGRESS and finished
+            // later.
+            throw new AlreadyConnectedException();
+        }
+
+        if (localAddress != null) {
+            socket.bind(localAddress);
+        }
+    }
+
+//    public void setRemote() {
+//        remote = remoteSocketAddr == null ?
+//                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+//    }
+
+    private boolean doConnect0(SocketAddress remote) throws Exception {
+        boolean success = false;
+        try {
+            boolean connected = socket.connect(remote);
+            if (!connected) {
+                //setFlag(Native.EPOLLOUT);
+            }
+            success = true;
+            return connected;
+        } finally {
+            if (!success) {
+                doClose();
+            }
+        }
+    }
+
     void shutdownInput(boolean rdHup) {
         logger.trace("shutdownInput Fd: {}", this.socket.intValue());
         if (!socket.isInputShutdown()) {
@@ -498,6 +676,26 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+
+    //Todo we should move it to a error class
+    // copy unix Errors
+    static void throwConnectException(String method, int err)
+            throws IOException {
+        if (err == ERROR_EALREADY_NEGATIVE) {
+            throw new ConnectionPendingException();
+        }
+        if (err == ERROR_ENETUNREACH_NEGATIVE) {
+            throw new NoRouteToHostException();
+        }
+        if (err == ERROR_EISCONN_NEGATIVE) {
+            throw new AlreadyConnectedException();
+        }
+        if (err == ERRNO_ENOENT_NEGATIVE) {
+            throw new FileNotFoundException();
+        }
+        throw new ConnectException(method + "(..) failed: ");
+    }
+
     private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof SocketChannelConfig &&
                ((SocketChannelConfig) config).isAllowHalfClosure();
@@ -508,11 +706,52 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         close(voidPromise());
     }
 
+    void cancelTimeoutFuture() {
+        if (connectTimeoutFuture != null) {
+            connectTimeoutFuture.cancel(false);
+        }
+        connectPromise = null;
+    }
+
+    boolean doFinishConnect() throws Exception {
+        if (socket.finishConnect()) {
+            if (requestedRemoteAddress instanceof InetSocketAddress) {
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            }
+            requestedRemoteAddress = null;
+
+            return true;
+        }
+        return false;
+    }
+
+    void computeRemote() {
+         if (requestedRemoteAddress instanceof InetSocketAddress) {
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            }
+    }
+
     final boolean shouldBreakIoUringInReady(ChannelConfig config) {
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
 
     public void setWriteable(boolean writeable) {
         this.writeable = writeable;
+    }
+
+    public long getRemoteAddressMemoryAddress() {
+        return remoteAddressMemoryAddress;
+    }
+
+    public ChannelPromise getConnectPromise() {
+        return connectPromise;
+    }
+
+    public ScheduledFuture<?> getConnectTimeoutFuture() {
+        return connectTimeoutFuture;
+    }
+
+    public SocketAddress getRequestedRemoteAddress() {
+        return requestedRemoteAddress;
     }
 }

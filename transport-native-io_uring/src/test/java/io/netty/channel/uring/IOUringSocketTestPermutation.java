@@ -100,14 +100,14 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+                        return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IOUringSocketChannel.class);
                                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
                 },
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+                        return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IOUringSocketChannel.class);
                               //  .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
                 }

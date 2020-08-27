@@ -33,11 +33,15 @@ import io.netty.channel.unix.Socket;
 import io.netty.channel.uring.AbstractIOUringStreamChannel.IOUringStreamUnsafe;
 
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
+import java.util.Collections;
 
 public final class IOUringSocketChannel extends AbstractIOUringStreamChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
+    //private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public IOUringSocketChannel() {
        super(null, LinuxSocket.newSocketStream(), false);
@@ -47,6 +51,15 @@ public final class IOUringSocketChannel extends AbstractIOUringStreamChannel imp
     IOUringSocketChannel(final Channel parent, final LinuxSocket fd) {
         super(parent, fd);
         this.config = new IOUringSocketChannelConfig(this);
+    }
+
+   IOUringSocketChannel(Channel parent, LinuxSocket fd, InetSocketAddress remoteAddress) {
+        super(parent, fd, remoteAddress);
+        this.config = new IOUringSocketChannelConfig(this);
+
+//        if (parent instanceof IOUringSocketChannel) {
+//            tcpMd5SigAddresses = ((IOUringSocketChannel) parent).tcpMd5SigAddresses();
+//        }
     }
 
     @Override
