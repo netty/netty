@@ -87,7 +87,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
         public void uringEventExecution() {
             final IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            submissionQueue.addPollLink(socket.intValue());
+            submissionQueue.addPollInLink(socket.intValue());
 
             //Todo get network addresses
             submissionQueue.addAccept(fd().intValue());

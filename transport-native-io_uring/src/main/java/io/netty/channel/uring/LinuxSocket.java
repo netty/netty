@@ -67,6 +67,10 @@ final class LinuxSocket extends Socket {
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
     }
 
+    public int initAddress(byte[] address, int scopeId, int port, long remoteAddressMemoryAddress) {
+        return Native.initAddress(intValue(), ipv6, address, scopeId, port, remoteAddressMemoryAddress);
+    }
+
     InetAddress getInterface() throws IOException {
         NetworkInterface inf = getNetworkInterface();
         if (inf != null) {

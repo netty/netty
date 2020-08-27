@@ -30,6 +30,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel implements DuplexChannel {
@@ -41,6 +42,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
     protected AbstractIOUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
         super(parent, socket, active);
+    }
+
+    AbstractIOUringStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(parent, fd, remote);
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
     }
 
     @Override

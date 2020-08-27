@@ -67,6 +67,8 @@ final class Native {
         Socket.initialize();
     }
 
+
+
     public static RingBuffer createRingBuffer(int ringSize) {
         //Todo throw Exception if it's null
         return ioUringSetup(ringSize);
@@ -94,6 +96,8 @@ final class Native {
     }
 
     public static native void ioUringExit(RingBuffer ringBuffer);
+
+    public static native int initAddress(int fd, boolean ipv6, byte[] address, int scopeId, int port, long remoteMemoryAddress);
 
     private static native int eventFd();
 

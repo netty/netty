@@ -24,6 +24,7 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -39,6 +40,11 @@ public class IOUringSocketChannelConfig extends DefaultChannelConfig implements 
 
     public IOUringSocketChannelConfig(Channel channel) {
         super(channel);
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            setTcpNoDelay(true);
+        }
+        calculateMaxBytesPerGatheringWrite();
+
     }
 
     @Override

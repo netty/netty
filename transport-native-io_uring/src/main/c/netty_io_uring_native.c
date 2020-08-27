@@ -211,6 +211,40 @@ static void netty_io_uring_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
     }
 }
 
+static jint netty_io_uring_initAddress(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jint port, jlong remoteMemoryAddress) {
+    struct sockaddr_storage addr;
+    socklen_t addrSize;
+    if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
+        // A runtime exception was thrown
+        return -1;
+    }
+
+    memcpy((void *) remoteMemoryAddress, &addr, sizeof(struct sockaddr_storage));
+
+    return addrSize;
+}
+
+//static jint netty_unix_socket_connect(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jint port) {
+//    struct sockaddr_storage addr;
+//    socklen_t addrSize;
+//    if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
+//        // A runtime exception was thrown
+//        return -1;
+//    }
+//
+//    int res;
+//    int err;
+//    do {
+//        res = connect(fd, (struct sockaddr*) &addr, addrSize);
+//    } while (res == -1 && ((err = errno) == EINTR));
+//
+//    if (res < 0) {
+//        return -err;
+//    }
+//    return 0;
+//}
+
+
 static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
     uint64_t val;
 
@@ -338,7 +372,8 @@ static const JNINativeMethod method_table[] = {
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
     {"eventFdRead", "(I)V", (void *) netty_io_uring_eventFdRead },
     {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
-    {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
+    {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd},
+    {"initAddress", "(IZ[BIIJ)I", (void *) netty_io_uring_initAddress }
     };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);

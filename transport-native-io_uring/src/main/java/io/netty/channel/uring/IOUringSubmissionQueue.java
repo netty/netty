@@ -119,7 +119,7 @@ final class IOUringSubmissionQueue {
         //user_data should be same as POLL_LINK fd
         if (op == IOUring.OP_POLL_REMOVE) {
             PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
-            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_LINK);
+            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_IN_LINK);
             PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, pollLinkuData);
         }
 
@@ -127,7 +127,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
         //poll<link>read or accept operation
-        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT || pollMask == IOUring.POLLMASK_LINK)) {
+        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT_LINK || pollMask == IOUring.POLLMASK_IN_LINK)) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
@@ -152,6 +152,8 @@ final class IOUringSubmissionQueue {
             PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
         }
 
+
+
         logger.trace("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
         logger.trace("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
         logger.trace("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
@@ -168,16 +170,20 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
-    public boolean addPollLink(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_LINK);
+    public boolean addPollInLink(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_IN_LINK);
     }
 
-    public boolean addPollOut(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_OUT);
+    public boolean addPollOutLink(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_OUT_LINK);
     }
 
     public boolean addPollRdHup(int fd) {
         return addPoll(fd, IOUring.POLLMASK_RDHUP);
+    }
+
+    public boolean addPollOut(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_OUT);
     }
 
     private boolean addPoll(int fd, int pollMask) {
@@ -217,13 +223,23 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
-    //fill the user_data which is associated with server poll link
+    //fill the adddress which is associated with server poll link user_data
     public boolean addPollRemove(int fd) {
         long sqe = getSqe();
         if (sqe == 0) {
             return false;
         }
         setData(sqe, (byte) IOUring.OP_POLL_REMOVE, 0, fd, 0, 0, 0);
+
+        return true;
+    }
+
+    public boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, (byte) IOUring.OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
 
         return true;
     }
