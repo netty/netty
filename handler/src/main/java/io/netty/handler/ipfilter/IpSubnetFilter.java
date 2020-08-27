@@ -114,7 +114,6 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
             ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
 
-
             if (ipSubnetFilterRule.getFilterRule() instanceof IpSubnetFilterRule.Ip4SubnetFilterRule) {
                 unsortedIPv4Rules.add(ipSubnetFilterRule);
 
