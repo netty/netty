@@ -44,8 +44,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private static final long ETIME = -62;
     static final long ECANCELED = -125;
 
-    // events should be unique to identify which event type that was
-    private long eventIdCounter;
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private final RingBuffer ringBuffer;
 
@@ -191,8 +189,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 if (res != -1 && res != ERRNO_EAGAIN_NEGATIVE &&
                         res != ERRNO_EWOULDBLOCK_NEGATIVE) {
                     logger.trace("server filedescriptor Fd: {}", fd);
-                    acceptChannel.acceptComplete(res);
-                    pollRdHup(res);
+                    if (acceptChannel.acceptComplete(res)) {
+                        // all childChannels should poll POLLRDHUP
+                        submissionQueue.addPollRdHup(res);
+                        submissionQueue.submit();
+                    }
                 }
                 break;
             case IOUring.OP_READ:
@@ -247,9 +248,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                     } else {
                         //Todo error handling error
                         logger.trace("POLL_LINK Res: {}", res);
-                        break;
                     }
                 }
+                break;
             case IOUring.OP_POLL_REMOVE:
                 if (res == ENOENT) {
                     logger.trace("POLL_REMOVE OPERATION not permitted");
@@ -281,12 +282,5 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }
-    }
-
-   //to be notified when the filedesciptor is closed
-   private void pollRdHup(int fd) {
-        //all childChannels should poll POLLRDHUP
-        ringBuffer.getIoUringSubmissionQueue().addPollRdHup(fd);
-        ringBuffer.getIoUringSubmissionQueue().submit();
     }
 }
