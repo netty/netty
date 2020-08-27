@@ -21,8 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DuplexChannel;
@@ -31,6 +31,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.io.IOException;
 import java.util.concurrent.Executor;
 
 abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel implements DuplexChannel {
@@ -197,7 +198,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         }
 
         @Override
-        public void uringEventExecution() {
+        void pollIn(int res) {
             final ChannelConfig config = config();
 
             final ByteBufAllocator allocator = config.getAllocator();
@@ -207,6 +208,82 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             ByteBuf byteBuf = allocHandle.allocate(allocator);
             doReadBytes(byteBuf);
         }
-    }
 
+        private ByteBuf readBuffer;
+
+        public void doReadBytes(ByteBuf byteBuf) {
+            assert readBuffer == null;
+            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
+            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+
+            unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
+
+            if (byteBuf.hasMemoryAddress()) {
+                readBuffer = byteBuf;
+                submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
+                        byteBuf.writerIndex(), byteBuf.capacity());
+                submissionQueue.submit();
+            }
+        }
+
+        void readComplete0(int localReadAmount) {
+            boolean close = false;
+            ByteBuf byteBuf = null;
+            final IOUringRecvByteAllocatorHandle allocHandle =
+                    (IOUringRecvByteAllocatorHandle) unsafe()
+                            .recvBufAllocHandle();
+            final ChannelPipeline pipeline = pipeline();
+            try {
+                logger.trace("EventLoop Read Res: {}", localReadAmount);
+                logger.trace("EventLoop Fd: {}", fd().intValue());
+                byteBuf = this.readBuffer;
+                this.readBuffer = null;
+
+                if (localReadAmount > 0) {
+                    byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+                }
+
+                allocHandle.lastBytesRead(localReadAmount);
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read, release the buffer.
+                    byteBuf.release();
+                    byteBuf = null;
+                    close = allocHandle.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        shutdownInput(false);
+                    }
+                    allocHandle.readComplete();
+                    pipeline.fireChannelReadComplete();
+                    return;
+                }
+
+                allocHandle.incMessagesRead(1);
+                pipeline.fireChannelRead(byteBuf);
+                byteBuf = null;
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+            } catch (Throwable t) {
+                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+            }
+        }
+
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
+                                         Throwable cause, boolean close,
+                                         IOUringRecvByteAllocatorHandle allocHandle) {
+            if (byteBuf != null) {
+                if (byteBuf.isReadable()) {
+                    pipeline.fireChannelRead(byteBuf);
+                } else {
+                    byteBuf.release();
+                }
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            pipeline.fireExceptionCaught(cause);
+            if (close || cause instanceof IOException) {
+                shutdownInput(false);
+            }
+        }
+    }
 }

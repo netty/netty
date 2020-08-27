@@ -96,18 +96,19 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
     @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
+        return Arrays.<BootstrapFactory<Bootstrap>>asList(
+                /*
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IOUringSocketChannel.class);
                                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
-                },
+                },*/
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IOUringSocketChannel.class);
+                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
                               //  .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
                 }

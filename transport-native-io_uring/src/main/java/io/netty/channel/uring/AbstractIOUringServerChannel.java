@@ -52,47 +52,56 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
 
     abstract Channel newChildChannel(int fd) throws Exception;
 
-    boolean acceptComplete(int res) {
-        if (res >= 0) {
-            final IOUringRecvByteAllocatorHandle allocHandle =
-                    (IOUringRecvByteAllocatorHandle) unsafe()
-                            .recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-
-            allocHandle.incMessagesRead(1);
-            try {
-                final Channel childChannel = newChildChannel(res);
-                pipeline.fireChannelRead(childChannel);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-        }
-        //Todo refactoring method name
-        executeReadEvent();
-        return res >= 0;
-    }
-
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         private final byte[] acceptedAddress = new byte[26];
+
+
+        @Override
+        void pollIn(int res) {
+            IOUringSubmissionQueue submissionQueue = submissionQueue();
+            //Todo get network addresses
+            submissionQueue.addAccept(fd().intValue());
+            submissionQueue.submit();
+        }
+
+        void readComplete0(int res) {
+            if (res >= 0) {
+                final IOUringRecvByteAllocatorHandle allocHandle =
+                        (IOUringRecvByteAllocatorHandle) unsafe()
+                                .recvBufAllocHandle();
+                final ChannelPipeline pipeline = pipeline();
+
+                allocHandle.incMessagesRead(1);
+                try {
+                    final Channel childChannel = newChildChannel(res);
+
+                    // all childChannels should poll POLLRDHUP
+                    IOUringSubmissionQueue submissionQueue = submissionQueue();
+                    submissionQueue.addPollRdHup(res);
+                    submissionQueue.submit();
+
+                    pipeline.fireChannelRead(childChannel);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+            } else {
+                // TODO: Fix me
+                schedulePollIn();
+            }
+        }
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
                             final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
+    }
 
-        @Override
-        public void uringEventExecution() {
-            final IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            submissionQueue.addPollInLink(socket.intValue());
-
-            //Todo get network addresses
-            submissionQueue.addAccept(fd().intValue());
-            submissionQueue.submit();
-        }
+    @Override
+    protected void doClose() throws Exception {
+        super.doClose();
     }
 }
 
