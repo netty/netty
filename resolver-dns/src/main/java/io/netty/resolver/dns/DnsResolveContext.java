@@ -1031,7 +1031,7 @@ abstract class DnsResolveContext<T> {
             // We need to obtain a new stream from the parent DnsNameResolver if the hostname is not the same as
             // for the original query (for example we may follow CNAMEs). Otherwise let's just duplicate the
             // original nameservers so we correctly update the internal index
-            if (name.equals(this.hostname)) {
+            if (name.equals(hostname)) {
                 return nameServerAddrs.duplicate();
             }
             return parent.newNameServerAddressStream(name);
