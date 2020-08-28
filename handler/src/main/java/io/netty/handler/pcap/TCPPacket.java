@@ -31,15 +31,67 @@ final class TCPPacket {
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int srcPort, int dstPort) {
-        byteBuf.writeShort(dstPort); // Destination Port
+    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int segmentNumber, int ackNumber, int srcPort, int dstPort, Flag... flags) {
+        int fin = 0;
+        int syn = 0;
+        int rst = 0;
+        int psh = 0;
+        int ack = 0;
+        int urg = 0;
+        int ece = 0;
+        int cwr = 0;
+
+        for (Flag f : flags) {
+            if (f == Flag.FIN) {
+                fin = 1;
+            } else if (f == Flag.SYN) {
+                syn = 1;
+            } else if (f == Flag.RST) {
+                rst = 1;
+            } else if (f == Flag.PSH) {
+                psh = 1;
+            } else if (f == Flag.ACK) {
+                ack = 1;
+            } else if (f == Flag.URG) {
+                urg = 1;
+            } else if (f == Flag.ECE) {
+                ece = 1;
+            } else if (f == Flag.CWR) {
+                cwr = 1;
+            }
+        }
+
+        int tcpFlags = fin << 0 |
+                syn << 1 |
+                rst << 2 |
+                psh << 3 |
+                ack << 4 |
+                urg << 5 |
+                ece << 6 |
+                cwr << 7;
+
         byteBuf.writeShort(srcPort); // Source Port
-        byteBuf.writeInt(0);         // Sequence Number
-        byteBuf.writeInt(0);         // Acknowledgment Number
-        byteBuf.writeShort(5 << 12); // Flags
+        byteBuf.writeShort(dstPort); // Destination Port
+        byteBuf.writeInt(segmentNumber);
+        byteBuf.writeInt(ackNumber);         // Acknowledgment Number
+        byteBuf.writeShort(5 << 12 | tcpFlags); // Flags
         byteBuf.writeShort(65535);   // Window Size
         byteBuf.writeShort(0x0001);  // Checksum
         byteBuf.writeShort(0);       // Urgent Pointer
-        byteBuf.writeBytes(payload); //  Payload of Data
+
+        if (payload != null) {
+            byteBuf.writeBytes(payload); //  Payload of Data
+        }
+    }
+
+    enum Flag {
+        FIN,
+        SYN,
+        RST,
+        PSH,
+        ACK,
+        URG,
+        ECE,
+        CWR,
     }
 }

@@ -19,7 +19,9 @@ public class WritePCAPHandlerTest {
     public void udpV4() throws IOException {
 
         ByteBuf byteBuf = Unpooled.buffer();
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new WritePCAPHandler(new ByteBufOutputStream(byteBuf)));
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new WritePCAPHandler(
+                new ByteBufOutputStream(byteBuf), true, false, false
+        ));
 
         InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.1", 1000);
         InetSocketAddress dstAddr = new InetSocketAddress("192.168.1.1", 50000);
