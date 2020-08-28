@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -35,10 +34,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
 
     @Override
     public ByteBuf content() {
-        if (data.refCnt() <= 0) {
-            throw new IllegalReferenceCountException(data.refCnt());
-        }
-        return data;
+        return ByteBufUtil.ensureAccessible(data);
     }
 
     /**
