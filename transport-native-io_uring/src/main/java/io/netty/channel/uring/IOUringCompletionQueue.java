@@ -55,7 +55,7 @@ final class IOUringCompletionQueue {
     this.ringFd = ringFd;
   }
 
-  public int process(IOUringCompletionQueueCallback callback) throws Exception {
+  public int process(IOUringCompletionQueueCallback callback) {
       int i = 0;
       for (;;) {
           long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));

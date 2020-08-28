@@ -153,11 +153,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 }
             }
 
-            try {
-                completionQueue.process(this);
-            } catch (Exception e) {
-                //Todo handle exception
-            }
+            completionQueue.process(this);
 
             if (hasTasks()) {
                 runAllTasks();
@@ -201,15 +197,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 if (writeChannel == null) {
                     break;
                 }
-                //localFlushAmount -> res
-                logger.trace("EventLoop Write Res: {}", res);
-                logger.trace("EventLoop Fd: {}", fd);
-
-                if (res == SOCKET_ERROR_EPIPE) {
-                    writeChannel.shutdownInput(false);
-                } else {
-                    ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
-                }
+                ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
                 break;
             case IOUring.IO_TIMEOUT:
                 if (res == ETIME) {
@@ -225,14 +213,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 }
                 if (eventfd.intValue() == fd) {
                     pendingWakeup = false;
-                    // We need to consume the data as otherwise we would see another event
-                    // in the completionQueue without
-                    // an extra eventfd_write(....)
-                    Native.eventFdRead(eventfd.intValue());
-
-                    submissionQueue.addPollIn(eventfd.intValue());
-                    // Submit so its picked up
-                    submissionQueue.submit();
+                    handleEventFd(submissionQueue);
                 } else {
                     AbstractIOUringChannel channel = channels.get(fd);
                     if (channel == null) {
@@ -246,9 +227,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                             ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
                             break;
                         case IOUring.POLLMASK_RDHUP:
-                            if (!channel.isActive()) {
-                                channel.shutdownInput(true);
-                            }
+                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
                             break;
                         default:
                             break;
@@ -266,16 +245,25 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
             case IOUring.OP_CONNECT:
                 AbstractIOUringChannel channel = channels.get(fd);
-                System.out.println("Connect res: " + res);
                 if (channel != null) {
                     ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).connectComplete(res);
                 }
                 break;
-
             default:
                 break;
         }
         return true;
+    }
+
+    private void handleEventFd(IOUringSubmissionQueue submissionQueue) {
+        // We need to consume the data as otherwise we would see another event
+        // in the completionQueue without
+        // an extra eventfd_write(....)
+        Native.eventFdRead(eventfd.intValue());
+
+        submissionQueue.addPollIn(eventfd.intValue());
+        // Submit so its picked up
+        submissionQueue.submit();
     }
 
     @Override
