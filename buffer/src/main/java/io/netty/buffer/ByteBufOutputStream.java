@@ -40,7 +40,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     private final ByteBuf buffer;
     private final int startIndex;
-    private final DataOutputStream utf8out = new DataOutputStream(this);
+    private DataOutputStream utf8out; // lazily-instantiated
 
     /**
      * Creates a new stream which writes data to the specified {@code buffer}.
@@ -131,7 +131,11 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeUTF(String s) throws IOException {
-        utf8out.writeUTF(s);
+        DataOutputStream out = utf8out;
+        if (out == null) {
+            utf8out = out = new DataOutputStream(this);
+        }
+        out.writeUTF(s);
     }
 
     /**
