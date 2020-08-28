@@ -33,6 +33,10 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     @Override
     final boolean isAccessible() {
+        return isAccessible0();
+    }
+
+    boolean isAccessible0() {
         return unwrap().isAccessible();
     }
 
