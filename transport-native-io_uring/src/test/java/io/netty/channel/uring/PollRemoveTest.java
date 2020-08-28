@@ -57,7 +57,7 @@ public class PollRemoveTest {
          });
 
         Channel sc = b.bind(2020).sync().channel();
-        Thread.sleep(15000);
+        Thread.sleep(1500);
 
         //close ServerChannel
         sc.close().sync();
