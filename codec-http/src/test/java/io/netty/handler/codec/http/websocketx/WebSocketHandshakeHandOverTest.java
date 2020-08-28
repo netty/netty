@@ -203,8 +203,8 @@ public class WebSocketHandshakeHandOverTest {
 
         final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
 
-        // Close the channel while the handshake is in progress. This close could be initiated by the server by
-        // sending the CloseWebSocket frame. To reproduce the test scenario for this test case,
+        // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
+        // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
         // we would manually close the channel.
         clientWsHandler.close(ctx, ctx.newPromise());
 

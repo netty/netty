@@ -72,7 +72,10 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        handshakePromise.tryFailure(new WebSocketHandshakeException("channel closed with handshake in progress"));
+        if (!handshakePromise.isDone()) {
+            handshakePromise.tryFailure(new WebSocketHandshakeException("channel closed with handshake in progress"));
+        }
+
         super.channelInactive(ctx);
     }
 
