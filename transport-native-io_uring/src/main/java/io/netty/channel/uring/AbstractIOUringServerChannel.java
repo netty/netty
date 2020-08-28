@@ -21,8 +21,11 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.unix.Errors;
 
 import java.net.SocketAddress;
+
+import static io.netty.channel.unix.Errors.*;
 
 abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
@@ -40,7 +43,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
@@ -53,41 +56,43 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         private final byte[] acceptedAddress = new byte[26];
 
-
-        @Override
-        void pollIn(int res) {
+        private void acceptSocket() {
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             //Todo get network addresses
             submissionQueue.addAccept(fd().intValue());
             submissionQueue.submit();
         }
 
-        void readComplete0(int res) {
-            if (res >= 0) {
-                final IOUringRecvByteAllocatorHandle allocHandle =
-                        (IOUringRecvByteAllocatorHandle) unsafe()
-                                .recvBufAllocHandle();
-                final ChannelPipeline pipeline = pipeline();
+        @Override
+        void pollIn(int res) {
+            acceptSocket();
+        }
 
-                allocHandle.incMessagesRead(1);
-                try {
-                    final Channel childChannel = newChildChannel(res);
-
-                    // all childChannels should poll POLLRDHUP
-                    IOUringSubmissionQueue submissionQueue = submissionQueue();
-                    submissionQueue.addPollRdHup(res);
-                    submissionQueue.submit();
-
-                    pipeline.fireChannelRead(childChannel);
-                } catch (Exception e) {
-                    e.printStackTrace();
+        // TODO: Respect MAX_MESSAGES_READ
+        protected void readComplete0(int res) {
+            final IOUringRecvByteAllocatorHandle allocHandle =
+                    (IOUringRecvByteAllocatorHandle) unsafe()
+                            .recvBufAllocHandle();
+            final ChannelPipeline pipeline = pipeline();
+                if (res >= 0) {
+                    allocHandle.incMessagesRead(1);
+                    try {
+                        pipeline.fireChannelRead(newChildChannel(res));
+                    } catch (Throwable cause) {
+                        allocHandle.readComplete();
+                        pipeline.fireExceptionCaught(cause);
+                        pipeline.fireChannelReadComplete();
+                    }
+                    acceptSocket();
+                } else {
+                    allocHandle.readComplete();
+                    // Check if we did fail because there was nothing to accept atm.
+                    if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
+                        // Something bad happened. Convert to an exception.
+                        pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
+                    }
+                    pipeline.fireChannelReadComplete();
                 }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-            } else {
-                // TODO: Fix me
-                schedulePollIn();
-            }
         }
 
         @Override
@@ -95,11 +100,6 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
                             final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
-    }
-
-    @Override
-    protected void doClose() throws Exception {
-        super.doClose();
     }
 }
 

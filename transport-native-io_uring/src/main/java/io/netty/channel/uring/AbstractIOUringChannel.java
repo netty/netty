@@ -34,21 +34,13 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.unix.Buffer;
-import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.NativeInetAddress;
-import io.netty.channel.unix.Socket;
-import io.netty.channel.unix.UnixChannel;
-import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.channel.unix.*;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
@@ -70,7 +62,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     protected volatile boolean active;
     private boolean pollInScheduled = false;
 
-    //boolean uringInReadyPending;
     boolean inputClosedSeenErrorOnRead;
 
     static final int SOCK_ADDR_LEN = 128;
@@ -235,11 +226,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 connectPromise = null;
             }
 
-            ScheduledFuture<?> future = connectTimeoutFuture;
-            if (future != null) {
-                future.cancel(false);
-                connectTimeoutFuture = null;
-            }
+            cancelConnectTimeoutFuture();
 
             if (isRegistered()) {
                 // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
@@ -271,7 +258,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
-        System.out.println("Begin Read");
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if (!pollInScheduled) {
             unsafe.schedulePollIn();
@@ -279,7 +265,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         logger.trace("IOUring doWrite message size: {}", in.size());
 
         if (writeScheduled) {
@@ -290,22 +276,27 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             doWriteMultiple(in);
             //Object msg = in.current();
             //doWriteSingle((ByteBuf) msg);
-        } else if(msgCount == 1) {
+        } else if (msgCount == 1) {
             Object msg = in.current();
             doWriteSingle((ByteBuf) msg);
         }
     }
 
-     private void doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+     private void doWriteMultiple(ChannelOutboundBuffer in) {
          final IovecArrayPool iovecArray = ((IOUringEventLoop) eventLoop()).getIovecArrayPool();
 
          iovecMemoryAddress = iovecArray.createNewIovecMemoryAddress();
          if (iovecMemoryAddress != -1) {
-             in.forEachFlushedMessage(iovecArray);
+             try {
+                 in.forEachFlushedMessage(iovecArray);
+             } catch (Exception e) {
+
+             }
 
              if (iovecArray.count() > 0) {
                  submissionQueue().addWritev(socket.intValue(), iovecMemoryAddress, iovecArray.count());
                  submissionQueue().submit();
+                 writeScheduled = true;
              }
          }
          //Todo error handling
@@ -313,24 +304,17 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
 
     protected final void doWriteSingle(ByteBuf buf) {
-        if (buf.hasMemoryAddress()) {
-            //link poll<link>write operation
-            addPollOut();
-
-            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
-                                     buf.writerIndex());
-            submissionQueue.submit();
-            writeScheduled = true;
-        }
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
+                buf.writerIndex());
+        submissionQueue.submit();
+        writeScheduled = true;
     }
 
     //POLLOUT
     private void addPollOut() {
-        IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-        IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-        submissionQueue.addPollOutLink(socket.intValue());
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        submissionQueue.addPollOut(socket.intValue());
         submissionQueue.submit();
     }
 
@@ -396,14 +380,43 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             return allocHandle;
         }
 
+        void shutdownInput(boolean rdHup) {
+            logger.trace("shutdownInput Fd: {}", fd().intValue());
+            if (!socket.isInputShutdown()) {
+                if (isAllowHalfClosure(config())) {
+                    try {
+                        socket.shutdown(true, false);
+                    } catch (IOException ignored) {
+                        // We attempted to shutdown and failed, which means the input has already effectively been
+                        // shutdown.
+                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
+                        return;
+                    } catch (NotYetConnectedException ignore) {
+                        // We attempted to shutdown and failed, which means the input has already effectively been
+                        // shutdown.
+                    }
+                    pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                } else {
+                    close(voidPromise());
+                }
+            } else if (!rdHup) {
+                inputClosedSeenErrorOnRead = true;
+                pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+            }
+        }
+
+        private void fireEventAndClose(Object evt) {
+            pipeline().fireUserEventTriggered(evt);
+            close(voidPromise());
+        }
+
         void schedulePollIn() {
             assert !pollInScheduled;
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
             pollInScheduled = true;
-            IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-            IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+            IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addPollIn(socket.intValue());
             submissionQueue.submit();
         }
@@ -413,11 +426,26 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             readComplete0(res);
         }
 
-        abstract void readComplete0(int res);
+        protected abstract void readComplete0(int res);
+
+        /**
+         * Called once POLLRDHUP event is ready to be processed
+         */
+        final void pollRdHup(int res) {
+            if (isActive()) {
+                // If it is still active, we need to call epollInReady as otherwise we may miss to
+                // read pending data from the underlying file descriptor.
+                // See https://github.com/netty/netty/issues/3709
+                pollIn(res);
+            } else {
+                // Just to be safe make sure the input marked as closed.
+                shutdownInput(true);
+            }
+        }
 
         abstract void pollIn(int res);
 
-        void pollOut(int res) {
+        final void pollOut(int res) {
             // pending connect
             if (connectPromise != null) {
                 // Note this method is invoked by the event loop only if the connection attempt was
@@ -440,50 +468,55 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     if (!connectStillInProgress) {
                         // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                         // See https://github.com/netty/netty/issues/1770
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel(false);
-                        }
+                        cancelConnectTimeoutFuture();
                         connectPromise = null;
                     }
                 }
+            } else if (!getSocket().isOutputShutdown()) {
+                doWrite(unsafe().outboundBuffer());
             }
         }
 
-        void writeComplete(int res) {
+        final void writeComplete(int res) {
             writeScheduled = false;
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-            if (iovecMemoryAddress != 0) {
+            if (iovecMemoryAddress != -1) {
                 ((IOUringEventLoop) eventLoop()).getIovecArrayPool().releaseIovec(iovecMemoryAddress);
+                iovecMemoryAddress = -1;
             }
-            if (res > 0) {
+            if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
+                doWrite(channelOutboundBuffer);
+            } else {
                 try {
-                    doWrite(channelOutboundBuffer);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    if (ioResult("io_uring write", res) == 0) {
+                        // We were not able to write everything, let's register for POLLOUT
+                        addPollOut();
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
                 }
             }
         }
 
-
-        void connectComplete(int res) {
+        final void connectComplete(int res) {
             if (res == 0) {
                 fulfillConnectPromise(connectPromise, active);
             } else {
                 if (res == ERRNO_EINPROGRESS_NEGATIVE) {
                     // connect not complete yet need to wait for poll_out event
-                    IOUringSubmissionQueue submissionQueue = submissionQueue();
-                    submissionQueue.addPollOut(fd().intValue());
-                    submissionQueue.submit();
+                    addPollOut();
                 } else {
-                /*
-                if (res == -1 || res == -4) {
-                    submissionQueue.addConnect(fd, channel.getRemoteAddressMemoryAddress(),
-                                           AbstractIOUringChannel.SOCK_ADDR_LEN);
-                    submissionQueue.submit();
-                    break;
-                }
-                */
+                    try {
+                        Errors.throwConnectException("io_uring connect", res);
+                    } catch (Throwable cause) {
+                        fulfillConnectPromise(connectPromise, cause);
+                    } finally {
+                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                        // See https://github.com/netty/netty/issues/1770
+                        cancelConnectTimeoutFuture();
+                        connectPromise = null;
+                    }
                 }
             }
         }
@@ -504,9 +537,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
                 NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
                 socket.initAddress(address.address(), address.scopeId(), inetSocketAddress.getPort(),remoteAddressMemoryAddress);
-                IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-                final IOUringSubmissionQueue ioUringSubmissionQueue =
-                        ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+                final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
                 ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
                 ioUringSubmissionQueue.submit();
 
@@ -537,9 +568,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel(false);
-                        }
+                        cancelConnectTimeoutFuture();
                         connectPromise = null;
                         close(voidPromise());
                     }
@@ -603,7 +632,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     /**
      * Connect to the remote peer
      */
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    private void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
         }
@@ -626,87 +655,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-//    public void setRemote() {
-//        remote = remoteSocketAddr == null ?
-//                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
-//    }
-
-    private boolean doConnect0(SocketAddress remote) throws Exception {
-        boolean success = false;
-        try {
-            boolean connected = socket.connect(remote);
-            if (!connected) {
-                //setFlag(Native.EPOLLOUT);
-            }
-            success = true;
-            return connected;
-        } finally {
-            if (!success) {
-                doClose();
-            }
-        }
-    }
-
-    void shutdownInput(boolean rdHup) {
-        logger.trace("shutdownInput Fd: {}", this.socket.intValue());
-        if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure(config())) {
-                try {
-                    socket.shutdown(true, false);
-                } catch (IOException ignored) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                    fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                    return;
-                } catch (NotYetConnectedException ignore) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                }
-                pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-            } else {
-                close(voidPromise());
-            }
-        } else if (!rdHup) {
-            inputClosedSeenErrorOnRead = true;
-            pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-        }
-    }
-
-
-    //Todo we should move it to a error class
-    // copy unix Errors
-    static void throwConnectException(String method, int err)
-            throws IOException {
-        if (err == ERROR_EALREADY_NEGATIVE) {
-            throw new ConnectionPendingException();
-        }
-        if (err == ERROR_ENETUNREACH_NEGATIVE) {
-            throw new NoRouteToHostException();
-        }
-        if (err == ERROR_EISCONN_NEGATIVE) {
-            throw new AlreadyConnectedException();
-        }
-        if (err == ERRNO_ENOENT_NEGATIVE) {
-            throw new FileNotFoundException();
-        }
-        throw new ConnectException(method + "(..) failed: ");
-    }
-
     private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof SocketChannelConfig &&
                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    private void fireEventAndClose(Object evt) {
-        pipeline().fireUserEventTriggered(evt);
-        close(voidPromise());
-    }
-
-    void cancelTimeoutFuture() {
+    private void cancelConnectTimeoutFuture() {
         if (connectTimeoutFuture != null) {
             connectTimeoutFuture.cancel(false);
+            connectTimeoutFuture = null;
         }
-        connectPromise = null;
     }
 
     private boolean doFinishConnect() throws Exception {
@@ -718,35 +676,17 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             return true;
         }
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addPollOut(fd().intValue());
-        submissionQueue.submit();
+        addPollOut();
         return false;
     }
 
-    void computeRemote() {
+    private void computeRemote() {
         if (requestedRemoteAddress instanceof InetSocketAddress) {
             remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
         }
     }
 
-    final boolean shouldBreakIoUringInReady(ChannelConfig config) {
+    private boolean shouldBreakIoUringInReady(ChannelConfig config) {
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
-    }
-
-    public long getRemoteAddressMemoryAddress() {
-        return remoteAddressMemoryAddress;
-    }
-
-    public ChannelPromise getConnectPromise() {
-        return connectPromise;
-    }
-
-    public ScheduledFuture<?> getConnectTimeoutFuture() {
-        return connectTimeoutFuture;
-    }
-
-    public SocketAddress getRequestedRemoteAddress() {
-        return requestedRemoteAddress;
     }
 }
