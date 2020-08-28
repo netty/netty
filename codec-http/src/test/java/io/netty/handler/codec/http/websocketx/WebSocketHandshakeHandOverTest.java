@@ -184,6 +184,35 @@ public class WebSocketHandshakeHandOverTest {
         }
     }
 
+    /**
+     * Tests a scenario when channel is closed while the handshake is in progress. Validates that the handshake
+     * future is notified in such cases.
+     */
+    @Test
+    public void testHandshakeFutureIsNotifiedOnChannelClose() throws Exception {
+        EmbeddedChannel clientChannel = createClientChannel(null);
+        EmbeddedChannel serverChannel = createServerChannel(null);
+
+        // Start handshake from client to server but don't complete the handshake for the purpose of this test.
+        transferAllDataWithMerge(clientChannel, serverChannel);
+
+        final WebSocketClientProtocolHandler clientWsHandler =
+                clientChannel.pipeline().get(WebSocketClientProtocolHandler.class);
+        final WebSocketClientProtocolHandshakeHandler clientWsHandshakeHandler =
+                clientChannel.pipeline().get(WebSocketClientProtocolHandshakeHandler.class);
+
+        final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
+
+        // Close the channel while the handshake is in progress. This close could be initiated by the server by
+        // sending the CloseWebSocket frame. To reproduce the test scenario for this test case,
+        // we would manually close the channel.
+        clientWsHandler.close(ctx, ctx.newPromise());
+
+        // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
+        // channel is closed.
+        assertTrue(clientWsHandshakeHandler.getHandshakeFuture().isDone());
+    }
+
     @Test(timeout = 10000)
     public void testClientHandshakerForceClose() throws Exception {
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
@@ -308,9 +337,7 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     private static EmbeddedChannel createServerChannel(ChannelHandler handler) {
-        return new EmbeddedChannel(
-                new HttpServerCodec(),
-                new HttpObjectAggregator(8192),
+        return createServerChannel(
                 new WebSocketServerProtocolHandler("/test", "test-proto-1, test-proto-2", false),
                 handler);
     }
