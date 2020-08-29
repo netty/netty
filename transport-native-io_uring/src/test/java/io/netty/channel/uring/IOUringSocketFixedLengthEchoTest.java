@@ -19,8 +19,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketFixedLengthEchoTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketFixedLengthEchoTest extends SocketFixedLengthEchoTest {
 

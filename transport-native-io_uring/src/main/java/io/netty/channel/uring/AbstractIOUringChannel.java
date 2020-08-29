@@ -368,7 +368,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             pollInScheduled = true;
             IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
             IOUringSubmissionQueue submissionQueue = ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
-            submissionQueue.addPollInLink(socket.intValue());
+            submissionQueue.addPollIn(socket.intValue());
             submissionQueue.submit();
         }
 

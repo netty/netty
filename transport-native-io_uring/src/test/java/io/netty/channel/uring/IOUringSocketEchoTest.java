@@ -19,8 +19,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.socket.SocketEchoTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketEchoTest extends SocketEchoTest {
 

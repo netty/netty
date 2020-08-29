@@ -119,7 +119,7 @@ final class IOUringSubmissionQueue {
         //user_data should be same as POLL_LINK fd
         if (op == IOUring.OP_POLL_REMOVE) {
             PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
-            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_IN_LINK);
+            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_IN);
             PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, pollLinkuData);
         }
 
@@ -127,7 +127,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
         //poll<link>read or accept operation
-        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT_LINK || pollMask == IOUring.POLLMASK_IN_LINK)) {
+        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT_LINK)) {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
         } else {
             PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
@@ -170,8 +170,8 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
-    public boolean addPollInLink(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_IN_LINK);
+    public boolean addPollIn(int fd) {
+        return addPoll(fd, IOUring.POLLMASK_IN);
     }
 
     public boolean addPollOutLink(int fd) {

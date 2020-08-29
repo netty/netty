@@ -29,7 +29,7 @@ final class IOUring {
     static final int OP_POLL_REMOVE = 7;
     static final int OP_CONNECT = 16;
 
-    static final int POLLMASK_IN_LINK = 1;
+    static final int POLLMASK_IN = 1;
     static final int POLLMASK_OUT_LINK = 4;
     static final int POLLMASK_RDHUP = 8192;
     static final int POLLMASK_OUT = 4;
