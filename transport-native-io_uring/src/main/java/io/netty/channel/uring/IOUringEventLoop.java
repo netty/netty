@@ -57,6 +57,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
+    private IovecArrayPool iovecArrayPool;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
@@ -64,6 +65,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         ringBuffer = Native.createRingBuffer(ringSize);
         eventfd = Native.newEventFd();
         logger.trace("New EventLoop: {}", this.toString());
+        iovecArrayPool = new IovecArrayPool();
     }
 
     @Override
@@ -193,7 +195,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 }
                 ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
                 break;
-
+            case IOUring.OP_WRITEV:
             case IOUring.OP_WRITE:
                 AbstractIOUringChannel writeChannel = channels.get(fd);
                 if (writeChannel == null) {
@@ -209,7 +211,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                     ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
                 }
                 break;
-
             case IOUring.IO_TIMEOUT:
                 if (res == ETIME) {
                     prevDeadlineNanos = NONE;
@@ -285,6 +286,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             e.printStackTrace();
         }
         ringBuffer.close();
+        iovecArrayPool.release();
     }
 
     public RingBuffer getRingBuffer() {
@@ -297,5 +299,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }
+    }
+
+    public IovecArrayPool getIovecArrayPool() {
+        return iovecArrayPool;
     }
 }

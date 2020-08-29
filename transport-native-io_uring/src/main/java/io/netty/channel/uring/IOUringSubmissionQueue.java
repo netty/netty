@@ -244,6 +244,16 @@ final class IOUringSubmissionQueue {
         return true;
     }
 
+    public boolean addWritev(int fd, long iovecArrayAddress, int length) {
+        long sqe = getSqe();
+        if (sqe == 0) {
+            return false;
+        }
+        setData(sqe, (byte) IOUring.OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
+
+        return true;
+    }
+
     private int flushSqe() {
         long kTail = toUnsignedLong(PlatformDependent.getInt(kTailAddress));
         long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
