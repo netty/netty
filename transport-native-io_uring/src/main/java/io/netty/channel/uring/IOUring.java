@@ -21,6 +21,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 final class IOUring {
 
     private static final Throwable UNAVAILABILITY_CAUSE;
+    static final int OP_WRITEV = 2;
     static final int IO_POLL = 6;
     static final int IO_TIMEOUT = 11;
     static final int OP_ACCEPT = 13;

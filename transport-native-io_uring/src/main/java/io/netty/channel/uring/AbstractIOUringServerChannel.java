@@ -28,12 +28,10 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
 
     AbstractIOUringServerChannel(int fd) {
         super(null, new LinuxSocket(fd));
-       System.out.println("Server Socket fd: " + fd);
     }
 
     AbstractIOUringServerChannel(LinuxSocket fd) {
         super(null, fd);
-        System.out.println("Server Socket fd: " + fd);
     }
 
     @Override

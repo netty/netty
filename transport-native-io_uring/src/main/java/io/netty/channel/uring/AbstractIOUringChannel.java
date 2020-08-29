@@ -90,6 +90,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
+    //to release it
+    private long iovecMemoryAddress;
+
     AbstractIOUringChannel(final Channel parent, LinuxSocket socket) {
         super(parent);
         this.socket = checkNotNull(socket, "fd");
@@ -278,15 +281,38 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         logger.trace("IOUring doWrite message size: {}", in.size());
-        if (!writeScheduled && in.size() >= 1) {
+
+        if (writeScheduled) {
+            return;
+        }
+        int msgCount = in.size();
+        if (msgCount > 1 && in.current() instanceof ByteBuf) {
+            doWriteMultiple(in);
+            //Object msg = in.current();
+            //doWriteSingle((ByteBuf) msg);
+        } else if(msgCount == 1) {
             Object msg = in.current();
-            if (msg instanceof ByteBuf) {
-                doWriteBytes((ByteBuf) msg);
-            }
+            doWriteSingle((ByteBuf) msg);
         }
     }
 
-    protected final void doWriteBytes(ByteBuf buf) {
+     private void doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+         final IovecArrayPool iovecArray = ((IOUringEventLoop) eventLoop()).getIovecArrayPool();
+
+         iovecMemoryAddress = iovecArray.createNewIovecMemoryAddress();
+         if (iovecMemoryAddress != -1) {
+             in.forEachFlushedMessage(iovecArray);
+
+             if (iovecArray.count() > 0) {
+                 submissionQueue().addWritev(socket.intValue(), iovecMemoryAddress, iovecArray.count());
+                 submissionQueue().submit();
+             }
+         }
+         //Todo error handling
+     }
+
+
+    protected final void doWriteSingle(ByteBuf buf) {
         if (buf.hasMemoryAddress()) {
             //link poll<link>write operation
             addPollOut();
@@ -310,6 +336,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
         private IOUringRecvByteAllocatorHandle allocHandle;
+
+        @Override
+        protected final void flush0() {
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call forceFlush() later,
+            // and thus there's no need to call it now.
+            if (!writeScheduled) {
+                super.flush0();
+            }
+        }
 
         private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
             if (promise == null) {
@@ -411,12 +447,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
             }
-
         }
 
         void writeComplete(int res) {
             writeScheduled = false;
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            if (iovecMemoryAddress != 0) {
+                ((IOUringEventLoop) eventLoop()).getIovecArrayPool().releaseIovec(iovecMemoryAddress);
+            }
             if (res > 0) {
                 channelOutboundBuffer.removeBytes(res);
                 try {
