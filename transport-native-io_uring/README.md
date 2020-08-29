@@ -5,7 +5,8 @@ The new io_uring interface added to the Linux Kernel 5.1 is a high I/O performan
 ## Requirements:
 
 - x86-64 processor
-- at least 5.7.16+, 5.8.2+ or 5.9+
+- at least 5.8.2+
+- to run the tests, you have to increase memlock(default 64K)
 
 
 See [our wiki page](https://netty.io/wiki/native-transports.html).
