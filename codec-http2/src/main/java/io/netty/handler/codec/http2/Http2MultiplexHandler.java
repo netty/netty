@@ -211,6 +211,12 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 switch (stream.state()) {
                     case HALF_CLOSED_LOCAL:
                         if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+                            //create child channel for reserved stream
+                            if (stream.attachment == null) {
+                                AbstractHttp2StreamChannel ch =
+                                        new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+                                registerStreamChannel(ch);
+                            }
                             // Ignore everything which was not caused by an upgrade
                             break;
                         }
@@ -235,12 +241,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
                         }
-                        ChannelFuture future = ctx.channel().eventLoop().register(ch);
-                        if (future.isDone()) {
-                            registerDone(future);
-                        } else {
-                            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
-                        }
+                        registerStreamChannel(ch);
                         break;
                     case CLOSED:
                         AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
@@ -256,6 +257,15 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             return;
         }
         ctx.fireUserEventTriggered(evt);
+    }
+
+    private void registerStreamChannel(AbstractHttp2StreamChannel ch) {
+        ChannelFuture future = ctx.channel().eventLoop().register(ch);
+        if (future.isDone()) {
+            registerDone(future);
+        } else {
+            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
+        }
     }
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.

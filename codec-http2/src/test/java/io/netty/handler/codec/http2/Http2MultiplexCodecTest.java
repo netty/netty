@@ -19,8 +19,13 @@ import io.netty.channel.ChannelHandler;
 public class Http2MultiplexCodecTest extends Http2MultiplexTest<Http2FrameCodec> {
 
     @Override
+    protected boolean isServer() {
+        return true;
+    }
+
+    @Override
     protected Http2FrameCodec newCodec(TestChannelInitializer childChannelInitializer, Http2FrameWriter frameWriter) {
-        return new Http2MultiplexCodecBuilder(true, childChannelInitializer).frameWriter(frameWriter).build();
+        return new Http2MultiplexCodecBuilder(isServer(), childChannelInitializer).frameWriter(frameWriter).build();
     }
 
     @Override

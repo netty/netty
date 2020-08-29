@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -17,13 +17,13 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelHandler;
 
 /**
- * Unit tests for {@link Http2MultiplexHandler} used for server.
+ * Unit tests for {@link Http2MultiplexHandler} used for client.
  */
-public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCodec> {
+public class Http2MultiplexHandlerClientTest extends Http2MultiplexTest<Http2FrameCodec> {
 
     @Override
     protected boolean isServer() {
-        return true;
+        return false;
     }
 
     @Override
