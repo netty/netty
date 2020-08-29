@@ -16,15 +16,15 @@
 package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 final class PCapWriter implements Closeable {
-    private final long myStartTime = System.nanoTime();
+    private final SimpleDateFormat sdf = new SimpleDateFormat("SSSSSSSSS");
     private final OutputStream outputStream;
 
     /**
@@ -33,10 +33,9 @@ final class PCapWriter implements Closeable {
      *
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    PCapWriter(OutputStream outputStream) throws IOException {
+    PCapWriter(OutputStream outputStream, ByteBuf byteBuf) throws IOException {
         this.outputStream = outputStream;
 
-        ByteBuf byteBuf = Unpooled.buffer();
         PcapHeaders.writeGlobalHeader(byteBuf);
         byteBuf.readBytes(outputStream, byteBuf.readableBytes());
         byteBuf.release();
@@ -46,22 +45,26 @@ final class PCapWriter implements Closeable {
      * Write Packet in Pcap OutputStream.
      *
      * @param packetHeaderBuf Packer Header {@link ByteBuf}
-     * @param packet Packet
+     * @param packet          Packet
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
-        long difference = System.nanoTime() - myStartTime;
+        long currentTime = System.currentTimeMillis();
+
+        String microsecond = sdf.format(new Date(currentTime));
+        microsecond = microsecond.substring(microsecond.indexOf(".") + 1);
 
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
-                (int) TimeUnit.SECONDS.convert(difference, TimeUnit.NANOSECONDS),
-                (int) TimeUnit.MICROSECONDS.convert(difference, TimeUnit.NANOSECONDS),
+                currentTime,
+                Integer.parseInt(microsecond),
                 packet.readableBytes(),
                 packet.readableBytes()
         );
 
         packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
         packet.readBytes(outputStream, packet.readableBytes());
+        packetHeaderBuf.release();
     }
 
     @Override

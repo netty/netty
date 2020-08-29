@@ -41,23 +41,24 @@ final class TCPPacket {
         int ece = 0;
         int cwr = 0;
 
-        for (Flag f : flags) {
-            if (f == Flag.FIN) {
-                fin = 1;
-            } else if (f == Flag.SYN) {
-                syn = 1;
-            } else if (f == Flag.RST) {
-                rst = 1;
-            } else if (f == Flag.PSH) {
-                psh = 1;
-            } else if (f == Flag.ACK) {
-                ack = 1;
-            } else if (f == Flag.URG) {
-                urg = 1;
-            } else if (f == Flag.ECE) {
-                ece = 1;
-            } else if (f == Flag.CWR) {
-                cwr = 1;
+        for (Flag flag : flags) {
+            switch (flag) {
+                case FIN:
+                    fin = 1;
+                case SYN:
+                    syn = 1;
+                case RST:
+                    rst = 1;
+                case PSH:
+                    psh = 1;
+                case ACK:
+                    ack = 1;
+                case URG:
+                    urg = 1;
+                case ECE:
+                    ece = 1;
+                case CWR:
+                    cwr = 1;
             }
         }
 
@@ -70,14 +71,14 @@ final class TCPPacket {
                 ece << 6 |
                 cwr << 7;
 
-        byteBuf.writeShort(srcPort); // Source Port
-        byteBuf.writeShort(dstPort); // Destination Port
-        byteBuf.writeInt(segmentNumber);
-        byteBuf.writeInt(ackNumber);         // Acknowledgment Number
+        byteBuf.writeShort(srcPort);     // Source Port
+        byteBuf.writeShort(dstPort);     // Destination Port
+        byteBuf.writeInt(segmentNumber); // Segment Number
+        byteBuf.writeInt(ackNumber);     // Acknowledgment Number
         byteBuf.writeShort(5 << 12 | tcpFlags); // Flags
-        byteBuf.writeShort(65535);   // Window Size
-        byteBuf.writeShort(0x0001);  // Checksum
-        byteBuf.writeShort(0);       // Urgent Pointer
+        byteBuf.writeShort(65535);       // Window Size
+        byteBuf.writeShort(0x0001);      // Checksum
+        byteBuf.writeShort(0);           // Urgent Pointer
 
         if (payload != null) {
             byteBuf.writeBytes(payload); //  Payload of Data
