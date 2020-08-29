@@ -62,14 +62,23 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     /**
      * Create new {@link PCAPWriteHandler} Instance.
+     * {@code isTCP}, {@code isServer} and {@code captureZeroByte} are set to {@code false}.
+     *
+     * @param outputStream OutputStream where Pcap data will be written
+     */
+    public PCAPWriteHandler(OutputStream outputStream) {
+        this(outputStream, false, false, false);
+    }
+
+    /**
+     * Create new {@link PCAPWriteHandler} Instance.
      * {@code captureZeroByte} is set to {@code false}.
      *
      * @param outputStream OutputStream where Pcap data will be written
      * @param isTCP        {@code true} to capture TCP packets
      * @param isServer     {@code true} if we'll capture packet as server
-     * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer) throws IOException {
+    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer) {
         this(outputStream, isTCP, isServer, false);
     }
 
@@ -80,9 +89,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
      * @param isTCP           {@code true} to capture TCP packets
      * @param isServer        {@code true} if we'll capture packet as server
      * @param captureZeroByte {@code true} if we'll capture packets with 0 bytes
-     * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer, boolean captureZeroByte) throws IOException {
+    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer, boolean captureZeroByte) {
         this.outputStream = outputStream;
         this.isTCP = isTCP;
         this.isServer = isServer;
@@ -218,7 +226,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         InetSocketAddress dstAddr = datagramPacket.recipient();
 
         logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}", datagramPacket.content().readableBytes()
-                ,srcAddr, dstAddr);
+                , srcAddr, dstAddr);
 
         UDPPacket.writePacket(udpBuf,
                 datagramPacket.content(),
