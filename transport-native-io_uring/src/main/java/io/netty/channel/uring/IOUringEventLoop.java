@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.uring.AbstractIOUringChannel.AbstractUringUnsafe;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
@@ -29,8 +28,6 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static io.netty.channel.unix.Errors.*;
 
 final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
@@ -118,7 +115,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
 
         // Lets add the eventfd related events before starting to do any real work.
-        submissionQueue.addPollInLink(eventfd.intValue());
+        submissionQueue.addPollIn(eventfd.intValue());
         submissionQueue.submit();
 
         for (; ; ) {
@@ -232,7 +229,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                     // an extra eventfd_write(....)
                     Native.eventFdRead(eventfd.intValue());
 
-                    submissionQueue.addPollInLink(eventfd.intValue());
+                    submissionQueue.addPollIn(eventfd.intValue());
                     // Submit so its picked up
                     submissionQueue.submit();
                 } else {
@@ -241,7 +238,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         break;
                     }
                     switch (pollMask) {
-                        case IOUring.POLLMASK_IN_LINK:
+                        case IOUring.POLLMASK_IN:
                             ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
                             break;
                         case IOUring.POLLMASK_OUT:

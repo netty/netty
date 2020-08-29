@@ -11,9 +11,17 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assume.assumeTrue;
+
 public class PollRemoveTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Sharable
     class EchoUringServerHandler extends ChannelInboundHandlerAdapter {

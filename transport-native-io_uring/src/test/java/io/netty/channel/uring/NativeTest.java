@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.FileDescriptor;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
@@ -24,10 +25,16 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 import io.netty.buffer.ByteBuf;
 
 public class NativeTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Test
     public void canWriteFile() throws Exception {
@@ -137,7 +144,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPollInLink(eventFd.intValue()));
+        assertTrue(submissionQueue.addPollIn(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
@@ -195,7 +202,7 @@ public class NativeTest {
         };
         waitingCqe.start();
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPollInLink(eventFd.intValue()));
+        assertTrue(submissionQueue.addPollIn(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
@@ -223,7 +230,7 @@ public class NativeTest {
         final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
 
         FileDescriptor eventFd = Native.newEventFd();
-        submissionQueue.addPollInLink(eventFd.intValue());
+        submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
 
         Thread.sleep(10);
