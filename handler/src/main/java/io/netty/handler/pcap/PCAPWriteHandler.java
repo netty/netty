@@ -30,9 +30,9 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-public final class WritePCAPHandler extends ChannelDuplexHandler {
+public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
-    private final InternalLogger logger = InternalLoggerFactory.getInstance(WritePCAPHandler.class);
+    private final InternalLogger logger = InternalLoggerFactory.getInstance(PCAPWriteHandler.class);
 
     /**
      * TCP Sender Segment Number.
@@ -61,7 +61,7 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
     private final boolean captureZeroByte;
 
     /**
-     * Create new {@link WritePCAPHandler} Instance.
+     * Create new {@link PCAPWriteHandler} Instance.
      * {@code captureZeroByte} is set to {@code false}.
      *
      * @param outputStream OutputStream where Pcap data will be written
@@ -69,12 +69,12 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
      * @param isServer     {@code true} if we'll capture packet as server
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    public WritePCAPHandler(OutputStream outputStream, boolean isTCP, boolean isServer) throws IOException {
+    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer) throws IOException {
         this(outputStream, isTCP, isServer, false);
     }
 
     /**
-     * Create new {@link WritePCAPHandler} Instance
+     * Create new {@link PCAPWriteHandler} Instance
      *
      * @param outputStream    OutputStream where Pcap data will be written
      * @param isTCP           {@code true} to capture TCP packets
@@ -82,7 +82,7 @@ public final class WritePCAPHandler extends ChannelDuplexHandler {
      * @param captureZeroByte {@code true} if we'll capture packets with 0 bytes
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    public WritePCAPHandler(OutputStream outputStream, boolean isTCP, boolean isServer, boolean captureZeroByte) throws IOException {
+    public PCAPWriteHandler(OutputStream outputStream, boolean isTCP, boolean isServer, boolean captureZeroByte) throws IOException {
         this.outputStream = outputStream;
         this.isTCP = isTCP;
         this.isServer = isServer;

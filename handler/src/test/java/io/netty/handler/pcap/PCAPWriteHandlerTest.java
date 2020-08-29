@@ -13,13 +13,13 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-public class WritePCAPHandlerTest {
+public class PCAPWriteHandlerTest {
 
     @Test
     public void udpV4() throws IOException {
 
         ByteBuf byteBuf = Unpooled.buffer();
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new WritePCAPHandler(
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new PCAPWriteHandler(
                 new ByteBufOutputStream(byteBuf), true, false, false
         ));
 
