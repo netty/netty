@@ -54,9 +54,9 @@ import java.util.List;
 @Sharable
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
+    private final boolean acceptIfNotFound;
     private final List<IpSubnetFilterRule> ipv4Rules;
     private final List<IpSubnetFilterRule> ipv6Rules;
-    private final boolean acceptIfNotFound;
     private final IpFilterRuleType ipFilterRuleTypeIPv4;
     private final IpFilterRuleType ipFilterRuleTypeIPv6;
 
