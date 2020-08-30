@@ -192,6 +192,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
                 break;
             case IOUring.OP_WRITEV:
+                // Fall-through
+
             case IOUring.OP_WRITE:
                 AbstractIOUringChannel writeChannel = channels.get(fd);
                 if (writeChannel == null) {
@@ -219,18 +221,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                     if (channel == null) {
                         break;
                     }
-                    switch (pollMask) {
-                        case IOUring.POLLMASK_IN:
-                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
-                            break;
-                        case IOUring.POLLMASK_OUT:
-                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
-                            break;
-                        case IOUring.POLLMASK_RDHUP:
-                            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
-                            break;
-                        default:
-                            break;
+                    if ((pollMask & IOUring.POLLMASK_OUT) != 0) {
+                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
+                    }
+                    if ((pollMask & IOUring.POLLMASK_IN) != 0) {
+                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
+                    }
+                    if ((pollMask & IOUring.POLLMASK_RDHUP) != 0) {
+                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
                     }
                 }
                 break;
