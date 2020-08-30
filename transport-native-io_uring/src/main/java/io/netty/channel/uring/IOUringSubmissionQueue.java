@@ -288,10 +288,11 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submitted = flushSqe();
         logger.trace("Submitted: {}", submitted);
-
-        int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
-        if (ret < 0) {
-            throw new RuntimeException("ioUringEnter syscall");
+        if (submitted > 0) {
+            int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
+            if (ret < 0) {
+                throw new RuntimeException("ioUringEnter syscall");
+            }
         }
     }
 
