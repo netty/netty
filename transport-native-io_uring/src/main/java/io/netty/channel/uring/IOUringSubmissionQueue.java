@@ -126,12 +126,7 @@ final class IOUringSubmissionQueue {
         long uData = convertToUserData(op, fd, pollMask);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
-        //poll<link>read or accept operation
-        if (op == 6 && (pollMask == IOUring.POLLMASK_OUT_LINK)) {
-            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) IOSQE_IO_LINK);
-        } else {
-            PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
-        }
+        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
 
         //c union set Rw-Flags or accept_flags
         if (op != IOUring.OP_ACCEPT) {
@@ -152,8 +147,6 @@ final class IOUringSubmissionQueue {
             PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
         }
 
-
-
         logger.trace("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
         logger.trace("BufferAddress: {}", PlatformDependent.getLong(sqe + SQE_ADDRESS_FIELD));
         logger.trace("Length: {}", PlatformDependent.getInt(sqe + SQE_LEN_FIELD));
@@ -172,10 +165,6 @@ final class IOUringSubmissionQueue {
 
     public boolean addPollIn(int fd) {
         return addPoll(fd, IOUring.POLLMASK_IN);
-    }
-
-    public boolean addPollOutLink(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_OUT_LINK);
     }
 
     public boolean addPollRdHup(int fd) {

@@ -54,7 +54,7 @@ final class IovecArrayPool implements MessageProcessor {
         count = 0;
 
         if (remainingIovec.empty()) {
-            //Todo allocate new Memory
+            // Todo allocate new Memory
             return -1;
         }
         long index = remainingIovec.pop();
@@ -135,7 +135,7 @@ final class IovecArrayPool implements MessageProcessor {
     }
 
     @Override
-    public boolean processMessage(Object msg) throws Exception {
+    public boolean processMessage(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
             return add(buffer, buffer.readerIndex(), buffer.readableBytes());

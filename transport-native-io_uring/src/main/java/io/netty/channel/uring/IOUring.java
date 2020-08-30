@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.SystemPropertyUtil;
 
 final class IOUring {
@@ -31,9 +30,8 @@ final class IOUring {
     static final int OP_CONNECT = 16;
 
     static final int POLLMASK_IN = 1;
-    static final int POLLMASK_OUT_LINK = 4;
-    static final int POLLMASK_RDHUP = 8192;
     static final int POLLMASK_OUT = 4;
+    static final int POLLMASK_RDHUP = 8192;
 
     static {
         Throwable cause = null;
