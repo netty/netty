@@ -290,7 +290,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
              try {
                  in.forEachFlushedMessage(iovecArray);
              } catch (Exception e) {
-
+                 // This should never happem, anyway fallback to single write.
+                 doWriteSingle((ByteBuf) in.current());
              }
 
              if (iovecArray.count() > 0) {
@@ -298,8 +299,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                  submissionQueue().submit();
                  writeScheduled = true;
              }
+         } else {
+             // We were not be able to create a new iovec, fallback to single write.
+             doWriteSingle((ByteBuf) in.current());
          }
-         //Todo error handling
      }
 
 
