@@ -71,6 +71,8 @@ final class IOUringSubmissionQueue {
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
 
+    //private int sqeSubmitCounter;
+
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long fFlagsAdress, long kDroppedAddress, long arrayAddress,
                            long submissionQueueArrayAddress, int ringSize,
@@ -94,14 +96,15 @@ final class IOUringSubmissionQueue {
     public long getSqe() {
         long next = sqeTail + 1;
         long kRingEntries = toUnsignedLong(PlatformDependent.getInt(kRingEntriesAddress));
+
+        //acquire memory barrier
+        long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
+
         long sqe = 0;
-        if ((next - sqeHead) <= kRingEntries) {
+        if ((next - kHead) <= kRingEntries) {
             long index = sqeTail & toUnsignedLong(PlatformDependent.getInt(kRingMaskAddress));
             sqe = SQE_SIZE * index + submissionQueueArrayAddress;
             sqeTail = next;
-        }
-        if (sqe == 0) {
-            logger.trace("sqe is null");
         }
         return sqe;
     }
@@ -176,71 +179,114 @@ final class IOUringSubmissionQueue {
     }
 
     private boolean addPoll(int fd, int pollMask) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
 
         setData(sqe, (byte) IOUring.IO_POLL, pollMask, fd, 0, 0, 0);
-        return true;
+        return submitted;
     }
 
+    //return true -> submit() was called
     public boolean addRead(int fd, long bufferAddress, int pos, int limit) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
-        return true;
+        return submitted;
     }
 
     public boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
-        return true;
+        return submitted;
     }
 
     public boolean addAccept(int fd) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_ACCEPT, 0, fd, 0, 0, 0);
-        return true;
+        return submitted;
     }
 
     //fill the address which is associated with server poll link user_data
     public boolean addPollRemove(int fd) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_POLL_REMOVE, 0, fd, 0, 0, 0);
 
-        return true;
+        return submitted;
     }
 
     public boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
 
-        return true;
+        return submitted;
     }
 
     public boolean addWritev(int fd, long iovecArrayAddress, int length) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setData(sqe, (byte) IOUring.OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
 
-        return true;
+        return submitted;
     }
 
     private int flushSqe() {
@@ -277,6 +323,7 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submitted = flushSqe();
         logger.trace("Submitted: {}", submitted);
+        System.out.println("submitted: " + submitted);
         if (submitted > 0) {
             int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
             if (ret < 0) {
@@ -306,17 +353,13 @@ final class IOUringSubmissionQueue {
         return (long) fd << 32 | opMask & 0xFFFFFFFFL;
     }
 
+    public long count() {
+        return (sqeTail - toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress)));
+    }
+
     //delete memory
     public void release() {
         Buffer.free(timeoutMemory);
-    }
-
-    public void setSqeHead(long sqeHead) {
-        this.sqeHead = sqeHead;
-    }
-
-    public void setSqeTail(long sqeTail) {
-        this.sqeTail = sqeTail;
     }
 
     public long getKHeadAddress() {
@@ -351,16 +394,8 @@ final class IOUringSubmissionQueue {
         return this.submissionQueueArrayAddress;
     }
 
-    public long getSqeHead() {
-        return this.sqeHead;
-    }
-
     public int getRingFd() {
         return ringFd;
-    }
-
-    public long getSqeTail() {
-        return this.sqeTail;
     }
 
     public int getRingSize() {
