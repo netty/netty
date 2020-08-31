@@ -20,6 +20,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -187,17 +188,13 @@ public class NativeTest {
             @Override
             public void run() {
                 assertTrue(completionQueue.ioUringWaitCqe());
-                try {
-                    assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
-                        @Override
-                        public boolean handle(int fd, int res, long flags, int op, int mask) {
-                            assertEquals(1, res);
-                            return true;
-                        }
-                    }));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        assertEquals(1, res);
+                        return true;
+                    }
+                }));
             }
         };
         waitingCqe.start();
@@ -232,47 +229,46 @@ public class NativeTest {
         FileDescriptor eventFd = Native.newEventFd();
         submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
-
-        Thread.sleep(10);
-
         submissionQueue.addPollRemove(eventFd.intValue(), IOUring.POLLMASK_IN);
         submissionQueue.submit();
 
+        final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
         Thread waitingCqe = new Thread() {
+            private final IOUringCompletionQueue.IOUringCompletionQueueCallback verifyCallback =
+                    new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                @Override
+                public boolean handle(int fd, int res, long flags, int op, int mask) {
+                    if (op == IOUring.IO_POLL) {
+                        assertEquals(IOUringEventLoop.ECANCELED, res);
+                    } else if (op == IOUring.OP_POLL_REMOVE) {
+                        assertEquals(0, res);
+                    } else {
+                        fail("op " + op);
+                    }
+                    return false;
+                }
+            };
+
             @Override
             public void run() {
-                assertTrue(completionQueue.ioUringWaitCqe());
                 try {
-                    assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
-                        @Override
-                        public boolean handle(int fd, int res, long flags, int op, int mask) {
-                            assertEquals(IOUringEventLoop.ECANCELED, res);
-                            assertEquals(IOUring.IO_POLL, op);
-                            return true;
-                        }
-                    }));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                try {
-                    assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
-                        @Override
-                        public boolean handle(int fd, int res, long flags, int op, int mask) {
-                            assertEquals(0, res);
-                            assertEquals(IOUring.OP_POLL_REMOVE, op);
-                            return true;
-                        }
-                    }));
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    assertTrue(completionQueue.ioUringWaitCqe());
+                    assertEquals(1, completionQueue.process(verifyCallback));
+                    assertTrue(completionQueue.ioUringWaitCqe());
+                    assertEquals(1, completionQueue.process(verifyCallback));
+                } catch (AssertionError error) {
+                    errorRef.set(error);
                 }
             }
         };
         waitingCqe.start();
-
         waitingCqe.join();
         try {
             eventFd.close();
+            AssertionError error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
         } finally {
             ringBuffer.close();
         }

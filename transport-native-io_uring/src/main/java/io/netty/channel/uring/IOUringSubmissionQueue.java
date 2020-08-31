@@ -122,32 +122,31 @@ final class IOUringSubmissionQueue {
         //user_data should be same as POLL_LINK fd
         if (op == IOUring.OP_POLL_REMOVE) {
             PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
-            long uData = convertToUserData(op, fd, pollMask);
+            long uData = convertToUserData((byte) IOUring.IO_POLL, fd, pollMask);
             PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, uData);
+            PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, convertToUserData(op, fd, 0));
+            PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, 0);
+        } else {
+            long uData = convertToUserData(op, fd, pollMask);
+            PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
+            //c union set Rw-Flags or accept_flags
+            if (op != IOUring.OP_ACCEPT) {
+                PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
+            } else {
+                //accept_flags set NON_BLOCKING
+                PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, SOCK_NONBLOCK | SOCK_CLOEXEC);
+            }
         }
-
-        long uData = convertToUserData(op, fd, pollMask);
-        PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
 
         PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) 0);
 
-        //c union set Rw-Flags or accept_flags
-        if (op != IOUring.OP_ACCEPT) {
-            PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, 0);
-        } else {
-            //accept_flags set NON_BLOCKING
-            PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, SOCK_NONBLOCK | SOCK_CLOEXEC);
-        }
+
 
         // pad field array -> all fields should be zero
         long offsetIndex = 0;
         for (int i = 0; i < 3; i++) {
             PlatformDependent.putLong(sqe + SQE_PAD_FIELD + offsetIndex, 0);
             offsetIndex += 8;
-        }
-
-        if (pollMask != 0) {
-            PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
         }
 
         logger.trace("UserDataField: {}", PlatformDependent.getLong(sqe + SQE_USER_DATA_FIELD));
