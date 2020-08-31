@@ -24,14 +24,25 @@ public final class MqttUnsubscribeMessage extends MqttMessage {
 
     public MqttUnsubscribeMessage(
             MqttFixedHeader mqttFixedHeader,
-            MqttMessageIdVariableHeader variableHeader,
+            MqttMessageIdAndPropertiesVariableHeader variableHeader,
             MqttUnsubscribePayload payload) {
         super(mqttFixedHeader, variableHeader, payload);
+    }
+
+    public MqttUnsubscribeMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttMessageIdVariableHeader variableHeader,
+            MqttUnsubscribePayload payload) {
+        this(mqttFixedHeader, variableHeader.withEmptyProperties(), payload);
     }
 
     @Override
     public MqttMessageIdVariableHeader variableHeader() {
         return (MqttMessageIdVariableHeader) super.variableHeader();
+    }
+
+    public MqttMessageIdAndPropertiesVariableHeader idAndPropertiesVariableHeader() {
+        return (MqttMessageIdAndPropertiesVariableHeader) super.variableHeader();
     }
 
     @Override

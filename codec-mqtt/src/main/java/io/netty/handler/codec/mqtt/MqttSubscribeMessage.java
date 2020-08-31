@@ -24,14 +24,25 @@ public final class MqttSubscribeMessage extends MqttMessage {
 
     public MqttSubscribeMessage(
             MqttFixedHeader mqttFixedHeader,
-            MqttMessageIdVariableHeader variableHeader,
+            MqttMessageIdAndPropertiesVariableHeader variableHeader,
             MqttSubscribePayload payload) {
         super(mqttFixedHeader, variableHeader, payload);
+    }
+
+    public MqttSubscribeMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttMessageIdVariableHeader variableHeader,
+            MqttSubscribePayload payload) {
+        this(mqttFixedHeader, variableHeader.withEmptyProperties(), payload);
     }
 
     @Override
     public MqttMessageIdVariableHeader variableHeader() {
         return (MqttMessageIdVariableHeader) super.variableHeader();
+    }
+
+    public MqttMessageIdAndPropertiesVariableHeader idAndPropertiesVariableHeader() {
+        return (MqttMessageIdAndPropertiesVariableHeader) super.variableHeader();
     }
 
     @Override

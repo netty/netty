@@ -25,7 +25,8 @@ import io.netty.util.CharsetUtil;
  */
 public enum MqttVersion {
     MQTT_3_1("MQIsdp", (byte) 3),
-    MQTT_3_1_1("MQTT", (byte) 4);
+    MQTT_3_1_1("MQTT", (byte) 4),
+    MQTT_5("MQTT", (byte) 5);
 
     private final String name;
     private final byte level;
@@ -49,8 +50,8 @@ public enum MqttVersion {
 
     public static MqttVersion fromProtocolNameAndLevel(String protocolName, byte protocolLevel) {
         for (MqttVersion mv : values()) {
-            if (mv.name.equals(protocolName)) {
-                if (mv.level == protocolLevel) {
+            if (mv.level == protocolLevel) {
+                if (mv.name.equals(protocolName)) {
                     return mv;
                 } else {
                     throw new MqttUnacceptableProtocolVersionException(protocolName + " and " +
