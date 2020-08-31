@@ -24,6 +24,7 @@ import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
@@ -54,8 +55,13 @@ public class MqttHeartBeatClientHandler extends ChannelInboundHandlerAdapter {
                 new MqttFixedHeader(MqttMessageType.CONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
         MqttConnectVariableHeader connectVariableHeader =
                 new MqttConnectVariableHeader(PROTOCOL_NAME_MQTT_3_1_1, PROTOCOL_VERSION_MQTT_3_1_1, true, true, false,
-                                              0, false, false, 20);
-        MqttConnectPayload connectPayload = new MqttConnectPayload(clientId, null, null, userName, password);
+                                              0, false, false, 20, MqttProperties.NO_PROPERTIES);
+        MqttConnectPayload connectPayload = new MqttConnectPayload(clientId,
+                MqttProperties.NO_PROPERTIES,
+                null,
+                null,
+                userName,
+                password);
         MqttConnectMessage connectMessage =
                 new MqttConnectMessage(connectFixedHeader, connectVariableHeader, connectPayload);
         ctx.writeAndFlush(connectMessage);

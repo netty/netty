@@ -22,7 +22,7 @@ import io.netty.util.internal.StringUtil;
  * Variable Header containing only Message Id
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#msg-id">MQTTV3.1/msg-id</a>
  */
-public final class MqttMessageIdVariableHeader {
+public class MqttMessageIdVariableHeader {
 
     private final int messageId;
 
@@ -33,7 +33,7 @@ public final class MqttMessageIdVariableHeader {
       return new MqttMessageIdVariableHeader(messageId);
     }
 
-    private MqttMessageIdVariableHeader(int messageId) {
+    protected MqttMessageIdVariableHeader(int messageId) {
         this.messageId = messageId;
     }
 
@@ -48,5 +48,9 @@ public final class MqttMessageIdVariableHeader {
             .append("messageId=").append(messageId)
             .append(']')
             .toString();
+    }
+
+    public MqttMessageIdAndPropertiesVariableHeader withEmptyProperties() {
+        return new MqttMessageIdAndPropertiesVariableHeader(messageId, MqttProperties.NO_PROPERTIES);
     }
 }
