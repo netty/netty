@@ -417,6 +417,18 @@ public final class NetUtil {
     }
 
     /**
+     * Convert {@link Inet4Address} into {@code int}
+     */
+    public static int ipv4AddressToInt(Inet4Address ipAddress) {
+        byte[] octets = ipAddress.getAddress();
+
+        return  (octets[0] & 0xff) << 24 |
+                (octets[1] & 0xff) << 16 |
+                (octets[2] & 0xff) << 8 |
+                 octets[3] & 0xff;
+    }
+
+    /**
      * Converts a 32-bit integer into an IPv4 address.
      */
     public static String intToIpAddress(int i) {
