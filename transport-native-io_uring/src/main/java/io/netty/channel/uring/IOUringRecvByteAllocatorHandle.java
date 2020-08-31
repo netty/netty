@@ -25,12 +25,6 @@ final class IOUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
         implements RecvByteBufAllocator.ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
-    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
-        @Override
-        public boolean get() {
-            return true;
-        }
-    };
 
     IOUringRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
         super(handle);

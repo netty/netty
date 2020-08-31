@@ -82,7 +82,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private volatile SocketAddress remote;
 
     //to release it
-    private long iovecMemoryAddress;
+    private long iovecMemoryAddress = -1;
 
     AbstractIOUringChannel(final Channel parent, LinuxSocket socket) {
         super(parent);
@@ -274,8 +274,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int msgCount = in.size();
         if (msgCount > 1 && in.current() instanceof ByteBuf) {
             doWriteMultiple(in);
-            //Object msg = in.current();
-            //doWriteSingle((ByteBuf) msg);
         } else if (msgCount == 1) {
             Object msg = in.current();
             doWriteSingle((ByteBuf) msg);

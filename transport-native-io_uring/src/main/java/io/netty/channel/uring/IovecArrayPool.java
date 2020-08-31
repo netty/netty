@@ -19,7 +19,7 @@ final class IovecArrayPool implements MessageProcessor {
     private static int poolSize = 40;
 
     //Todo IOVEC entries shoule be lower IOVEMAX
-    private static final int IOV_ENTRIES = 500;
+    private static final int IOV_ENTRIES = 1024;
 
     private static final int IOVEC_ARRAY_SIZE = IOV_SIZE * IOV_ENTRIES;
     private static final int CAPACITY = IOVEC_ARRAY_SIZE * poolSize;
@@ -60,6 +60,7 @@ final class IovecArrayPool implements MessageProcessor {
         long index = remainingIovec.pop();
 
         currentIovecMemoryAddress = index * IOVEC_ARRAY_SIZE + iovecArrayMemoryAddress;
+
         return currentIovecMemoryAddress;
     }
 
@@ -123,12 +124,6 @@ final class IovecArrayPool implements MessageProcessor {
             if (PlatformDependent.hasUnsafe()) {
                 PlatformDependent.putLong(baseOffset + currentIovecMemoryAddress, addr);
                 PlatformDependent.putLong(lengthOffset + currentIovecMemoryAddress, len);
-            }
-        } else {
-            assert ADDRESS_SIZE == 4;
-            if (PlatformDependent.hasUnsafe()) {
-                PlatformDependent.putInt(baseOffset + currentIovecMemoryAddress, (int) addr);
-                PlatformDependent.putInt(lengthOffset + currentIovecMemoryAddress, len);
             }
         }
         return true;
