@@ -19,6 +19,13 @@ import io.netty.buffer.ByteBuf;
 
 final class TCPPacket {
 
+    /**
+     * <p> Data Offset + Reserved Bits. </p>
+     *
+     * Equivalent to: {@code 5 << 12}
+     */
+    private static final short OFFSET = 20480;
+
     private TCPPacket() {
         // Prevent outside initialization
     }
@@ -32,53 +39,13 @@ final class TCPPacket {
      * @param dstPort Destination Port
      */
     static void writePacket(ByteBuf byteBuf, ByteBuf payload, int segmentNumber, int ackNumber, int srcPort,
-                            int dstPort, Flag... flags) {
-        int fin = 0;
-        int syn = 0;
-        int rst = 0;
-        int psh = 0;
-        int ack = 0;
-        int urg = 0;
-        int ece = 0;
-        int cwr = 0;
-
-        for (Flag flag : flags) {
-            switch (flag) {
-                case FIN:
-                    fin = 1;
-                case SYN:
-                    syn = 1;
-                case RST:
-                    rst = 1;
-                case PSH:
-                    psh = 1;
-                case ACK:
-                    ack = 1;
-                case URG:
-                    urg = 1;
-                case ECE:
-                    ece = 1;
-                case CWR:
-                    cwr = 1;
-                default:
-                    // NO-OP
-            }
-        }
-
-        int tcpFlags = fin << 0 |
-                syn << 1 |
-                rst << 2 |
-                psh << 3 |
-                ack << 4 |
-                urg << 5 |
-                ece << 6 |
-                cwr << 7;
+                            int dstPort, TCPFlag... tcpFlags) {
 
         byteBuf.writeShort(srcPort);     // Source Port
         byteBuf.writeShort(dstPort);     // Destination Port
         byteBuf.writeInt(segmentNumber); // Segment Number
         byteBuf.writeInt(ackNumber);     // Acknowledgment Number
-        byteBuf.writeShort(5 << 12 | tcpFlags); // Flags
+        byteBuf.writeShort(OFFSET | TCPFlag.getFlag(tcpFlags)); // Flags
         byteBuf.writeShort(65535);       // Window Size
         byteBuf.writeShort(0x0001);      // Checksum
         byteBuf.writeShort(0);           // Urgent Pointer
@@ -88,7 +55,7 @@ final class TCPPacket {
         }
     }
 
-    enum Flag {
+    enum TCPFlag {
         FIN,
         SYN,
         RST,
@@ -96,6 +63,46 @@ final class TCPPacket {
         ACK,
         URG,
         ECE,
-        CWR,
+        CWR;
+
+        static int getFlag(TCPFlag... tcpFlags) {
+            int fin = 0;
+            int syn = 0;
+            int rst = 0;
+            int psh = 0;
+            int ack = 0;
+            int urg = 0;
+            int ece = 0;
+            int cwr = 0;
+
+            for (TCPFlag tcpFlag : tcpFlags) {
+                if (tcpFlag == TCPFlag.FIN) {
+                    fin = 1;
+                } else if (tcpFlag == TCPFlag.SYN) {
+                    syn = 1;
+                } else if (tcpFlag == TCPFlag.RST) {
+                    rst = 1;
+                } else if (tcpFlag == TCPFlag.PSH) {
+                    psh = 1;
+                } else if (tcpFlag == TCPFlag.ACK) {
+                    ack = 1;
+                } else if (tcpFlag == TCPFlag.URG) {
+                    urg = 1;
+                } else if (tcpFlag == TCPFlag.ECE) {
+                    ece = 1;
+                } else if (tcpFlag == TCPFlag.CWR) {
+                    cwr = 1;
+                }
+            }
+
+            return  fin << 0 |
+                    syn << 1 |
+                    rst << 2 |
+                    psh << 3 |
+                    ack << 4 |
+                    urg << 5 |
+                    ece << 6 |
+                    cwr << 7;
+        }
     }
 }

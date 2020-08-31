@@ -19,7 +19,22 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.concurrent.TimeUnit;
 
-final class PcapHeaders {
+public final class PcapHeaders {
+
+    /**
+     * Pcap Global Header built from:
+     * <ol>
+     *      <li> magic_number </li>
+     *      <li> version_major </li>
+     *      <li> version_minor </li>
+     *      <li> thiszone </li>
+     *      <li> sigfigs </li>
+     *      <li> snaplen </li>
+     *      <li> network </li>
+     * </ol>
+     */
+    private static final byte[] GLOBAL_HEADER = new byte[]{-95, -78, -61, -44, 0, 2, 0, 4, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0, 0, 1};
 
     private PcapHeaders() {
         // Prevent outside initialization
@@ -27,22 +42,17 @@ final class PcapHeaders {
 
     /**
      * Write Pcap Global Header
+     *
      * @param byteBuf byteBuf ByteBuf where we'll write header data
      */
-    static void writeGlobalHeader(ByteBuf byteBuf) {
-        byteBuf.writeInt(0xa1b2c3d4); // magic_number
-        byteBuf.writeShort(2);        // version_major
-        byteBuf.writeShort(4);        // version_minor
-        byteBuf.writeInt(0);          // thiszone
-        byteBuf.writeInt(0);          // sigfigs
-        byteBuf.writeInt(0xffff);     // snaplen
-        byteBuf.writeInt(1);          // network
+    public static void writeGlobalHeader(ByteBuf byteBuf) {
+        byteBuf.writeBytes(GLOBAL_HEADER);
     }
 
     /**
      * Write Pcap Packet Header
      *
-     * @param byteBuf ByteBuf where we'll write header data
+     * @param byteBuf  ByteBuf where we'll write header data
      * @param ts_sec   timestamp seconds
      * @param ts_usec  timestamp microseconds
      * @param incl_len number of octets of packet saved in file

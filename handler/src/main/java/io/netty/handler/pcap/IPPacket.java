@@ -19,6 +19,16 @@ import io.netty.buffer.ByteBuf;
 
 final class IPPacket {
 
+    private static final byte MAX_TTL = (byte) (255);
+    private static final short V4_HEADER_SIZE = 20;
+    private static final byte TCP = 6 & 0xff;
+    private static final byte UDP = 17 & 0xff;
+
+    /**
+     * Version + Traffic class + Flow label
+     */
+    private static final int IPV6_VERSION_TRAFFIC_FLOW = 60000000;
+
     private IPPacket() {
         // Prevent outside initialization
     }
@@ -32,7 +42,7 @@ final class IPPacket {
      * @param dstAddress Destination IPv4 Address
      */
     static void writeUDPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        writePacketv4(byteBuf, payload, 17, srcAddress, dstAddress);
+        writePacketv4(byteBuf, payload, UDP, srcAddress, dstAddress);
     }
 
     /**
@@ -44,7 +54,7 @@ final class IPPacket {
      * @param dstAddress Destination IPv6 Address
      */
     static void writeUDPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        writePacketv6(byteBuf, payload, 17, srcAddress, dstAddress);
+        writePacketv6(byteBuf, payload, UDP, srcAddress, dstAddress);
     }
 
     /**
@@ -56,7 +66,7 @@ final class IPPacket {
      * @param dstAddress Destination IPv4 Address
      */
     static void writeTCPv4(ByteBuf byteBuf, ByteBuf payload, int srcAddress, int dstAddress) {
-        writePacketv4(byteBuf, payload, 6, srcAddress, dstAddress);
+        writePacketv4(byteBuf, payload, TCP, srcAddress, dstAddress);
     }
 
     /**
@@ -68,17 +78,18 @@ final class IPPacket {
      * @param dstAddress Destination IPv6 Address
      */
     static void writeTCPv6(ByteBuf byteBuf, ByteBuf payload, byte[] srcAddress, byte[] dstAddress) {
-        writePacketv6(byteBuf, payload, 6, srcAddress, dstAddress);
+        writePacketv6(byteBuf, payload, TCP, srcAddress, dstAddress);
     }
 
     private static void writePacketv4(ByteBuf byteBuf, ByteBuf payload, int protocol, int srcAddress,
                                       int dstAddress) {
+
         byteBuf.writeByte(0x45);      //  Version + IHL
         byteBuf.writeByte(0x00);      //  DSCP
-        byteBuf.writeShort(payload.readableBytes() + 20); // Length
+        byteBuf.writeShort(payload.readableBytes() + V4_HEADER_SIZE); // Length
         byteBuf.writeShort(0x0000);   // Identification
         byteBuf.writeShort(0x0000);   // Fragment
-        byteBuf.writeByte(0xff);      // TTL
+        byteBuf.writeByte(MAX_TTL);   // TTL
         byteBuf.writeByte(protocol);  // Protocol
         byteBuf.writeShort(0);        // Checksum
         byteBuf.writeInt(srcAddress); // Source IPv4 Address
@@ -88,10 +99,11 @@ final class IPPacket {
 
     private static void writePacketv6(ByteBuf byteBuf, ByteBuf payload, int protocol, byte[] srcAddress,
                                       byte[] dstAddress) {
-        byteBuf.writeInt(6 << 28);          // Version  + Traffic class + Flow label
+
+        byteBuf.writeInt(IPV6_VERSION_TRAFFIC_FLOW); // Version  + Traffic class + Flow label
         byteBuf.writeShort(payload.readableBytes()); // Payload length
         byteBuf.writeByte(protocol & 0xff); // Next header
-        byteBuf.writeByte(255);             // Hop limit
+        byteBuf.writeByte(MAX_TTL);         // Hop limit
         byteBuf.writeBytes(srcAddress);     // Source IPv6 Address
         byteBuf.writeBytes(dstAddress);     // Destination IPv6 Address
         byteBuf.writeBytes(payload);        // Payload of L4
