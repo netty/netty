@@ -198,11 +198,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         private ByteBuf readBuffer;
 
         @Override
-        void pollIn(int res) {
-            readFromSocket();
-        }
-
-        private void readFromSocket() {
+        protected void scheduleRead0() {
             final ChannelConfig config = config();
 
             final ByteBufAllocator allocator = config.getAllocator();
@@ -215,6 +211,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
             assert readBuffer == null;
             readBuffer = byteBuf;
+
             submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
                     byteBuf.writerIndex(), byteBuf.capacity());
             submissionQueue.submit();
@@ -231,8 +228,6 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             ByteBuf byteBuf = this.readBuffer;
             this.readBuffer = null;
             assert byteBuf != null;
-
-            boolean writable = true;
 
             try {
                 if (res < 0) {
@@ -261,21 +256,20 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 }
 
                 allocHandle.incMessagesRead(1);
-                writable = byteBuf.isWritable();
+                boolean writable = byteBuf.isWritable();
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-            } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
-            }
-            if (!close) {
-                if (!writable) {
+                if (!writable && config().isAutoRead()) {
                     // Let's schedule another read.
-                    readFromSocket();
+                    scheduleRead();
                 } else {
                     // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
                     pipeline.fireChannelReadComplete();
                 }
+            } catch (Throwable t) {
+                handleReadException(pipeline, byteBuf, t, close, allocHandle);
             }
+
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
