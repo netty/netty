@@ -187,15 +187,6 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         }
     }
 
-    @Override
-    protected void doRegister() throws Exception {
-        super.doRegister();
-        // all non-server channels should poll POLLRDHUP
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addPollRdHup(fd().intValue());
-        submissionQueue.submit();
-    }
-
     class IOUringStreamUnsafe extends AbstractUringUnsafe {
 
         // Overridden here just to be able to access this method from AbstractEpollStreamChannel
