@@ -132,8 +132,8 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
 
         private Ip4SubnetFilterRule(Inet4Address ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
             if (cidrPrefix < 0 || cidrPrefix > 32) {
-                throw new IllegalArgumentException(String.format("IPv4 requires the subnet prefix to be in range of " +
-                        "[0,32]. The prefix was: %d", cidrPrefix));
+                throw new IllegalArgumentException(String.format("IPv4 requires the subnet prefix to be in range of "
+                        + "[0,32]. The prefix was: %d", cidrPrefix));
             }
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
@@ -181,8 +181,8 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
 
         private Ip6SubnetFilterRule(Inet6Address ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
             if (cidrPrefix < 0 || cidrPrefix > 128) {
-                throw new IllegalArgumentException(String.format("IPv6 requires the subnet prefix to be in range of " +
-                        "[0,128]. The prefix was: %d", cidrPrefix));
+                throw new IllegalArgumentException(String.format("IPv6 requires the subnet prefix to be in range of "
+                        + "[0,128]. The prefix was: %d", cidrPrefix));
             }
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
