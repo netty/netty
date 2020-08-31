@@ -67,59 +67,59 @@ public class SocketEchoTest extends AbstractSocketTest {
         testSimpleEcho0(sb, cb, false, false, true);
     }
 
-//    @Test(timeout = 30000)
-//    public void testSimpleEchoNotAutoRead() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, false, false, false);
-//    }
-//
-//    @Test//(timeout = 30000)
-//    public void testSimpleEchoWithAdditionalExecutor() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, true, false, true);
-//    }
-//
-//    @Test//(timeout = 30000)
-//    public void testSimpleEchoWithAdditionalExecutorNotAutoRead() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoWithAdditionalExecutorNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, true, false, false);
-//    }
-//
-//    @Test//(timeout = 30000)
-//    public void testSimpleEchoWithVoidPromise() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, false, true, true);
-//    }
-//
-//    @Test//(timeout = 30000)
-//    public void testSimpleEchoWithVoidPromiseNotAutoRead() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, false, true, false);
-//    }
-//
-//    @Test(timeout = 30000)
-//    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise() throws Throwable {
-//        run();
-//    }
-//
-//    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-//        testSimpleEcho0(sb, cb, true, true, true);
-//    }
+    @Test(timeout = 30000)
+    public void testSimpleEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, false, false);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutor() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, false, true);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutorNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithAdditionalExecutorNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, false, false);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithVoidPromise() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, true, true);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithVoidPromiseNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, true, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, true, true);
+    }
 
     private static void testSimpleEcho0(
             ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean voidPromise, boolean autoRead)
