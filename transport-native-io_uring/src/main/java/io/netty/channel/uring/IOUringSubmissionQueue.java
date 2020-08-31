@@ -122,8 +122,8 @@ final class IOUringSubmissionQueue {
         //user_data should be same as POLL_LINK fd
         if (op == IOUring.OP_POLL_REMOVE) {
             PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
-            long pollLinkuData = convertToUserData((byte) IOUring.IO_POLL, fd, IOUring.POLLMASK_IN);
-            PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, pollLinkuData);
+            long uData = convertToUserData(op, fd, pollMask);
+            PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, uData);
         }
 
         long uData = convertToUserData(op, fd, pollMask);
@@ -241,7 +241,7 @@ final class IOUringSubmissionQueue {
     }
 
     //fill the address which is associated with server poll link user_data
-    public boolean addPollRemove(int fd) {
+    public boolean addPollRemove(int fd, int pollMask) {
         long sqe = 0;
         boolean submitted = false;
         while (sqe == 0) {
@@ -252,7 +252,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_POLL_REMOVE, 0, fd, 0, 0, 0);
+        setData(sqe, (byte) IOUring.OP_POLL_REMOVE, pollMask, fd, 0, 0, 0);
 
         return submitted;
     }
@@ -323,7 +323,6 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submitted = flushSqe();
         logger.trace("Submitted: {}", submitted);
-        System.out.println("submitted: " + submitted);
         if (submitted > 0) {
             int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
             if (ret < 0) {

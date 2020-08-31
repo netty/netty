@@ -60,14 +60,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     protected volatile boolean active;
-    private boolean pollInScheduled = false;
-
+    private boolean pollInPending = false;
+    private boolean pollOutPending = false;
+    private boolean writeScheduled = false;
+    private boolean readScheduled = false;
     boolean inputClosedSeenErrorOnRead;
 
     static final int SOCK_ADDR_LEN = 128;
 
-    //can only submit one write operation at a time
-    private boolean writeScheduled = false;
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
      */
@@ -211,7 +211,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         active = false;
 
         IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addPollRemove(socket.intValue());
+        if (pollInPending) {
+            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_IN);
+            pollInPending = false;
+        }
+        if (pollOutPending) {
+            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_OUT);
+            pollOutPending = false;
+        }
+        submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_RDHUP);
         submissionQueue.submit();
 
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
@@ -258,15 +266,13 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected void doBeginRead() {
         final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
-        if (!pollInScheduled) {
+        if (!pollInPending) {
             unsafe.schedulePollIn();
         }
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) {
-        logger.trace("IOUring doWrite message size: {}", in.size());
-
         if (writeScheduled) {
             return;
         }
@@ -280,6 +286,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
      private void doWriteMultiple(ChannelOutboundBuffer in) {
+
          final IovecArrayPool iovecArray = ((IOUringEventLoop) eventLoop()).getIovecArrayPool();
 
          iovecMemoryAddress = iovecArray.createNewIovecMemoryAddress();
@@ -313,6 +320,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     //POLLOUT
     private void addPollOut() {
+        assert !pollOutPending;
+        pollOutPending = true;
         IOUringSubmissionQueue submissionQueue = submissionQueue();
         submissionQueue.addPollOut(socket.intValue());
         submissionQueue.submit();
@@ -326,7 +335,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (!writeScheduled) {
+            if (!pollOutPending) {
                 super.flush0();
             }
         }
@@ -418,18 +427,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         void schedulePollIn() {
-            assert !pollInScheduled;
+            assert !pollInPending;
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            pollInScheduled = true;
+            pollInPending = true;
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addPollIn(socket.intValue());
             submissionQueue.submit();
         }
 
         final void readComplete(int res) {
-            pollInScheduled = false;
+            readScheduled = false;
+
             readComplete0(res);
         }
 
@@ -440,11 +450,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          */
         final void pollRdHup(int res) {
             if (isActive()) {
-                if (!pollInScheduled) {
-                    // If it is still active, we need to call epollInReady as otherwise we may miss to
-                    // read pending data from the underlying file descriptor.
-                    // See https://github.com/netty/netty/issues/3709
-                    pollIn(res);
+                if (!readScheduled) {
+                    scheduleRead();
                 }
             } else {
                 // Just to be safe make sure the input marked as closed.
@@ -452,9 +459,30 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        abstract void pollIn(int res);
+        /**
+         * Called once POLLIN event is ready to be processed
+         */
+        final void pollIn(int res) {
+            pollInPending = false;
 
+            if (!readScheduled) {
+                scheduleRead();
+            }
+        }
+
+        protected final void scheduleRead() {
+            readScheduled = true;
+            scheduleRead0();
+        }
+
+        protected abstract void scheduleRead0();
+
+        /**
+         * Called once POLLOUT event is ready to be processed
+         */
         final void pollOut(int res) {
+            pollOutPending = false;
+
             // pending connect
             if (connectPromise != null) {
                 // Note this method is invoked by the event loop only if the connection attempt was
@@ -484,12 +512,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
             } else if (!getSocket().isOutputShutdown()) {
-                doWrite(unsafe().outboundBuffer());
+                // Try writing again
+                super.flush0();
             }
         }
 
         final void writeComplete(int res) {
             writeScheduled = false;
+
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (iovecMemoryAddress != -1) {
                 ((IOUringEventLoop) eventLoop()).getIovecArrayPool().releaseIovec(iovecMemoryAddress);

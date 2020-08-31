@@ -235,7 +235,7 @@ public class NativeTest {
 
         Thread.sleep(10);
 
-        submissionQueue.addPollRemove(eventFd.intValue());
+        submissionQueue.addPollRemove(eventFd.intValue(), IOUring.POLLMASK_IN);
         submissionQueue.submit();
 
         Thread waitingCqe = new Thread() {

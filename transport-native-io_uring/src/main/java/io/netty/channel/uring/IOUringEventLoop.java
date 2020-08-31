@@ -177,11 +177,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         switch (op) {
             case IOUring.OP_ACCEPT:
-                //Todo error handle the res
-                if (res == ECANCELED) {
-                    logger.trace("POLL_LINK canceled");
-                    break;
-                }
                 // Fall-through
 
             case IOUring.OP_READ:
