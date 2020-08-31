@@ -1244,7 +1244,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel channel = newInboundStream(true, inboundHandler);
         assertTrue(inboundHandler.isChannelActive());
         Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(request, true).stream(channel.stream());
-        assertEquals(headersFrame, inboundHandler.readInbound());
+        assertEqualsAndRelease(headersFrame, inboundHandler.<Http2Frame>readInbound());
 
         //half-closed(local)
         final Http2HeadersFrame outboundHeaders = new DefaultHttp2HeadersFrame(
@@ -1283,7 +1283,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             assertFalse(inboundHandler.isChannelActive());
             Http2HeadersFrame pushedHeader = inboundHandler.readInbound();
             assertEquals(pushedHeader.stream().id(), pushedCh.stream().id());
-            assertNotNull(inboundHandler.readInbound());
+            Http2DataFrame data = inboundHandler.readInbound();
+            assertNotNull(data);
+            release(pushedHeader);
+            release(data);
         }
     }
 
