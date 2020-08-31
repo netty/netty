@@ -54,18 +54,12 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     abstract Channel newChildChannel(int fd) throws Exception;
 
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
-        private final byte[] acceptedAddress = new byte[26];
-
-        private void acceptSocket() {
+        @Override
+        protected void scheduleRead0() {
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             //Todo get network addresses
             submissionQueue.addAccept(fd().intValue());
             submissionQueue.submit();
-        }
-
-        @Override
-        void pollIn(int res) {
-            acceptSocket();
         }
 
         // TODO: Respect MAX_MESSAGES_READ
@@ -89,7 +83,9 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
                         pipeline.fireExceptionCaught(cause);
                         pipeline.fireChannelReadComplete();
                     }
-                    acceptSocket();
+                    if (config().isAutoRead()) {
+                        scheduleRead();
+                    }
                 } else {
                     allocHandle.readComplete();
                     // Check if we did fail because there was nothing to accept atm.
