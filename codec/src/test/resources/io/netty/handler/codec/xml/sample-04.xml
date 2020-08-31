@@ -104,15 +104,6 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- Byte code generator - completely optional -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>3.18.0-GA</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
       <!-- JBoss Marshalling - completely optional -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -218,13 +209,6 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- Enable Javassist support for all test runs -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
