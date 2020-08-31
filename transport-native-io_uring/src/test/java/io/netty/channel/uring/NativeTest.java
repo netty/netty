@@ -53,7 +53,7 @@ public class NativeTest {
         assertNotNull(submissionQueue);
         assertNotNull(completionQueue);
 
-        assertTrue(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
+        assertFalse(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
                                             writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
         submissionQueue.submit();
 
@@ -68,7 +68,7 @@ public class NativeTest {
         }));
 
         final ByteBuf readEventByteBuf = allocator.directBuffer(100);
-        assertTrue(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
+        assertFalse(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
                                            readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
         submissionQueue.submit();
 
@@ -144,7 +144,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPollIn(eventFd.intValue()));
+        assertFalse(submissionQueue.addPollIn(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
@@ -202,7 +202,7 @@ public class NativeTest {
         };
         waitingCqe.start();
         final FileDescriptor eventFd = Native.newEventFd();
-        assertTrue(submissionQueue.addPollIn(eventFd.intValue()));
+        assertFalse(submissionQueue.addPollIn(eventFd.intValue()));
         submissionQueue.submit();
 
         new Thread() {
