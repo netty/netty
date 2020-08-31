@@ -38,7 +38,6 @@ final class PCapWriter implements Closeable {
 
         PcapHeaders.writeGlobalHeader(byteBuf);
         byteBuf.readBytes(outputStream, byteBuf.readableBytes());
-        byteBuf.release();
     }
 
     /**
@@ -64,7 +63,6 @@ final class PCapWriter implements Closeable {
 
         packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
         packet.readBytes(outputStream, packet.readableBytes());
-        packetHeaderBuf.release();
     }
 
     @Override

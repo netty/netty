@@ -31,7 +31,8 @@ final class TCPPacket {
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int segmentNumber, int ackNumber, int srcPort, int dstPort, Flag... flags) {
+    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int segmentNumber, int ackNumber, int srcPort,
+                            int dstPort, Flag... flags) {
         int fin = 0;
         int syn = 0;
         int rst = 0;
@@ -59,6 +60,8 @@ final class TCPPacket {
                     ece = 1;
                 case CWR:
                     cwr = 1;
+                default:
+                    // NO-OP
             }
         }
 
