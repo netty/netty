@@ -54,10 +54,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     //    other value T    when EL is waiting with wakeup scheduled at time T
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private final FileDescriptor eventfd;
+    private final IovecArrayPool iovecArrayPool;
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
-    private IovecArrayPool iovecArrayPool;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
@@ -203,9 +203,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 break;
 
             case IOUring.IO_POLL:
-                //Todo error handle the res
                 if (res == ECANCELED) {
-                    logger.trace("POLL_LINK canceled");
+                    logger.trace("IO_POLL cancelled");
                     break;
                 }
                 if (eventfd.intValue() == fd) {
@@ -230,9 +229,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
             case IOUring.OP_POLL_REMOVE:
                 if (res == ENOENT) {
-                    System.out.println(("POLL_REMOVE OPERATION not permitted"));
+                    logger.trace("POLL_REMOVE not successful");
                 } else if (res == 0) {
-                    System.out.println(("POLL_REMOVE OPERATION successful"));
+                    logger.trace("POLL_REMOVE successful");
                 }
                 break;
 
