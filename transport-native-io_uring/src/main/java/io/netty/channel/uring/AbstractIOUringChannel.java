@@ -434,10 +434,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          */
         final void pollRdHup(int res) {
             if (isActive()) {
-                // If it is still active, we need to call epollInReady as otherwise we may miss to
-                // read pending data from the underlying file descriptor.
-                // See https://github.com/netty/netty/issues/3709
-                pollIn(res);
+                if (!pollInScheduled) {
+                    // If it is still active, we need to call epollInReady as otherwise we may miss to
+                    // read pending data from the underlying file descriptor.
+                    // See https://github.com/netty/netty/issues/3709
+                    pollIn(res);
+                }
             } else {
                 // Just to be safe make sure the input marked as closed.
                 shutdownInput(true);
@@ -674,6 +676,11 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
             }
             requestedRemoteAddress = null;
+
+            // Register POLLRDHUP
+            IOUringSubmissionQueue submissionQueue = submissionQueue();
+            submissionQueue.addPollRdHup(fd().intValue());
+            submissionQueue.submit();
 
             return true;
         }

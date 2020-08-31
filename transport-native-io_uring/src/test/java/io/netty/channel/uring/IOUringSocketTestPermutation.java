@@ -59,7 +59,6 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
         return list;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<BootstrapFactory<ServerBootstrap>>();
@@ -93,23 +92,19 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.<BootstrapFactory<Bootstrap>>asList(
-                /*
+        return Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IOUringSocketChannel.class);
-                                //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
-                },*/
+                },
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                              //  .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100000);
                     }
                 }
         );

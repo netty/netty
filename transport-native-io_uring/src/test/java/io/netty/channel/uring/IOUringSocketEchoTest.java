@@ -20,6 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.socket.SocketEchoTest;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.util.List;
 
@@ -30,5 +32,12 @@ public class IOUringSocketEchoTest extends SocketEchoTest {
     @Override
     protected List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
+    }
+
+
+    @Ignore("FIX ME")
+    @Test(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise() throws Throwable {
+        run();
     }
 }

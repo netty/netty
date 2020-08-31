@@ -77,7 +77,13 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
                 if (res >= 0) {
                     allocHandle.incMessagesRead(1);
                     try {
-                        pipeline.fireChannelRead(newChildChannel(res));
+                        Channel channel = newChildChannel(res);
+                        // Register accepted channel for POLLRDHUP
+                        IOUringSubmissionQueue submissionQueue = submissionQueue();
+                        submissionQueue.addPollRdHup(res);
+                        submissionQueue.submit();
+
+                        pipeline.fireChannelRead(channel);
                     } catch (Throwable cause) {
                         allocHandle.readComplete();
                         pipeline.fireExceptionCaught(cause);
