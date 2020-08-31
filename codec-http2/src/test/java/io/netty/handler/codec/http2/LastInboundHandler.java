@@ -26,6 +26,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,11 +42,6 @@ public class LastInboundHandler implements ChannelHandler {
     private boolean channelActive;
     private String writabilityStates = "";
 
-    // TODO(scott): use JDK 8's Consumer
-    public interface Consumer<T> {
-        void accept(T obj);
-    }
-
     private static final Consumer<Object> NOOP_CONSUMER = obj -> {
     };
 
@@ -55,7 +51,7 @@ public class LastInboundHandler implements ChannelHandler {
     }
 
     public LastInboundHandler() {
-        this(LastInboundHandler.noopConsumer());
+        this(noopConsumer());
     }
 
     public LastInboundHandler(Consumer<ChannelHandlerContext> channelReadCompleteConsumer) {
