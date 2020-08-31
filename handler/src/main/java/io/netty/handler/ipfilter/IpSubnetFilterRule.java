@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 
@@ -106,7 +107,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
             Ip4SubnetFilterRule ip4SubnetFilterRule = (Ip4SubnetFilterRule) filterRule;
-            return compareInt(ip4SubnetFilterRule.networkAddress, Ip4SubnetFilterRule.ipToInt((Inet4Address)
+            return compareInt(ip4SubnetFilterRule.networkAddress, NetUtil.ipv4AddressToInt((Inet4Address)
                     inetSocketAddress.getAddress()) & ip4SubnetFilterRule.subnetMask);
         } else {
             Ip6SubnetFilterRule ip6SubnetFilterRule = (Ip6SubnetFilterRule) filterRule;
@@ -136,7 +137,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             }
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
-            networkAddress = ipToInt(ipAddress) & subnetMask;
+            networkAddress = NetUtil.ipv4AddressToInt(ipAddress) & subnetMask;
             this.ruleType = ruleType;
         }
 
@@ -144,7 +145,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         public boolean matches(InetSocketAddress remoteAddress) {
             final InetAddress inetAddress = remoteAddress.getAddress();
             if (inetAddress instanceof Inet4Address) {
-                int ipAddress = ipToInt((Inet4Address) inetAddress);
+                int ipAddress = NetUtil.ipv4AddressToInt((Inet4Address) inetAddress);
                 return (ipAddress & subnetMask) == networkAddress;
             }
             return false;
@@ -153,16 +154,6 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
         @Override
         public IpFilterRuleType ruleType() {
             return ruleType;
-        }
-
-        private static int ipToInt(Inet4Address ipAddress) {
-            byte[] octets = ipAddress.getAddress();
-            assert octets.length == 4;
-
-            return (octets[0] & 0xff) << 24 |
-                    (octets[1] & 0xff) << 16 |
-                    (octets[2] & 0xff) << 8 |
-                    octets[3] & 0xff;
         }
 
         private static int prefixToSubnetMask(int cidrPrefix) {
