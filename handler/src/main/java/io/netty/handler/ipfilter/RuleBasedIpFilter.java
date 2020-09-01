@@ -29,7 +29,7 @@ import java.net.SocketAddress;
  * will be accepted.
  *
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
- * {@link #channelRejected(ChannelHandlerContext, SocketAddress)}.
+ * {@link AbstractRemoteAddressFilter#channelRejected(ChannelHandlerContext, SocketAddress)}.
  */
 @Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
