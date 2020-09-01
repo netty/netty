@@ -58,8 +58,8 @@ public final class PcapHeaders {
      * @param incl_len number of octets of packet saved in file
      * @param orig_len actual length of packet
      */
-    static void writePacketHeader(ByteBuf byteBuf, long ts_sec, int ts_usec, int incl_len, int orig_len) {
-        byteBuf.writeInt((int) TimeUnit.MILLISECONDS.toSeconds(ts_sec));
+    static void writePacketHeader(ByteBuf byteBuf, int ts_sec, int ts_usec, int incl_len, int orig_len) {
+        byteBuf.writeInt(ts_sec);
         byteBuf.writeInt(ts_usec);
         byteBuf.writeInt(incl_len);
         byteBuf.writeInt(orig_len);

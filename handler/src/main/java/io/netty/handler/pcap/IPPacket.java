@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 final class IPPacket {
 
-    private static final byte MAX_TTL = (byte) (255);
+    private static final byte MAX_TTL = (byte) 255;
     private static final short V4_HEADER_SIZE = 20;
     private static final byte TCP = 6 & 0xff;
     private static final byte UDP = 17 & 0xff;

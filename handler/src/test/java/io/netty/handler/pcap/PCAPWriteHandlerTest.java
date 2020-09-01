@@ -64,9 +64,9 @@ public class PCAPWriteHandlerTest {
         // -------------------------------------------- Verify Packet --------------------------------------------
         // Verify Ethernet Packet
         ByteBuf ethernetPacket = byteBuf.readBytes(46);
-        assertArrayEquals(new byte[]{-86, -69, -52, -35, -18, -1},
+        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, -1},
                 ByteBufUtil.getBytes(ethernetPacket.readBytes(6)));
-        assertArrayEquals(new byte[]{-86, -69, -52, -35, -18, -1},
+        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, 0},
                 ByteBufUtil.getBytes(ethernetPacket.readBytes(6)));
         assertEquals(0x0800, ethernetPacket.readShort());
 

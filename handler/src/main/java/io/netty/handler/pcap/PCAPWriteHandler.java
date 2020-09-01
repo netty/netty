@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -30,9 +31,33 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+/**
+ * <p> {@link PCAPWriteHandler} captures {@link ByteBuf} from {@link SocketChannel} / {@link ServerChannel}
+ * or {@link DatagramPacket} and writes it into Pcap {@link OutputStream}. </p>
+ * <p></p>
+ *
+ * <p>
+ *  Things to keep in mind when using {@link PCAPWriteHandler} with TCP:
+ *
+ *    <ul>
+ *        <li> Whenever {@link ChannelInboundHandlerAdapter#channelActive(ChannelHandlerContext)} is called,
+ *        a fake TCP 3-way handshake (SYN, SYN+ACK, ACK) is simulated as new connection in Pcap. </li>
+ *
+ *        <li> Whenever {@link ChannelInboundHandlerAdapter#handlerRemoved(ChannelHandlerContext)} is called,
+ *        a fake TCP 3-way handshake (FIN+ACK, FIN+ACK, ACK) is simulated as connection shutdown in Pcap.  </li>
+ *
+ *        <li> Whenever {@link ChannelInboundHandlerAdapter#exceptionCaught(ChannelHandlerContext, Throwable)}
+ *        is called, a fake TCP RST is sent to simulate connection Reset in Pcap. </li>
+ *
+ *        <li> ACK is sent each time data is send / received. </li>
+ *
+ *        <li> Zero Length Data Packets can cause TCP Double ACK error in Wireshark. To tackle this,
+ *        set {@code captureZeroByte} to {@code false}. </li>
+ *    </ul>
+ * </p>
+ */
 public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     private final InternalLogger logger = InternalLoggerFactory.getInstance(PCAPWriteHandler.class);
@@ -84,7 +109,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf byteBuf  = ctx.alloc().buffer();
+        ByteBuf byteBuf = ctx.alloc().buffer();
 
         try {
             this.pCapWriter = new PCapWriter(this.outputStream, byteBuf);
@@ -123,18 +148,16 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
                 // Write SYN with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 0, 0, srcAddr.getPort(), dstAddr.getPort(), TCPPacket.TCPFlag.SYN);
-                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
+                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
 
                 // Write SYN+ACK with Reversed Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 0, 1, dstAddr.getPort(), srcAddr.getPort(), TCPPacket.TCPFlag.SYN,
                         TCPPacket.TCPFlag.ACK);
-                completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc());
+                completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc(), ctx);
 
                 // Write ACK with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 1, 1, srcAddr.getPort(), dstAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
-            } catch (IOException ex) {
-                ctx.fireExceptionCaught(ex);
+                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
             } finally {
                 tcpBuf.release();
             }
@@ -174,30 +197,28 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                 if (isWriteOperation) {
                     TCPPacket.writePacket(tcpBuf, packet, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
                             dstAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                    completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
+                    completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
                     logTCP(true, bytes, sendSegmentNumber, receiveSegmentNumber, srcAddr, dstAddr, false);
 
                     sendSegmentNumber += bytes;
 
                     TCPPacket.writePacket(tcpBuf, null, receiveSegmentNumber, sendSegmentNumber, dstAddr.getPort(),
                             srcAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                    completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc());
+                    completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc(), ctx);
                     logTCP(true, bytes, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr, true);
                 } else {
                     TCPPacket.writePacket(tcpBuf, packet, receiveSegmentNumber, sendSegmentNumber, dstAddr.getPort(),
                             srcAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                    completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc());
+                    completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc(), ctx);
                     logTCP(false, bytes, receiveSegmentNumber, sendSegmentNumber, dstAddr, srcAddr, false);
 
                     receiveSegmentNumber += bytes;
 
                     TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
                             dstAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                    completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
+                    completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
                     logTCP(false, bytes, sendSegmentNumber, receiveSegmentNumber, srcAddr, dstAddr, true);
                 }
-            } catch (IOException ex) {
-                ctx.fireExceptionCaught(ex);
             } finally {
                 tcpBuf.release();
             }
@@ -227,8 +248,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         InetSocketAddress srcAddr = datagramPacket.sender();
         InetSocketAddress dstAddr = datagramPacket.recipient();
 
-        logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}", datagramPacket.content().readableBytes()
-                , srcAddr, dstAddr);
+        logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
+                datagramPacket.content().readableBytes(), srcAddr, dstAddr);
 
         try {
 
@@ -237,23 +258,20 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                     srcAddr.getPort(),
                     dstAddr.getPort());
 
-            completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc());
-        } catch (IOException ex) {
-            ctx.fireExceptionCaught(ex);
+            completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
         } finally {
             udpBuf.release();
         }
     }
 
     private void completeTCPWrite(InetSocketAddress srcAddr, InetSocketAddress dstAddr, ByteBuf tcpBuf,
-                                  ByteBufAllocator byteBufAllocator) throws IOException {
+                                  ByteBufAllocator byteBufAllocator, ChannelHandlerContext ctx) {
 
         ByteBuf ipBuf = byteBufAllocator.buffer();
         ByteBuf ethernetBuf = byteBufAllocator.buffer();
         ByteBuf pcap = byteBufAllocator.buffer();
 
         try {
-
             if (srcAddr.getAddress() instanceof Inet4Address) {
                 IPPacket.writeTCPv4(ipBuf,
                         tcpBuf,
@@ -271,6 +289,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             }
 
             pCapWriter.writePacket(pcap, ethernetBuf);
+        } catch (IOException ex) {
+            ctx.fireExceptionCaught(ex);
         } finally {
             ipBuf.release();
             ethernetBuf.release();
@@ -279,14 +299,13 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     }
 
     private void completeUDPWrite(InetSocketAddress srcAddr, InetSocketAddress dstAddr, ByteBuf udpBuf,
-                                  ByteBufAllocator byteBufAllocator) throws IOException {
+                                  ByteBufAllocator byteBufAllocator, ChannelHandlerContext ctx) {
 
         ByteBuf ipBuf = byteBufAllocator.buffer();
         ByteBuf ethernetBuf = byteBufAllocator.buffer();
         ByteBuf pcap = byteBufAllocator.buffer();
 
         try {
-
             if (srcAddr.getAddress() instanceof Inet4Address) {
                 IPPacket.writeUDPv4(ipBuf,
                         udpBuf,
@@ -304,6 +323,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             }
 
             pCapWriter.writePacket(byteBufAllocator.buffer(), ethernetBuf);
+        } catch (IOException ex) {
+            ctx.fireExceptionCaught(ex);
         } finally {
             ipBuf.release();
             ethernetBuf.release();
@@ -320,22 +341,24 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
-            // Write FIN+ACK with Normal Source and Destination Address
-            TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
-                    dstAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
-            completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
+            try {
+                // Write FIN+ACK with Normal Source and Destination Address
+                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
+                        dstAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
+                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
 
-            // Write FIN+ACK with Reversed Source and Destination Address
-            TCPPacket.writePacket(tcpBuf, null, receiveSegmentNumber, sendSegmentNumber, dstAddr.getPort(),
-                    srcAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
-            completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc());
+                // Write FIN+ACK with Reversed Source and Destination Address
+                TCPPacket.writePacket(tcpBuf, null, receiveSegmentNumber, sendSegmentNumber, dstAddr.getPort(),
+                        srcAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
+                completeTCPWrite(dstAddr, srcAddr, tcpBuf, ctx.alloc(), ctx);
 
-            // Write ACK with Normal Source and Destination Address
-            TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber + 1, receiveSegmentNumber + 1,
-                    srcAddr.getPort(), dstAddr.getPort(), TCPPacket.TCPFlag.ACK);
-            completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
-
-            tcpBuf.release();
+                // Write ACK with Normal Source and Destination Address
+                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber + 1, receiveSegmentNumber + 1,
+                        srcAddr.getPort(), dstAddr.getPort(), TCPPacket.TCPFlag.ACK);
+                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
+            } finally {
+                tcpBuf.release();
+            }
 
             logger.debug("Finished Fake TCP FIN+ACK Flow to close connection");
         }
@@ -355,9 +378,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                 // Write RST+ACK with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
                         dstAddr.getPort(), TCPPacket.TCPFlag.RST, TCPPacket.TCPFlag.ACK);
-                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc());
-            } catch (IOException ex) {
-                ctx.fireExceptionCaught(ex);
+                completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
             } finally {
                 tcpBuf.release();
             }

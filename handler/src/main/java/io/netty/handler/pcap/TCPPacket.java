@@ -20,11 +20,9 @@ import io.netty.buffer.ByteBuf;
 final class TCPPacket {
 
     /**
-     * <p> Data Offset + Reserved Bits. </p>
-     *
-     * Equivalent to: {@code 5 << 12}
+     * Data Offset + Reserved Bits.
      */
-    private static final short OFFSET = 20480;
+    private static final short OFFSET = 0x5000;
 
     private TCPPacket() {
         // Prevent outside initialization
@@ -56,53 +54,29 @@ final class TCPPacket {
     }
 
     enum TCPFlag {
-        FIN,
-        SYN,
-        RST,
-        PSH,
-        ACK,
-        URG,
-        ECE,
-        CWR;
+        FIN(1),
+        SYN(1 << 1),
+        RST(1 << 2),
+        PSH(1 << 3),
+        ACK(1 << 4),
+        URG(1 << 5),
+        ECE(1 << 6),
+        CWR(1 << 7);
+
+        private final int value;
+
+        TCPFlag(int value) {
+            this.value = value;
+        }
 
         static int getFlag(TCPFlag... tcpFlags) {
-            int fin = 0;
-            int syn = 0;
-            int rst = 0;
-            int psh = 0;
-            int ack = 0;
-            int urg = 0;
-            int ece = 0;
-            int cwr = 0;
+            int flags = 0;
 
             for (TCPFlag tcpFlag : tcpFlags) {
-                if (tcpFlag == TCPFlag.FIN) {
-                    fin = 1;
-                } else if (tcpFlag == TCPFlag.SYN) {
-                    syn = 1;
-                } else if (tcpFlag == TCPFlag.RST) {
-                    rst = 1;
-                } else if (tcpFlag == TCPFlag.PSH) {
-                    psh = 1;
-                } else if (tcpFlag == TCPFlag.ACK) {
-                    ack = 1;
-                } else if (tcpFlag == TCPFlag.URG) {
-                    urg = 1;
-                } else if (tcpFlag == TCPFlag.ECE) {
-                    ece = 1;
-                } else if (tcpFlag == TCPFlag.CWR) {
-                    cwr = 1;
-                }
+                flags |= tcpFlag.value;
             }
 
-            return  fin << 0 |
-                    syn << 1 |
-                    rst << 2 |
-                    psh << 3 |
-                    ack << 4 |
-                    urg << 5 |
-                    ece << 6 |
-                    cwr << 7;
+            return  flags;
         }
     }
 }

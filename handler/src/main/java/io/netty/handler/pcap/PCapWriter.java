@@ -20,11 +20,9 @@ import io.netty.buffer.ByteBuf;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 final class PCapWriter implements Closeable {
-    private final SimpleDateFormat sdf = new SimpleDateFormat("SSSSSSSSS");
     private final OutputStream outputStream;
 
     /**
@@ -50,13 +48,10 @@ final class PCapWriter implements Closeable {
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
         long currentTime = System.currentTimeMillis();
 
-        String microsecond = sdf.format(new Date(currentTime));
-        microsecond = microsecond.substring(microsecond.indexOf(".") + 1);
-
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
-                currentTime,
-                Integer.parseInt(microsecond),
+                (int) TimeUnit.MILLISECONDS.toSeconds(currentTime),
+                (int) currentTime % 1000,
                 packet.readableBytes(),
                 packet.readableBytes()
         );
@@ -67,6 +62,6 @@ final class PCapWriter implements Closeable {
 
     @Override
     public void close() throws IOException {
-        this.outputStream.close();
+        outputStream.close();
     }
 }
