@@ -77,11 +77,6 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
                 allocHandle.incMessagesRead(1);
                 try {
                     Channel channel = newChildChannel(res);
-                    // Register accepted channel for POLLRDHUP
-                    IOUringSubmissionQueue submissionQueue = submissionQueue();
-                    submissionQueue.addPollRdHup(res);
-                    submissionQueue.submit();
-
                     pipeline.fireChannelRead(channel);
                     if (allocHandle.continueReading()) {
                         scheduleRead();
