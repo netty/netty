@@ -81,9 +81,9 @@ public class PCAPWriteHandlerTest {
         assertEquals((byte) 17, ipv4Packet.readByte());        // Protocol
         assertEquals(0, ipv4Packet.readShort());      // Checksum
         assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) srcAddr.getAddress()),
-                ipv4Packet.readInt()); // Source IPv4 Address
+                ipv4Packet.readInt());                          // Source IPv4 Address
         assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) dstAddr.getAddress()),
-                ipv4Packet.readInt()); // Destination IPv4 Address
+                ipv4Packet.readInt());                          // Destination IPv4 Address
 
         // Verify UDP Packet
         ByteBuf udpPacket = ipv4Packet.readBytes(12);
@@ -93,6 +93,7 @@ public class PCAPWriteHandlerTest {
         assertEquals(0x0001, udpPacket.readShort());                // Checksum
         assertArrayEquals("Meow".getBytes(CharsetUtil.UTF_8), ByteBufUtil.getBytes(udpPacket.readBytes(4))); // Payload
 
+        assertTrue(byteBuf.release());
         assertTrue(ethernetPacket.release());
         assertTrue(ipv4Packet.release());
         assertTrue(udpPacket.release());
