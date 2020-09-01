@@ -202,12 +202,12 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             final ChannelConfig config = config();
 
             final ByteBufAllocator allocator = config.getAllocator();
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+            final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
             ByteBuf byteBuf = allocHandle.allocate(allocator);
             IOUringSubmissionQueue submissionQueue = submissionQueue();
-            unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
+            allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
             assert readBuffer == null;
             readBuffer = byteBuf;
@@ -217,13 +217,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             submissionQueue.submit();
         }
 
-        // TODO: Respect MAX_MESSAGE_READ.
+        @Override
         protected void readComplete0(int res) {
             boolean close = false;
 
-            final IOUringRecvByteAllocatorHandle allocHandle =
-                    (IOUringRecvByteAllocatorHandle) unsafe()
-                            .recvBufAllocHandle();
+            final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
             this.readBuffer = null;
@@ -256,10 +254,9 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 }
 
                 allocHandle.incMessagesRead(1);
-                boolean writable = byteBuf.isWritable();
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                if (!writable && config().isAutoRead()) {
+                if (allocHandle.continueReading()) {
                     // Let's schedule another read.
                     scheduleRead();
                 } else {
@@ -269,7 +266,6 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             }
-
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
