@@ -900,7 +900,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             flush0();
         }
 
-        @SuppressWarnings("deprecation")
         protected void flush0() {
             if (inFlush0) {
                 // Avoid re-entrance
@@ -933,7 +932,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 doWrite(outboundBuffer);
             } catch (final Throwable t) {
                 if (t instanceof IOException && config().isAutoClose()) {
-                    /**
+                    /*
                      * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
                      * failing all flushed messages and also ensure the actual close of the underlying transport
                      * will happen before the promises are notified.
