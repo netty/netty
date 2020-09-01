@@ -67,6 +67,15 @@ public final class MqttProperties {
         CORRELATION_DATA(0x09),
         AUTHENTICATION_DATA(0x16);
 
+        private static final MqttPropertyType[] VALUES;
+
+        static {
+            VALUES = new MqttPropertyType[43];
+            for (MqttPropertyType v : values()) {
+                VALUES[v.value] = v;
+            }
+        }
+
         private final int value;
 
         MqttPropertyType(int value) {
@@ -78,12 +87,16 @@ public final class MqttProperties {
         }
 
         public static MqttPropertyType valueOf(int type) {
-            for (MqttPropertyType t : values()) {
-                if (t.value == type) {
-                    return t;
-                }
+            MqttPropertyType t = null;
+            try {
+                t = VALUES[type];
+            } catch (ArrayIndexOutOfBoundsException ignored) {
+                // nop
             }
-            throw new IllegalArgumentException("unknown property type: " + type);
+            if (t == null) {
+                throw new IllegalArgumentException("unknown property type: " + type);
+            }
+            return t;
         }
     }
 
