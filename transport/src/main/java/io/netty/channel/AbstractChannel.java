@@ -603,8 +603,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void close(final ChannelPromise promise) {
             assertEventLoop();
 
-            ClosedChannelException closedChannelException = new ClosedChannelException();
-            close(promise, closedChannelException, closedChannelException, false);
+            close(promise, new BufferCloser() {
+                @Override
+                public void close(ChannelOutboundBuffer buffer) {
+                    ClosedChannelException cause = new ClosedChannelException();
+                    buffer.failFlushed(cause, false);
+                    buffer.close(cause);
+                }
+            });
         }
 
         /**
@@ -679,8 +685,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
 
-        private void close(final ChannelPromise promise, final Throwable cause,
-                           final ClosedChannelException closeCause, final boolean notify) {
+        private void close(final ChannelPromise promise, final BufferCloser bufferCloser) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -721,8 +726,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 public void run() {
                                     if (outboundBuffer != null) {
                                         // Fail all the queued messages
-                                        outboundBuffer.failFlushed(cause, notify);
-                                        outboundBuffer.close(closeCause);
+                                        bufferCloser.close(outboundBuffer);
                                     }
                                     fireChannelInactiveAndDeregister(wasActive);
                                 }
@@ -737,8 +741,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } finally {
                     if (outboundBuffer != null) {
                         // Fail all the queued messages.
-                        outboundBuffer.failFlushed(cause, notify);
-                        outboundBuffer.close(closeCause);
+                        bufferCloser.close(outboundBuffer);
                     }
                 }
                 if (inFlush0) {
@@ -928,7 +931,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             try {
                 doWrite(outboundBuffer);
-            } catch (Throwable t) {
+            } catch (final Throwable t) {
                 if (t instanceof IOException && config().isAutoClose()) {
                     /**
                      * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
@@ -939,13 +942,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                      * may still return {@code true} even if the channel should be closed as result of the exception.
                      */
                     initialCloseCause = t;
-                    close(voidPromise(), t, newClosedChannelException(t), false);
+                    close(voidPromise(), new BufferCloser() {
+                        @Override
+                        public void close(ChannelOutboundBuffer buffer) {
+                            buffer.failFlushed(t, false);
+                            buffer.close(newClosedChannelException(t));
+                        }
+                    });
                 } else {
                     try {
                         shutdownOutput(voidPromise(), t);
-                    } catch (Throwable t2) {
+                    } catch (final Throwable t2) {
                         initialCloseCause = t;
-                        close(voidPromise(), t2, newClosedChannelException(t), false);
+                        close(voidPromise(), new BufferCloser() {
+                            @Override
+                            public void close(ChannelOutboundBuffer buffer) {
+                                buffer.failFlushed(t2, false);
+                                buffer.close(newClosedChannelException(t));
+                            }
+                        });
                     }
                 }
             } finally {
@@ -1202,5 +1217,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public Throwable fillInStackTrace() {
             return this;
         }
+    }
+
+    private interface BufferCloser {
+        void close(ChannelOutboundBuffer buffer);
     }
 }
