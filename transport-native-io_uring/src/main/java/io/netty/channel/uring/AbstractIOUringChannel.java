@@ -276,12 +276,18 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (writeScheduled) {
             return;
         }
+
         int msgCount = in.size();
-        if (msgCount > 1 && in.current() instanceof ByteBuf) {
+        if (msgCount == 0) {
+            return;
+        }
+        ByteBuf msg = (ByteBuf) in.current();
+        if (msgCount > 1 ||
+                // We also need some special handling for CompositeByteBuf
+                msg.nioBufferCount() > 1) {
             doWriteMultiple(in);
         } else if (msgCount == 1) {
-            Object msg = in.current();
-            doWriteSingle((ByteBuf) msg);
+            doWriteSingle(msg);
         }
     }
 
