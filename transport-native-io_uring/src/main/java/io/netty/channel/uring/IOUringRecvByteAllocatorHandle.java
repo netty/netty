@@ -41,9 +41,4 @@ final class IOUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
         return ((RecvByteBufAllocator.ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
     }
-
-    @Override
-    public boolean continueReading() {
-        return false;
-    }
 }

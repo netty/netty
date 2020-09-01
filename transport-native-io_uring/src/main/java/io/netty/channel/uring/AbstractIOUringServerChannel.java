@@ -56,45 +56,53 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
         @Override
         protected void scheduleRead0() {
+            final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config());
+            allocHandle.attemptedBytesRead(1);
+
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             //Todo get network addresses
             submissionQueue.addAccept(fd().intValue());
             submissionQueue.submit();
         }
 
-        // TODO: Respect MAX_MESSAGES_READ
         protected void readComplete0(int res) {
             final IOUringRecvByteAllocatorHandle allocHandle =
                     (IOUringRecvByteAllocatorHandle) unsafe()
                             .recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
-                if (res >= 0) {
-                    allocHandle.incMessagesRead(1);
-                    try {
-                        Channel channel = newChildChannel(res);
-                        // Register accepted channel for POLLRDHUP
-                        IOUringSubmissionQueue submissionQueue = submissionQueue();
-                        submissionQueue.addPollRdHup(res);
-                        submissionQueue.submit();
+            allocHandle.lastBytesRead(res);
 
-                        pipeline.fireChannelRead(channel);
-                    } catch (Throwable cause) {
+            if (res >= 0) {
+                allocHandle.incMessagesRead(1);
+                try {
+                    Channel channel = newChildChannel(res);
+                    // Register accepted channel for POLLRDHUP
+                    IOUringSubmissionQueue submissionQueue = submissionQueue();
+                    submissionQueue.addPollRdHup(res);
+                    submissionQueue.submit();
+
+                    pipeline.fireChannelRead(channel);
+                    if (allocHandle.continueReading()) {
+                        scheduleRead();
+                    } else {
                         allocHandle.readComplete();
-                        pipeline.fireExceptionCaught(cause);
                         pipeline.fireChannelReadComplete();
                     }
-                    if (config().isAutoRead()) {
-                        scheduleRead();
-                    }
-                } else {
+                } catch (Throwable cause) {
                     allocHandle.readComplete();
-                    // Check if we did fail because there was nothing to accept atm.
-                    if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
-                        // Something bad happened. Convert to an exception.
-                        pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
-                    }
                     pipeline.fireChannelReadComplete();
+                    pipeline.fireExceptionCaught(cause);
                 }
+            } else {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+                // Check if we did fail because there was nothing to accept atm.
+                if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
+                    // Something bad happened. Convert to an exception.
+                    pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
+                }
+            }
         }
 
         @Override
