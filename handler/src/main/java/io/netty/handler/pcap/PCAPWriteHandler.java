@@ -146,7 +146,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
             try {
-
                 // Write SYN with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 0, 0, srcAddr.getPort(), dstAddr.getPort(), TCPPacket.TCPFlag.SYN);
                 completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);
@@ -253,7 +252,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                 datagramPacket.content().readableBytes(), srcAddr, dstAddr);
 
         try {
-
             UDPPacket.writePacket(udpBuf,
                     datagramPacket.content(),
                     srcAddr.getPort(),
@@ -288,7 +286,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
                 EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
             }
-
             pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
@@ -322,7 +319,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
                 EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
             }
-
             pCapWriter.writePacket(byteBufAllocator.buffer(), ethernetBuf);
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
