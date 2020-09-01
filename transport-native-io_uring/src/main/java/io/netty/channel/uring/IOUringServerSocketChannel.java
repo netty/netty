@@ -18,22 +18,15 @@ package io.netty.channel.uring;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
 
-import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 
 public final class IOUringServerSocketChannel extends AbstractIOUringServerChannel implements ServerSocketChannel {
     private final IOUringServerSocketChannelConfig config;
-    private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public IOUringServerSocketChannel() {
-        super(Socket.newSocketStream().intValue());
+        super(LinuxSocket.newSocketStream(), false);
         this.config = new IOUringServerSocketChannelConfig(this);
     }
 

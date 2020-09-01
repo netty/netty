@@ -29,12 +29,8 @@ import static io.netty.channel.unix.Errors.*;
 
 abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
 
-    AbstractIOUringServerChannel(int fd) {
-        super(null, new LinuxSocket(fd));
-    }
-
-    AbstractIOUringServerChannel(LinuxSocket fd) {
-        super(null, fd);
+    protected AbstractIOUringServerChannel(LinuxSocket socket, boolean active) {
+        super(null, socket, active);
     }
 
     @Override
