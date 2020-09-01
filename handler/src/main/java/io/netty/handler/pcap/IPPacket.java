@@ -86,7 +86,7 @@ final class IPPacket {
 
         byteBuf.writeByte(0x45);      //  Version + IHL
         byteBuf.writeByte(0x00);      //  DSCP
-        byteBuf.writeShort(payload.readableBytes() + V4_HEADER_SIZE); // Length
+        byteBuf.writeShort(V4_HEADER_SIZE + payload.readableBytes()); // Length
         byteBuf.writeShort(0x0000);   // Identification
         byteBuf.writeShort(0x0000);   // Fragment
         byteBuf.writeByte(MAX_TTL);   // TTL
