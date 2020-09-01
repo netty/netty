@@ -33,7 +33,7 @@ import java.util.List;
  * <p>
  * This class allows one to filter new {@link Channel}s based on the
  * {@link IpSubnetFilter}s passed to its constructor. If no rules are provided, all connections
- * will be accepted.
+ * will be accepted since {@code acceptIfNotFound} is {@code true} by default.
  * </p>
  *
  * <p>
@@ -62,7 +62,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
     /**
      * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array. </p>
-     * <p> {@code acceptIfNotFound} is set to {@code true} </p>
+     * <p> {@code acceptIfNotFound} is set to {@code true}. </p>
      *
      * @param rules {@link IpSubnetFilterRule} as an array
      */
@@ -83,7 +83,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
     /**
      * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as {@link List}. </p>
-     * <p> {@code acceptIfNotFound} is set to {@code true} </p>
+     * <p> {@code acceptIfNotFound} is set to {@code true}. </p>
      *
      * @param rules {@link IpSubnetFilterRule} as a {@link List}
      */
