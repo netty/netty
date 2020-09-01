@@ -34,11 +34,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
     //Todo set config ring buffer size
-    private final int ringSize = 32;
-    private final int ENOENT = -2;
-
-    //just temporary -> Todo use ErrorsStaticallyReferencedJniMethods like in Epoll
-    private static final int SOCKET_ERROR_EPIPE = -32;
+    private static final int ringSize = 32;
+    private static final int ENOENT = -2;
     private static final long ETIME = -62;
     static final long ECANCELED = -125;
 
@@ -263,7 +260,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         try {
             eventfd.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn("Failed to close the event fd.", e);
         }
         ringBuffer.close();
         iovecArrayPool.release();
