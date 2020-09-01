@@ -959,7 +959,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private ClosedChannelException newClosedChannelException(Throwable cause, String method) {
             ClosedChannelException exception =
-                    StacklessClosedChannelException.newInstance(AbstractChannel.class, method);
+                    StacklessClosedChannelException.newInstance(AbstractChannel.AbstractUnsafe.class, method);
             if (cause != null) {
                 exception.initCause(cause);
             }
