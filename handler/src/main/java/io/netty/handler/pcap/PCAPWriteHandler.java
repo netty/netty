@@ -63,6 +63,21 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     private final InternalLogger logger = InternalLoggerFactory.getInstance(PCAPWriteHandler.class);
 
     /**
+     * {@link PCapWriter} Instance
+     */
+    private PCapWriter pCapWriter;
+
+    /**
+     * {@link OutputStream} where we'll write Pcap data.
+     */
+    private final OutputStream outputStream;
+
+    /**
+     * {@code true} if we want to capture packets with zero bytes else {@code false}.
+     */
+    private final boolean captureZeroByte;
+
+    /**
      * TCP Sender Segment Number.
      */
     private int sendSegmentNumber = 1;
@@ -81,10 +96,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
      * Destination Address [TCP ONLY]
      */
     private InetSocketAddress dstAddr;
-
-    private final OutputStream outputStream;
-    private PCapWriter pCapWriter;
-    private final boolean captureZeroByte;
 
     /**
      * Create new {@link PCAPWriteHandler} Instance.
@@ -119,15 +130,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             byteBuf.release();
         }
 
-        /*
-         * If `isServer` is set to true, it means we'll be receiving data from client.
-         * In this case, Source Address will be `remoteAddress` and Destination Address
-         * will be `localAddress`.
-         *
-         * If `isServer` is set to false, it means we'll be sending data to server.
-         * In this case, Source Address will be `localAddress` and Destination Address
-         * will be `remoteAddress`.
-         */
         if (ctx.channel() instanceof SocketChannel) {
             if (ctx.channel() instanceof ServerChannel) {
                 srcAddr = (InetSocketAddress) ctx.channel().remoteAddress();
@@ -138,7 +140,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             }
         }
 
-        // If `isTCP` is true, then we'll simulate a fake handshake.
         if (ctx.channel() instanceof SocketChannel) {
             logger.debug("Starting Fake TCP 3-Way Handshake");
 
@@ -370,7 +371,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 
-        // If `isTCP` is true, then we'll simulate a `RST` flow.
         if (ctx.channel() instanceof SocketChannel) {
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
