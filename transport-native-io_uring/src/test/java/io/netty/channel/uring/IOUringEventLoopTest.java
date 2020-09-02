@@ -18,6 +18,8 @@ package io.netty.channel.uring;
 import io.netty.channel.EventLoop;
 import org.junit.Test;
 
+import java.util.concurrent.TimeUnit;
+
 public class IOUringEventLoopTest {
 
     @Test
@@ -49,5 +51,22 @@ public class IOUringEventLoopTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void testSchedule() throws Exception {
+        IOUringEventLoopGroup group = new IOUringEventLoopGroup(1);
+        try {
+            EventLoop loop = group.next();
+            loop.schedule(new Runnable() {
+                @Override
+                public void run() {
+
+                }
+            }, 1, TimeUnit.SECONDS).sync();
+        } finally {
+            group.shutdownGracefully();
+        }
+
     }
 }
