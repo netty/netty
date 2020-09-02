@@ -43,12 +43,8 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     /**
      * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
      * based on their IP address and {@code rules} applied.
-     *
-     * @param rules An array of {@link IpFilterRule} containing all rules.
-     * @throws NullPointerException If {@code rules} array or {@code rule} in
-     *                              {@code rules} array is {@code null}.
      */
-    public RuleBasedIpFilter(IpFilterRule... rules) throws NullPointerException {
+    public RuleBasedIpFilter(IpFilterRule... rules) {
         this.rules = ObjectUtil.checkNotNull(rules, "rules");
 
         for (IpFilterRule rule : this.rules) {
@@ -57,7 +53,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     }
 
     @Override
-    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
         for (IpFilterRule rule : rules) {
             if (rule.matches(remoteAddress)) {
                 return rule.ruleType() == IpFilterRuleType.ACCEPT;
