@@ -22,6 +22,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 final class IOUringSubmissionQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringSubmissionQueue.class);
 
@@ -329,7 +332,6 @@ final class IOUringSubmissionQueue {
             }
         }
     }
-
     private void setTimeout(long timeoutNanoSeconds) {
         long seconds, nanoSeconds;
 
@@ -338,8 +340,8 @@ final class IOUringSubmissionQueue {
             seconds = 0;
             nanoSeconds = 0;
         } else {
-            seconds = timeoutNanoSeconds / 1000000000L;
-            nanoSeconds = timeoutNanoSeconds % 1000;
+            seconds = (int) min(timeoutNanoSeconds / 1000000000L, Integer.MAX_VALUE);
+            nanoSeconds = (int) max(timeoutNanoSeconds - seconds * 1000000000L, 0);
         }
 
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
