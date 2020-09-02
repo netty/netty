@@ -218,14 +218,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (isRegistered()) {
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_IN);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
                 ioState &= ~POLL_IN_SCHEDULED;
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_OUT);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
                 ioState &= ~POLL_OUT_SCHEDULED;
             }
-            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_RDHUP);
+            submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
             submissionQueue.submit();
         }
 

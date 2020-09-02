@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -35,7 +36,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     //Todo set config ring buffer size
     private static final int ringSize = 32;
-    private static final int ENOENT = -2;
     private static final long ETIME = -62;
     static final long ECANCELED = -125;
 
@@ -168,81 +168,68 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
     }
 
-
-
     @Override
     public boolean handle(int fd, int res, long flags, int op, int pollMask) {
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        switch (op) {
-            case IOUring.OP_ACCEPT:
-                // Fall-through
-
-            case IOUring.OP_READ:
-                AbstractIOUringChannel readChannel = channels.get(fd);
-                if (readChannel == null) {
-                    break;
-                }
-                ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
-                break;
-            case IOUring.OP_WRITEV:
-                // Fall-through
-
-            case IOUring.OP_WRITE:
-                AbstractIOUringChannel writeChannel = channels.get(fd);
-                if (writeChannel == null) {
-                    break;
-                }
-                ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
-                break;
-            case IOUring.IO_TIMEOUT:
-                if (res == ETIME) {
-                    prevDeadlineNanos = NONE;
-                }
-                break;
-
-            case IOUring.IO_POLL:
-                if (res == ECANCELED) {
-                    logger.trace("IO_POLL cancelled");
-                    break;
-                }
-                if (eventfd.intValue() == fd) {
-                    pendingWakeup = false;
-                    handleEventFd(submissionQueue);
-                } else {
-                    AbstractIOUringChannel channel = channels.get(fd);
-                    if (channel == null) {
-                        break;
-                    }
-                    if ((pollMask & IOUring.POLLMASK_OUT) != 0) {
-                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
-                    }
-                    if ((pollMask & IOUring.POLLMASK_IN) != 0) {
-                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
-                    }
-                    if ((pollMask & IOUring.POLLMASK_RDHUP) != 0) {
-                        ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
-                    }
-                }
-                break;
-
-            case IOUring.OP_POLL_REMOVE:
-                if (res == ENOENT) {
-                    logger.trace("POLL_REMOVE not successful");
-                } else if (res == 0) {
-                    logger.trace("POLL_REMOVE successful");
-                }
-                break;
-
-            case IOUring.OP_CONNECT:
-                AbstractIOUringChannel channel = channels.get(fd);
-                if (channel != null) {
-                    ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).connectComplete(res);
-                }
-                break;
-            default:
-                break;
+        if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
+            handleRead(fd, res);
+        } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
+            handleWrite(fd, res);
+        } else if (op == Native.IORING_OP_POLL_ADD) {
+            if (res == ECANCELED) {
+                logger.trace("IORING_POLL_ADD cancelled");
+                return true;
+            }
+            if (eventfd.intValue() == fd) {
+                pendingWakeup = false;
+                handleEventFd(submissionQueue);
+            } else {
+                handlePollAdd(fd, res, pollMask);
+            }
+        } else if (op == Native.IORING_OP_POLL_REMOVE) {
+            if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
+                logger.trace("IORING_POLL_REMOVE not successful");
+            } else if (res == 0) {
+                logger.trace("IORING_POLL_REMOVE successful");
+            }
+        } else if (op == Native.IORING_OP_CONNECT) {
+            handleConnect(fd, res);
+        } else if (op == Native.IORING_OP_TIMEOUT) {
+            if (res == ETIME) {
+                prevDeadlineNanos = NONE;
+            }
         }
+
         return true;
+    }
+
+    private void handleRead(int fd, int res) {
+        AbstractIOUringChannel readChannel = channels.get(fd);
+        if (readChannel != null) {
+            ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
+        }
+    }
+
+    private void handleWrite(int fd, int res) {
+        AbstractIOUringChannel writeChannel = channels.get(fd);
+        if (writeChannel != null) {
+            ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
+        }
+    }
+
+    private void handlePollAdd(int fd, int res, int pollMask) {
+        AbstractIOUringChannel channel = channels.get(fd);
+        if (channel != null) {
+            if ((pollMask & Native.POLLOUT) != 0) {
+                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
+            }
+            if ((pollMask & Native.POLLIN) != 0) {
+                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
+            }
+            if ((pollMask & Native.POLLRDHUP) != 0) {
+                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
+            }
+        }
     }
 
     private void handleEventFd(IOUringSubmissionQueue submissionQueue) {
@@ -254,6 +241,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         submissionQueue.addPollIn(eventfd.intValue());
         // Submit so its picked up
         submissionQueue.submit();
+    }
+
+    private void handleConnect(int fd, int res) {
+        AbstractIOUringChannel channel = channels.get(fd);
+        if (channel != null) {
+            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).connectComplete(res);
+        }
     }
 
     @Override

@@ -57,6 +57,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/eventfd.h>
+#include <poll.h>
 
 static jmethodID ringBufferMethodId = NULL;
 static jmethodID ioUringSubmissionQueueMethodId = NULL;
@@ -362,7 +363,76 @@ static jint netty_create_file(JNIEnv *env, jclass class) {
     return open("io-uring-test.txt", O_RDWR | O_TRUNC | O_CREAT, 0644);
 }
 
+static jint netty_io_uring_sockNonblock(JNIEnv* env, jclass clazz) {
+    return SOCK_NONBLOCK;
+}
+
+static jint netty_io_uring_sockCloexec(JNIEnv* env, jclass clazz) {
+    return SOCK_CLOEXEC;
+}
+
+static jint netty_io_uring_pollin(JNIEnv* env, jclass clazz) {
+    return POLLIN;
+}
+
+static jint netty_io_uring_pollout(JNIEnv* env, jclass clazz) {
+    return POLLOUT;
+}
+
+static jint netty_io_uring_pollrdhup(JNIEnv* env, jclass clazz) {
+    return POLLRDHUP;
+}
+
+static jint netty_io_uring_ioringOpWritev(JNIEnv* env, jclass clazz) {
+    return IORING_OP_WRITEV;
+}
+
+static jint netty_io_uring_ioringOpPollAdd(JNIEnv* env, jclass clazz) {
+    return IORING_OP_POLL_ADD;
+}
+
+static jint netty_io_uring_ioringOpPollRemove(JNIEnv* env, jclass clazz) {
+    return IORING_OP_POLL_REMOVE;
+}
+
+static jint netty_io_uring_ioringOpTimeout(JNIEnv* env, jclass clazz) {
+    return IORING_OP_TIMEOUT;
+}
+
+static jint netty_io_uring_ioringOpAccept(JNIEnv* env, jclass clazz) {
+    return IORING_OP_ACCEPT;
+}
+
+static jint netty_io_uring_ioringOpRead(JNIEnv* env, jclass clazz) {
+    return IORING_OP_READ;
+}
+
+static jint netty_io_uring_ioringOpWrite(JNIEnv* env, jclass clazz) {
+    return IORING_OP_WRITE;
+}
+
+static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
+    return IORING_OP_CONNECT;
+}
+
 // JNI Method Registration Table Begin
+static const JNINativeMethod statically_referenced_fixed_method_table[] = {
+  { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
+  { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
+  { "pollin", "()I", (void *) netty_io_uring_pollin },
+  { "pollout", "()I", (void *) netty_io_uring_pollout },
+  { "pollrdhup", "()I", (void *) netty_io_uring_pollrdhup },
+  { "ioringOpWritev", "()I", (void *) netty_io_uring_ioringOpWritev },
+  { "ioringOpPollAdd", "()I", (void *) netty_io_uring_ioringOpPollAdd },
+  { "ioringOpPollRemove", "()I", (void *) netty_io_uring_ioringOpPollRemove },
+  { "ioringOpTimeout", "()I", (void *) netty_io_uring_ioringOpTimeout },
+  { "ioringOpAccept", "()I", (void *) netty_io_uring_ioringOpAccept },
+  { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
+  { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
+  { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect }
+};
+static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
+
 static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(I)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
     {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
@@ -411,6 +481,15 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
             "dlinfo.dli_fname: %s\n",
             dlinfo.dli_fname);
         return JNI_ERR;
+    }
+
+    // We must register the statically referenced methods first!
+    if (netty_unix_util_register_natives(env,
+            packagePrefix,
+            "io/netty/channel/uring/NativeStaticallyReferencedJniMethods",
+            statically_referenced_fixed_method_table,
+            statically_referenced_fixed_method_table_size) != 0) {
+        goto done;
     }
 
     if (netty_unix_util_register_natives(env, packagePrefix,
