@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketCloseForciblyTest;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.List;
 
@@ -28,12 +26,5 @@ public class IOUringSocketCloseForciblyTest extends SocketCloseForciblyTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Ignore("FIX ME")
-    @Test
-    @Override
-    public void testCloseForcibly() throws Throwable {
-        super.testCloseForcibly();
     }
 }
