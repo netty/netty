@@ -47,10 +47,10 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     private final List<IpFilterRule> rules;
 
     /**
-     * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
-     * based on their IP address and {@code rules} applied.
+     * <p> Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
+     * based on their IP address and {@code rules} applied. </p>
      *
-     * {@code acceptIfNotFound} is set to {@code true}
+     * <p> {@code acceptIfNotFound} is set to {@code true}. </p>
      *
      * @param rules An array of {@link IpFilterRule} containing all rules.
      */
