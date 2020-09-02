@@ -229,7 +229,7 @@ public class NativeTest {
         FileDescriptor eventFd = Native.newEventFd();
         submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
-        submissionQueue.addPollRemove(eventFd.intValue(), IOUring.POLLMASK_IN);
+        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN);
         submissionQueue.submit();
 
         final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
@@ -238,9 +238,9 @@ public class NativeTest {
                     new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                 @Override
                 public boolean handle(int fd, int res, long flags, int op, int mask) {
-                    if (op == IOUring.IO_POLL) {
+                    if (op == Native.IORING_OP_POLL_ADD) {
                         assertEquals(IOUringEventLoop.ECANCELED, res);
-                    } else if (op == IOUring.OP_POLL_REMOVE) {
+                    } else if (op == Native.IORING_OP_POLL_REMOVE) {
                         assertEquals(0, res);
                     } else {
                         fail("op " + op);

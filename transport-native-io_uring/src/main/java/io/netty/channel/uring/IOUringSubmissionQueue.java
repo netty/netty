@@ -32,8 +32,6 @@ final class IOUringSubmissionQueue {
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
 
-    private static final int IOSQE_IO_LINK = 4;
-
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L21
     private static final int SQE_OP_CODE_FIELD = 0;
@@ -67,9 +65,6 @@ final class IOUringSubmissionQueue {
     private final int ringSize;
     private final long ringAddress;
     private final int ringFd;
-
-    private static final int SOCK_NONBLOCK = 2048;
-    private static final int SOCK_CLOEXEC = 524288;
 
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
@@ -123,9 +118,9 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
 
         //user_data should be same as POLL_LINK fd
-        if (op == IOUring.OP_POLL_REMOVE) {
+        if (op == Native.IORING_OP_POLL_REMOVE) {
             PlatformDependent.putInt(sqe + SQE_FD_FIELD, -1);
-            long uData = convertToUserData((byte) IOUring.IO_POLL, fd, pollMask);
+            long uData = convertToUserData((byte) Native.IORING_OP_POLL_ADD, fd, pollMask);
             PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, uData);
             PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, convertToUserData(op, fd, 0));
             PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, 0);
@@ -133,11 +128,11 @@ final class IOUringSubmissionQueue {
             long uData = convertToUserData(op, fd, pollMask);
             PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, uData);
             //c union set Rw-Flags or accept_flags
-            if (op != IOUring.OP_ACCEPT) {
+            if (op != Native.IORING_OP_ACCEPT) {
                 PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, pollMask);
             } else {
                 //accept_flags set NON_BLOCKING
-                PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, SOCK_NONBLOCK | SOCK_CLOEXEC);
+                PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC);
             }
         }
 
@@ -164,20 +159,20 @@ final class IOUringSubmissionQueue {
             return false;
         }
         setTimeout(nanoSeconds);
-        setData(sqe, (byte) IOUring.IO_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
+        setData(sqe, (byte) Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
         return true;
     }
 
     public boolean addPollIn(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_IN);
+        return addPoll(fd, Native.POLLIN);
     }
 
     public boolean addPollRdHup(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_RDHUP);
+        return addPoll(fd, Native.POLLRDHUP);
     }
 
     public boolean addPollOut(int fd) {
-        return addPoll(fd, IOUring.POLLMASK_OUT);
+        return addPoll(fd, Native.POLLOUT);
     }
 
     private boolean addPoll(int fd, int pollMask) {
@@ -192,7 +187,7 @@ final class IOUringSubmissionQueue {
             }
         }
 
-        setData(sqe, (byte) IOUring.IO_POLL, pollMask, fd, 0, 0, 0);
+        setData(sqe, (byte) Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0);
         return submitted;
     }
 
@@ -208,7 +203,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
+        setData(sqe, (byte) Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
         return submitted;
     }
 
@@ -223,7 +218,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
+        setData(sqe, (byte) Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
         return submitted;
     }
 
@@ -238,7 +233,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_ACCEPT, 0, fd, 0, 0, 0);
+        setData(sqe, (byte) Native.IORING_OP_ACCEPT, 0, fd, 0, 0, 0);
         return submitted;
     }
 
@@ -254,7 +249,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_POLL_REMOVE, pollMask, fd, 0, 0, 0);
+        setData(sqe, (byte) Native.IORING_OP_POLL_REMOVE, pollMask, fd, 0, 0, 0);
 
         return submitted;
     }
@@ -270,7 +265,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
+        setData(sqe, (byte) Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
 
         return submitted;
     }
@@ -286,7 +281,7 @@ final class IOUringSubmissionQueue {
                 submitted = true;
             }
         }
-        setData(sqe, (byte) IOUring.OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
+        setData(sqe, (byte) Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
 
         return submitted;
     }
