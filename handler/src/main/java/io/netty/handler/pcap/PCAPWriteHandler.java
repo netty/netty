@@ -129,18 +129,23 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf byteBuf = ctx.alloc().buffer();
 
-        try {
-            if (writePcapGlobalHeader) {
+        /*
+         * If `writePcapGlobalHeader` is `true`, we'll write Pcap Global Header.
+         */
+        if (writePcapGlobalHeader) {
+
+            ByteBuf byteBuf = ctx.alloc().buffer();
+            try {
                 this.pCapWriter = new PCapWriter(this.outputStream, byteBuf);
-            } else {
-                this.pCapWriter = new PCapWriter(this.outputStream);
+            } catch (IOException ex) {
+                ctx.fireExceptionCaught(ex);
+            } finally {
+                byteBuf.release();
             }
-        } catch (IOException ex) {
-            ctx.fireExceptionCaught(ex);
-        } finally {
-            byteBuf.release();
+
+        } else {
+            this.pCapWriter = new PCapWriter(this.outputStream);
         }
 
         if (ctx.channel() instanceof SocketChannel) {
