@@ -15,9 +15,7 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -30,11 +28,9 @@ import java.io.IOException;
 import java.nio.channels.Selector;
 import java.util.Locale;
 
-import static io.netty.channel.unix.Socket.isIPv6Preferred;
-
 
 final class Native {
-   private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
     private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 32);
 
      static {
@@ -66,8 +62,20 @@ final class Native {
         }
         Socket.initialize();
     }
+    static final int SOCK_NONBLOCK = NativeStaticallyReferencedJniMethods.sockNonblock();
+    static final int SOCK_CLOEXEC = NativeStaticallyReferencedJniMethods.sockCloexec();
+    static final int POLLIN = NativeStaticallyReferencedJniMethods.pollin();
+    static final int POLLOUT = NativeStaticallyReferencedJniMethods.pollout();
+    static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
 
-
+    static final int IORING_OP_POLL_ADD = NativeStaticallyReferencedJniMethods.ioringOpPollAdd();
+    static final int IORING_OP_TIMEOUT = NativeStaticallyReferencedJniMethods.ioringOpTimeout();
+    static final int IORING_OP_ACCEPT = NativeStaticallyReferencedJniMethods.ioringOpAccept();
+    static final int IORING_OP_READ = NativeStaticallyReferencedJniMethods.ioringOpRead();
+    static final int IORING_OP_WRITE = NativeStaticallyReferencedJniMethods.ioringOpWrite();
+    static final int IORING_OP_POLL_REMOVE = NativeStaticallyReferencedJniMethods.ioringOpPollRemove();
+    static final int IORING_OP_CONNECT = NativeStaticallyReferencedJniMethods.ioringOpConnect();
+    static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
 
     public static RingBuffer createRingBuffer(int ringSize) {
         //Todo throw Exception if it's null
