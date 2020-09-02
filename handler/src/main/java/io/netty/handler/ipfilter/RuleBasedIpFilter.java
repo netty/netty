@@ -24,29 +24,41 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
+ * <p>
  * This class allows one to filter new {@link Channel}s based on the
  * {@link IpFilterRule}s passed to its constructor. If no rules are provided, all connections
  * will be accepted.
+ * </p>
  *
+ * <p>
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
  * {@link AbstractRemoteAddressFilter#channelRejected(ChannelHandlerContext, SocketAddress)}.
+ * </p>
  */
 @Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final IpFilterRule[] rules;
 
-    public RuleBasedIpFilter(IpFilterRule... rules) {
+    /**
+     * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
+     * based on their IP address and {@code rules} applied.
+     *
+     * @param rules An array of {@link IpFilterRule} containing all rules.
+     * @throws NullPointerException If {@code rules} array or {@code rule} in
+     *                              {@code rules} array is {@code null}.
+     */
+    public RuleBasedIpFilter(IpFilterRule... rules) throws NullPointerException {
         this.rules = ObjectUtil.checkNotNull(rules, "rules");
+
+        for (IpFilterRule rule : this.rules) {
+            ObjectUtil.checkNotNull(rule, "rule");
+        }
     }
 
     @Override
-    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
         for (IpFilterRule rule : rules) {
-            if (rule == null) {
-                break;
-            }
-
             if (rule.matches(remoteAddress)) {
                 return rule.ruleType() == IpFilterRuleType.ACCEPT;
             }
