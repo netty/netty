@@ -117,7 +117,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         submissionQueue.addPollIn(eventfd.intValue());
         submissionQueue.submit();
 
-        for (; ; ) {
+        for (;;) {
             logger.trace("Run IOUringEventLoop {}", this.toString());
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
             if (curDeadlineNanos == -1L) {
@@ -152,9 +152,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
             completionQueue.process(this);
 
-            if (hasTasks()) {
-                runAllTasks();
-            }
+            // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
+            runAllTasks();
 
             try {
                 if (isShuttingDown()) {
@@ -168,6 +167,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             }
         }
     }
+
+
 
     @Override
     public boolean handle(int fd, int res, long flags, int op, int pollMask) {
