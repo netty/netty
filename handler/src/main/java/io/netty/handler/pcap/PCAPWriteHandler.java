@@ -39,7 +39,7 @@ import java.net.InetSocketAddress;
  * <p></p>
  *
  * <p>
- *  Things to keep in mind when using {@link PCAPWriteHandler} with TCP:
+ * Things to keep in mind when using {@link PCAPWriteHandler} with TCP:
  *
  *    <ul>
  *        <li> Whenever {@link ChannelInboundHandlerAdapter#channelActive(ChannelHandlerContext)} is called,
@@ -78,6 +78,11 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     private final boolean captureZeroByte;
 
     /**
+     * {@code true} if we want to write Pcap Global Header on initialization of {@link PCapWriter} else {@code false}.
+     */
+    private final boolean writePcapGlobalHeader;
+
+    /**
      * TCP Sender Segment Number.
      */
     private int sendSegmentNumber = 1;
@@ -99,23 +104,27 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     /**
      * Create new {@link PCAPWriteHandler} Instance.
-     * {@code captureZeroByte} are set to {@code false}.
+     * {@code captureZeroByte} is set to {@code false} and
+     * {@code writePcapGlobalHeader} is set to {@code true}.
      *
      * @param outputStream OutputStream where Pcap data will be written
      */
     public PCAPWriteHandler(OutputStream outputStream) {
-        this(outputStream, false);
+        this(outputStream, false, true);
     }
 
     /**
      * Create new {@link PCAPWriteHandler} Instance
      *
-     * @param outputStream    OutputStream where Pcap data will be written
-     * @param captureZeroByte {@code true} If we'll capture packets with 0 bytes
+     * @param outputStream          OutputStream where Pcap data will be written
+     * @param captureZeroByte       {@code true} If we'll capture packets with 0 bytes else {@code false}
+     * @param writePcapGlobalHeader {@code true} if we want to write Pcap Global Header on initialization
+     *                              of {@link PCapWriter} else {@code false}.
      */
-    public PCAPWriteHandler(OutputStream outputStream, boolean captureZeroByte) {
+    public PCAPWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
         this.outputStream = outputStream;
         this.captureZeroByte = captureZeroByte;
+        this.writePcapGlobalHeader = writePcapGlobalHeader;
     }
 
     @Override
@@ -123,7 +132,11 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         ByteBuf byteBuf = ctx.alloc().buffer();
 
         try {
-            this.pCapWriter = new PCapWriter(this.outputStream, byteBuf);
+            if (writePcapGlobalHeader) {
+                this.pCapWriter = new PCapWriter(this.outputStream, byteBuf);
+            } else {
+                this.pCapWriter = new PCapWriter(this.outputStream);
+            }
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
         } finally {

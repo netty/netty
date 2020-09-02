@@ -27,6 +27,14 @@ final class PCapWriter implements Closeable {
 
     /**
      * This uses {@link OutputStream} for writing Pcap.
+     *
+     */
+    PCapWriter(OutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
+
+    /**
+     * This uses {@link OutputStream} for writing Pcap.
      * Pcap Global Header is also written on construction.
      *
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
