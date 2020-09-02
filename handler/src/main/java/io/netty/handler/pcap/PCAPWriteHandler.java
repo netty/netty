@@ -118,9 +118,12 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
      * Create new {@link PCAPWriteHandler} Instance
      *
      * @param outputStream          OutputStream where Pcap data will be written
-     * @param captureZeroByte       {@code true} If we'll capture packets with 0 bytes else {@code false}
-     * @param writePcapGlobalHeader {@code true} if we want to write Pcap Global Header on initialization
-     *                              of {@link PCapWriter} else {@code false}.
+     * @param captureZeroByte       Set to {@code true} to enable capturing packets with empty (0 bytes) payload.
+     *                              Otherwise, if set to {@code false}, empty packets will be filtered out.
+     * @param writePcapGlobalHeader Set to {@code true} to write Pcap Global Header on initialization.
+     *                              Otherwise, if set to {@code false}, Pcap Global Header will not be written
+     *                              on initialization. This could when writing Pcap data on a existing file where
+     *                              Pcap Global Header is already present.
      */
     public PCAPWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
         this.outputStream = outputStream;
