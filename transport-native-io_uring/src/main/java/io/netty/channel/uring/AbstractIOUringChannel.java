@@ -214,17 +214,20 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         freeRemoteAddressMemory();
         active = false;
 
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        if ((ioState & POLL_IN_SCHEDULED) != 0) {
-            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_IN);
-            ioState &= ~POLL_IN_SCHEDULED;
+        // doClose() may be called by closeForcibly() before the Channel is registered on the EventLoop.
+        if (isRegistered()) {
+            IOUringSubmissionQueue submissionQueue = submissionQueue();
+            if ((ioState & POLL_IN_SCHEDULED) != 0) {
+                submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_IN);
+                ioState &= ~POLL_IN_SCHEDULED;
+            }
+            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
+                submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_OUT);
+                ioState &= ~POLL_OUT_SCHEDULED;
+            }
+            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_RDHUP);
+            submissionQueue.submit();
         }
-        if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-            submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_OUT);
-            ioState &= ~POLL_OUT_SCHEDULED;
-        }
-        submissionQueue.addPollRemove(socket.intValue(), IOUring.POLLMASK_RDHUP);
-        submissionQueue.submit();
 
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
