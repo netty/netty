@@ -22,6 +22,8 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -41,19 +43,39 @@ import java.net.SocketAddress;
 @Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
-    private final IpFilterRule[] rules;
+    private final boolean acceptIfNotFound;
+    private final List<IpFilterRule> rules;
 
     /**
      * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
      * based on their IP address and {@code rules} applied.
      *
+     * {@code acceptIfNotFound} is set to {@code true}
+     *
      * @param rules An array of {@link IpFilterRule} containing all rules.
      */
     public RuleBasedIpFilter(IpFilterRule... rules) {
-        this.rules = ObjectUtil.checkNotNull(rules, "rules");
+        this(true, rules);
+    }
 
-        for (IpFilterRule rule : this.rules) {
-            ObjectUtil.checkNotNull(rule, "rule");
+    /**
+     * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
+     * based on their IP address and {@code rules} applied.
+     *
+     * @param acceptIfNotFound If {@code true} then accept connection from IP Address if it
+     *                         doesn't match any rule.
+     * @param rules            An array of {@link IpFilterRule} containing all rules.
+     */
+    public RuleBasedIpFilter(boolean acceptIfNotFound, IpFilterRule... rules) {
+        ObjectUtil.checkNotNull(rules, "rules");
+
+        this.acceptIfNotFound = acceptIfNotFound;
+        this.rules = new ArrayList<IpFilterRule>();
+
+        for (IpFilterRule rule : rules) {
+            if (rule != null) {
+                this.rules.add(rule);
+            }
         }
     }
 
@@ -65,6 +87,6 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
             }
         }
 
-        return true;
+        return acceptIfNotFound;
     }
 }
