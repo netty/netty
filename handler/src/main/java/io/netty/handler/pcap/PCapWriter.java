@@ -70,6 +70,7 @@ final class PCapWriter implements Closeable {
 
     @Override
     public void close() throws IOException {
+        outputStream.flush();
         outputStream.close();
     }
 }

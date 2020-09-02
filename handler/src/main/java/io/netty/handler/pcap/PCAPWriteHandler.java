@@ -78,7 +78,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     private final boolean captureZeroByte;
 
     /**
-     * {@code true} if we want to write Pcap Global Header on initialization of {@link PCapWriter} else {@code false}.
+     * {@code true} if we want to write Pcap Global Header on initialization of
+     * {@link PCapWriter} else {@code false}.
      */
     private final boolean writePcapGlobalHeader;
 
