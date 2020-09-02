@@ -51,7 +51,7 @@ final class PCapWriter implements Closeable {
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
                 (int) TimeUnit.MILLISECONDS.toSeconds(currentTime),
-                (int) currentTime % 1000,
+                (int) TimeUnit.MILLISECONDS.toMicros(currentTime) % 1000000,
                 packet.readableBytes(),
                 packet.readableBytes()
         );
