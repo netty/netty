@@ -34,6 +34,9 @@ import java.net.SocketAddress;
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
  * {@link AbstractRemoteAddressFilter#channelRejected(ChannelHandlerContext, SocketAddress)}.
  * </p>
+ *
+ * <p> You can also consider using {@link IpSubnetFilter} which uses Binary Search Algorithm
+ * for super fast IP Address filtering. </p>
  */
 @Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
@@ -43,6 +46,8 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     /**
      * Create new Instance of {@link RuleBasedIpFilter} and filter incoming connections
      * based on their IP address and {@code rules} applied.
+     *
+     * @param rules An array of {@link IpFilterRule} containing all rules.
      */
     public RuleBasedIpFilter(IpFilterRule... rules) {
         this.rules = ObjectUtil.checkNotNull(rules, "rules");
