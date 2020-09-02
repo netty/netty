@@ -371,6 +371,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
             active = true;
 
+            if (local == null) {
+                local = socket.localAddress();
+            }
             computeRemote();
 
             // Register POLLRDHUP

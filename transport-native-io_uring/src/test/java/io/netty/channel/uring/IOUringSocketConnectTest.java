@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConnectTest;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.List;
 
@@ -29,12 +27,4 @@ public class IOUringSocketConnectTest extends SocketConnectTest {
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
     }
-
-    @Ignore
-    @Test
-    @Override
-    public void testLocalAddressAfterConnect() throws Throwable {
-        super.testLocalAddressAfterConnect();
-    }
-
 }
