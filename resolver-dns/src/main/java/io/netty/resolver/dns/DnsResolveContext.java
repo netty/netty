@@ -1025,11 +1025,18 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private DnsServerAddressStream getNameServers(String hostname) {
-        DnsServerAddressStream stream = getNameServersFromCache(hostname);
-        // We need to obtain a new stream from the parent DnsNameResolver as the hostname may not be the same as the
-        // one used for the original query (for example we may follow CNAMEs).
-        return stream == null ? parent.newNameServerAddressStream(hostname) : stream;
+    private DnsServerAddressStream getNameServers(String name) {
+        DnsServerAddressStream stream = getNameServersFromCache(name);
+        if (stream == null) {
+            // We need to obtain a new stream from the parent DnsNameResolver if the hostname is not the same as
+            // for the original query (for example we may follow CNAMEs). Otherwise let's just duplicate the
+            // original nameservers so we correctly update the internal index
+            if (name.equals(hostname)) {
+                return nameServerAddrs.duplicate();
+            }
+            return parent.newNameServerAddressStream(name);
+        }
+        return stream;
     }
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,

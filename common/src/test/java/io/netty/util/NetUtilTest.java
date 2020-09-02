@@ -18,6 +18,7 @@ package io.netty.util;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -722,6 +723,12 @@ public class NetUtilTest {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
             assertEquals(e.getKey(), toAddressString(InetAddress.getByAddress(unhex(e.getValue()))));
         }
+    }
+
+    @Test
+    public void testIPv4ToInt() throws UnknownHostException {
+        assertEquals(2130706433, ipv4AddressToInt((Inet4Address) InetAddress.getByName("127.0.0.1")));
+        assertEquals(-1062731519, ipv4AddressToInt((Inet4Address) InetAddress.getByName("192.168.1.1")));
     }
 
     @Test
