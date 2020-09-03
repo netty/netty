@@ -467,7 +467,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         final void pollRdHup(int res) {
             if (isActive()) {
                 if ((ioState & READ_SCHEDULED) == 0) {
-                    scheduleRead();
+                    scheduleFirstRead();
                 }
             } else {
                 // Just to be safe make sure the input marked as closed.
@@ -482,8 +482,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             ioState &= ~POLL_IN_SCHEDULED;
 
             if ((ioState & READ_SCHEDULED) == 0) {
-                scheduleRead();
+                scheduleFirstRead();
             }
+        }
+
+        private void scheduleFirstRead() {
+            // This is a new "read loop" so we need to reset the allocHandle.
+            final ChannelConfig config = config();
+            final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
+            scheduleRead();
         }
 
         protected final void scheduleRead() {
