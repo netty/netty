@@ -915,9 +915,9 @@ public final class ByteBufUtil {
             }
         }
 
-        byte[] v = PlatformDependent.allocateUninitializedArray(length);
-        buf.getBytes(start, v);
-        return v;
+        byte[] bytes = PlatformDependent.allocateUninitializedArray(length);
+        buf.getBytes(start, bytes);
+        return bytes;
     }
 
     /**
