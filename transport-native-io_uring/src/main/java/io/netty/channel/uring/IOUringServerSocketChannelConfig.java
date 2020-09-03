@@ -16,18 +16,20 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.*;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Map;
 
-public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig implements ServerSocketChannelConfig {
+import static io.netty.channel.ChannelOption.SO_BACKLOG;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
+public final class IOUringServerSocketChannelConfig extends DefaultChannelConfig implements ServerSocketChannelConfig {
+    private volatile int backlog = NetUtil.SOMAXCONN;
 
     IOUringServerSocketChannelConfig(AbstractIOUringServerChannel channel) {
         super(channel);
@@ -35,20 +37,24 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
     }
 
     @Override
-    public IOUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
-        super.setReuseAddress(reuseAddress);
-        return this;
-    }
-
-    @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IOUringChannelOption.SO_REUSEPORT, IOUringChannelOption.IP_FREEBIND,
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG,
+                IOUringChannelOption.SO_REUSEPORT, IOUringChannelOption.IP_FREEBIND,
             IOUringChannelOption.IP_TRANSPARENT, IOUringChannelOption.TCP_DEFER_ACCEPT);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == SO_BACKLOG) {
+            return (T) Integer.valueOf(getBacklog());
+        }
         if (option == IOUringChannelOption.SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
         }
@@ -67,8 +73,13 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
-
-        if (option == IOUringChannelOption.SO_REUSEPORT) {
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_BACKLOG) {
+            setBacklog((Integer) value);
+        } else if (option == IOUringChannelOption.SO_REUSEPORT) {
             setReusePort((Boolean) value);
         } else if (option == IOUringChannelOption.IP_FREEBIND) {
             setFreeBind((Boolean) value);
@@ -84,19 +95,57 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
     }
 
     @Override
-    public IOUringServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        super.setReceiveBufferSize(receiveBufferSize);
-        return this;
-    }
-
-    @Override
     public IOUringServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         return this;
     }
 
     @Override
+    public boolean isReuseAddress() {
+        try {
+            return ((AbstractIOUringChannel) channel).socket.isReuseAddress();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public IOUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        try {
+            ((AbstractIOUringChannel) channel).socket.setReuseAddress(reuseAddress);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public int getReceiveBufferSize() {
+        try {
+            return ((AbstractIOUringChannel) channel).socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public IOUringServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            ((AbstractIOUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public int getBacklog() {
+        return backlog;
+    }
+
+    @Override
     public IOUringServerSocketChannelConfig setBacklog(int backlog) {
-        super.setBacklog(backlog);
+        checkPositiveOrZero(backlog, "backlog");
+        this.backlog = backlog;
         return this;
     }
 
@@ -163,20 +212,6 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
         return this;
     }
 
-//    /**
-//     * Set the {@code TCP_MD5SIG} option on the socket. See {@code linux/tcp.h} for more details.
-//     * Keys can only be set on, not read to prevent a potential leak, as they are confidential.
-//     * Allowing them being read would mean anyone with access to the channel could get them.
-//     */
-//    public IOUringServerSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
-//        try {
-//            ((IOUringServerSocketChannel) channel).setTcpMd5Sig(keys);
-//            return this;
-//        } catch (IOException e) {
-//            throw new ChannelException(e);
-//        }
-//    }
-
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
@@ -188,13 +223,13 @@ public class IOUringServerSocketChannelConfig extends IOUringServerChannelConfig
         }
     }
 
-//    /**
-//     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
-//     * {@link EpollSocketChannel}s to the same port and so accept connections with multiple threads.
-//     *
-//     * Be aware this method needs be called before {@link EpollSocketChannel#bind(java.net.SocketAddress)} to have
-//     * any affect.
-//     */
+    /**
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
+     * {@link io.netty.channel.socket.ServerSocketChannel}s to the same port and so accept connections with multiple threads.
+     *
+     * Be aware this method needs be called before
+     * {@link io.netty.channel.socket.ServerSocketChannel#bind(java.net.SocketAddress)} to have any affect.
+     */
     public IOUringServerSocketChannelConfig setReusePort(boolean reusePort) {
         try {
             ((IOUringServerSocketChannel) channel).socket.setReusePort(reusePort);
