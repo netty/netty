@@ -148,7 +148,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             } finally {
                 byteBuf.release();
             }
-
         } else {
             this.pCapWriter = new PCapWriter(this.outputStream);
         }
@@ -189,6 +188,9 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             logger.debug("Finished Fake TCP 3-Way Handshake");
         } else if (ctx.channel() instanceof DatagramChannel) {
             DatagramChannel datagramChannel = (DatagramChannel) ctx.channel();
+
+            // If `DatagramChannel` is connected then we can get
+            // `localAddress` and `remoteAddress` from Channel.
             if (datagramChannel.isConnected()) {
                 srcAddr = (InetSocketAddress) ctx.channel().localAddress();
                 dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
@@ -264,7 +266,6 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             } finally {
                 tcpBuf.release();
             }
-
         } else {
             logger.error("Discarding Pcap Write for TCP Object: {}", msg);
         }
@@ -305,6 +306,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
                         InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
+        // If `ackOnly` is `true` when we don't need to write any data so we'll not
+        // log number of bytes being written and mark the operation as "TCP ACK".
         if (ackOnly) {
             logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
                     + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
@@ -347,7 +350,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                     return;
                 }
 
-                ByteBuf  byteBuf = ((ByteBuf) msg).duplicate();
+                ByteBuf byteBuf = ((ByteBuf) msg).duplicate();
 
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         byteBuf.readableBytes(), srcAddr, dstAddr);
