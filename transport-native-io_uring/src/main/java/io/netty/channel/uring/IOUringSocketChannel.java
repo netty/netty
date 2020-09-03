@@ -15,33 +15,14 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
-import io.netty.channel.uring.AbstractIOUringStreamChannel.IOUringStreamUnsafe;
 
-
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Collection;
-import java.util.Collections;
 
 public final class IOUringSocketChannel extends AbstractIOUringStreamChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
-    //private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public IOUringSocketChannel() {
        super(null, LinuxSocket.newSocketStream(), false);
@@ -53,33 +34,14 @@ public final class IOUringSocketChannel extends AbstractIOUringStreamChannel imp
         this.config = new IOUringSocketChannelConfig(this);
     }
 
-   IOUringSocketChannel(Channel parent, LinuxSocket fd, InetSocketAddress remoteAddress) {
-        super(parent, fd, remoteAddress);
-        this.config = new IOUringSocketChannelConfig(this);
-
-//        if (parent instanceof IOUringSocketChannel) {
-//            tcpMd5SigAddresses = ((IOUringSocketChannel) parent).tcpMd5SigAddresses();
-//        }
-    }
-
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
 
     @Override
-    protected AbstractUringUnsafe newUnsafe() {
-        return new IOUringStreamUnsafe();
-    }
-
-    @Override
     public IOUringSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public FileDescriptor fd() {
-        return super.fd();
     }
 
     @Override

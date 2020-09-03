@@ -83,8 +83,7 @@ final class Native {
     }
 
     public static RingBuffer createRingBuffer() {
-        //Todo throw Exception if it's null
-        return ioUringSetup(DEFAULT_RING_SIZE);
+        return createRingBuffer(DEFAULT_RING_SIZE);
     }
 
     private static native RingBuffer ioUringSetup(int entries);
