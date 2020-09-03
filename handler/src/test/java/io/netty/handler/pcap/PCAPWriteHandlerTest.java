@@ -71,8 +71,7 @@ public class PCAPWriteHandlerTest {
 
         ChannelFuture channelFutureClient = client.connect(srvAddr, cltAddr).sync();
         assertTrue(channelFutureClient.isSuccess());
-        assertTrue(channelFutureClient.channel().writeAndFlush(
-                new DatagramPacket(Unpooled.wrappedBuffer("Meow".getBytes()), srvAddr))
+        assertTrue(channelFutureClient.channel().writeAndFlush(Unpooled.wrappedBuffer("Meow".getBytes()))
                 .sync().isSuccess());
         assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
