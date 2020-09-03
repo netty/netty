@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.List;
 
@@ -28,18 +26,5 @@ public class IOUringSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Ignore("FIX ME")
-    @Test
-    public void testHalfClosureOnlyOneEventWhenAutoRead() throws Throwable {
-        super.testHalfClosureOnlyOneEventWhenAutoRead();
-    }
-
-
-    @Ignore("FIX ME")
-    @Test
-    public void testAutoCloseFalseDoesShutdownOutput() throws Throwable {
-        super.testAutoCloseFalseDoesShutdownOutput();
     }
 }

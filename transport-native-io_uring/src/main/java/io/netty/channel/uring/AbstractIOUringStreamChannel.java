@@ -210,13 +210,8 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
         @Override
         protected void scheduleRead0() {
-            final ChannelConfig config = config();
-
-            final ByteBufAllocator allocator = config.getAllocator();
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
-
-            ByteBuf byteBuf = allocHandle.allocate(allocator);
+            ByteBuf byteBuf = allocHandle.allocate(alloc());
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
