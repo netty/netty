@@ -184,19 +184,14 @@ import io.netty.channel.ChannelHandlerContext;
  * </pre>
  * @see LengthFieldPrepender
  */
-public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
+public class LengthFieldBasedFrameDecoder extends BaseLengthBasedFrameDecoder {
 
     private final ByteOrder byteOrder;
-    private final int maxFrameLength;
     private final int lengthFieldOffset;
     private final int lengthFieldLength;
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
     private final int initialBytesToStrip;
-    private final boolean failFast;
-    private boolean discardingTooLongFrame;
-    private long tooLongFrameLength;
-    private long bytesToDiscard;
 
     /**
      * Creates a new instance.
@@ -301,10 +296,8 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     public LengthFieldBasedFrameDecoder(
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
-
+        super(checkPositive(maxFrameLength, "maxFrameLength"), failFast);
         this.byteOrder = checkNotNull(byteOrder, "byteOrder");
-
-        checkPositive(maxFrameLength, "maxFrameLength");
 
         checkPositiveOrZero(lengthFieldOffset, "lengthFieldOffset");
 
@@ -318,31 +311,11 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
                     "lengthFieldLength (" + lengthFieldLength + ").");
         }
 
-        this.maxFrameLength = maxFrameLength;
         this.lengthFieldOffset = lengthFieldOffset;
         this.lengthFieldLength = lengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
         this.lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
-        this.failFast = failFast;
-    }
-
-    @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        Object decoded = decode(ctx, in);
-        if (decoded != null) {
-            out.add(decoded);
-        }
-    }
-
-    private void discardingTooLongFrame(ByteBuf in) {
-        long bytesToDiscard = this.bytesToDiscard;
-        int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());
-        in.skipBytes(localBytesToDiscard);
-        bytesToDiscard -= localBytesToDiscard;
-        this.bytesToDiscard = bytesToDiscard;
-
-        failIfNecessary(false);
     }
 
     private static void failOnNegativeLengthField(ByteBuf in, long frameLength, int lengthFieldEndOffset) {
@@ -434,7 +407,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         // extract frame
         int readerIndex = in.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
-        ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
+        ByteBuf frame = extractFrame(in, readerIndex, actualFrameLength);
         in.readerIndex(readerIndex + actualFrameLength);
         return frame;
     }
@@ -473,40 +446,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         return frameLength;
     }
 
-    private void failIfNecessary(boolean firstDetectionOfTooLongFrame) {
-        if (bytesToDiscard == 0) {
-            // Reset to the initial state and tell the handlers that
-            // the frame was too large.
-            long tooLongFrameLength = this.tooLongFrameLength;
-            this.tooLongFrameLength = 0;
-            discardingTooLongFrame = false;
-            if (!failFast || firstDetectionOfTooLongFrame) {
-                fail(tooLongFrameLength);
-            }
-        } else {
-            // Keep discarding and notify handlers if necessary.
-            if (failFast && firstDetectionOfTooLongFrame) {
-                fail(tooLongFrameLength);
-            }
-        }
-    }
-
     /**
      * Extract the sub-region of the specified buffer.
      */
     protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
         return buffer.retainedSlice(index, length);
-    }
-
-    private void fail(long frameLength) {
-        if (frameLength > 0) {
-            throw new TooLongFrameException(
-                            "Adjusted frame length exceeds " + maxFrameLength +
-                            ": " + frameLength + " - discarded");
-        } else {
-            throw new TooLongFrameException(
-                            "Adjusted frame length exceeds " + maxFrameLength +
-                            " - discarding");
-        }
     }
 }
