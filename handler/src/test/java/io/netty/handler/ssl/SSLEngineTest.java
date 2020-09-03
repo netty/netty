@@ -81,7 +81,6 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -109,7 +108,6 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
-import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -1267,14 +1265,14 @@ public abstract class SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 // This test only works for non TLSv1.3 for now
-                .protocols(protocols())
+                .protocols(PROTOCOL_TLS_V1_2)
                 .sslContextProvider(clientSslContextProvider())
                 .build());
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 // This test only works for non TLSv1.3 for now
-                .protocols(protocols())
+                .protocols(PROTOCOL_TLS_V1_2)
                 .sslContextProvider(serverSslContextProvider())
                 .build());
         SSLEngine clientEngine = null;
@@ -1289,54 +1287,10 @@ public abstract class SSLEngineTest {
 
             handshake(clientEngine, serverEngine);
 
-            if (protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
-                // Allocate something which is big enough for sure
-                ByteBuffer packetBuffer = allocateBuffer(32 * 1024);
-                ByteBuffer appBuffer = allocateBuffer(32 * 1024);
-
-                appBuffer.clear().position(4).flip();
-                packetBuffer.clear();
-
-                do {
-                    SSLEngineResult result;
-
-                    do {
-                        result = serverEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-                    do {
-                        result = clientEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-
-                    do {
-                        result = clientEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-
-                    do {
-                        result = serverEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-                } while (clientEngine.getSession().getId().length == 0);
-
-                // With TLS1.3 we should see pseudo IDs and so these should never match.
-                assertFalse(Arrays.equals(clientEngine.getSession().getId(), serverEngine.getSession().getId()));
-            } else {
-                // After the handshake the id should have length > 0
-                assertNotEquals(0, clientEngine.getSession().getId().length);
-                assertNotEquals(0, serverEngine.getSession().getId().length);
-
-                assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
-            }
+            // After the handshake the id should have length > 0
+            assertNotEquals(0, clientEngine.getSession().getId().length);
+            assertNotEquals(0, serverEngine.getSession().getId().length);
+            assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
@@ -1513,7 +1467,8 @@ public abstract class SSLEngineTest {
         ByteBuffer cTOs = allocateBuffer(clientEngine.getSession().getPacketBufferSize());
         ByteBuffer sTOc = allocateBuffer(serverEngine.getSession().getPacketBufferSize());
 
-        ByteBuffer serverAppReadBuffer = allocateBuffer(serverEngine.getSession().getApplicationBufferSize());
+        ByteBuffer serverAppReadBuffer = allocateBuffer(
+                serverEngine.getSession().getApplicationBufferSize());
         ByteBuffer clientAppReadBuffer = allocateBuffer(
                 clientEngine.getSession().getApplicationBufferSize());
 
@@ -1527,6 +1482,7 @@ public abstract class SSLEngineTest {
 
         boolean clientHandshakeFinished = false;
         boolean serverHandshakeFinished = false;
+
         boolean cTOsHasRemaining;
         boolean sTOcHasRemaining;
 
@@ -2943,267 +2899,6 @@ public abstract class SSLEngineTest {
     }
 
     @Test
-    public void testSessionCache() throws Exception {
-        clientSslCtx = wrapContext(SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .build());
-
-        try {
-            doHandshakeVerifyReusedAndClose("a.netty.io", 9999, false);
-            doHandshakeVerifyReusedAndClose("a.netty.io", 9999, true);
-            doHandshakeVerifyReusedAndClose("b.netty.io", 9999, false);
-            invalidateSessionsAndAssert(serverSslCtx.sessionContext());
-            invalidateSessionsAndAssert(clientSslCtx.sessionContext());
-        } finally {
-            ssc.delete();
-        }
-    }
-
-    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
-        Enumeration<byte[]> ids = context.getIds();
-        while (ids.hasMoreElements()) {
-            byte[] id = ids.nextElement();
-            SSLSession session = context.getSession(id);
-            if (session != null) {
-                session.invalidate();
-                assertFalse(session.isValid());
-                assertNull(context.getSession(id));
-            }
-        }
-    }
-
-    private static void assertSessionCache(SSLSessionContext sessionContext, int numSessions) {
-        Enumeration<byte[]> ids = sessionContext.getIds();
-        int numIds = 0;
-        while (ids.hasMoreElements()) {
-            numIds++;
-            byte[] id = ids.nextElement();
-            assertNotEquals(0, id.length);
-            SSLSession session = sessionContext.getSession(id);
-            assertArrayEquals(id, session.getId());
-        }
-        assertEquals(numSessions, numIds);
-    }
-
-    private void doHandshakeVerifyReusedAndClose(String host, int port, boolean reuse)
-            throws Exception {
-        SSLEngine clientEngine = null;
-        SSLEngine serverEngine = null;
-        try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, host, port));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            handshake(clientEngine, serverEngine);
-            int clientSessions = currentSessionCacheSize(clientSslCtx.sessionContext());
-            int serverSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
-            int nCSessions = clientSessions;
-            int nSSessions = serverSessions;
-            if (protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
-                // Allocate something which is big enough for sure
-                ByteBuffer packetBuffer = allocateBuffer(32 * 1024);
-                ByteBuffer appBuffer = allocateBuffer(32 * 1024);
-
-                appBuffer.clear().position(4).flip();
-                packetBuffer.clear();
-
-                do {
-                    SSLEngineResult result;
-
-                    do {
-                        result = serverEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-                    do {
-                        result = clientEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-
-                    do {
-                        result = clientEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-
-                    do {
-                        result = serverEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-                    nCSessions = currentSessionCacheSize(clientSslCtx.sessionContext());
-                    nSSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
-                } while ((reuse && (!isSessionMaybeReused(clientEngine) || !isSessionMaybeReused(serverEngine)))
-                        || (!reuse && (nCSessions < clientSessions ||
-                        // server may use multiple sessions
-                        nSSessions < serverSessions)));
-            }
-
-            assertSessionReusedForEngine(clientEngine, serverEngine, reuse);
-
-            closeOutboundAndInbound(clientEngine, serverEngine);
-        } finally {
-            cleanupClientSslEngine(clientEngine);
-            cleanupServerSslEngine(serverEngine);
-        }
-    }
-
-    protected boolean isSessionMaybeReused(SSLEngine engine) {
-        return true;
-    }
-
-    private static int currentSessionCacheSize(SSLSessionContext ctx) {
-        Enumeration<byte[]> ids = ctx.getIds();
-        int i = 0;
-        while (ids.hasMoreElements()) {
-            i++;
-            ids.nextElement();
-        }
-        return i;
-    }
-
-    private void closeOutboundAndInbound(SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
-        assertFalse(clientEngine.isInboundDone());
-        assertFalse(clientEngine.isOutboundDone());
-        assertFalse(serverEngine.isInboundDone());
-        assertFalse(serverEngine.isOutboundDone());
-
-        ByteBuffer empty = allocateBuffer(0);
-
-        // Ensure we allocate a bit more so we can fit in multiple packets. This is needed as we may call multiple
-        // time wrap / unwrap in a for loop before we drain the buffer we are writing in.
-        ByteBuffer cTOs = allocateBuffer(clientEngine.getSession().getPacketBufferSize() * 4);
-        ByteBuffer sTOs = allocateBuffer(serverEngine.getSession().getPacketBufferSize() * 4);
-        ByteBuffer cApps = allocateBuffer(clientEngine.getSession().getApplicationBufferSize() * 4);
-        ByteBuffer sApps = allocateBuffer(serverEngine.getSession().getApplicationBufferSize() * 4);
-
-        clientEngine.closeOutbound();
-        for (;;) {
-            // call wrap till we produced all data
-            SSLEngineResult result = clientEngine.wrap(empty, cTOs);
-            if (result.getStatus() == Status.CLOSED && result.bytesProduced() == 0) {
-                break;
-            }
-            assertTrue(cTOs.hasRemaining());
-        }
-        cTOs.flip();
-
-        for (;;) {
-            // call unwrap till we consumed all data
-            SSLEngineResult result = serverEngine.unwrap(cTOs, sApps);
-            if (result.getStatus() == Status.CLOSED && result.bytesProduced() == 0) {
-                break;
-            }
-            assertTrue(sApps.hasRemaining());
-        }
-
-        serverEngine.closeOutbound();
-        for (;;) {
-            // call wrap till we produced all data
-            SSLEngineResult result = serverEngine.wrap(empty, sTOs);
-            if (result.getStatus() == Status.CLOSED && result.bytesProduced() == 0) {
-                break;
-            }
-            assertTrue(sTOs.hasRemaining());
-        }
-        sTOs.flip();
-
-        for (;;) {
-            // call unwrap till we consumed all data
-            SSLEngineResult result = clientEngine.unwrap(sTOs, cApps);
-            if (result.getStatus() == Status.CLOSED && result.bytesProduced() == 0) {
-                break;
-            }
-            assertTrue(cApps.hasRemaining());
-        }
-
-        // Now close the inbound as well
-        clientEngine.closeInbound();
-        serverEngine.closeInbound();
-    }
-
-    protected void assertSessionReusedForEngine(SSLEngine clientEngine, SSLEngine serverEngine, boolean reuse) {
-        // NOOP
-    }
-
-    @Test
-    public void testSessionCacheTimeout() throws Exception {
-        clientSslCtx = wrapContext(SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .sessionTimeout(1)
-                .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .sessionTimeout(1)
-                .build());
-
-        try {
-            doHandshakeVerifyReusedAndClose("a.netty.io", 9999, false);
-
-            // Let's sleep for a bit more then 1 second so the cache should timeout the sessions.
-            Thread.sleep(1500);
-
-            assertSessionCache(serverSslCtx.sessionContext(), 0);
-            assertSessionCache(clientSslCtx.sessionContext(), 0);
-        } finally {
-            ssc.delete();
-        }
-    }
-
-    @Test
-    public void testSessionCacheSize() throws Exception {
-        clientSslCtx = wrapContext(SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .sessionCacheSize(1)
-                .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .protocols(protocols())
-                .ciphers(ciphers())
-                .sessionCacheSize(1)
-                .build());
-
-        try {
-            doHandshakeVerifyReusedAndClose("a.netty.io", 9999, false);
-            // As we have a cache size of 1 we should never have more then one session in the cache
-            doHandshakeVerifyReusedAndClose("b.netty.io", 9999, false);
-
-            // We should at least reuse b.netty.io
-            doHandshakeVerifyReusedAndClose("b.netty.io", 9999, true);
-        } finally {
-            ssc.delete();
-        }
-    }
-
-    @Test
     public void testSessionBindingEvent() throws Exception {
         clientSslCtx = wrapContext(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -3814,7 +3509,7 @@ public abstract class SSLEngineTest {
             final Promise<SecretKey> promise = sb.config().group().next().newPromise();
             serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) {
+                protected void initChannel(Channel ch) throws Exception {
                     ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                     SslHandler sslHandler = delegatingExecutor == null ?
@@ -3872,7 +3567,7 @@ public abstract class SSLEngineTest {
                 new java.security.cert.X509Certificate[] { ssc.cert() }, ssc.key(), null, null, null);
     }
 
-    private static final class TestTrustManagerFactory extends X509ExtendedTrustManager {
+    private final class TestTrustManagerFactory extends X509ExtendedTrustManager {
         private final Certificate localCert;
         private volatile boolean verified;
 
