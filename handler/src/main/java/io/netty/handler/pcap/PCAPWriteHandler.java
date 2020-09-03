@@ -22,7 +22,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -36,7 +38,6 @@ import java.net.InetSocketAddress;
 /**
  * <p> {@link PCAPWriteHandler} captures {@link ByteBuf} from {@link SocketChannel} / {@link ServerChannel}
  * or {@link DatagramPacket} and writes it into Pcap {@link OutputStream}. </p>
- * <p></p>
  *
  * <p>
  * Things to keep in mind when using {@link PCAPWriteHandler} with TCP:
@@ -94,12 +95,12 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     private int receiveSegmentNumber = 1;
 
     /**
-     * Source Address [TCP ONLY]
+     * Source Address
      */
     private InetSocketAddress srcAddr;
 
     /**
-     * Destination Address [TCP ONLY]
+     * Destination Address
      */
     private InetSocketAddress dstAddr;
 
@@ -152,18 +153,19 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             this.pCapWriter = new PCapWriter(this.outputStream);
         }
 
+        // If Channel belongs to `SocketChannel` then we're handling TCP.
         if (ctx.channel() instanceof SocketChannel) {
-            if (ctx.channel() instanceof ServerChannel) {
+
+            // Capture correct `localAddress` and `remoteAddress`
+            if (ctx.channel().parent() instanceof ServerSocketChannel) {
                 srcAddr = (InetSocketAddress) ctx.channel().remoteAddress();
                 dstAddr = (InetSocketAddress) ctx.channel().localAddress();
             } else {
                 srcAddr = (InetSocketAddress) ctx.channel().localAddress();
                 dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
             }
-        }
 
-        if (ctx.channel() instanceof SocketChannel) {
-            logger.debug("Starting Fake TCP 3-Way Handshake");
+            logger.debug("Initiating Fake TCP 3-Way Handshake");
 
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
@@ -185,6 +187,12 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             }
 
             logger.debug("Finished Fake TCP 3-Way Handshake");
+        } else if (ctx.channel() instanceof DatagramChannel) {
+            DatagramChannel datagramChannel = (DatagramChannel) ctx.channel();
+            if (datagramChannel.isConnected()) {
+                srcAddr = (InetSocketAddress) ctx.channel().localAddress();
+                dstAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+            }
         }
 
         super.channelActive(ctx);
@@ -192,17 +200,29 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        writePacket(ctx, msg, false);
+        if (ctx.channel() instanceof SocketChannel) {
+            handleTCP(ctx, msg, false);
+        } else if (ctx.channel() instanceof DatagramChannel) {
+            handleUDP(ctx, msg);
+        } else {
+            logger.error("Discarding Pcap Write for Unknown Channel: {}", ctx.channel());
+        }
         super.channelRead(ctx, msg);
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        writePacket(ctx, msg, true);
+        if (ctx.channel() instanceof SocketChannel) {
+            handleTCP(ctx, msg, true);
+        } else if (ctx.channel() instanceof DatagramChannel) {
+            handleUDP(ctx, msg);
+        } else {
+            logger.error("Discarding Pcap Write for Unknown Channel: {}", ctx.channel());
+        }
         super.write(ctx, msg, promise);
     }
 
-    private void writePacket(ChannelHandlerContext ctx, Object msg, boolean isWriteOperation) {
+    private void handleTCP(ChannelHandlerContext ctx, Object msg, boolean isWriteOperation) {
         if (msg instanceof ByteBuf) {
 
             // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
@@ -245,43 +265,8 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                 tcpBuf.release();
             }
 
-        } else if (msg instanceof DatagramPacket) {
-            handleUDP(ctx, ((DatagramPacket) msg).duplicate());
         } else {
-            logger.error("Discarding Pcap Write for Object {}", msg);
-        }
-    }
-
-    private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
-                        InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
-        if (ackOnly) {
-            logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
-                    + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
-        } else {
-            logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
-                            "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
-                    receiveSegmentNumber, srcAddr, dstAddr);
-        }
-    }
-
-    private void handleUDP(ChannelHandlerContext ctx, DatagramPacket datagramPacket) {
-        ByteBuf udpBuf = ctx.alloc().buffer();
-
-        InetSocketAddress srcAddr = datagramPacket.sender();
-        InetSocketAddress dstAddr = datagramPacket.recipient();
-
-        logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
-                datagramPacket.content().readableBytes(), srcAddr, dstAddr);
-
-        try {
-            UDPPacket.writePacket(udpBuf,
-                    datagramPacket.content(),
-                    srcAddr.getPort(),
-                    dstAddr.getPort());
-
-            completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
-        } finally {
-            udpBuf.release();
+            logger.error("Discarding Pcap Write for TCP Object: {}", msg);
         }
     }
 
@@ -315,6 +300,68 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             ipBuf.release();
             ethernetBuf.release();
             pcap.release();
+        }
+    }
+
+    private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
+                        InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
+        if (ackOnly) {
+            logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
+                    + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
+        } else {
+            logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
+                            "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
+                    receiveSegmentNumber, srcAddr, dstAddr);
+        }
+    }
+
+    private void handleUDP(ChannelHandlerContext ctx, Object msg) {
+        ByteBuf udpBuf = ctx.alloc().buffer();
+
+        try {
+            if (msg instanceof DatagramPacket) {
+
+                // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
+                if (((DatagramPacket) msg).content().readableBytes() == 0 && !captureZeroByte) {
+                    logger.debug("Discarding Zero Byte UDP Packet");
+                    return;
+                }
+
+                DatagramPacket datagramPacket = ((DatagramPacket) msg).duplicate();
+                InetSocketAddress srcAddr = datagramPacket.sender();
+                InetSocketAddress dstAddr = datagramPacket.recipient();
+
+                logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
+                        datagramPacket.content().readableBytes(), srcAddr, dstAddr);
+
+                UDPPacket.writePacket(udpBuf,
+                        datagramPacket.content(),
+                        srcAddr.getPort(),
+                        dstAddr.getPort());
+                completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
+            } else if (msg instanceof ByteBuf && ((DatagramChannel) ctx.channel()).isConnected()) {
+
+                // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
+                if (((ByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
+                    logger.debug("Discarding Zero Byte UDP Packet");
+                    return;
+                }
+
+                ByteBuf  byteBuf = ((ByteBuf) msg).duplicate();
+
+                logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
+                        byteBuf.readableBytes(), srcAddr, dstAddr);
+
+                UDPPacket.writePacket(udpBuf,
+                        byteBuf,
+                        srcAddr.getPort(),
+                        dstAddr.getPort());
+                completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
+            } else {
+                logger.error("Discarding Pcap Write for UDP Object: {}", msg);
+            }
+        } finally {
+            udpBuf.release();
         }
     }
 
