@@ -154,13 +154,19 @@ final class IOUringSubmissionQueue {
     }
 
     public boolean addTimeout(long nanoSeconds) {
-        long sqe = getSqe();
-        if (sqe == 0) {
-            return false;
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
         }
         setTimeout(nanoSeconds);
         setData(sqe, (byte) Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
-        return true;
+        return submitted;
     }
 
     public boolean addPollIn(int fd) {
