@@ -51,15 +51,14 @@ final class OpenSslServerContext extends OpenSslContext {
                          boolean enableOcsp,
                          String keyStore)
       throws SSLException {
-        super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_SERVER,
+        super(ciphers, cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER,
           keyCertChain, clientAuth, protocols, startTls, enableOcsp);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {

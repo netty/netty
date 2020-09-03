@@ -317,6 +317,16 @@ public class JdkSslContext extends SslContext {
     }
 
     @Override
+    public final long sessionCacheSize() {
+        return sessionContext().getSessionCacheSize();
+    }
+
+    @Override
+    public final long sessionTimeout() {
+        return sessionContext().getSessionTimeout();
+    }
+
+    @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
         return configureAndWrapEngine(context().createSSLEngine(), alloc);
     }

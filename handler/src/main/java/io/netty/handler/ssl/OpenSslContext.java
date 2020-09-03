@@ -28,18 +28,19 @@ import javax.net.ssl.SSLException;
  */
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
-                   int mode, Certificate[] keyCertChain,
+                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp)
             throws SSLException {
-        super(ciphers, cipherFilter, apnCfg, mode, keyCertChain,
+        super(ciphers, cipherFilter, apnCfg, sessionCacheSize, sessionTimeout, mode, keyCertChain,
                 clientAuth, protocols, startTls, enableOcsp, false);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                   OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
+                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
+                   long sessionTimeout, int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls,
                    boolean enableOcsp) throws SSLException {
-        super(ciphers, cipherFilter, apn, mode, keyCertChain, clientAuth, protocols,
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, mode, keyCertChain, clientAuth, protocols,
                 startTls, enableOcsp, false);
     }
 
