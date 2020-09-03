@@ -102,6 +102,19 @@ static void netty_io_uring_linuxsocket_setInterface(JNIEnv* env, jclass clazz, j
     }
 }
 
+static jint netty_io_uring_initAddress(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jint port, jlong addressMemory) {
+    struct sockaddr_storage addr;
+    socklen_t addrSize;
+    if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
+        // A runtime exception was thrown
+        return -1;
+    }
+
+    memcpy((void *) addressMemory, &addr, sizeof(struct sockaddr_storage));
+
+    return addrSize;
+}
+
 static void netty_io_uring_linuxsocket_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval));
 }
@@ -700,7 +713,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "joinGroup", "(IZ[B[BII)V", (void *) netty_io_uring_linuxsocket_joinGroup },
   { "joinSsmGroup", "(IZ[B[BII[B)V", (void *) netty_io_uring_linuxsocket_joinSsmGroup },
   { "leaveGroup", "(IZ[B[BII)V", (void *) netty_io_uring_linuxsocket_leaveGroup },
-  { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty_io_uring_linuxsocket_leaveSsmGroup }
+  { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty_io_uring_linuxsocket_leaveSsmGroup },
+  {"initAddress", "(IZ[BIIJ)I", (void *) netty_io_uring_initAddress }
   // "sendFile" has a dynamic signature
 };
 
