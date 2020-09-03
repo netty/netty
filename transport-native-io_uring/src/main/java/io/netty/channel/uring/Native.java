@@ -105,8 +105,6 @@ final class Native {
 
     public static native void ioUringExit(RingBuffer ringBuffer);
 
-    public static native int initAddress(int fd, boolean ipv6, byte[] address, int scopeId, int port, long remoteMemoryAddress);
-
     private static native int eventFd();
 
     // for testing(it is only temporary)
