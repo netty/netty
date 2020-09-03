@@ -8,6 +8,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -24,7 +25,7 @@ public class PollRemoveTest {
     }
 
     @Sharable
-    class EchoUringServerHandler extends ChannelInboundHandlerAdapter {
+    private static final class EchoUringServerHandler extends ChannelInboundHandlerAdapter {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -46,29 +47,33 @@ public class PollRemoveTest {
     }
 
     void io_uring_test() throws Exception {
-        Class clazz;
+        Class<? extends ServerSocketChannel> clazz = IOUringServerSocketChannel.class;
         final EventLoopGroup bossGroup = new IOUringEventLoopGroup(1);
         final EventLoopGroup workerGroup = new IOUringEventLoopGroup(1);
-        clazz = IOUringServerSocketChannel.class;
 
-        ServerBootstrap b = new ServerBootstrap();
-        b.group(bossGroup, workerGroup)
-         .channel(clazz)
-         .handler(new LoggingHandler(LogLevel.TRACE))
-         .childHandler(new ChannelInitializer<SocketChannel>() {
-             @Override
-             public void initChannel(SocketChannel ch) throws Exception {
-                 ChannelPipeline p = ch.pipeline();
+        try {
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
+                    .channel(clazz)
+                    .handler(new LoggingHandler(LogLevel.TRACE))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
 
-                 p.addLast(new EchoUringServerHandler());
-             }
-         });
+                            p.addLast(new EchoUringServerHandler());
+                        }
+                    });
 
-        Channel sc = b.bind(2020).sync().channel();
-        Thread.sleep(1500);
+            Channel sc = b.bind(2020).sync().channel();
+            Thread.sleep(1500);
 
-        //close ServerChannel
-        sc.close().sync();
+            // close ServerChannel
+            sc.close().sync();
+        } finally {
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
+        }
 
     }
 
