@@ -334,6 +334,12 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
                 InetSocketAddress srcAddr = datagramPacket.sender();
                 InetSocketAddress dstAddr = datagramPacket.recipient();
 
+                // If `datagramPacket.sender()` is `null` then DatagramPacket is initialized
+                // `sender` (local) address. In this case, we'll get source address from Channel.
+                if (srcAddr == null) {
+                    srcAddr = (InetSocketAddress) ctx.channel().localAddress();
+                }
+
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         datagramPacket.content().readableBytes(), srcAddr, dstAddr);
 
