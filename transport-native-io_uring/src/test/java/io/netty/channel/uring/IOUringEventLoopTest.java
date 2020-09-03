@@ -15,12 +15,31 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
-public class IOUringEventLoopTest {
+public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @Override
+    protected EventLoopGroup newEventLoopGroup() {
+        return new IOUringEventLoopGroup(1);
+    }
+
+    @Override
+    protected Channel newChannel() {
+        return new IOUringSocketChannel();
+    }
+
+    @Override
+    protected Class<? extends ServerChannel> serverChannelClass() {
+        return IOUringServerSocketChannel.class;
+    }
 
     @Test
     public void testSubmitMultipleTasksAndEnsureTheseAreExecuted() throws Exception {
