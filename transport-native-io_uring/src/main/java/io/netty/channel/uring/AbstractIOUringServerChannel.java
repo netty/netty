@@ -53,7 +53,6 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
         @Override
         protected void scheduleRead0() {
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config());
             allocHandle.attemptedBytesRead(1);
 
             IOUringSubmissionQueue submissionQueue = submissionQueue();

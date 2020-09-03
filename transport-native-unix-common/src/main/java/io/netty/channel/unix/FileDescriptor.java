@@ -201,7 +201,6 @@ public class FileDescriptor {
     }
 
     static boolean isClosed(int state) {
-        System.out.println("State: " + state);
         return (state & STATE_CLOSED_MASK) != 0;
     }
 
