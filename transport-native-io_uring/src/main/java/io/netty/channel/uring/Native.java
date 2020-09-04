@@ -77,6 +77,7 @@ final class Native {
     static final int IORING_OP_POLL_REMOVE = NativeStaticallyReferencedJniMethods.ioringOpPollRemove();
     static final int IORING_OP_CONNECT = NativeStaticallyReferencedJniMethods.ioringOpConnect();
     static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
+    static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
     public static RingBuffer createRingBuffer(int ringSize) {
         //Todo throw Exception if it's null

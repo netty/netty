@@ -381,6 +381,10 @@ static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
     return IORING_OP_CONNECT;
 }
 
+static jint netty_io_uring_iosqeAsync(JNIEnv* env, jclass clazz) {
+    return IOSQE_ASYNC;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
@@ -395,7 +399,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpAccept", "()I", (void *) netty_io_uring_ioringOpAccept },
   { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
-  { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect }
+  { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
+  { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
