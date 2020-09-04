@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.collection.IntObjectHashMap;
+
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -67,6 +67,15 @@ public final class MqttProperties {
         CORRELATION_DATA(0x09),
         AUTHENTICATION_DATA(0x16);
 
+        private static final MqttPropertyType[] VALUES;
+
+        static {
+            VALUES = new MqttPropertyType[43];
+            for (MqttPropertyType v : values()) {
+                VALUES[v.value] = v;
+            }
+        }
+
         private final int value;
 
         MqttPropertyType(int value) {
@@ -78,18 +87,20 @@ public final class MqttProperties {
         }
 
         public static MqttPropertyType valueOf(int type) {
-            for (MqttPropertyType t : values()) {
-                if (t.value == type) {
-                    return t;
-                }
+            MqttPropertyType t = null;
+            try {
+                t = VALUES[type];
+            } catch (ArrayIndexOutOfBoundsException ignored) {
+                // nop
             }
-            throw new IllegalArgumentException("unknown property type: " + type);
+            if (t == null) {
+                throw new IllegalArgumentException("unknown property type: " + type);
+            }
+            return t;
         }
     }
 
-    public static final MqttProperties NO_PROPERTIES = new MqttProperties(
-            Collections.unmodifiableMap(new HashMap<Integer, MqttProperty>())
-    );
+    public static final MqttProperties NO_PROPERTIES = new MqttProperties(false);
 
     static MqttProperties withEmptyDefaults(MqttProperties properties) {
         if (properties == null) {
@@ -190,20 +201,29 @@ public final class MqttProperties {
     }
 
     public MqttProperties() {
-        this(new HashMap<Integer, MqttProperty>());
+        this(true);
     }
 
-    private MqttProperties(Map<Integer, MqttProperty> props) {
-        this.props = props;
+    private MqttProperties(boolean canModify) {
+        this.canModify = canModify;
     }
 
-    private final Map<Integer, MqttProperty> props;
+    private IntObjectHashMap<MqttProperty> props;
+    private final boolean canModify;
 
     public void add(MqttProperty property) {
+        if (!canModify) {
+            throw new UnsupportedOperationException("adding property isn't allowed");
+        }
+        IntObjectHashMap<MqttProperty> props = this.props;
         if (property.propertyId == MqttPropertyType.USER_PROPERTY.value) {
-            UserProperties userProps = (UserProperties) props.get(property.propertyId);
+            UserProperties userProps = (UserProperties) (props != null? props.get(property.propertyId) : null);
             if (userProps == null) {
                 userProps = new UserProperties();
+                if (props == null) {
+                    props = new IntObjectHashMap<MqttProperty>();
+                    this.props = props;
+                }
                 props.put(property.propertyId, userProps);
             }
             if (property instanceof UserProperty) {
@@ -214,19 +234,26 @@ public final class MqttProperties {
                 }
             }
         } else {
+            if (props == null) {
+                props = new IntObjectHashMap<MqttProperty>();
+                this.props = props;
+            }
             props.put(property.propertyId, property);
         }
     }
 
     public Collection<? extends MqttProperty> listAll() {
-        return props.values();
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return props == null? Collections.<MqttProperty>emptyList() : props.values();
     }
 
     public boolean isEmpty() {
-        return props.isEmpty();
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return props == null || props.isEmpty();
     }
 
     public MqttProperty getProperty(int propertyId) {
-        return props.get(propertyId);
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return props == null? null : props.get(propertyId);
     }
 }

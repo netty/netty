@@ -48,16 +48,24 @@ public enum MqttVersion {
     }
 
     public static MqttVersion fromProtocolNameAndLevel(String protocolName, byte protocolLevel) {
-        for (MqttVersion mv : values()) {
-            if (mv.level == protocolLevel) {
-                if (mv.name.equals(protocolName)) {
-                    return mv;
-                } else {
-                    throw new MqttUnacceptableProtocolVersionException(protocolName + " and " +
-                            protocolLevel + " are not match");
-                }
-            }
+        MqttVersion mv = null;
+        switch (protocolLevel) {
+        case 3:
+            mv = MQTT_3_1;
+            break;
+        case 4:
+            mv = MQTT_3_1_1;
+            break;
+        case 5:
+            mv = MQTT_5;
+            break;
         }
-        throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
+        if (mv == null) {
+            throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
+        }
+        if (mv.name.equals(protocolName)) {
+            return mv;
+        }
+        throw new MqttUnacceptableProtocolVersionException(protocolName + " and " + protocolLevel + " are not match");
     }
 }
