@@ -65,9 +65,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
     private final InternalLogger logger = InternalLoggerFactory.getInstance(PcapWriteHandler.class);
 
     /**
-     * {@link PCapWriter} Instance
+     * {@link PcapWriter} Instance
      */
-    private PCapWriter pCapWriter;
+    private PcapWriter pCapWriter;
 
     /**
      * {@link OutputStream} where we'll write Pcap data.
@@ -81,7 +81,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
 
     /**
      * {@code true} if we want to write Pcap Global Header on initialization of
-     * {@link PCapWriter} else {@code false}.
+     * {@link PcapWriter} else {@code false}.
      */
     private final boolean writePcapGlobalHeader;
 
@@ -145,14 +145,14 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
 
             ByteBuf byteBuf = ctx.alloc().buffer();
             try {
-                this.pCapWriter = new PCapWriter(this.outputStream, byteBuf);
+                this.pCapWriter = new PcapWriter(this.outputStream, byteBuf);
             } catch (IOException ex) {
                 ctx.fireExceptionCaught(ex);
             } finally {
                 byteBuf.release();
             }
         } else {
-            this.pCapWriter = new PCapWriter(this.outputStream);
+            this.pCapWriter = new PcapWriter(this.outputStream);
         }
 
         // If Channel belongs to `SocketChannel` then we're handling TCP.

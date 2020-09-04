@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 
-final class PCapWriter implements Closeable {
+final class PcapWriter implements Closeable {
 
     /**
      * {@link OutputStream} where we'll write Pcap data.
@@ -33,7 +33,7 @@ final class PCapWriter implements Closeable {
      * This uses {@link OutputStream} for writing Pcap.
      * Pcap Global Header is not written on construction.
      */
-    PCapWriter(OutputStream outputStream) {
+    PcapWriter(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
@@ -43,7 +43,7 @@ final class PCapWriter implements Closeable {
      *
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    PCapWriter(OutputStream outputStream, ByteBuf byteBuf) throws IOException {
+    PcapWriter(OutputStream outputStream, ByteBuf byteBuf) throws IOException {
         this.outputStream = outputStream;
 
         PcapHeaders.writeGlobalHeader(byteBuf);
