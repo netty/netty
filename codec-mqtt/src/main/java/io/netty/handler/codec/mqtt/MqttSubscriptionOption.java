@@ -36,12 +36,16 @@ public final class MqttSubscriptionOption {
         }
 
         public static RetainedHandlingPolicy valueOf(int value) {
-            for (RetainedHandlingPolicy q: values()) {
-                if (q.value == value) {
-                    return q;
-                }
+            switch (value) {
+            case 0:
+                return SEND_AT_SUBSCRIBE;
+            case 1:
+                return SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS;
+            case 2:
+                return DONT_SEND_AT_SUBSCRIBE;
+            default:
+                throw new IllegalArgumentException("invalid RetainedHandlingPolicy: " + value);
             }
-            throw new IllegalArgumentException("invalid RetainedHandlingPolicy: " + value);
         }
     }
 
