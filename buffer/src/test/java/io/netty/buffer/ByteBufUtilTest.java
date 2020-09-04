@@ -29,11 +29,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
 public class ByteBufUtilTest {
     @Test
@@ -814,5 +819,85 @@ public class ByteBufUtilTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test
+    public void testGetBytesHeap() {
+        final ByteBuf buf = Unpooled.buffer(4);
+        try {
+            assumeTrue(buf.hasArray());
+            checkGetBytes(buf);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesDirect() {
+        final ByteBuf buf = Unpooled.directBuffer(4);
+        try {
+            assumeFalse(buf.hasArray());
+            checkGetBytes(buf);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesHeapWithNonZeroArrayOffset() {
+        final ByteBuf buf = Unpooled.buffer(5);
+        try {
+            buf.setByte(0, 0x05);
+
+            final ByteBuf slice = buf.slice(1, 4);
+            slice.writerIndex(0);
+
+            assumeTrue(slice.hasArray());
+            assumeThat(slice.arrayOffset(), is(1));
+            assumeThat(slice.array().length, is(buf.capacity()));
+
+            checkGetBytes(slice);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesHeapWithArrayLengthGreaterThanCapacity() {
+        final ByteBuf buf = Unpooled.buffer(5);
+        try {
+            buf.setByte(4, 0x05);
+
+            final ByteBuf slice = buf.slice(0, 4);
+            slice.writerIndex(0);
+
+            assumeTrue(slice.hasArray());
+            assumeThat(slice.arrayOffset(), is(0));
+            assumeThat(slice.array().length, greaterThan(slice.capacity()));
+
+            checkGetBytes(slice);
+        } finally {
+            buf.release();
+        }
+    }
+
+    private static void checkGetBytes(final ByteBuf buf) {
+        buf.writeInt(0x01020304);
+
+        byte[] expected = { 0x01, 0x02, 0x03, 0x04 };
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf));
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 0, buf.readableBytes(), false));
+
+        expected = new byte[] { 0x01, 0x02, 0x03 };
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 0, 3));
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 0, 3, false));
+
+        expected = new byte[] { 0x02, 0x03, 0x04 };
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 1, 3));
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 1, 3, false));
+
+        expected = new byte[] { 0x02, 0x03 };
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 1, 2));
+        assertArrayEquals(expected, ByteBufUtil.getBytes(buf, 1, 2, false));
     }
 }

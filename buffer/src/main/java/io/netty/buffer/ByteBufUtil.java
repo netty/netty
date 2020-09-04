@@ -906,17 +906,18 @@ public final class ByteBufUtil {
         }
 
         if (buf.hasArray()) {
-            if (copy || start != 0 || length != capacity) {
-                int baseOffset = buf.arrayOffset() + start;
-                return Arrays.copyOfRange(buf.array(), baseOffset, baseOffset + length);
+            int baseOffset = buf.arrayOffset() + start;
+            byte[] bytes = buf.array();
+            if (copy || baseOffset != 0 || length != bytes.length) {
+                return Arrays.copyOfRange(bytes, baseOffset, baseOffset + length);
             } else {
-                return buf.array();
+                return bytes;
             }
         }
 
-        byte[] v = PlatformDependent.allocateUninitializedArray(length);
-        buf.getBytes(start, v);
-        return v;
+        byte[] bytes = PlatformDependent.allocateUninitializedArray(length);
+        buf.getBytes(start, bytes);
+        return bytes;
     }
 
     /**
