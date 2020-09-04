@@ -65,13 +65,9 @@ final class IOUringCompletionQueue {
 
   public int process(IOUringCompletionQueueCallback callback) {
       int tail = PlatformDependent.getIntVolatile(kTailAddress);
-      if (ringHead == tail) {
-          return 0;
-      }
       int i = 0;
-      for (;;) {
-          long index = ringHead & ringMask;
-          long cqe = index * CQE_SIZE + completionQueueArrayAddress;
+      while (ringHead != tail) {
+          long cqe = (ringHead & ringMask) * CQE_SIZE + completionQueueArrayAddress;
 
           long udata = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
           int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);
@@ -89,9 +85,9 @@ final class IOUringCompletionQueue {
           if (!callback.handle(fd, res, flags, op, mask)) {
               break;
           }
-          // Check again with barrier in case tail has moved on
-          if (ringHead == tail && ringHead == (tail = PlatformDependent.getIntVolatile(kTailAddress))) {
-              break;
+          if (ringHead == tail) {
+              // Check again with barrier in case tail has moved on
+              tail = PlatformDependent.getIntVolatile(kTailAddress);
           }
       }
       return i;
