@@ -19,6 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.util.List;
 
@@ -26,5 +30,13 @@ public class IOUringSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
+    }
+
+    @Ignore
+    @Test
+    public void testAutoCloseFalseDoesShutdownOutput() throws Throwable {
+        // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
+        Assume.assumeFalse(PlatformDependent.isWindows());
+        run();
     }
 }

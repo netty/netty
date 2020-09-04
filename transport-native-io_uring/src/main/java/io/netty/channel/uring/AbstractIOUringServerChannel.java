@@ -58,7 +58,6 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             //Todo get network addresses
             submissionQueue.addAccept(fd().intValue());
-            submissionQueue.submit();
         }
 
         protected void readComplete0(int res) {
