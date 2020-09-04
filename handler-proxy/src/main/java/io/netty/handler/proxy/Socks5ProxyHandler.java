@@ -18,27 +18,32 @@ package io.netty.handler.proxy;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialRequest;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandRequest;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialRequest;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5PasswordAuthRequest;
 import io.netty.handler.codec.socksx.v5.Socks5AddressType;
 import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
-import io.netty.handler.codec.socksx.v5.Socks5InitialRequest;
-import io.netty.handler.codec.socksx.v5.Socks5InitialResponse;
-import io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5ClientEncoder;
 import io.netty.handler.codec.socksx.v5.Socks5CommandResponse;
 import io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.handler.codec.socksx.v5.Socks5CommandType;
+import io.netty.handler.codec.socksx.v5.Socks5InitialRequest;
+import io.netty.handler.codec.socksx.v5.Socks5InitialResponse;
+import io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponse;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -58,6 +63,20 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     private String decoderName;
     private String encoderName;
+
+    /**
+     * <p> Create {@link Socks5ProxyHandler} using VM argument
+     * {@code socksProxyHost} and {@code socksProxyPort}. </p>
+     *
+     * <p> If {@code socksProxyPort} is not present, default value will be {@code 1080}. </p>
+     *
+     * @return {@link Socks5ProxyHandler} Instance.
+     */
+    public static Socks5ProxyHandler createDefault() {
+        ObjectUtil.checkNotNull(SystemPropertyUtil.get("socksProxyHost"), "socksProxyHost");
+        return new Socks5ProxyHandler(new InetSocketAddress(SystemPropertyUtil.get("socksProxyHost"),
+                SystemPropertyUtil.getInt("socksProxyHost", 1080)), null, null);
+    }
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null, null);
@@ -82,7 +101,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     @Override
     public String authScheme() {
-        return socksAuthMethod() == Socks5AuthMethod.PASSWORD? AUTH_PASSWORD : AUTH_NONE;
+        return socksAuthMethod() == Socks5AuthMethod.PASSWORD ? AUTH_PASSWORD : AUTH_NONE;
     }
 
     public String username() {
@@ -122,7 +141,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     @Override
     protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
-        return socksAuthMethod() == Socks5AuthMethod.PASSWORD? INIT_REQUEST_PASSWORD : INIT_REQUEST_NO_AUTH;
+        return socksAuthMethod() == Socks5AuthMethod.PASSWORD ? INIT_REQUEST_PASSWORD : INIT_REQUEST_NO_AUTH;
     }
 
     @Override
@@ -142,7 +161,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
                 // In case of password authentication, send an authentication request.
                 ctx.pipeline().replace(decoderName, decoderName, new Socks5PasswordAuthResponseDecoder());
                 sendToProxyServer(new DefaultSocks5PasswordAuthRequest(
-                        username != null? username : "", password != null? password : ""));
+                        username != null ? username : "", password != null ? password : ""));
             } else {
                 // Should never reach here.
                 throw new Error();

@@ -40,7 +40,10 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.SocketAddress;
+import java.net.URI;
 
 public final class HttpProxyHandler extends ProxyHandler {
 
@@ -61,6 +64,21 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final boolean ignoreDefaultPortsInConnectHostHeader;
     private HttpResponseStatus status;
     private HttpHeaders inboundHeaders;
+
+    /**
+     * <p> Create {@link HttpProxyHandler} using {@link ProxySelector#getDefault()} </p>
+     *
+     * @return {@link HttpProxyHandler} Instance.
+     * @throws IllegalArgumentException If {@link ProxySelector#getDefault()} type is not {@link Proxy.Type#HTTP}
+     */
+    public static HttpProxyHandler createDefault() throws IllegalArgumentException {
+        Proxy proxy = ProxySelector.getDefault().select(URI.create("http://localhost")).get(0);
+        if (proxy.type() != Proxy.Type.HTTP) {
+            throw new IllegalArgumentException("Expected Default Proxy Type: HTTP, Got: " + proxy.type());
+        }
+
+        return new HttpProxyHandler(proxy.address(), null, null);
+    }
 
     public HttpProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null);
@@ -123,7 +141,7 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     @Override
     public String authScheme() {
-        return authorization != null? AUTH_BASIC : AUTH_NONE;
+        return authorization != null ? AUTH_BASIC : AUTH_NONE;
     }
 
     public String username() {
