@@ -30,6 +30,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import org.junit.AfterClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -99,6 +100,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     // Test for https://github.com/netty/netty/issues/2647
     @Test
+    @Ignore
     public void testGatheringWriteBig() throws Throwable {
         run();
     }

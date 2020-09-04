@@ -34,8 +34,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
-    //Todo set config ring buffer size
-    private static final int ringSize = 32;
     private static final long ETIME = -62;
     static final long ECANCELED = -125;
 
@@ -59,7 +57,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
 
-        ringBuffer = Native.createRingBuffer(ringSize);
+        ringBuffer = Native.createRingBuffer();
         eventfd = Native.newEventFd();
         logger.trace("New EventLoop: {}", this.toString());
         iovecArrayPool = new IovecArrayPool();
@@ -155,9 +153,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
             runAllTasks();
 
+            submissionQueue.submit();
             try {
                 if (isShuttingDown()) {
                     closeAll();
+                    submissionQueue.submit();
                     if (confirmShutdown()) {
                         break;
                     }
@@ -239,8 +239,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         Native.eventFdRead(eventfd.intValue());
 
         submissionQueue.addPollIn(eventfd.intValue());
-        // Submit so its picked up
-        submissionQueue.submit();
     }
 
     private void handleConnect(int fd, int res) {
