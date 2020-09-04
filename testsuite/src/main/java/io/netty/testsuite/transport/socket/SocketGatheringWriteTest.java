@@ -100,7 +100,6 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     // Test for https://github.com/netty/netty/issues/2647
     @Test
-    @Ignore
     public void testGatheringWriteBig() throws Throwable {
         run();
     }
