@@ -397,7 +397,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
                 EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
             }
-            pCapWriter.writePacket(byteBufAllocator.buffer(), ethernetBuf);
+            pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
         } finally {

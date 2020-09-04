@@ -93,10 +93,12 @@ public class PCAPWriteHandlerTest {
         // -------------------------------------------- Verify Packet --------------------------------------------
         // Verify Ethernet Packet
         ByteBuf ethernetPacket = byteBuf.readBytes(46);
+        ByteBuf dstMac = ethernetPacket.readBytes(6);
+        ByteBuf srcMac = ethernetPacket.readBytes(6);
         assertArrayEquals(new byte[]{0, 0, 94, 0, 83, -1},
-                ByteBufUtil.getBytes(ethernetPacket.readBytes(6)));
+                ByteBufUtil.getBytes(dstMac));
         assertArrayEquals(new byte[]{0, 0, 94, 0, 83, 0},
-                ByteBufUtil.getBytes(ethernetPacket.readBytes(6)));
+                ByteBufUtil.getBytes(srcMac));
         assertEquals(0x0800, ethernetPacket.readShort());
 
         // Verify IPv4 Packet
@@ -120,8 +122,12 @@ public class PCAPWriteHandlerTest {
         assertEquals(srvAddr.getPort() & 0xffff, udpPacket.readShort() & 0xffff); // Destination Port
         assertEquals(12, udpPacket.readShort());     // Length
         assertEquals(0x0001, udpPacket.readShort()); // Checksum
-        assertArrayEquals("Meow".getBytes(CharsetUtil.UTF_8), ByteBufUtil.getBytes(udpPacket.readBytes(4))); // Payload
+        ByteBuf payload = udpPacket.readBytes(4);
+        assertArrayEquals("Meow".getBytes(CharsetUtil.UTF_8), ByteBufUtil.getBytes(payload)); // Payload
 
+        assertTrue(dstMac.release());
+        assertTrue(srcMac.release());
+        assertTrue(payload.release());
         assertTrue(byteBuf.release());
         assertTrue(ethernetPacket.release());
         assertTrue(ipv4Packet.release());
