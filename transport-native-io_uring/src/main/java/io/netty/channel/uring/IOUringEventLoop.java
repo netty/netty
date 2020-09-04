@@ -138,6 +138,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         addEventFdRead(submissionQueue);
 
         for (;;) {
+            logger.trace("Run IOUringEventLoop {}", this.toString());
             for (;;) {
                 // avoid blocking for as long as possible
                 completionQueue.process(this);
@@ -145,21 +146,21 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 if (!ranTasks) {
                     break;
                 }
-            }
 
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    submissionQueue.submit();
-                    if (confirmShutdown()) {
-                        break;
+                try {
+                    if (isShuttingDown()) {
+                        closeAll();
+                        submissionQueue.submit();
+                        if (confirmShutdown()) {
+                            break;
+                        }
                     }
+                } catch (Throwable t) {
+                    logger.info("Exception error: {}", t);
                 }
-            } catch (Throwable t) {
-                logger.info("Exception error: {}", t);
             }
 
-            logger.trace("Run IOUringEventLoop {}", this.toString());
+            // No more work, prepare to block wait
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
             if (curDeadlineNanos == -1L) {
                 curDeadlineNanos = NONE; // nothing on the calendar
