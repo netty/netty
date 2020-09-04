@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.unix.FileDescriptor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -55,10 +54,5 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
         super.doBind(localAddress);
         socket.listen(config.getBacklog());
         active = true;
-    }
-
-    @Override
-    public FileDescriptor fd() {
-        return super.fd();
     }
 }

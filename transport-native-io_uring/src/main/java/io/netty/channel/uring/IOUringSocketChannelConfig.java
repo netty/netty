@@ -27,24 +27,19 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.*;
-import static io.netty.channel.unix.Limits.*;
 
 
-public class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
+public final class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
-    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
-    public IOUringSocketChannelConfig(Channel channel) {
+    IOUringSocketChannelConfig(Channel channel) {
         super(channel);
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
-        calculateMaxBytesPerGatheringWrite();
-
     }
 
     @Override
@@ -333,7 +328,6 @@ public class IOUringSocketChannelConfig extends DefaultChannelConfig implements 
     public IOUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((IOUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
-            calculateMaxBytesPerGatheringWrite();
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -640,17 +634,5 @@ public class IOUringSocketChannelConfig extends DefaultChannelConfig implements 
     public IOUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
-    }
-
-    final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
-        this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
-    }
-
-    private void calculateMaxBytesPerGatheringWrite() {
-        // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
-        int newSendBufferSize = getSendBufferSize() << 1;
-        if (newSendBufferSize > 0) {
-            setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
-        }
     }
 }

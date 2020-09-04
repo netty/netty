@@ -24,7 +24,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -49,6 +48,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
     AbstractIOUringStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
+    }
+
+    @Override
+    protected AbstractUringUnsafe newUnsafe() {
+        return new IOUringStreamUnsafe();
     }
 
     @Override
@@ -198,7 +202,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         }
     }
 
-    class IOUringStreamUnsafe extends AbstractUringUnsafe {
+    private final class IOUringStreamUnsafe extends AbstractUringUnsafe {
 
         // Overridden here just to be able to access this method from AbstractEpollStreamChannel
         @Override
@@ -267,6 +271,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                     scheduleRead();
                 } else {
                     // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
+                    allocHandle.readComplete();
                     pipeline.fireChannelReadComplete();
                 }
             } catch (Throwable t) {
