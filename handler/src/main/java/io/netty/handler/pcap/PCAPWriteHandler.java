@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 
 /**
@@ -86,11 +87,13 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
 
     /**
      * TCP Sender Segment Number.
+     * It'll start with 1 and keep incrementing with number of bytes read/sent.
      */
     private int sendSegmentNumber = 1;
 
     /**
-     * TCP Receiver Segment Number
+     * TCP Receiver Segment Number.
+     * It'll start with 1 and keep incrementing with number of bytes read/sent.
      */
     private int receiveSegmentNumber = 1;
 
@@ -219,11 +222,20 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         } else if (ctx.channel() instanceof DatagramChannel) {
             handleUDP(ctx, msg);
         } else {
-            logger.error("Discarding Pcap Write for Unknown Channel: {}", ctx.channel());
+            logger.error("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
         }
         super.write(ctx, msg, promise);
     }
 
+    /**
+     * Handle TCP L4
+     *
+     * @param ctx              {@link ChannelHandlerContext} for {@link ByteBuf} allocation and
+     *                         {@code fireExceptionCaught}
+     * @param msg              {@link Object} must be {@link ByteBuf} else it'll be discarded
+     * @param isWriteOperation Set {@code true} if we have to process packet when packets are being sent out
+     *                         else set {@code false}
+     */
     private void handleTCP(ChannelHandlerContext ctx, Object msg, boolean isWriteOperation) {
         if (msg instanceof ByteBuf) {
 
@@ -271,6 +283,15 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Write TCP/IP L3 and L2 here.
+     *
+     * @param srcAddr          {@link InetSocketAddress} Source Address of this Packet
+     * @param dstAddr          {@link InetSocketAddress} Destination Address of this Packet
+     * @param tcpBuf           {@link ByteBuf} containing TCP L4 Data
+     * @param byteBufAllocator {@link ByteBufAllocator} for allocating bytes for TCP/IP L3 and L2 data.
+     * @param ctx              {@link ChannelHandlerContext} for {@code fireExceptionCaught}
+     */
     private void completeTCPWrite(InetSocketAddress srcAddr, InetSocketAddress dstAddr, ByteBuf tcpBuf,
                                   ByteBufAllocator byteBufAllocator, ChannelHandlerContext ctx) {
 
@@ -279,21 +300,27 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         ByteBuf pcap = byteBufAllocator.buffer();
 
         try {
-            if (srcAddr.getAddress() instanceof Inet4Address) {
+            if (srcAddr.getAddress() instanceof Inet4Address && dstAddr.getAddress() instanceof Inet4Address) {
                 IPPacket.writeTCPv4(ipBuf,
                         tcpBuf,
                         NetUtil.ipv4AddressToInt((Inet4Address) srcAddr.getAddress()),
                         NetUtil.ipv4AddressToInt((Inet4Address) dstAddr.getAddress()));
 
                 EthernetPacket.writeIPv4(ethernetBuf, ipBuf);
-            } else {
+            } else if (srcAddr.getAddress() instanceof Inet6Address && dstAddr.getAddress() instanceof Inet6Address) {
                 IPPacket.writeTCPv6(ipBuf,
                         tcpBuf,
                         srcAddr.getAddress().getAddress(),
                         dstAddr.getAddress().getAddress());
 
                 EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
+            } else {
+                logger.error("Source and Destination IP Address versions are not same. Source Address: {}, " +
+                        "Destination Address: {}", srcAddr.getAddress(), dstAddr.getAddress());
+                return;
             }
+
+            // Write Packet into Pcap
             pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
@@ -304,20 +331,32 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Logger for TCP
+     */
     private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
                         InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
         // If `ackOnly` is `true` when we don't need to write any data so we'll not
         // log number of bytes being written and mark the operation as "TCP ACK".
-        if (ackOnly) {
-            logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
-                    + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
-        } else {
-            logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
-                            "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
-                    receiveSegmentNumber, srcAddr, dstAddr);
+        if (logger.isDebugEnabled()) {
+            if (ackOnly) {
+                logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
+                        + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
+            } else {
+                logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
+                                "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
+                        receiveSegmentNumber, srcAddr, dstAddr);
+            }
         }
     }
 
+    /**
+     * Handle UDP l4
+     *
+     * @param ctx {@link ChannelHandlerContext} for {@code localAddress} / {@code remoteAddress},
+     *            {@link ByteBuf} allocation and {@code fireExceptionCaught}
+     * @param msg {@link DatagramPacket} or {@link DatagramChannel}
+     */
     private void handleUDP(ChannelHandlerContext ctx, Object msg) {
         ByteBuf udpBuf = ctx.alloc().buffer();
 
@@ -374,6 +413,15 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Write UDP/IP L3 and L2 here.
+     *
+     * @param srcAddr          {@link InetSocketAddress} Source Address of this Packet
+     * @param dstAddr          {@link InetSocketAddress} Destination Address of this Packet
+     * @param udpBuf           {@link ByteBuf} containing UDP L4 Data
+     * @param byteBufAllocator {@link ByteBufAllocator} for allocating bytes for UDP/IP L3 and L2 data.
+     * @param ctx              {@link ChannelHandlerContext} for {@code fireExceptionCaught}
+     */
     private void completeUDPWrite(InetSocketAddress srcAddr, InetSocketAddress dstAddr, ByteBuf udpBuf,
                                   ByteBufAllocator byteBufAllocator, ChannelHandlerContext ctx) {
 
@@ -382,21 +430,25 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
         ByteBuf pcap = byteBufAllocator.buffer();
 
         try {
-            if (srcAddr.getAddress() instanceof Inet4Address) {
-                IPPacket.writeUDPv4(ipBuf,
-                        udpBuf,
+            if (srcAddr.getAddress() instanceof Inet4Address && dstAddr.getAddress() instanceof Inet4Address) {
+                IPPacket.writeUDPv4(ipBuf, udpBuf,
                         NetUtil.ipv4AddressToInt((Inet4Address) srcAddr.getAddress()),
                         NetUtil.ipv4AddressToInt((Inet4Address) dstAddr.getAddress()));
 
                 EthernetPacket.writeIPv4(ethernetBuf, ipBuf);
-            } else {
-                IPPacket.writeUDPv6(ipBuf,
-                        udpBuf,
+            } else if (srcAddr.getAddress() instanceof Inet6Address && dstAddr.getAddress() instanceof Inet6Address) {
+                IPPacket.writeUDPv6(ipBuf, udpBuf,
                         srcAddr.getAddress().getAddress(),
                         dstAddr.getAddress().getAddress());
 
                 EthernetPacket.writeIPv6(ethernetBuf, ipBuf);
+            } else {
+                logger.error("Source and Destination IP Address versions are not same. Source Address: {}, " +
+                        "Destination Address: {}", srcAddr.getAddress(), dstAddr.getAddress());
+                return;
             }
+
+            // Write Packet into Pcap
             pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
             ctx.fireExceptionCaught(ex);
@@ -449,7 +501,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
             try {
-                // Write RST+ACK with Normal Source and Destination Address
+                // Write RST with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, srcAddr.getPort(),
                         dstAddr.getPort(), TCPPacket.TCPFlag.RST, TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(srcAddr, dstAddr, tcpBuf, ctx.alloc(), ctx);

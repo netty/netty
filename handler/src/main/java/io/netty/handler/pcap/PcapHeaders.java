@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.concurrent.TimeUnit;
 
-public final class PcapHeaders {
+final class PcapHeaders {
 
     /**
      * Pcap Global Header built from:

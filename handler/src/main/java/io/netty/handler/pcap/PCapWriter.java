@@ -23,6 +23,10 @@ import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 
 final class PCapWriter implements Closeable {
+
+    /**
+     * {@link OutputStream} where we'll write Pcap data.
+     */
     private final OutputStream outputStream;
 
     /**
