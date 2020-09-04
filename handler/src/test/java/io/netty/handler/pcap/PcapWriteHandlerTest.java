@@ -37,7 +37,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PCAPWriteHandlerTest {
+public class PcapWriteHandlerTest {
 
     @Test
     public void udpV4() throws InterruptedException {
@@ -67,7 +67,7 @@ public class PCAPWriteHandlerTest {
         Bootstrap client = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioDatagramChannel.class)
-                .handler(new PCAPWriteHandler(new ByteBufOutputStream(byteBuf)));
+                .handler(new PcapWriteHandler(new ByteBufOutputStream(byteBuf)));
 
         ChannelFuture channelFutureClient = client.connect(srvAddr, cltAddr).sync();
         assertTrue(channelFutureClient.isSuccess());

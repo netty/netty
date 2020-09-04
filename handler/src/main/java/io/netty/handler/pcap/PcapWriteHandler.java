@@ -37,11 +37,11 @@ import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 
 /**
- * <p> {@link PCAPWriteHandler} captures {@link ByteBuf} from {@link SocketChannel} / {@link ServerChannel}
+ * <p> {@link PcapWriteHandler} captures {@link ByteBuf} from {@link SocketChannel} / {@link ServerChannel}
  * or {@link DatagramPacket} and writes it into Pcap {@link OutputStream}. </p>
  *
  * <p>
- * Things to keep in mind when using {@link PCAPWriteHandler} with TCP:
+ * Things to keep in mind when using {@link PcapWriteHandler} with TCP:
  *
  *    <ul>
  *        <li> Whenever {@link ChannelInboundHandlerAdapter#channelActive(ChannelHandlerContext)} is called,
@@ -60,9 +60,9 @@ import java.net.InetSocketAddress;
  *    </ul>
  * </p>
  */
-public final class PCAPWriteHandler extends ChannelDuplexHandler {
+public final class PcapWriteHandler extends ChannelDuplexHandler {
 
-    private final InternalLogger logger = InternalLoggerFactory.getInstance(PCAPWriteHandler.class);
+    private final InternalLogger logger = InternalLoggerFactory.getInstance(PcapWriteHandler.class);
 
     /**
      * {@link PCapWriter} Instance
@@ -108,18 +108,18 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
     private InetSocketAddress dstAddr;
 
     /**
-     * Create new {@link PCAPWriteHandler} Instance.
+     * Create new {@link PcapWriteHandler} Instance.
      * {@code captureZeroByte} is set to {@code false} and
      * {@code writePcapGlobalHeader} is set to {@code true}.
      *
      * @param outputStream OutputStream where Pcap data will be written
      */
-    public PCAPWriteHandler(OutputStream outputStream) {
+    public PcapWriteHandler(OutputStream outputStream) {
         this(outputStream, false, true);
     }
 
     /**
-     * Create new {@link PCAPWriteHandler} Instance
+     * Create new {@link PcapWriteHandler} Instance
      *
      * @param outputStream          OutputStream where Pcap data will be written
      * @param captureZeroByte       Set to {@code true} to enable capturing packets with empty (0 bytes) payload.
@@ -129,7 +129,7 @@ public final class PCAPWriteHandler extends ChannelDuplexHandler {
      *                              on initialization. This could when writing Pcap data on a existing file where
      *                              Pcap Global Header is already present.
      */
-    public PCAPWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
+    public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
         this.outputStream = outputStream;
         this.captureZeroByte = captureZeroByte;
         this.writePcapGlobalHeader = writePcapGlobalHeader;
