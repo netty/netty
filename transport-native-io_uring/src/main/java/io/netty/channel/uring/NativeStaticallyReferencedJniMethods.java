@@ -34,6 +34,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockCloexec();
     static native int etime();
     static native int ecanceled();
+    static native int enxio();
     static native int pollin();
     static native int pollout();
     static native int pollrdhup();
@@ -42,11 +43,17 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioringOpPollAdd();
     static native int ioringOpPollRemove();
     static native int ioringOpTimeout();
+    static native int ioringOpTimeoutRemove();
     static native int ioringOpAccept();
     static native int ioringOpRead();
     static native int ioringOpWrite();
     static native int ioringOpConnect();
     static native int ioringOpClose();
+    static native int ioringOpReadFixed();
+    static native int ioringOpWriteFixed();
+    static native int ioringOpAsyncCancel();
+    static native int ioringRegisterBuffers();
+    static native int ioringUnregisterBuffers();
     static native int ioringEnterGetevents();
     static native int iosqeAsync();
 }

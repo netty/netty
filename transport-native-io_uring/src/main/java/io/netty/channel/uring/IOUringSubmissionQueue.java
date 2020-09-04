@@ -65,6 +65,8 @@ final class IOUringSubmissionQueue {
     private int head;
     private int tail;
 
+    private int ioInflightCount;
+
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long fFlagsAdress, long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress,
                            int ringSize, long ringAddress, int ringFd,
@@ -99,7 +101,17 @@ final class IOUringSubmissionQueue {
         }
     }
 
-    private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
+    private boolean enqueueSqe(int op, int rwFlags, int fd,
+            long bufferAddress, int length, long offset) {
+        return enqueueSqe(op, rwFlags, fd, bufferAddress, length, offset, (short) 0);
+    }
+
+    private boolean enqueueFixedSqe(int op, int fd, long bufferAddress, int length, short bufIndex) {
+        return enqueueSqe(op, 0, fd, bufferAddress, length, 0, bufIndex);
+    }
+
+    private boolean enqueueSqe(int op, int rwFlags, int fd,
+            long bufferAddress, int length, long offset, short bufIndex) {
         int pending = tail - head;
         boolean submit = pending == ringEntries;
         if (submit) {
@@ -110,15 +122,17 @@ final class IOUringSubmissionQueue {
             }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
-        setData(sqe, op, rwFlags, fd, bufferAddress, length, offset);
+        setData(sqe, op, rwFlags, fd, bufferAddress, length, offset, bufIndex);
         return submit;
     }
 
-    private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
+    private void setData(long sqe, int op, int rwFlags, int fd,
+            long bufferAddress, int length, long offset, short bufIndex) {
         //set sqe(submission queue) properties
 
         PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) op);
         // These two constants are set up-front
+        //TODO maybe don't set async for timeout remove
         //PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
         //PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, (short) 0);
         PlatformDependent.putInt(sqe + SQE_FD_FIELD, fd);
@@ -126,8 +140,17 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
         PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, rwFlags);
+
+        // normalize completion op to read or write
+        //TODO maybe simpler
+        if (op == Native.IORING_OP_READ_FIXED) {
+            op = Native.IORING_OP_READ;
+        } else if (op == Native.IORING_OP_WRITE_FIXED | op == Native.IORING_OP_WRITEV) {
+            op = Native.IORING_OP_WRITE;
+        }
         long userData = convertToUserData(op, fd, rwFlags);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, userData);
+        PlatformDependent.putShort(sqe + SQE_PAD_FIELD, bufIndex);
 
         logger.trace("UserDataField: {}", userData);
         logger.trace("BufferAddress: {}", bufferAddress);
@@ -135,57 +158,84 @@ final class IOUringSubmissionQueue {
         logger.trace("Offset: {}", offset);
     }
 
-    boolean addTimeout(long nanoSeconds) {
+    void addTimeout(long nanoSeconds) {
         setTimeout(nanoSeconds);
-        return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
+        enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
     }
 
-    boolean addPollIn(int fd) {
-        return addPoll(fd, Native.POLLIN);
+    void addTimeoutRemove() {
+        enqueueSqe(Native.IORING_OP_TIMEOUT_REMOVE, 0, -1,
+                convertToUserData(Native.IORING_OP_TIMEOUT, -1, 0), 0, 0);
     }
 
-    boolean addPollRdHup(int fd) {
-        return addPoll(fd, Native.POLLRDHUP);
+    void addPollIn(int fd) {
+        addPoll(fd, Native.POLLIN);
     }
 
-    boolean addPollOut(int fd) {
-        return addPoll(fd, Native.POLLOUT);
+    void addPollRdHup(int fd) {
+        addPoll(fd, Native.POLLRDHUP);
     }
 
-    private boolean addPoll(int fd, int pollMask) {
+    void addPollOut(int fd) {
+        addPoll(fd, Native.POLLOUT);
+    }
+
+    boolean addPoll(int fd, int pollMask) {
         return enqueueSqe(Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0);
     }
 
-    //return true -> submit() was called
-    boolean addRead(int fd, long bufferAddress, int pos, int limit) {
-        return enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
+    void addRead(int fd, long bufferAddress, int pos, int limit, short bufIndex,
+            boolean blocking) {
+        if (bufIndex >= 0) {
+            enqueueFixedSqe(Native.IORING_OP_READ_FIXED, fd,
+                    bufferAddress + pos, limit - pos, bufIndex);
+        } else {
+            enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
+        }
+        if (!blocking) {
+            ioInflightCount++;
+        }
     }
 
-    boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
-        return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
+    void addWrite(int fd, long bufferAddress, int pos, int limit, short bufIndex) {
+        if (bufIndex >= 0) {
+            enqueueFixedSqe(Native.IORING_OP_WRITE_FIXED, fd,
+                    bufferAddress + pos, limit - pos, bufIndex);
+        } else {
+            enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
+        }
+        ioInflightCount++;
     }
 
-    boolean addAccept(int fd, long address, long addressLength) {
-        return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
+    void addAccept(int fd, long address, long addressLength) {
+        enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
                 address, 0, addressLength);
+        ioInflightCount++;
     }
 
     //fill the address which is associated with server poll link user_data
-    boolean addPollRemove(int fd, int pollMask) {
-        return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
+    void addPollRemove(int fd, int pollMask) {
+        enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
                 convertToUserData(Native.IORING_OP_POLL_ADD, fd, pollMask), 0, 0);
     }
 
-    boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
-        return enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
+    void addReadCancel(int fd) {
+        enqueueSqe(Native.IORING_OP_ASYNC_CANCEL, 0, fd,
+                convertToUserData(Native.IORING_OP_READ, fd, 0), 0, 0);
     }
 
-    boolean addWritev(int fd, long iovecArrayAddress, int length) {
-        return enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
+    void addConnect(int fd, long socketAddress, long socketAddressLength) {
+        enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
+        ioInflightCount++;
     }
 
-    boolean addClose(int fd) {
-        return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
+    void addWritev(int fd, long iovecArrayAddress, int length) {
+        enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
+        ioInflightCount++;
+    }
+
+    void addClose(int fd) {
+        enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
     }
 
     int submit() {
@@ -240,12 +290,24 @@ final class IOUringSubmissionQueue {
         return (long) fd << 32 | opMask & 0xFFFFFFFFL;
     }
 
-    public long count() {
+    public int pendingCount() {
         return tail - head;
     }
 
     //delete memory
     public void release() {
         PlatformDependent.freeMemory(timeoutMemoryAddress);
+    }
+
+    public int getRingFd() {
+        return this.ringFd;
+    }
+
+    void ioOpComplete() {
+        ioInflightCount--;
+    }
+
+    boolean ioInFlight() {
+        return ioInflightCount > 0;
     }
 }

@@ -109,6 +109,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     final PoolArena<T> arena;
     final T memory;
+    final long memoryAddress;
     final boolean unpooled;
     final int offset;
     private final byte[] memoryMap;
@@ -145,6 +146,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         unpooled = false;
         this.arena = arena;
         this.memory = memory;
+        this.memoryAddress = arena.memoryAddress(memory);
         this.pageSize = pageSize;
         this.pageShifts = pageShifts;
         this.maxOrder = maxOrder;
@@ -181,6 +183,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         unpooled = true;
         this.arena = arena;
         this.memory = memory;
+        this.memoryAddress = arena.memoryAddress(memory);
         this.offset = offset;
         memoryMap = null;
         depthMap = null;
@@ -507,6 +510,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void destroy() {
+        if (!unpooled) {
+            arena.poolChunkDeallocated(this);
+        }
         arena.destroyChunk(this);
     }
 }

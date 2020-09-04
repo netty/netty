@@ -69,9 +69,11 @@ final class Native {
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
+    static final int ERRNO_ENXIO_NEGATIVE = -NativeStaticallyReferencedJniMethods.enxio();
 
     static final int IORING_OP_POLL_ADD = NativeStaticallyReferencedJniMethods.ioringOpPollAdd();
     static final int IORING_OP_TIMEOUT = NativeStaticallyReferencedJniMethods.ioringOpTimeout();
+    static final int IORING_OP_TIMEOUT_REMOVE = NativeStaticallyReferencedJniMethods.ioringOpTimeoutRemove();
     static final int IORING_OP_ACCEPT = NativeStaticallyReferencedJniMethods.ioringOpAccept();
     static final int IORING_OP_READ = NativeStaticallyReferencedJniMethods.ioringOpRead();
     static final int IORING_OP_WRITE = NativeStaticallyReferencedJniMethods.ioringOpWrite();
@@ -79,6 +81,13 @@ final class Native {
     static final int IORING_OP_CONNECT = NativeStaticallyReferencedJniMethods.ioringOpConnect();
     static final int IORING_OP_CLOSE = NativeStaticallyReferencedJniMethods.ioringOpClose();
     static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
+    static final int IORING_OP_READ_FIXED = NativeStaticallyReferencedJniMethods.ioringOpReadFixed();
+    static final int IORING_OP_WRITE_FIXED = NativeStaticallyReferencedJniMethods.ioringOpWriteFixed();
+    static final int IORING_OP_ASYNC_CANCEL = NativeStaticallyReferencedJniMethods.ioringOpAsyncCancel();
+
+    static final int IORING_REGISTER_BUFFERS = NativeStaticallyReferencedJniMethods.ioringRegisterBuffers();
+    static final int IORING_UNREGISTER_BUFFERS = NativeStaticallyReferencedJniMethods.ioringUnregisterBuffers();
+
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
@@ -132,6 +141,8 @@ final class Native {
     private static native long[][] ioUringSetup(int entries);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
+
+    public static native int ioUringRegister(int ringFd, int opcode, long argsAddress, int count);
 
     public static native void eventFdWrite(int fd, long value);
 

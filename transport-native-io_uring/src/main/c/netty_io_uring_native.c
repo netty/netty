@@ -153,6 +153,19 @@ static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint 
     return -err;
 }
 
+static jint netty_io_uring_register(JNIEnv *env, jclass class1, jint ring_fd, jint opcode,
+                                    jlong args, jint nr_args) {
+    int result;
+    int err;
+    do {
+        result = sys_io_uring_register(ring_fd, opcode, (void *) args, nr_args);
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+    return -err;
+}
+
 static jint netty_epoll_native_blocking_event_fd(JNIEnv* env, jclass clazz) {
     // We use a blocking fd with io_uring FAST_POLL read
     jint eventFD = eventfd(0, EFD_CLOEXEC);
@@ -275,6 +288,10 @@ static jint netty_io_uring_ecanceled(JNIEnv* env, jclass clazz) {
     return ECANCELED;
 }
 
+static jint netty_io_uring_enxio(JNIEnv* env, jclass clazz) {
+    return ENXIO;
+}
+
 static jint netty_io_uring_pollin(JNIEnv* env, jclass clazz) {
     return POLLIN;
 }
@@ -303,6 +320,10 @@ static jint netty_io_uring_ioringOpTimeout(JNIEnv* env, jclass clazz) {
     return IORING_OP_TIMEOUT;
 }
 
+static jint netty_io_uring_ioringOpTimeoutRemove(JNIEnv* env, jclass clazz) {
+    return IORING_OP_TIMEOUT_REMOVE;
+}
+
 static jint netty_io_uring_ioringOpAccept(JNIEnv* env, jclass clazz) {
     return IORING_OP_ACCEPT;
 }
@@ -323,6 +344,26 @@ static jint netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
     return IORING_OP_CLOSE;
 }
 
+static jint netty_io_uring_ioringOpReadFixed(JNIEnv* env, jclass clazz) {
+    return IORING_OP_READ_FIXED;
+}
+
+static jint netty_io_uring_ioringOpWriteFixed(JNIEnv* env, jclass clazz) {
+    return IORING_OP_WRITE_FIXED;
+}
+
+static jint netty_io_uring_ioringOpAsyncCancel(JNIEnv* env, jclass clazz) {
+    return IORING_OP_ASYNC_CANCEL;
+}
+
+static jint netty_io_uring_ioringRegisterBuffers(JNIEnv* env, jclass clazz) {
+    return IORING_REGISTER_BUFFERS;
+}
+
+static jint netty_io_uring_ioringUnregisterBuffers(JNIEnv* env, jclass clazz) {
+    return IORING_UNREGISTER_BUFFERS;
+}
+
 static jint netty_io_uring_ioringEnterGetevents(JNIEnv* env, jclass clazz) {
     return IORING_ENTER_GETEVENTS;
 }
@@ -337,6 +378,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
   { "etime", "()I", (void *) netty_io_uring_etime },
   { "ecanceled", "()I", (void *) netty_io_uring_ecanceled },
+  { "enxio", "()I", (void *) netty_io_uring_enxio },
   { "pollin", "()I", (void *) netty_io_uring_pollin },
   { "pollout", "()I", (void *) netty_io_uring_pollout },
   { "pollrdhup", "()I", (void *) netty_io_uring_pollrdhup },
@@ -344,11 +386,17 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpPollAdd", "()I", (void *) netty_io_uring_ioringOpPollAdd },
   { "ioringOpPollRemove", "()I", (void *) netty_io_uring_ioringOpPollRemove },
   { "ioringOpTimeout", "()I", (void *) netty_io_uring_ioringOpTimeout },
+  { "ioringOpTimeoutRemove", "()I", (void *) netty_io_uring_ioringOpTimeoutRemove },
   { "ioringOpAccept", "()I", (void *) netty_io_uring_ioringOpAccept },
   { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
   { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
+  { "ioringOpReadFixed", "()I", (void *) netty_io_uring_ioringOpReadFixed },
+  { "ioringOpWriteFixed", "()I", (void *) netty_io_uring_ioringOpWriteFixed },
+  { "ioringOpAsyncCancel", "()I", (void *) netty_io_uring_ioringOpAsyncCancel },
+  { "ioringRegisterBuffers", "()I", (void *) netty_io_uring_ioringRegisterBuffers },
+  { "ioringUnregisterBuffers", "()I", (void *) netty_io_uring_ioringUnregisterBuffers },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 };
@@ -359,6 +407,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
+    {"ioUringRegister", "(IIJI)I", (void *) netty_io_uring_register},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite }
 };

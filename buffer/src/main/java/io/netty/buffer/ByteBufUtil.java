@@ -1473,5 +1473,17 @@ public final class ByteBufUtil {
         } while (outLen > 0);
     }
 
+    /**
+     * @return 0 if not applicable or not available
+     */
+    public static long getPooledMemoryAddress(ByteBuf buf) {
+        for (; buf != null; buf = buf.unwrap()) {
+            if (buf instanceof PooledByteBuf) {
+                return ((PooledByteBuf<?>) buf).chunk.memoryAddress;
+            }
+        }
+        return 0L;
+    }
+
     private ByteBufUtil() { }
 }

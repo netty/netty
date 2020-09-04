@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.buffer.PooledByteBufAllocator.AllocationCallback;
 import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -126,6 +127,65 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         metrics.add(q075);
         metrics.add(q100);
         chunkListMetrics = Collections.unmodifiableList(metrics);
+    }
+
+    //TODO lazy init maybe
+    private final List<AllocationCallback> callbacks = new ArrayList<AllocationCallback>(8);
+
+    synchronized void registerAllocationCallback(AllocationCallback callback) {
+        this.callbacks.add(callback);
+        // register already-allocated buffers
+        registerPoolSubPages(callback, smallSubpagePools);
+        registerPoolSubPages(callback, tinySubpagePools);
+        registerPoolChunkLists(callback, qInit, q000, q025, q050, q075, q100);
+    }
+
+    synchronized void unregisterAllocationCallback(AllocationCallback callback) {
+        this.callbacks.remove(callback);
+    }
+
+    private static void registerPoolSubPages(AllocationCallback callback, PoolSubpage<?>[] pages) {
+        for (PoolSubpage<?> page : pages) {
+            poolChunkAllocated(page.chunk, callback);
+        }
+    }
+
+    private void registerPoolChunkLists(AllocationCallback callback,
+            PoolChunkList<T>... chunkLists) {
+        for (PoolChunkList<T> chunkList : chunkLists) {
+            chunkList.registerAllChunks(this, callback);
+        }
+    }
+
+    static void poolChunkAllocated(PoolChunk<?> c, AllocationCallback callback) {
+        if (c != null) {
+            long address = c.memoryAddress;
+            if (address != 0L) {
+                callback.bufferAllocated(address, c.chunkSize());
+            }
+        }
+    }
+
+    void poolChunkAllocated(PoolChunk<T> c) {
+        if (c != null) {
+            long address = c.memoryAddress;
+            if (address != 0L) {
+                for (int i = 0; i < callbacks.size(); i++) {
+                    callbacks.get(i).bufferAllocated(address, c.chunkSize());
+                }
+            }
+        }
+    }
+
+    void poolChunkDeallocated(PoolChunk<T> c) {
+        if (c != null) {
+            long address = c.memoryAddress;
+            if (address != 0L) {
+                for (int i = 0; i < callbacks.size(); i++) {
+                    callbacks.get(i).bufferDeallocated(address);
+                }
+            }
+        }
     }
 
     private PoolSubpage<T> newSubpagePoolHead(int pageSize) {
@@ -248,6 +308,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         boolean success = c.allocate(buf, reqCapacity, normCapacity, threadCache);
         assert success;
         qInit.add(c);
+        poolChunkAllocated(c);
     }
 
     private void incTinySmallAllocation(boolean tiny) {
@@ -268,7 +329,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
-            destroyChunk(chunk);
+            chunk.destroy();
             activeBytesHuge.add(-size);
             deallocationsHuge.increment();
         } else {
@@ -313,7 +374,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
         if (destroyChunk) {
             // destroyChunk not need to be called while holding the synchronized lock.
-            destroyChunk(chunk);
+            chunk.destroy();
         }
     }
 
@@ -563,6 +624,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return max(0, val);
     }
 
+    protected abstract long memoryAddress(T memory);
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
@@ -668,6 +730,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
+        protected long memoryAddress(byte[] memory) {
+            return 0L; // only for direct
+        }
+
+        @Override
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             return new PoolChunk<byte[]>(this, newByteArray(chunkSize), pageSize, maxOrder, pageShifts, chunkSize, 0);
         }
@@ -709,6 +776,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         @Override
         boolean isDirect() {
             return true;
+        }
+
+        @Override
+        protected long memoryAddress(ByteBuffer memory) {
+            return PlatformDependent.directBufferAddress(memory);
         }
 
         // mark as package-private, only for unit test

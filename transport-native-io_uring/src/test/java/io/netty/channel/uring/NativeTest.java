@@ -54,9 +54,10 @@ public class NativeTest {
         assertNotNull(submissionQueue);
         assertNotNull(completionQueue);
 
-        assertFalse(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
-                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
-        submissionQueue.submit();
+        submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
+                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex(),
+                                            (short) -1);
+        assertEquals(1, submissionQueue.submit());
 
         assertTrue(completionQueue.ioUringWaitCqe());
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
@@ -68,9 +69,10 @@ public class NativeTest {
         }));
 
         final ByteBuf readEventByteBuf = allocator.directBuffer(100);
-        assertFalse(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
-                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
-        submissionQueue.submit();
+        submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
+                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity(),
+                                           (short) -1, false);
+        assertEquals(1, submissionQueue.submit());
 
         assertTrue(completionQueue.ioUringWaitCqe());
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
@@ -142,8 +144,8 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         final FileDescriptor eventFd = Native.newBlockingEventFd();
-        assertFalse(submissionQueue.addPollIn(eventFd.intValue()));
-        submissionQueue.submit();
+        submissionQueue.addPollIn(eventFd.intValue());
+        assertEquals(1, submissionQueue.submit());
 
         new Thread() {
             @Override
@@ -194,8 +196,8 @@ public class NativeTest {
         };
         waitingCqe.start();
         final FileDescriptor eventFd = Native.newBlockingEventFd();
-        assertFalse(submissionQueue.addPollIn(eventFd.intValue()));
-        submissionQueue.submit();
+        submissionQueue.addPollIn(eventFd.intValue());
+        assertEquals(1, submissionQueue.submit());
 
         new Thread() {
             @Override

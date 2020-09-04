@@ -196,6 +196,23 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         this(false);
     }
 
+    public interface AllocationCallback {
+        void bufferAllocated(long address, int length);
+        void bufferDeallocated(long address);
+    }
+
+    public void registerAllocationCallback(AllocationCallback callback) {
+        for (PoolArena<ByteBuffer> arena : directArenas) {
+            arena.registerAllocationCallback(callback);
+        }
+    }
+
+    public void unregisterAllocationCallback(AllocationCallback callback) {
+        for (PoolArena<ByteBuffer> arena : directArenas) {
+            arena.unregisterAllocationCallback(callback);
+        }
+    }
+
     @SuppressWarnings("deprecation")
     public PooledByteBufAllocator(boolean preferDirect) {
         this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);

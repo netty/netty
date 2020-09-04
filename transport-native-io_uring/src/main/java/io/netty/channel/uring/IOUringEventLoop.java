@@ -15,6 +15,9 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
@@ -36,7 +39,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
-    private final long eventfdReadBuf = PlatformDependent.allocateMemory(8);
+    private final ByteBuf eventfdReadBuf;
+    private final long eventfdReadAddress;
 
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private final RingBuffer ringBuffer;
@@ -52,6 +56,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final FileDescriptor eventfd;
 
     private final IovArrays iovArrays;
+
+    private final FixedBufferTracker tracker;
+    private boolean buffersRegistered;
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
@@ -75,7 +82,29 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         });
 
         eventfd = Native.newBlockingEventFd();
+
+        PooledByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT; //TODO configurable
+
+        ByteBuf buf = null;
+        if (alloc != null) {
+            buf = PooledByteBufAllocator.DEFAULT.directBuffer(8);
+            if (!buf.hasMemoryAddress()) {
+                buf.release();
+                buf = null;
+            }
+            tracker = new FixedBufferTracker(this, alloc);
+        } else {
+            tracker = FixedBufferTracker.NOOP_TRACKER;
+        }
+        eventfdReadBuf = buf;
+        eventfdReadAddress = buf != null ? buf.memoryAddress() : PlatformDependent.allocateMemory(8);
+
         logger.trace("New EventLoop: {}", this.toString());
+    }
+
+    // returns -1 for none
+    short getFixedBufferIndex(ByteBuf buf) {
+        return tracker.getIndex(ByteBufUtil.getPooledMemoryAddress(buf));
     }
 
     private static Queue<Runnable> newTaskQueue(
@@ -134,12 +163,51 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         final IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
+        tracker.start();
+        if (tracker.isDirty()) {
+            registerFixedBuffers(submissionQueue.getRingFd());
+        }
+
         // Lets add the eventfd related events before starting to do any real work.
         addEventFdRead(submissionQueue);
 
         for (;;) {
             try {
                 logger.trace("Run IOUringEventLoop {}", this);
+
+                // Avoid blocking for as long as possible - loop until available work exhausted
+                boolean maybeMoreWork = true;
+                do {
+                    try {
+                        // CQE processing can produce tasks, and new CQEs could arrive while
+                        // processing tasks. So run both on every iteration and break when
+                        // they both report that nothing was done (| means always run both).
+                        maybeMoreWork = completionQueue.process(this) != 0 | runAllTasks();
+                    } catch (Throwable t) {
+                        handleLoopException(t);
+                    }
+                    // Always handle shutdown even if the loop processing threw an exception
+                    try {
+                        if (isShuttingDown()) {
+                            closeAll();
+                            if (confirmShutdown()) {
+                                tracker.close();
+                                return;
+                            }
+                            if (!maybeMoreWork) {
+                                maybeMoreWork = hasTasks() || completionQueue.hasCompletions();
+                            }
+                        }
+                    } catch (Throwable t) {
+                        handleLoopException(t);
+                    }
+                } while (maybeMoreWork);
+
+                if (tracker.isDirty() && !submissionQueue.ioInFlight()) {
+                    pauseLongIo(submissionQueue);
+                    registerFixedBuffers(submissionQueue.getRingFd());
+                    continue; // might have more work by now
+                }
 
                 // Prepare to block wait
                 long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
@@ -153,8 +221,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 try {
                     if (!hasTasks()) {
                         if (curDeadlineNanos != prevDeadlineNanos) {
+                            if (prevDeadlineNanos != NONE) {
+                                submissionQueue.addTimeoutRemove(); //TODO batch the removals
+                            }
+                            if (curDeadlineNanos != NONE) {
+                                submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
+                            }
                             prevDeadlineNanos = curDeadlineNanos;
-                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
                         }
 
                         // Check there were any completion events to process
@@ -172,33 +245,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             } catch (Throwable t) {
                 handleLoopException(t);
             }
-
-            // Avoid blocking for as long as possible - loop until available work exhausted
-            boolean maybeMoreWork = true;
-            do {
-                try {
-                    // CQE processing can produce tasks, and new CQEs could arrive while
-                    // processing tasks. So run both on every iteration and break when
-                    // they both report that nothing was done (| means always run both).
-                    maybeMoreWork = completionQueue.process(this) != 0 | runAllTasks();
-                } catch (Throwable t) {
-                    handleLoopException(t);
-                }
-                // Always handle shutdown even if the loop processing threw an exception
-                try {
-                    if (isShuttingDown()) {
-                        closeAll();
-                        if (confirmShutdown()) {
-                            return;
-                        }
-                        if (!maybeMoreWork) {
-                            maybeMoreWork = hasTasks() || completionQueue.hasCompletions();
-                        }
-                    }
-                } catch (Throwable t) {
-                    handleLoopException(t);
-                }
-            } while (maybeMoreWork);
         }
     }
 
@@ -219,11 +265,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     @Override
     public void handle(int fd, int res, int flags, int op, int pollMask) {
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
-            if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                pendingWakeup = false;
-                addEventFdRead(ringBuffer.ioUringSubmissionQueue());
-            }
+            //TODO not if loop is shutting down
+            pendingWakeup = false;
+            addEventFdRead(submissionQueue);
         } else if (op == Native.IORING_OP_TIMEOUT) {
             if (res == Native.ERRNO_ETIME_NEGATIVE) {
                 prevDeadlineNanos = NONE;
@@ -235,23 +282,31 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 return;
             }
             if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
-                handleRead(channel, res);
-            } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
-                handleWrite(channel, res);
+                submissionQueue.ioOpComplete();
+                handleRead(channel, res); // also includes READ_FIXED
+            } else if (op == Native.IORING_OP_WRITE) {
+                submissionQueue.ioOpComplete();
+                handleWrite(channel, res); // also includes WRITEV and WRITE_FIXED
             } else if (op == Native.IORING_OP_POLL_ADD) {
-                handlePollAdd(channel, res, pollMask);
+                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                    handlePollAdd(channel, res, pollMask);
+                } else if (channel.isActive()) {
+                    // reinstate poll following register pause
+                    submissionQueue.addPoll(fd, pollMask);
+                }
             } else if (op == Native.IORING_OP_POLL_REMOVE) {
                 if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
                     logger.trace("IORING_POLL_REMOVE not successful");
                 } else if (res == 0) {
                     logger.trace("IORING_POLL_REMOVE successful");
                 }
-                if (!channel.ioScheduled()) {
+                if (!channel.isActive() && !channel.ioScheduled()) {
                     // We cancelled the POLL ops which means we are done and should remove the mapping.
                     channels.remove(fd);
                     return;
                 }
             } else if (op == Native.IORING_OP_CONNECT) {
+                submissionQueue.ioOpComplete();
                 handleConnect(channel, res);
             }
             channel.ioUringUnsafe().processDelayedClose();
@@ -279,7 +334,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
-        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8);
+        submissionQueue.addRead(eventfd.intValue(), eventfdReadAddress, 0, 8,
+                getFixedBufferIndex(eventfdReadBuf), true);
     }
 
     private void handleConnect(AbstractIOUringChannel channel, int res) {
@@ -295,7 +351,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
         ringBuffer.close();
         iovArrays.release();
-        PlatformDependent.freeMemory(eventfdReadBuf);
+        if (eventfdReadBuf != null) {
+            eventfdReadBuf.release();
+        } else {
+            PlatformDependent.freeMemory(eventfdReadAddress);
+        }
     }
 
     RingBuffer getRingBuffer() {
@@ -318,5 +378,48 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             assert iovArray != null;
         }
         return iovArray;
+    }
+
+    private void registerFixedBuffers(int ringFd) {
+        if (buffersRegistered) {
+            // Need to unregister first
+            int ret = Native.ioUringRegister(ringFd, Native.IORING_UNREGISTER_BUFFERS,
+                    0L /*NULL*/, 0);
+            if (ret < 0 && ret != Native.ERRNO_ENXIO_NEGATIVE) {
+                logger.warn("UNREGISTER_BUFFERS returned " + ret); //TODO
+                return;
+            }
+            buffersRegistered = false;
+        }
+        int bufCount = tracker.getCount();
+        if (bufCount > 0) {
+            final ByteBuf ioVecs = tracker.getIoVecs();
+            try {
+                bufCount = tracker.getCount(); // note this may have changed due to the iovec alloc
+                int ret = Native.ioUringRegister(ringFd, Native.IORING_REGISTER_BUFFERS,
+                        ioVecs.memoryAddress(), bufCount);
+                if (ret < 0) {
+                    //TODO reset tracker indices here
+                    throw new RuntimeException("REGISTER_BUFFERS returned " + ret);  //TODO
+                }
+                buffersRegistered = true;
+            } finally {
+                ioVecs.release();
+            }
+        }
+    }
+
+    private void pauseLongIo(IOUringSubmissionQueue submissionQueue) {
+        for (IntObjectMap.PrimitiveEntry<AbstractIOUringChannel> ent : channels.entries()) {
+            ent.value().removePolls();
+        }
+        if (!pendingWakeup) {
+            submissionQueue.addReadCancel(eventfd.intValue());
+        }
+        if (prevDeadlineNanos != NONE) {
+            submissionQueue.addTimeoutRemove();
+            prevDeadlineNanos = NONE;
+        }
+        submissionQueue.submit();
     }
 }

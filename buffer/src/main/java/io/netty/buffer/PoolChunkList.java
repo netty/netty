@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.buffer.PooledByteBufAllocator.AllocationCallback;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -247,7 +248,16 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     void destroy(PoolArena<T> arena) {
         PoolChunk<T> chunk = head;
         while (chunk != null) {
-            arena.destroyChunk(chunk);
+            chunk.destroy();
+            chunk = chunk.next;
+        }
+        head = null;
+    }
+
+    void registerAllChunks(PoolArena<T> arena, AllocationCallback callback) {
+        PoolChunk<T> chunk = head;
+        while (chunk != null) {
+            PoolArena.poolChunkAllocated(chunk, callback);
             chunk = chunk.next;
         }
         head = null;

@@ -310,25 +310,35 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     protected final void doWriteSingle(ByteBuf buf) {
         assert (ioState & WRITE_SCHEDULED) == 0;
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
-                buf.writerIndex());
+        submissionQueue().addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
+                buf.writerIndex(), ((IOUringEventLoop) eventLoop()).getFixedBufferIndex(buf));
         ioState |= WRITE_SCHEDULED;
     }
 
     //POLLOUT
     private void schedulePollOut() {
         assert (ioState & POLL_OUT_SCHEDULED) == 0;
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addPollOut(socket.intValue());
+        submissionQueue().addPollOut(socket.intValue());
         ioState |= POLL_OUT_SCHEDULED;
     }
 
     void schedulePollRdHup() {
         assert (ioState & POLL_RDHUP_SCHEDULED) == 0;
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addPollRdHup(fd().intValue());
+        submissionQueue().addPollRdHup(socket.intValue());
         ioState |= POLL_RDHUP_SCHEDULED;
+    }
+
+    void removePolls() {
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        if ((ioState & AbstractIOUringChannel.POLL_IN_SCHEDULED) != 0) {
+            submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
+        }
+        if ((ioState & AbstractIOUringChannel.POLL_RDHUP_SCHEDULED) != 0) {
+            submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
+        }
+        if ((ioState & AbstractIOUringChannel.POLL_OUT_SCHEDULED) != 0) {
+            submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
+        }
     }
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
@@ -700,27 +710,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() {
         IOUringEventLoop eventLoop = (IOUringEventLoop) eventLoop();
         eventLoop.add(this);
         submissionQueue = eventLoop.getRingBuffer().ioUringSubmissionQueue();
     }
 
     @Override
-    protected void doDeregister() throws Exception {
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-
-        if (submissionQueue != null) {
-            if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
-            }
-            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
-            }
-            if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
-            }
-        }
+    protected void doDeregister() {
+        removePolls();
+        ioState &= ~(POLL_IN_SCHEDULED | POLL_OUT_SCHEDULED | POLL_RDHUP_SCHEDULED);
     }
 
     @Override
