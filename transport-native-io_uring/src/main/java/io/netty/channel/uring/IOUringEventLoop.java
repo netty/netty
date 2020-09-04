@@ -136,9 +136,29 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
         // Lets add the eventfd related events before starting to do any real work.
         addEventFdRead(submissionQueue);
-        submissionQueue.submit();
 
         for (;;) {
+            for (;;) {
+                // avoid blocking for as long as possible
+                completionQueue.process(this);
+                boolean ranTasks = runAllTasks();
+                if (!ranTasks) {
+                    break;
+                }
+            }
+
+            try {
+                if (isShuttingDown()) {
+                    closeAll();
+                    submissionQueue.submit();
+                    if (confirmShutdown()) {
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                logger.info("Exception error: {}", t);
+            }
+
             logger.trace("Run IOUringEventLoop {}", this.toString());
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
             if (curDeadlineNanos == -1L) {
@@ -153,14 +173,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                     if (curDeadlineNanos != prevDeadlineNanos) {
                         prevDeadlineNanos = curDeadlineNanos;
                         submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
-                        submissionQueue.submit();
                     }
 
                     // Check there were any completion events to process
-                    if (completionQueue.process(this) == -1) {
+                    if (!completionQueue.hasCompletions()) {
                         // Block if there is nothing to process after this try again to call process(....)
                         logger.trace("ioUringWaitCqe {}", this.toString());
-                        completionQueue.ioUringWaitCqe();
+                        submissionQueue.submitAndWait();
                     }
                 } catch (Throwable t) {
                     //Todo handle exception
@@ -169,25 +188,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         pendingWakeup = true;
                     }
                 }
-            }
-
-            completionQueue.process(this);
-
-            // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
-            runAllTasks();
-
-            submissionQueue.submit();
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    submissionQueue.submit();
-
-                    if (confirmShutdown()) {
-                        break;
-                    }
-                }
-            } catch (Throwable t) {
-                logger.info("Exception error: {}", t);
             }
         }
     }

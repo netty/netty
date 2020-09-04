@@ -188,17 +188,33 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submit = tail - head;
         if (submit > 0) {
-            PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
-            int ret = Native.ioUringEnter(ringFd, submit, 0, 0);
-            head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
-            if (ret != submit) {
-                if (ret < 0) {
-                    throw new RuntimeException("ioUringEnter syscall");
-                }
-                logger.warn("Not all submissions succeeded");
-            }
-            submissionCallback.run();
+            submit(submit, 0, 0);
         }
+    }
+
+    public void submitAndWait() {
+        int submit = tail - head;
+        if (submit > 0) {
+            submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
+        } else {
+            int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
+            if (ret < 0) {
+                throw new RuntimeException("ioUringEnter syscall");
+            }
+        }
+    }
+
+    public void submit(int toSubmit, int minComplete, int flags) {
+        PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
+        int ret = Native.ioUringEnter(ringFd, toSubmit, minComplete, flags);
+        head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
+        if (ret != toSubmit) {
+            if (ret < 0) {
+                throw new RuntimeException("ioUringEnter syscall");
+            }
+            logger.warn("Not all submissions succeeded");
+        }
+        submissionCallback.run();
     }
 
     private void setTimeout(long timeoutNanoSeconds) {
