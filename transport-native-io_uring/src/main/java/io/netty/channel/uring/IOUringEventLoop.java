@@ -143,20 +143,20 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 // avoid blocking for as long as possible
                 completionQueue.process(this);
                 boolean ranTasks = runAllTasks();
-                if (!ranTasks) {
-                    break;
-                }
 
                 try {
                     if (isShuttingDown()) {
                         closeAll();
-                        submissionQueue.submit();
                         if (confirmShutdown()) {
-                            break;
+                            return;
                         }
                     }
                 } catch (Throwable t) {
                     logger.info("Exception error: {}", t);
+                }
+
+                if (!ranTasks) {
+                    break;
                 }
             }
 
