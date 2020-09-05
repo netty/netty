@@ -32,6 +32,8 @@ final class NativeStaticallyReferencedJniMethods {
 
     static native int sockNonblock();
     static native int sockCloexec();
+    static native int etime();
+    static native int ecanceled();
     static native int pollin();
     static native int pollout();
     static native int pollrdhup();
@@ -44,5 +46,6 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioringOpRead();
     static native int ioringOpWrite();
     static native int ioringOpConnect();
+    static native int ioringEnterGetevents();
     static native int iosqeAsync();
 }
