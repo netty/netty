@@ -95,10 +95,8 @@ public class PcapWriteHandlerTest {
         ByteBuf ethernetPacket = byteBuf.readBytes(46);
         ByteBuf dstMac = ethernetPacket.readBytes(6);
         ByteBuf srcMac = ethernetPacket.readBytes(6);
-        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, -1},
-                ByteBufUtil.getBytes(dstMac));
-        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, 0},
-                ByteBufUtil.getBytes(srcMac));
+        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, -1}, ByteBufUtil.getBytes(dstMac));
+        assertArrayEquals(new byte[]{0, 0, 94, 0, 83, 0}, ByteBufUtil.getBytes(srcMac));
         assertEquals(0x0800, ethernetPacket.readShort());
 
         // Verify IPv4 Packet
@@ -111,10 +109,10 @@ public class PcapWriteHandlerTest {
         assertEquals((byte) 0xff, ipv4Packet.readByte());      // TTL
         assertEquals((byte) 17, ipv4Packet.readByte());        // Protocol
         assertEquals(0, ipv4Packet.readShort());      // Checksum
-        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) srvAddr.getAddress()),
-                ipv4Packet.readInt());                          // Source IPv4 Address
-        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) cltAddr.getAddress()),
-                ipv4Packet.readInt());                          // Destination IPv4 Address
+        // Source IPv4 Address
+        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) srvAddr.getAddress()), ipv4Packet.readInt());
+        // Destination IPv4 Address
+        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) cltAddr.getAddress()), ipv4Packet.readInt());
 
         // Verify UDP Packet
         ByteBuf udpPacket = ipv4Packet.readBytes(12);
@@ -122,9 +120,12 @@ public class PcapWriteHandlerTest {
         assertEquals(srvAddr.getPort() & 0xffff, udpPacket.readShort() & 0xffff); // Destination Port
         assertEquals(12, udpPacket.readShort());     // Length
         assertEquals(0x0001, udpPacket.readShort()); // Checksum
+
+        // Verify Payload
         ByteBuf payload = udpPacket.readBytes(4);
         assertArrayEquals("Meow".getBytes(CharsetUtil.UTF_8), ByteBufUtil.getBytes(payload)); // Payload
 
+        // Release all ByteBuf
         assertTrue(dstMac.release());
         assertTrue(srcMac.release());
         assertTrue(payload.release());
