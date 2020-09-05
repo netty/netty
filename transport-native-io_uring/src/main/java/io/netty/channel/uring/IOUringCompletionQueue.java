@@ -27,8 +27,6 @@ final class IOUringCompletionQueue {
 
   private static final int CQE_SIZE = 16;
 
-  private static final int IORING_ENTER_GETEVENTS = 1;
-
   //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
   private final long kHeadAddress;
   private final long kTailAddress;
@@ -95,7 +93,7 @@ final class IOUringCompletionQueue {
 
   public boolean ioUringWaitCqe() {
     //IORING_ENTER_GETEVENTS -> wait until an event is completely processed
-    int ret = Native.ioUringEnter(ringFd, 0, 1, IORING_ENTER_GETEVENTS);
+    int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
     if (ret < 0) {
         //Todo throw exception!
         return false;

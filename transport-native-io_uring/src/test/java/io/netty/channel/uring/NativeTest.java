@@ -239,7 +239,7 @@ public class NativeTest {
                 @Override
                 public boolean handle(int fd, int res, long flags, int op, int mask) {
                     if (op == Native.IORING_OP_POLL_ADD) {
-                        assertEquals(IOUringEventLoop.ECANCELED, res);
+                        assertEquals(Native.ERRNO_ECANCELED_NEGATIVE, res);
                     } else if (op == Native.IORING_OP_POLL_REMOVE) {
                         assertEquals(0, res);
                     } else {

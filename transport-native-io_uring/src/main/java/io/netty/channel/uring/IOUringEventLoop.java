@@ -34,9 +34,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
-    private static final long ETIME = -62;
-    static final long ECANCELED = -125;
-
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private final RingBuffer ringBuffer;
 
@@ -176,7 +173,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
             handleWrite(fd, res);
         } else if (op == Native.IORING_OP_POLL_ADD) {
-            if (res == ECANCELED) {
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 logger.trace("IORING_POLL_ADD cancelled");
                 return true;
             }
@@ -195,7 +192,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         } else if (op == Native.IORING_OP_CONNECT) {
             handleConnect(fd, res);
         } else if (op == Native.IORING_OP_TIMEOUT) {
-            if (res == ETIME) {
+            if (res == Native.ERRNO_ETIME_NEGATIVE) {
                 prevDeadlineNanos = NONE;
             }
         }
