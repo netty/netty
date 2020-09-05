@@ -179,7 +179,8 @@ static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint 
 }
 
 static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
-    jint eventFD = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    // We use a blocking fd with io_uring FAST_POLL read
+    jint eventFD = eventfd(0, EFD_CLOEXEC);
 
     if (eventFD < 0) {
         netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd() failed: ", errno);
