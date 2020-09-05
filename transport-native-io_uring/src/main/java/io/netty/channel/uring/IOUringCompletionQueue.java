@@ -85,10 +85,6 @@ final class IOUringCompletionQueue {
           if (!callback.handle(fd, res, flags, op, mask)) {
               break;
           }
-          if (ringHead == tail) {
-              // Check again with barrier in case tail has moved on
-              tail = PlatformDependent.getIntVolatile(kTailAddress);
-          }
       }
       return i;
   }
