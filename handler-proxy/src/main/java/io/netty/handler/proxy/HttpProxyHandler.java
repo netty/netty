@@ -38,12 +38,14 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.List;
 
 public final class HttpProxyHandler extends ProxyHandler {
 
@@ -66,18 +68,35 @@ public final class HttpProxyHandler extends ProxyHandler {
     private HttpHeaders inboundHeaders;
 
     /**
-     * <p> Create {@link HttpProxyHandler} using {@link ProxySelector#getDefault()} </p>
+     * <p> Create {@link HttpProxyHandler} and fetch Proxy Address using
+     * {@link ProxySelector#getDefault()} or System Properties. </p>
      *
+     * @param useProxySelector Set to {@code true} if we want to get Proxy Server Address
+     *                         using {@link ProxySelector#getDefault()}. Set to {@code false} if we want to get
+     *                         Proxy Server Address using System Properties.
      * @return {@link HttpProxyHandler} Instance.
-     * @throws IllegalArgumentException If {@link ProxySelector#getDefault()} type is not {@link Proxy.Type#HTTP}
+     * @throws NullPointerException If {@link ProxySelector#getDefault()} type is not {@link Proxy.Type#HTTP} or
+     *                              {@code http.proxyHost} is {@code null}
      */
-    public static HttpProxyHandler createDefault() throws IllegalArgumentException {
-        Proxy proxy = ProxySelector.getDefault().select(URI.create("http://localhost")).get(0);
-        if (proxy.type() != Proxy.Type.HTTP) {
-            throw new IllegalArgumentException("Expected Default Proxy Type: HTTP, Got: " + proxy.type());
-        }
+    public static HttpProxyHandler createDefault(boolean useProxySelector) throws NullPointerException {
+        if (useProxySelector) {
+            List<Proxy> proxyList = ProxySelector.getDefault().select(URI.create("http://localhost:1"));
+            if (proxyList.size() == 0) {
+                throw new NullPointerException("Proxy List Size is Zero");
+            }
 
-        return new HttpProxyHandler(proxy.address(), null, null);
+            Proxy proxy = proxyList.get(0);
+
+            // If Proxy Type is not `HTTP`, throw exception.
+            if (proxy.type() != Proxy.Type.HTTP) {
+                throw new NullPointerException("Expected Default Proxy Type: HTTP, Got: " + proxy.type());
+            }
+            return new HttpProxyHandler(proxy.address(), null, null);
+        } else {
+            ObjectUtil.checkNotNull(SystemPropertyUtil.get("http.proxyHost"), "http.proxyHost");
+            return new HttpProxyHandler(new InetSocketAddress(SystemPropertyUtil.get("http.proxyHost"),
+                    SystemPropertyUtil.getInt("http.proxyPort", 80)), null, null);
+        }
     }
 
     public HttpProxyHandler(SocketAddress proxyAddress) {

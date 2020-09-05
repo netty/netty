@@ -24,9 +24,15 @@ import io.netty.handler.codec.socksx.v4.Socks4ClientEncoder;
 import io.netty.handler.codec.socksx.v4.Socks4CommandResponse;
 import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
 import io.netty.handler.codec.socksx.v4.Socks4CommandType;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.util.List;
 
 public final class Socks4ProxyHandler extends ProxyHandler {
 
@@ -37,6 +43,41 @@ public final class Socks4ProxyHandler extends ProxyHandler {
 
     private String decoderName;
     private String encoderName;
+
+    /**
+     * <p> Create {@link Socks4ProxyHandler} and fetch Proxy Address using
+     * {@link ProxySelector#getDefault()} or System Properties </p>
+     *
+     * <p> If {@code socksProxyPort} is not present, default value will be {@code 1080}. </p>
+     *
+     * @param useProxySelector Set to {@code true} if we want to get Proxy Server Address
+     *                         using {@link ProxySelector#getDefault()}. Set to {@code false} if we want to get
+     *                         Proxy Server Address using System Properties.
+     * @return {@link Socks4ProxyHandler} Instance.
+     * @throws NullPointerException If {@link ProxySelector#getDefault()} type is not {@link Proxy.Type#SOCKS} or
+     *                              {@code socksProxyHost} is {@code null}
+     */
+    public static Socks4ProxyHandler createDefault(boolean useProxySelector) throws NullPointerException {
+        if (useProxySelector) {
+            List<Proxy> proxyList = ProxySelector.getDefault().select(URI.create("socket://localhost:1"));
+            if (proxyList.size() == 0) {
+                throw new NullPointerException("Proxy List Size is Zero");
+            }
+
+            Proxy proxy = proxyList.get(0);
+
+            // If Proxy Type is not `SOCKS`, throw exception.
+            if (proxy.type() != Proxy.Type.SOCKS) {
+                throw new IllegalArgumentException("Expected Default Proxy Type: SOCKS, Got: " + proxy.type());
+            }
+
+            return new Socks4ProxyHandler(proxy.address(), null);
+        } else {
+            ObjectUtil.checkNotNull(SystemPropertyUtil.get("socksProxyHost"), "socksProxyHost");
+            return new Socks4ProxyHandler(new InetSocketAddress(SystemPropertyUtil.get("socksProxyHost"),
+                    SystemPropertyUtil.getInt("socksProxyHost", 1080)), null);
+        }
+    }
 
     public Socks4ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null);

@@ -46,6 +46,7 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public final class Socks5ProxyHandler extends ProxyHandler {
 
@@ -65,17 +66,38 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     private String encoderName;
 
     /**
-     * <p> Create {@link Socks5ProxyHandler} using VM argument
-     * {@code socksProxyHost} and {@code socksProxyPort}. </p>
+     * <p> Create {@link Socks5ProxyHandler} and fetch Proxy Address using
+     * {@link ProxySelector#getDefault()} or System Properties </p>
      *
      * <p> If {@code socksProxyPort} is not present, default value will be {@code 1080}. </p>
      *
+     * @param useProxySelector Set to {@code true} if we want to get Proxy Server Address
+     *                         using {@link ProxySelector#getDefault()}. Set to {@code false} if we want to get
+     *                         Proxy Server Address using System Properties.
      * @return {@link Socks5ProxyHandler} Instance.
+     * @throws NullPointerException If {@link ProxySelector#getDefault()} type is not {@link Proxy.Type#SOCKS} or
+     *                              {@code socksProxyHost} is {@code null}
      */
-    public static Socks5ProxyHandler createDefault() {
-        ObjectUtil.checkNotNull(SystemPropertyUtil.get("socksProxyHost"), "socksProxyHost");
-        return new Socks5ProxyHandler(new InetSocketAddress(SystemPropertyUtil.get("socksProxyHost"),
-                SystemPropertyUtil.getInt("socksProxyHost", 1080)), null, null);
+    public static Socks5ProxyHandler createDefault(boolean useProxySelector) throws NullPointerException {
+        if (useProxySelector) {
+            List<Proxy> proxyList = ProxySelector.getDefault().select(URI.create("socket://localhost:1"));
+            if (proxyList.size() == 0) {
+                throw new NullPointerException("Proxy List Size is Zero");
+            }
+
+            Proxy proxy = proxyList.get(0);
+
+            // If Proxy Type is not `SOCKS`, throw exception.
+            if (proxy.type() != Proxy.Type.SOCKS) {
+                throw new IllegalArgumentException("Expected Default Proxy Type: SOCKS, Got: " + proxy.type());
+            }
+
+            return new Socks5ProxyHandler(proxy.address(), null, null);
+        } else {
+            ObjectUtil.checkNotNull(SystemPropertyUtil.get("socksProxyHost"), "socksProxyHost");
+            return new Socks5ProxyHandler(new InetSocketAddress(SystemPropertyUtil.get("socksProxyHost"),
+                    SystemPropertyUtil.getInt("socksProxyHost", 1080)), null, null);
+        }
     }
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
