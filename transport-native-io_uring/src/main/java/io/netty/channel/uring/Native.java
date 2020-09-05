@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.channels.Selector;
 import java.util.Locale;
 
-
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
     // Todo expose this via the EventLoopGroup constructor as well.
@@ -68,6 +67,8 @@ final class Native {
     static final int POLLIN = NativeStaticallyReferencedJniMethods.pollin();
     static final int POLLOUT = NativeStaticallyReferencedJniMethods.pollout();
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
+    static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
+    static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
 
     static final int IORING_OP_POLL_ADD = NativeStaticallyReferencedJniMethods.ioringOpPollAdd();
     static final int IORING_OP_TIMEOUT = NativeStaticallyReferencedJniMethods.ioringOpTimeout();
@@ -77,6 +78,7 @@ final class Native {
     static final int IORING_OP_POLL_REMOVE = NativeStaticallyReferencedJniMethods.ioringOpPollRemove();
     static final int IORING_OP_CONNECT = NativeStaticallyReferencedJniMethods.ioringOpConnect();
     static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
+    static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
     public static RingBuffer createRingBuffer(int ringSize) {

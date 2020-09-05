@@ -337,6 +337,14 @@ static jint netty_io_uring_sockCloexec(JNIEnv* env, jclass clazz) {
     return SOCK_CLOEXEC;
 }
 
+static jint netty_io_uring_etime(JNIEnv* env, jclass clazz) {
+    return ETIME;
+}
+
+static jint netty_io_uring_ecanceled(JNIEnv* env, jclass clazz) {
+    return ECANCELED;
+}
+
 static jint netty_io_uring_pollin(JNIEnv* env, jclass clazz) {
     return POLLIN;
 }
@@ -381,6 +389,10 @@ static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
     return IORING_OP_CONNECT;
 }
 
+static jint netty_io_uring_ioringEnterGetevents(JNIEnv* env, jclass clazz) {
+    return IORING_ENTER_GETEVENTS;
+}
+
 static jint netty_io_uring_iosqeAsync(JNIEnv* env, jclass clazz) {
     return IOSQE_ASYNC;
 }
@@ -389,6 +401,8 @@ static jint netty_io_uring_iosqeAsync(JNIEnv* env, jclass clazz) {
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
+  { "etime", "()I", (void *) netty_io_uring_etime },
+  { "ecanceled", "()I", (void *) netty_io_uring_ecanceled },
   { "pollin", "()I", (void *) netty_io_uring_pollin },
   { "pollout", "()I", (void *) netty_io_uring_pollout },
   { "pollrdhup", "()I", (void *) netty_io_uring_pollrdhup },
@@ -400,7 +414,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
+  { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
+
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
