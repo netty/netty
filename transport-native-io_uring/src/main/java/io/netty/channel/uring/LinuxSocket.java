@@ -49,6 +49,10 @@ final class LinuxSocket extends Socket {
         return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
     }
 
+    public boolean markClosed() {
+        return super.markClosed();
+    }
+
     void setTimeToLive(int ttl) throws IOException {
         setTimeToLive(intValue(), ttl);
     }

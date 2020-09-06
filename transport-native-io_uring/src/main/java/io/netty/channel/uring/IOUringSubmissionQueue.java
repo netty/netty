@@ -291,6 +291,22 @@ final class IOUringSubmissionQueue {
         return submitted;
     }
 
+    public boolean addClose(int fd) {
+        long sqe = 0;
+        boolean submitted = false;
+        while (sqe == 0) {
+            sqe = getSqe();
+
+            if (sqe == 0) {
+                submit();
+                submitted = true;
+            }
+        }
+        setData(sqe, (byte) Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
+
+        return submitted;
+    }
+
     private int flushSqe() {
         long kTail = toUnsignedLong(PlatformDependent.getInt(kTailAddress));
         long kHead = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
