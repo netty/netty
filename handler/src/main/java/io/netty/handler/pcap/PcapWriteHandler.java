@@ -212,7 +212,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
         } else if (ctx.channel() instanceof DatagramChannel) {
             handleUDP(ctx, msg);
         } else {
-            logger.error("Discarding Pcap Write for Unknown Channel: {}", ctx.channel());
+            logger.error("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
         }
         super.channelRead(ctx, msg);
     }
