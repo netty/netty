@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
 final class IOUring {
@@ -28,19 +29,24 @@ final class IOUring {
             cause = new UnsupportedOperationException(
                     "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
         } else {
-            RingBuffer ringBuffer = null;
-            try {
-                ringBuffer = Native.createRingBuffer();
-            } catch (Throwable t) {
-                cause = t;
-            } finally {
-                if (ringBuffer != null) {
-                    try {
-                        ringBuffer.close();
-                    } catch (Exception ignore) {
-                        // ignore
+            Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
+            if (unsafeCause == null) {
+                RingBuffer ringBuffer = null;
+                try {
+                    ringBuffer = Native.createRingBuffer();
+                } catch (Throwable t) {
+                    cause = t;
+                } finally {
+                    if (ringBuffer != null) {
+                        try {
+                            ringBuffer.close();
+                        } catch (Exception ignore) {
+                            // ignore
+                        }
                     }
                 }
+            } else {
+                cause = new UnsupportedOperationException("Unsafe is not supported", unsafeCause);
             }
         }
 

@@ -16,16 +16,18 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.SO_BACKLOG;
-import static io.netty.channel.ChannelOption.SO_RCVBUF;
-import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public final class IOUringServerSocketChannelConfig extends DefaultChannelConfig implements ServerSocketChannelConfig {
@@ -38,21 +40,21 @@ public final class IOUringServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG,
-                IOUringChannelOption.SO_REUSEPORT, IOUringChannelOption.IP_FREEBIND,
-            IOUringChannelOption.IP_TRANSPARENT, IOUringChannelOption.TCP_DEFER_ACCEPT);
+        return getOptions(super.getOptions(), ChannelOption.SO_RCVBUF, ChannelOption.SO_REUSEADDR,
+                ChannelOption.SO_BACKLOG, IOUringChannelOption.SO_REUSEPORT, IOUringChannelOption.IP_FREEBIND,
+                IOUringChannelOption.IP_TRANSPARENT, IOUringChannelOption.TCP_DEFER_ACCEPT);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
+        if (option == ChannelOption.SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
         }
-        if (option == SO_REUSEADDR) {
+        if (option == ChannelOption.SO_REUSEADDR) {
             return (T) Boolean.valueOf(isReuseAddress());
         }
-        if (option == SO_BACKLOG) {
+        if (option == ChannelOption.SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
         if (option == IOUringChannelOption.SO_REUSEPORT) {
@@ -73,11 +75,11 @@ public final class IOUringServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
-        if (option == SO_RCVBUF) {
+        if (option == ChannelOption.SO_RCVBUF) {
             setReceiveBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
+        } else if (option == ChannelOption.SO_REUSEADDR) {
             setReuseAddress((Boolean) value);
-        } else if (option == SO_BACKLOG) {
+        } else if (option == ChannelOption.SO_BACKLOG) {
             setBacklog((Integer) value);
         } else if (option == IOUringChannelOption.SO_REUSEPORT) {
             setReusePort((Boolean) value);
@@ -225,7 +227,8 @@ public final class IOUringServerSocketChannelConfig extends DefaultChannelConfig
 
     /**
      * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
-     * {@link io.netty.channel.socket.ServerSocketChannel}s to the same port and so accept connections with multiple threads.
+     * {@link io.netty.channel.socket.ServerSocketChannel}s to the same port and so accept connections with multiple
+     * threads.
      *
      * Be aware this method needs be called before
      * {@link io.netty.channel.socket.ServerSocketChannel#bind(java.net.SocketAddress)} to have any affect.

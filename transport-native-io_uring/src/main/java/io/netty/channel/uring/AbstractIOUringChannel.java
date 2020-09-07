@@ -34,7 +34,13 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.unix.*;
+import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.NativeInetAddress;
+import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.UnixChannel;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -320,7 +326,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          }
      }
 
-
     protected final void doWriteSingle(ByteBuf buf) {
         IOUringSubmissionQueue submissionQueue = submissionQueue();
         submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
@@ -520,7 +525,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
                 } finally {
                     if (!connectStillInProgress) {
-                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0
+                        // is used
                         // See https://github.com/netty/netty/issues/1770
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
@@ -573,7 +579,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     } catch (Throwable cause) {
                         fulfillConnectPromise(connectPromise, cause);
                     } finally {
-                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is
+                        // used
                         // See https://github.com/netty/netty/issues/1770
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
@@ -601,7 +608,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
                 long remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
 
-                socket.initAddress(address.address(), address.scopeId(), inetSocketAddress.getPort(), remoteAddressMemoryAddress);
+                socket.initAddress(address.address(), address.scopeId(), inetSocketAddress.getPort(),
+                        remoteAddressMemoryAddress);
                 final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
                 ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
             } catch (Throwable t) {
@@ -629,7 +637,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             promise.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isCancelled()) {
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
@@ -688,7 +696,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return remote;
     }
 
-    public Socket getSocket() {
+    protected Socket getSocket() {
         return socket;
     }
 
