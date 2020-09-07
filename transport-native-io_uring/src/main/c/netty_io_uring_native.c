@@ -167,7 +167,15 @@ void setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
 
 static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint to_submit,
                                  jint min_complete, jint flags) {
-    return sys_io_uring_enter(ring_fd, to_submit, min_complete, flags, NULL);
+    int result;
+    int err;
+    do {
+        result = sys_io_uring_enter(ring_fd, to_submit, min_complete, flags, NULL);
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+    return -err;
 }
 
 static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
