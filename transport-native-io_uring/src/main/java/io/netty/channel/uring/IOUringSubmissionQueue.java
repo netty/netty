@@ -357,7 +357,7 @@ final class IOUringSubmissionQueue {
     }
 
     public long count() {
-        return (sqeTail - toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress)));
+        return sqeTail - toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
     }
 
     //delete memory

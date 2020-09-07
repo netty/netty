@@ -79,13 +79,10 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
             EventLoop loop = group.next();
             loop.schedule(new Runnable() {
                 @Override
-                public void run() {
-
-                }
+                public void run() { }
             }, 1, TimeUnit.SECONDS).sync();
         } finally {
             group.shutdownGracefully();
         }
-
     }
 }

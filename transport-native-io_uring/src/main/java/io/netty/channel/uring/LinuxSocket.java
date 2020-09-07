@@ -387,5 +387,6 @@ final class LinuxSocket extends Socket {
     private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
     private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
-    private static native int initAddress(int fd, boolean ipv6, byte[] address, int scopeId, int port, long memoryAddress);
+    private static native int initAddress(
+            int fd, boolean ipv6, byte[] address, int scopeId, int port, long memoryAddress);
 }
