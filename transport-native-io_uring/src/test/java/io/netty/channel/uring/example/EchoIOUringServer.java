@@ -13,10 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.uring;
+package io.netty.channel.uring.example;
 
 import io.netty.bootstrap.ServerBootstrap;
-
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
