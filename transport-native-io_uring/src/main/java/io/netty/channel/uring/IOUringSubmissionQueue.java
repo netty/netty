@@ -137,10 +137,7 @@ final class IOUringSubmissionQueue {
         }
 
         // TODO: Make it configurable if we should use this flag or not.
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD,
-                // Workaround for a kernel bug:
-                // See https://lore.kernel.org/io-uring/6428c1ee0234105d18c5e3e88aa00c57@nickhill.org/T/#t
-                (byte) (op != Native.IORING_OP_WRITEV ? Native.IOSQE_ASYNC : 0));
+        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
 
         // pad field array -> all fields should be zero
         long offsetIndex = 0;
