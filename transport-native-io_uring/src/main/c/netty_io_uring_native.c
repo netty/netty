@@ -306,13 +306,11 @@ static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jo
     io_uring_ring.sq.sqe_head = 0;
     setup_io_uring(ring_fd, &io_uring_ring, &p);
 
-    // Later may want to consider using io_uring_ring.sq.kflags
-
     jobject ioUringSubmissionQueue = (*env)->NewObject(
         env, ioUringSubmissionQueueClass, ioUringSubmissionQueueMethodId,
         (jlong)io_uring_ring.sq.khead, (jlong)io_uring_ring.sq.ktail,
         (jlong)io_uring_ring.sq.kring_mask,
-        (jlong)io_uring_ring.sq.kring_entries,
+        (jlong)io_uring_ring.sq.kring_entries, (jlong)io_uring_ring.sq.kflags,
         (jlong)io_uring_ring.sq.kdropped, (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes, (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr, (jint)ring_fd, submitCallback);
@@ -540,7 +538,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
                 nettyClassName, done);
     NETTY_LOAD_CLASS(env, ioUringSubmissionQueueClass, nettyClassName, done);
     NETTY_GET_METHOD(env, ioUringSubmissionQueueClass,
-                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJIJILjava/lang/Runnable;)V",
+                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJJIJILjava/lang/Runnable;)V",
                    done);
 
     NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/IOUringCompletionQueue",

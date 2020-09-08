@@ -48,6 +48,7 @@ final class IOUringSubmissionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
+    private final long fFlagsAdress;
     private final long kDroppedAddress;
     private final long arrayAddress;
 
@@ -67,10 +68,11 @@ final class IOUringSubmissionQueue {
     private int tail;
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
-                           long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress, int ringSize,
-                           long ringAddress, int ringFd, Runnable submissionCallback) {
+                           long fFlagsAdress, long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress,
+                           int ringSize, long ringAddress, int ringFd, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
+        this.fFlagsAdress = fFlagsAdress;
         this.kDroppedAddress = kDroppedAddress;
         this.arrayAddress = arrayAddress;
         this.submissionQueueArrayAddress = submissionQueueArrayAddress;
@@ -88,10 +90,13 @@ final class IOUringSubmissionQueue {
         // Zero the whole SQE array first
         PlatformDependent.setMemory(submissionQueueArrayAddress, ringEntries * SQE_SIZE, (byte) 0);
 
-        // Fill SQ array (lines up with SQE array)
+        // Fill SQ array indices (1-1 with SQE array) and set nonzero constant SQE fields
         long address = arrayAddress;
-        for (int i = 0; i < ringEntries; i++, address += INT_SIZE) {
+        long sqeFlagsAddress = submissionQueueArrayAddress + SQE_FLAGS_FIELD;
+        for (int i = 0; i < ringEntries; i++, address += INT_SIZE, sqeFlagsAddress += SQE_SIZE) {
             PlatformDependent.putInt(address, i);
+            // TODO: Make it configurable if we should use this flag or not.
+            PlatformDependent.putByte(sqeFlagsAddress, (byte) Native.IOSQE_ASYNC);
         }
     }
 
@@ -109,11 +114,10 @@ final class IOUringSubmissionQueue {
 
     private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
         //set sqe(submission queue) properties
-        // never-used fields are omitted since we zero the entire array up-front
 
         PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) op);
-        // TODO: Make it configurable if we should use this flag or not.
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
+        // These two constants are set up-front
+        //PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
         //PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, (short) 0);
         PlatformDependent.putInt(sqe + SQE_FD_FIELD, fd);
         PlatformDependent.putLong(sqe + SQE_OFFSET_FIELD, offset);
@@ -184,9 +188,9 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submit = tail - head;
         if (submit > 0) {
-            PlatformDependent.putIntOrdered(kTailAddress, tail);
+            PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
             int ret = Native.ioUringEnter(ringFd, submit, 0, 0);
-            head = PlatformDependent.getIntVolatile(kHeadAddress);
+            head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
             if (ret != submit) {
                 if (ret < 0) {
                     throw new RuntimeException("ioUringEnter syscall");
@@ -227,20 +231,8 @@ final class IOUringSubmissionQueue {
         PlatformDependent.freeMemory(timeoutMemoryAddress);
     }
 
-    public long getKHeadAddress() {
-        return this.kHeadAddress;
-    }
-
-    public long getKTailAddress() {
-        return this.kTailAddress;
-    }
-
     public int getRingEntries() {
         return this.ringEntries;
-    }
-
-    public long getKDroppedAddress() {
-        return this.kDroppedAddress;
     }
 
     public long getArrayAddress() {
@@ -252,7 +244,7 @@ final class IOUringSubmissionQueue {
     }
 
     public int getRingFd() {
-        return ringFd;
+        return this.ringFd;
     }
 
     public int getRingSize() {
