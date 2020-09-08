@@ -19,6 +19,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
@@ -46,18 +47,22 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     //    other value T    when EL is waiting with wakeup scheduled at time T
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private final FileDescriptor eventfd;
-    private final IovecArrayPool iovecArrayPool;
+
+    // For now just use one IovArray and submit once it is full. That said we could also use something like a
+    // "ring" of IovArrays to allow more gathering writes before we need submit.
+    private final IovArray iovArray;
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
-
+        // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
+        IOUring.ensureAvailability();
+        iovArray = new IovArray();
         ringBuffer = Native.createRingBuffer();
         eventfd = Native.newEventFd();
         logger.trace("New EventLoop: {}", this.toString());
-        iovecArrayPool = new IovecArrayPool();
     }
 
     @Override
@@ -150,11 +155,16 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
             runAllTasks();
 
+            // Once we submitted its safe to clear the iovArray and so be able to re-use it.
             submissionQueue.submit();
+            iovArray.clear();
             try {
                 if (isShuttingDown()) {
                     closeAll();
+                    // Once we submitted its safe to clear the iovArray and so be able to re-use it.
                     submissionQueue.submit();
+                    iovArray.clear();
+
                     if (confirmShutdown()) {
                         break;
                     }
@@ -253,7 +263,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             logger.warn("Failed to close the event fd.", e);
         }
         ringBuffer.close();
-        iovecArrayPool.release();
+        iovArray.release();
     }
 
     public RingBuffer getRingBuffer() {
@@ -268,7 +278,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
     }
 
-    public IovecArrayPool getIovecArrayPool() {
-        return iovecArrayPool;
+    public IovArray iovArray() {
+        // Check if its full and if so submit so we can reuse it.
+        if (iovArray.isFull()) {
+            ringBuffer.getIoUringSubmissionQueue().submit();
+            iovArray.clear();
+        }
+        return iovArray;
     }
 }

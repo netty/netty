@@ -71,6 +71,10 @@ public final class IovArray implements MessageProcessor {
         memoryAddress = Buffer.memoryAddress(memory);
     }
 
+    public boolean isFull() {
+        return count >= IOV_MAX || size >= maxBytes;
+    }
+
     public void clear() {
         count = 0;
         size = 0;
