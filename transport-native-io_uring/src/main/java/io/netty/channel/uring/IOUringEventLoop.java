@@ -19,6 +19,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
@@ -46,18 +47,27 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     //    other value T    when EL is waiting with wakeup scheduled at time T
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private final FileDescriptor eventfd;
-    private final IovecArrayPool iovecArrayPool;
+
+    private final IovArray[] iovArrays;
+    private int iovArrayIdx;
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
     IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
+        // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
+        IOUring.ensureAvailability();
 
+        // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
+        //       allow to change this in the future.
+        iovArrays = new IovArray[8];
+        for (int i = 0; i < iovArrays.length; i++) {
+            iovArrays[i] = new IovArray();
+        }
         ringBuffer = Native.createRingBuffer();
         eventfd = Native.newEventFd();
         logger.trace("New EventLoop: {}", this.toString());
-        iovecArrayPool = new IovecArrayPool();
     }
 
     @Override
@@ -150,11 +160,16 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
             runAllTasks();
 
+            // Once we submitted its safe to clear the iovArray and so be able to re-use it.
             submissionQueue.submit();
+            clearUsedIovArrays();
             try {
                 if (isShuttingDown()) {
                     closeAll();
+                    // Once we submitted its safe to clear the iovArray and so be able to re-use it.
                     submissionQueue.submit();
+                    clearUsedIovArrays();
+
                     if (confirmShutdown()) {
                         break;
                     }
@@ -163,6 +178,13 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 logger.info("Exception error: {}", t);
             }
         }
+    }
+
+    private void clearUsedIovArrays() {
+        for (int i = 0; i < iovArrayIdx; i++) {
+            iovArrays[i].clear();
+        }
+        iovArrayIdx = 0;
     }
 
     @Override
@@ -253,7 +275,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             logger.warn("Failed to close the event fd.", e);
         }
         ringBuffer.close();
-        iovecArrayPool.release();
+        for (IovArray array: iovArrays) {
+            array.release();
+        }
     }
 
     public RingBuffer getRingBuffer() {
@@ -268,7 +292,21 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
     }
 
-    public IovecArrayPool getIovecArrayPool() {
-        return iovecArrayPool;
+    public IovArray iovArray() {
+        IovArray iovArray = iovArrays[iovArrayIdx];
+        if (iovArray.isFull()) {
+            if (iovArrayIdx < iovArrays.length - 1) {
+                // There is another array left that we can use, increment the index and use it.
+                iovArrayIdx++;
+                iovArray = iovArrays[iovArrayIdx];
+            } else {
+                // No array left to use. Submit so we can reuse all of the arrays.
+                ringBuffer.getIoUringSubmissionQueue().submit();
+                clearUsedIovArrays();
+                iovArray = iovArrays[iovArrayIdx];
+            }
+            assert !iovArray.isFull();
+        }
+        return iovArray;
     }
 }
