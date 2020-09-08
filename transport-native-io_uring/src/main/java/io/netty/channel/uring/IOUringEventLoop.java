@@ -140,7 +140,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         for (;;) {
             logger.trace("Run IOUringEventLoop {}", this.toString());
             // avoid blocking for as long as possible - loop until two consecutive "empty" results
-            for (boolean maybeMoreIo = true, maybeMoreTasks = true; maybeMoreIo | maybeMoreTasks;) {
+            boolean maybeMoreTasks = true;
+            boolean maybeMoreIo;
+            do {
                 maybeMoreIo = completionQueue.process(this) != 0;
                 if (!maybeMoreIo & !maybeMoreTasks) {
                     break; // no need to check tasks again here
@@ -156,7 +158,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 } catch (Throwable t) {
                     logger.info("Exception error: {}", t);
                 }
-            }
+            } while (maybeMoreIo | maybeMoreTasks);
 
             // No more work, prepare to block wait
             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
