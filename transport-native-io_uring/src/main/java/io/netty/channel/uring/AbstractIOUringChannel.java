@@ -309,7 +309,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
              submissionQueue().addWritev(socket.intValue(), iovecArray.memoryAddress(offset), iovecArray.count() - offset);
              ioState |= WRITE_SCHEDULED;
          } catch (Exception e) {
-             // This should never happem, anyway fallback to single write.
+             // This should never happen, anyway fallback to single write.
              doWriteSingle((ByteBuf) in.current());
          }
 
