@@ -306,13 +306,13 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          try {
              int offset = iovecArray.count();
              in.forEachFlushedMessage(iovecArray);
-             submissionQueue().addWritev(socket.intValue(), iovecArray.memoryAddress(offset), iovecArray.count() - offset);
+             submissionQueue().addWritev(socket.intValue(),
+                     iovecArray.memoryAddress(offset), iovecArray.count() - offset);
              ioState |= WRITE_SCHEDULED;
          } catch (Exception e) {
              // This should never happen, anyway fallback to single write.
              doWriteSingle((ByteBuf) in.current());
          }
-
      }
 
     protected final void doWriteSingle(ByteBuf buf) {
