@@ -33,6 +33,9 @@ final class Native {
     // Todo expose this via the EventLoopGroup constructor as well.
     private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 4096);
 
+    // Todo configurable
+    static final boolean SQPOLL = true;
+
      static {
         Selector selector = null;
         try {
@@ -81,27 +84,30 @@ final class Native {
     static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
+    static final int IORING_SQ_POLL = NativeStaticallyReferencedJniMethods.sqPoll();
+    static final int IORING_NEED_WAKEUP = NativeStaticallyReferencedJniMethods.sqNeedWakeUp();
+    static final int IORING_WAKEUP = NativeStaticallyReferencedJniMethods.ioringEnterWakeUp();
 
-    static RingBuffer createRingBuffer(int ringSize) {
-        //Todo throw Exception if it's null
+    public static RingBuffer createRingBuffer(int ringSize) {
+
         return ioUringSetup(ringSize, new Runnable() {
             @Override
             public void run() {
                 // Noop
             }
-        });
+        },  SQPOLL ? IORING_SQ_POLL : 0);
     }
 
     static RingBuffer createRingBuffer(int ringSize, Runnable submissionCallback) {
         //Todo throw Exception if it's null
-        return ioUringSetup(ringSize, submissionCallback);
+        return ioUringSetup(ringSize, submissionCallback, SQPOLL ? IORING_SQ_POLL : 0);
     }
 
     static RingBuffer createRingBuffer(Runnable submissionCallback) {
         return createRingBuffer(DEFAULT_RING_SIZE, submissionCallback);
     }
 
-    private static native RingBuffer ioUringSetup(int entries, Runnable submissionCallback);
+    private static native RingBuffer ioUringSetup(int entries, Runnable submissionCallback, int flags);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 

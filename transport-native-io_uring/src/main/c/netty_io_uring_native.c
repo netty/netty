@@ -280,10 +280,11 @@ static int nettyBlockingSocket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
 
-static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jobject submitCallback) {
+static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jobject submitCallback, jint flags) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
 
+    p.flags = flags;
     int ring_fd = sys_io_uring_setup((int)entries, &p);
 
     //Todo
@@ -400,6 +401,18 @@ static jint netty_io_uring_iosqeAsync(JNIEnv* env, jclass clazz) {
     return IOSQE_ASYNC;
 }
 
+static jint netty_io_uring_sqPoll(JNIEnv* env, jclass clazz) {
+    return IORING_SETUP_SQPOLL;
+}
+
+static jint netty_io_uring_sqNeedWakeUp(JNIEnv* env, jclass clazz) {
+    return IORING_SQ_NEED_WAKEUP;
+}
+
+static jint netty_io_uring_enter_wakeup(JNIEnv *env, jclass clazz) {
+    return IORING_ENTER_SQ_WAKEUP;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
@@ -419,13 +432,15 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
   { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
-  { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
-
+  { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync },
+  { "sqPoll", "()I", (void *) netty_io_uring_sqPoll},
+  { "sqNeedWakeUp", "()I", (void *) netty_io_uring_sqNeedWakeUp},
+  { "ioringEnterWakeUp", "()I", (void *) netty_io_uring_enter_wakeup}
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
 static const JNINativeMethod method_table[] = {
-    {"ioUringSetup", "(ILjava/lang/Runnable;)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
+    {"ioUringSetup", "(ILjava/lang/Runnable;I)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
     {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},

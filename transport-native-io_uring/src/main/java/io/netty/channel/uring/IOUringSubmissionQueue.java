@@ -53,7 +53,7 @@ final class IOUringSubmissionQueue {
     private final long kTailAddress;
     private final long kRingMaskAddress;
     private final long kRingEntriesAddress;
-    private final long fFlagsAdress;
+    private final long kFlagsAddress;
     private final long kDroppedAddress;
     private final long arrayAddress;
 
@@ -73,14 +73,14 @@ final class IOUringSubmissionQueue {
     //private int sqeSubmitCounter;
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
-                           long fFlagsAdress, long kDroppedAddress, long arrayAddress,
+                           long kFlagsAddress, long kDroppedAddress, long arrayAddress,
                            long submissionQueueArrayAddress, int ringSize,
                            long ringAddress, int ringFd, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kRingMaskAddress = kRingMaskAddress;
         this.kRingEntriesAddress = kRingEntriesAddress;
-        this.fFlagsAdress = fFlagsAdress;
+        this.kFlagsAddress = kFlagsAddress;
         this.kDroppedAddress = kDroppedAddress;
         this.arrayAddress = arrayAddress;
         this.submissionQueueArrayAddress = submissionQueueArrayAddress;
@@ -137,8 +137,9 @@ final class IOUringSubmissionQueue {
             }
         }
 
+        // just a workaround, it seems to fail with
         // TODO: Make it configurable if we should use this flag or not.
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
+        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte)  (op != Native.IORING_OP_ACCEPT ? Native.IOSQE_ASYNC : 0));
 
         // pad field array -> all fields should be zero
         long offsetIndex = 0;
@@ -342,10 +343,19 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submitted = flushSqe();
         logger.trace("Submitted: {}", submitted);
-        if (submitted > 0) {
-            int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
-            if (ret < 0) {
-                throw new RuntimeException("ioUringEnter syscall");
+        if (!Native.SQPOLL) {
+            if (submitted > 0) {
+                int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
+                if (ret < 0) {
+                    throw new RuntimeException("ioUringEnter syscall");
+                }
+            }
+        } else {
+
+            //release barrier kFlagAddress
+            if((submitted > 0) && (PlatformDependent.getIntVolatile(kFlagsAddress) & Native.IORING_NEED_WAKEUP) != 0) {
+                //System.out.println("Wakeup Thread");
+                Native.ioUringEnter(ringFd, 0, 0, Native.IORING_WAKEUP);
             }
         }
         submissionCallback.run();
@@ -397,8 +407,8 @@ final class IOUringSubmissionQueue {
         return this.kRingEntriesAddress;
     }
 
-    public long getFFlagsAdress() {
-        return this.fFlagsAdress;
+    public long getkFlagsAddress() {
+        return kFlagsAddress;
     }
 
     public long getKDroppedAddress() {
