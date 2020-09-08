@@ -306,11 +306,13 @@ static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jo
     io_uring_ring.sq.sqe_head = 0;
     setup_io_uring(ring_fd, &io_uring_ring, &p);
 
+    // Later may want to consider using io_uring_ring.sq.kflags
+
     jobject ioUringSubmissionQueue = (*env)->NewObject(
         env, ioUringSubmissionQueueClass, ioUringSubmissionQueueMethodId,
         (jlong)io_uring_ring.sq.khead, (jlong)io_uring_ring.sq.ktail,
         (jlong)io_uring_ring.sq.kring_mask,
-        (jlong)io_uring_ring.sq.kring_entries, (jlong)io_uring_ring.sq.kflags,
+        (jlong)io_uring_ring.sq.kring_entries,
         (jlong)io_uring_ring.sq.kdropped, (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes, (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr, (jint)ring_fd, submitCallback);
