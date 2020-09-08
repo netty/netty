@@ -540,7 +540,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
                 nettyClassName, done);
     NETTY_LOAD_CLASS(env, ioUringSubmissionQueueClass, nettyClassName, done);
     NETTY_GET_METHOD(env, ioUringSubmissionQueueClass,
-                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJJIJILjava/lang/Runnable;)V",
+                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJIJILjava/lang/Runnable;)V",
                    done);
 
     NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/IOUringCompletionQueue",
