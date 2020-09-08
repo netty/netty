@@ -48,7 +48,6 @@ final class IOUringSubmissionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
-    //private final long fFlagsAdress;
     private final long kDroppedAddress;
     private final long arrayAddress;
 
@@ -68,12 +67,10 @@ final class IOUringSubmissionQueue {
     private int tail;
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
-                           long fFlagsAdress, long kDroppedAddress, long arrayAddress,
-                           long submissionQueueArrayAddress, int ringSize,
+                           long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress, int ringSize,
                            long ringAddress, int ringFd, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        //this.fFlagsAdress = fFlagsAdress;
         this.kDroppedAddress = kDroppedAddress;
         this.arrayAddress = arrayAddress;
         this.submissionQueueArrayAddress = submissionQueueArrayAddress;
@@ -125,12 +122,6 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, rwFlags);
         long userData = convertToUserData(op, fd, rwFlags);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, userData);
-        // pad field array -> all fields should be zero
-//        long offsetIndex = 0;
-//        for (int i = 0; i < 3; i++) {
-//            PlatformDependent.putLong(sqe + SQE_PAD_FIELD + offsetIndex, 0);
-//            offsetIndex += 8;
-//        }
 
         logger.trace("UserDataField: {}", userData);
         logger.trace("BufferAddress: {}", bufferAddress);
