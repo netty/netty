@@ -37,6 +37,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
@@ -88,9 +89,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
-
-    //to release it
-    private long iovecMemoryAddress = -1;
 
     AbstractIOUringChannel(final Channel parent, LinuxSocket socket) {
         super(parent);
@@ -304,21 +302,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
      private void doWriteMultiple(ChannelOutboundBuffer in) {
-
-         final IovecArrayPool iovecArray = ((IOUringEventLoop) eventLoop()).getIovecArrayPool();
-
-         iovecMemoryAddress = iovecArray.createNewIovecMemoryAddress();
-         if (iovecMemoryAddress != -1) {
-             try {
-                 in.forEachFlushedMessage(iovecArray);
-             } catch (Exception e) {
-                 // This should never happem, anyway fallback to single write.
-                 doWriteSingle((ByteBuf) in.current());
-             }
-             submissionQueue().addWritev(socket.intValue(), iovecMemoryAddress, iovecArray.count());
+         final IovArray iovecArray = ((IOUringEventLoop) eventLoop()).iovArray();
+         try {
+             int offset = iovecArray.count();
+             in.forEachFlushedMessage(iovecArray);
+             submissionQueue().addWritev(socket.intValue(),
+                     iovecArray.memoryAddress(offset), iovecArray.count() - offset);
              ioState |= WRITE_SCHEDULED;
-         } else {
-             // We were not be able to create a new iovec, fallback to single write.
+         } catch (Exception e) {
+             // This should never happen, anyway fallback to single write.
              doWriteSingle((ByteBuf) in.current());
          }
      }
@@ -540,10 +532,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
         final void writeComplete(int res) {
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-            if (iovecMemoryAddress != -1) {
-                ((IOUringEventLoop) eventLoop()).getIovecArrayPool().releaseIovec(iovecMemoryAddress);
-                iovecMemoryAddress = -1;
-            }
             if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
 
