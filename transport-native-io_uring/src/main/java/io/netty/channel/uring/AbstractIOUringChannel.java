@@ -520,7 +520,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         protected final void scheduleRead() {
-            if (delayedClose == null) {
+            // Only schedule another read if the fd is still open.
+            if (delayedClose == null && fd().isOpen()) {
                 ioState |= READ_SCHEDULED;
                 scheduleRead0();
             }
