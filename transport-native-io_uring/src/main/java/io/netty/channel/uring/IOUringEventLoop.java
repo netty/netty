@@ -35,7 +35,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
-    private static final long efdReadBuf = PlatformDependent.allocateMemory(8);
+    private final long eventfdReadBuf = PlatformDependent.allocateMemory(8);
 
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private final RingBuffer ringBuffer;
@@ -259,7 +259,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
-        submissionQueue.addRead(eventfd.intValue(), efdReadBuf, 0, 8);
+        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8);
     }
 
     private AbstractIOUringChannel handleConnect(int fd, int res) {
@@ -279,6 +279,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
         ringBuffer.close();
         iovArrays.release();
+        PlatformDependent.freeMemory(eventfdReadBuf);
     }
 
     public RingBuffer getRingBuffer() {
