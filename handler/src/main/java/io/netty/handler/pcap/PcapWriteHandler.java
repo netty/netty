@@ -311,15 +311,13 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
 
         try {
             if (srcAddr.getAddress() instanceof Inet4Address && dstAddr.getAddress() instanceof Inet4Address) {
-                IPPacket.writeTCPv4(ipBuf,
-                        tcpBuf,
+                IPPacket.writeTCPv4(ipBuf, tcpBuf,
                         NetUtil.ipv4AddressToInt((Inet4Address) srcAddr.getAddress()),
                         NetUtil.ipv4AddressToInt((Inet4Address) dstAddr.getAddress()));
 
                 EthernetPacket.writeIPv4(ethernetBuf, ipBuf);
             } else if (srcAddr.getAddress() instanceof Inet6Address && dstAddr.getAddress() instanceof Inet6Address) {
-                IPPacket.writeTCPv6(ipBuf,
-                        tcpBuf,
+                IPPacket.writeTCPv6(ipBuf, tcpBuf,
                         srcAddr.getAddress().getAddress(),
                         dstAddr.getAddress().getAddress());
 
@@ -393,10 +391,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         datagramPacket.content().readableBytes(), srcAddr, dstAddr);
 
-                UDPPacket.writePacket(udpBuf,
-                        datagramPacket.content(),
-                        srcAddr.getPort(),
-                        dstAddr.getPort());
+                UDPPacket.writePacket(udpBuf, datagramPacket.content(), srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
             } else if (msg instanceof ByteBuf && ((DatagramChannel) ctx.channel()).isConnected()) {
 
@@ -411,10 +406,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         byteBuf.readableBytes(), srcAddr, dstAddr);
 
-                UDPPacket.writePacket(udpBuf,
-                        byteBuf,
-                        srcAddr.getPort(),
-                        dstAddr.getPort());
+                UDPPacket.writePacket(udpBuf, byteBuf, srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
             } else {
                 logger.debug("Discarding Pcap Write for UDP Object: {}", msg);
