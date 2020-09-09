@@ -45,12 +45,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-native-io_uring</artifactId>
-      <version>${project.version}</version>
-      <classifier>linux-x86_64</classifier>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>

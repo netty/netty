@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.uring;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+package io.netty.channel.uring.example;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 //temporary prototype example
 @Sharable
