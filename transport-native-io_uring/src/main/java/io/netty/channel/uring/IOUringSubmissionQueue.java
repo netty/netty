@@ -139,7 +139,7 @@ final class IOUringSubmissionQueue {
 
         // just a workaround, it seems to fail with
         // TODO: Make it configurable if we should use this flag or not.
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte)  (op != Native.IORING_OP_ACCEPT ? Native.IOSQE_ASYNC : 0));
+        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte)  Native.IOSQE_ASYNC);
 
         // pad field array -> all fields should be zero
         long offsetIndex = 0;
