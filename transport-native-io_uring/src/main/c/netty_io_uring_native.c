@@ -289,7 +289,7 @@ static int nettyBlockingSocket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
 
-static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries) {
+static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jobject submitCallback) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
 
@@ -315,7 +315,7 @@ static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries) {
         (jlong)io_uring_ring.sq.kring_entries, (jlong)io_uring_ring.sq.kflags,
         (jlong)io_uring_ring.sq.kdropped, (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes, (jlong)io_uring_ring.sq.ring_sz,
-        (jlong)io_uring_ring.cq.ring_ptr, (jint)ring_fd);
+        (jlong)io_uring_ring.cq.ring_ptr, (jint)ring_fd, submitCallback);
 
     jobject ioUringCompletionQueue = (*env)->NewObject(
         env, ioUringCompletionQueueClass, ioUringCommpletionQueueMethodId,
@@ -434,7 +434,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
 static const JNINativeMethod method_table[] = {
-    {"ioUringSetup", "(I)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
+    {"ioUringSetup", "(ILjava/lang/Runnable;)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
     {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
@@ -540,7 +540,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
                 nettyClassName, done);
     NETTY_LOAD_CLASS(env, ioUringSubmissionQueueClass, nettyClassName, done);
     NETTY_GET_METHOD(env, ioUringSubmissionQueueClass,
-                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJJIJI)V",
+                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJJIJILjava/lang/Runnable;)V",
                    done);
 
     NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/IOUringCompletionQueue",

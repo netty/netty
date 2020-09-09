@@ -82,16 +82,26 @@ final class Native {
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
-    public static RingBuffer createRingBuffer(int ringSize) {
+    static RingBuffer createRingBuffer(int ringSize) {
         //Todo throw Exception if it's null
-        return ioUringSetup(ringSize);
+        return ioUringSetup(ringSize, new Runnable() {
+            @Override
+            public void run() {
+                // Noop
+            }
+        });
     }
 
-    public static RingBuffer createRingBuffer() {
-        return createRingBuffer(DEFAULT_RING_SIZE);
+    static RingBuffer createRingBuffer(int ringSize, Runnable submissionCallback) {
+        //Todo throw Exception if it's null
+        return ioUringSetup(ringSize, submissionCallback);
     }
 
-    private static native RingBuffer ioUringSetup(int entries);
+    static RingBuffer createRingBuffer(Runnable submissionCallback) {
+        return createRingBuffer(DEFAULT_RING_SIZE, submissionCallback);
+    }
+
+    private static native RingBuffer ioUringSetup(int entries, Runnable submissionCallback);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 

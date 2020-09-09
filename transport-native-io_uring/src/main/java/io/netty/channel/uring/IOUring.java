@@ -33,7 +33,12 @@ final class IOUring {
             if (unsafeCause == null) {
                 RingBuffer ringBuffer = null;
                 try {
-                    ringBuffer = Native.createRingBuffer();
+                    ringBuffer = Native.createRingBuffer(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Noop
+                        }
+                    });
                 } catch (Throwable t) {
                     cause = t;
                 } finally {
