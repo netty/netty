@@ -32,7 +32,7 @@ public final class MqttSubAckMessage extends MqttMessage {
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttSubAckPayload payload) {
-        this(mqttFixedHeader, variableHeader.withEmptyProperties(), payload);
+        this(mqttFixedHeader, variableHeader.withDefaultEmptyProperties(), payload);
     }
 
     @Override
