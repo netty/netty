@@ -48,8 +48,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private final FileDescriptor eventfd;
 
-    private final IovArray[] iovArrays;
-    private int iovArrayIdx;
+    private final IovArrays iovArrays;
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
@@ -61,15 +60,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
         // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
         //       allow to change this in the future.
-        iovArrays = new IovArray[8];
-        for (int i = 0; i < iovArrays.length; i++) {
-            iovArrays[i] = new IovArray();
-        }
+        iovArrays = new IovArrays(8);
         ringBuffer = Native.createRingBuffer(new Runnable() {
             @Override
             public void run() {
                 // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
-                clearUsedIovArrays();
+                iovArrays.clear();
             }
         });
 
@@ -183,13 +179,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
     }
 
-    private void clearUsedIovArrays() {
-        for (int i = 0; i <= iovArrayIdx; i++) {
-            iovArrays[i].clear();
-        }
-        iovArrayIdx = 0;
-    }
-
     @Override
     public boolean handle(int fd, int res, long flags, int op, int pollMask) {
         IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
@@ -294,9 +283,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             logger.warn("Failed to close the event fd.", e);
         }
         ringBuffer.close();
-        for (IovArray array: iovArrays) {
-            array.release();
-        }
+        iovArrays.release();
     }
 
     public RingBuffer getRingBuffer() {
@@ -312,18 +299,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     public IovArray iovArray() {
-        IovArray iovArray = iovArrays[iovArrayIdx];
-        if (iovArray.isFull()) {
-            if (iovArrayIdx < iovArrays.length - 1) {
-                // There is another array left that we can use, increment the index and use it.
-                iovArrayIdx++;
-                iovArray = iovArrays[iovArrayIdx];
-            } else {
-                // No array left to use. Submit so we can reuse all of the arrays.
-                ringBuffer.getIoUringSubmissionQueue().submit();
-                iovArray = iovArrays[iovArrayIdx];
-            }
-            assert !iovArray.isFull();
+        IovArray iovArray = iovArrays.next();
+        if (iovArray == null) {
+            ringBuffer.getIoUringSubmissionQueue().submit();
+            iovArray = iovArrays.next();
+            assert iovArray != null;
         }
         return iovArray;
     }
