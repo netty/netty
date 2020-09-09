@@ -157,7 +157,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
             } catch (IOException ex) {
                 ctx.channel().close();
                 ctx.fireExceptionCaught(ex);
-                logger.error("Caught Exception While Initializing PcapWriter. Closing Channel", ex);
+                logger.error("Caught Exception While Initializing PcapWriter, Closing Channel.", ex);
             } finally {
                 byteBuf.release();
             }
@@ -334,6 +334,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
             // Write Packet into Pcap
             pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
+            logger.error("Caught Exception While Writing Packet into Pcap", ex);
             ctx.fireExceptionCaught(ex);
         } finally {
             ipBuf.release();
@@ -462,6 +463,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
             // Write Packet into Pcap
             pCapWriter.writePacket(pcap, ethernetBuf);
         } catch (IOException ex) {
+            logger.error("Caught Exception While Writing Packet into Pcap", ex);
             ctx.fireExceptionCaught(ex);
         } finally {
             ipBuf.release();
