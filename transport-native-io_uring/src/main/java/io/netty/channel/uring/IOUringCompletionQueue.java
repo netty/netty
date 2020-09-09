@@ -39,7 +39,7 @@ final class IOUringCompletionQueue {
   private final int ringSize;
   private final long ringAddress;
   private final int ringFd;
-  
+
   private final int ringMask;
   private int ringHead;
 
@@ -55,8 +55,8 @@ final class IOUringCompletionQueue {
     this.ringAddress = ringAddress;
     this.ringFd = ringFd;
 
-    this.ringMask = PlatformDependent.getInt(kringMaskAddress);
-    this.ringHead = PlatformDependent.getInt(kHeadAddress);
+    this.ringMask = PlatformDependent.getIntVolatile(kringMaskAddress);
+    this.ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
   }
 
   public boolean hasCompletions() {
@@ -67,14 +67,15 @@ final class IOUringCompletionQueue {
       int tail = PlatformDependent.getIntVolatile(kTailAddress);
       int i = 0;
       while (ringHead != tail) {
-          long cqe = (ringHead & ringMask) * CQE_SIZE + completionQueueArrayAddress;
+          long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
 
-          long udata = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
-          int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);
-          int flags = PlatformDependent.getInt(cqe + CQE_FLAGS_FIELD);
+          long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
+          int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
+          int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
 
           //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-          PlatformDependent.putIntOrdered(kHeadAddress, ++ringHead);
+          ringHead++;
+          PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
           int fd = (int) (udata >>> 32);
           int opMask = (int) (udata & 0xFFFFFFFFL);
