@@ -19,15 +19,15 @@ services:
 
   test-leak:
     <<: *common
-    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io"
+    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"
 
   test:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
+    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"
 
   test-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -P boringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -P boringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dmaven.wagon.http.pool=false"
 
   shell:
     <<: *common
