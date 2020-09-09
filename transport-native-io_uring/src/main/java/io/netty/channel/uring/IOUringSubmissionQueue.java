@@ -137,9 +137,8 @@ final class IOUringSubmissionQueue {
             }
         }
 
-        // just a workaround, it seems to fail with
         // TODO: Make it configurable if we should use this flag or not.
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte)  Native.IOSQE_ASYNC);
+        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) Native.IOSQE_ASYNC);
 
         // pad field array -> all fields should be zero
         long offsetIndex = 0;
@@ -343,17 +342,18 @@ final class IOUringSubmissionQueue {
     public void submit() {
         int submitted = flushSqe();
         logger.trace("Submitted: {}", submitted);
+        if (submitted <= 0) {
+            return;
+        }
         if (!Native.SQPOLL) {
-            if (submitted > 0) {
-                int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
-                if (ret < 0) {
-                    throw new RuntimeException("ioUringEnter syscall");
-                }
+            int ret = Native.ioUringEnter(ringFd, submitted, 0, 0);
+            if (ret < 0) {
+                throw new RuntimeException("ioUringEnter syscall");
             }
         } else {
 
             //release barrier kFlagAddress
-            if((submitted > 0) && (PlatformDependent.getIntVolatile(kFlagsAddress) & Native.IORING_NEED_WAKEUP) != 0) {
+            if ((PlatformDependent.getIntVolatile(kFlagsAddress) & Native.IORING_NEED_WAKEUP) != 0) {
                 //System.out.println("Wakeup Thread");
                 Native.ioUringEnter(ringFd, 0, 0, Native.IORING_WAKEUP);
             }
