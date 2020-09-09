@@ -80,10 +80,10 @@ final class IOUringSubmissionQueue {
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
         this.submissionCallback = submissionCallback;
-        this.ringEntries = PlatformDependent.getInt(kRingEntriesAddress);
-        this.ringMask = PlatformDependent.getInt(kRingMaskAddress);
-        this.head = PlatformDependent.getInt(kHeadAddress);
-        this.tail = PlatformDependent.getInt(kTailAddress);
+        this.ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
+        this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
+        this.head = PlatformDependent.getIntVolatile(kHeadAddress);
+        this.tail = PlatformDependent.getIntVolatile(kTailAddress);
 
         this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
