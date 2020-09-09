@@ -117,7 +117,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
      * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
      *                              {@link NullPointerException}
      */
-    public PcapWriteHandler(OutputStream outputStream) throws NullPointerException {
+    public PcapWriteHandler(OutputStream outputStream) {
         this(outputStream, false, true);
     }
 
@@ -134,8 +134,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
      * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
      *                              {@link NullPointerException}
      */
-    public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader)
-            throws NullPointerException {
+    public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
         this.outputStream = ObjectUtil.checkNotNull(outputStream, "OutputStream");
         this.captureZeroByte = captureZeroByte;
         this.writePcapGlobalHeader = writePcapGlobalHeader;
@@ -220,7 +219,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
         } else if (ctx.channel() instanceof DatagramChannel) {
             handleUDP(ctx, msg);
         } else {
-            logger.error("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+            logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
         }
         super.channelRead(ctx, msg);
     }
@@ -232,7 +231,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
         } else if (ctx.channel() instanceof DatagramChannel) {
             handleUDP(ctx, msg);
         } else {
-            logger.error("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+            logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
         }
         super.write(ctx, msg, promise);
     }
@@ -290,7 +289,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
                 tcpBuf.release();
             }
         } else {
-            logger.error("Discarding Pcap Write for TCP Object: {}", msg);
+            logger.debug("Discarding Pcap Write for TCP Object: {}", msg);
         }
     }
 
@@ -418,7 +417,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
                         dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
             } else {
-                logger.error("Discarding Pcap Write for UDP Object: {}", msg);
+                logger.debug("Discarding Pcap Write for UDP Object: {}", msg);
             }
         } finally {
             udpBuf.release();
