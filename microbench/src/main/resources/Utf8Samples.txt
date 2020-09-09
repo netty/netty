@@ -1,0 +1,1399 @@
+Kon nie 'n tydelike lêer skep vir storing van: %s
+Wil jy hê ek moet probeer om die muis-konfigurasieprogram te laat loop? Neem kennis datjy die stamwagwoord hiervoor nodig het.
+Verifiëringsbewysruiling vir gebruiker %s het gefaal
+Moenie woorde oor twee reëls _opbreek nie
+Seçili Körpü
+AtkHyperlink cisminin seçildiyini bildirir
+Lövbər Sayı
+AtkHyperlink cismi ilə əlaqələndirilmiş lövbər ədədini bildirir.
+Son indeks
+AtkHyperlink cisminin son indeksi
+Başlanğıc indeksi
+AtkHyperlink cisminin başlanğıc indeksi
+hökmsüz
+sür'ətləndirici etiketi
+xəbərdarlıq
+animasiya
+ox
+təqvim
+kanvas
+işarələmə qutusu
+işarələmə menyusu üzvü
+rəng seçicisi
+sütun başlığı
+kombo qutusu
+tarix editoru
+masa üstü timsalı
+masa üstü çərçivəsi
+zəng-et
+dialoq
+cərgə lövhəsi
+rəsm sahəsi
+fayl seçicisi
+doldurucu
+yazı növü seçicisi
+çərçivə
+ayna lövhəsi
+html konteyneri
+timsal
+şəkil
+daxili çərçivə
+etiket
+laylanmış lövhə
+siyahı
+siyahı üzvü
+menyu
+menyu çubuğu
+menyu üzvü
+seçim lövhəsi
+səhifə səkməsi
+səhifə səkməsi siyahısı
+panel
+şifrə mətni
+popup menyu
+ilərləmə çubuğu
+basma düyməsi
+qərar düyməsi
+qərar menyusu üzvü
+kök lövhə
+sətir başlığı
+sürüşdürmə çubuğu
+sürüşdürmə lövhəsi
+ayırıcı
+sürüşdürücü
+ayırma lövhəsi
+dönən düymə
+vəziyyət-çubuğu
+cədvəl
+cədvəl hücrəsi
+cədvəl sütun başlığı
+cədvəl sətir başlığı
+qopardıla bilən menyu üzvü
+terminal
+mətn
+keçiş düyməsi
+vasitə çubuğu
+məsləhət
+ağac
+budaq cədvəli
+namə'lum
+nümayiş-lövhəsi
+pəncərə
+başlıq
+altlıq
+paraqraf
+tə'minat
+avtomatik tamamlama
+düzəlişlər çubuğu
+daxili tərkib hissəsi
+Yetişilə Bilən Ad
+Yardımçı texnologiyalara yetişmə üçün şəkilləndilirmiş cismin adı
+Yetişilə Bilən İzahat
+Yardımçı texnologiyalara yetişmə üçün şəkilləndilirmiş cismin izahatı
+Yetişilə Bilən Valideyn
+Valideynin dəyişildiyini bildirmək üçün işlədilir
+Yetişilə Bilən Qiymət
+Qiymətin dəyişildiyini bildirmək üçün işlədilir
+Yetişilə Bilən Rol
+Bu üzvün yetişilə bilən rolu
+Yetişilə Bilən Lay
+Bu üzvün yetişilə bilən layı
+Yetişilə Bilən MDI Qiyməti
+Bu üzvün yetişilə bilən MDI qiyməti
+Yetişilə Bilən Cədvəl Etiketi
+Cədvəl etiket
+Вылучаная спасылка
+Задае, ці зьяўляецца аб'ект AtkHyperlink вылучаным
+Колькасьць якараў
+Колькасьць якараў, якія зьвязаныя з аб'ектам AtkHyperlink
+Канцавы індэкс
+Канцавы індэкс аб'екту AtkHyperlink
+Пачатковы індэкс
+Пачатковы індэкс аб'екту AtkHyperlink
+нерэчаіснае
+адмеціна паскаральніку
+сыгнал
+анімацыя
+стрэлка
+каляндар
+канва
+кнопка-пазначальнік
+пункт-пазначальнік мэню
+абіральнік колеру
+загаловак слупку
+камбінаваны элемэнт
+рэдактар даты
+значка стальцу
+кадар стальцу
+лічбавае табло
+дыялёг
+акно тэчкі
+прастора маляваньня
+абіральнік файлу
+фільтар
+абіральнік шрыфту
+кадар
+акно празрыстасьці
+кантэйнэр html
+значка
+відарыс
+унутраны кадар
+адмеціна
+акно узроўняў
+сьпіс
+пункт сьпісу
+мэню
+радок мэню
+пункт мэню
+акно выбараў
+ўкладка старонкі
+сьпіс ўкладак старонкі
+панэль
+тэкст паролю
+усплыўное мэню
+палоска посьпеху
+кнопка націску
+кнопка ўзаемавыключнага выбару
+пункт мэню ўзаемавыключнага выбару
+карэннае акно
+загаловак радку
+паласа пракруткі
+акно пракруткі
+дзельнік
+паўзунок
+дзельнік вокнаў
+пракрутка
+радок стану
+табліца
+ячэя табліцы
+загаловак слупку табліцы
+загаловак радку табліцы
+пункт зачапленьня мэню
+тэрмінал
+тэкст
+пераключальнік
+панэль сродкаў
+падказка
+дрэва
+табліца дрэва
+невядома
+акно прагляду
+акно
+загаловак
+ніжняя частка акна
+абзац
+дастасаваньне
+аўтазавяршэньне
+радок рэдагаваньня
+убудаваны кампанэнт
+Даступная назва
+Назва экзэмпляру аб'екту, фарматаваная для тэхналёгіі садзеяньня
+Апісаньне даступнасьці
+Апісаньне аб'екта, фарматаванае для тэхналёгіі садзеяньня
+Даступнасьць бацькоўскага аб'екту
+Выкарыстоўваецца, каб паведамляць пра зьмены бацькоўскага аб'екту
+Значэньне даступнасьці
+Выкарыстоўваецца, каб паведамляць пра зьмену значэньня
+Роля даступнасьці
+Роля аб'екту ў даступнасьці
+Узровень даступнасьці
+Узровень даступнасьці гэтага
+Избрана препратка
+Определя дали обектът AtkHyperlink е избран
+Брой котви
+Броят на котвите свързани с обект AtkHyperlink
+Край на индекс
+Крайният индекс на обект AtkHyperlink
+Начало на индекс
+Началният индекс на обект AtkHyperlink
+невалидно
+надпис на ускорител
+внимание
+анимация
+стрелка
+календар
+платно
+кутийка за отмятане
+елемент на менюто за отмятане
+избор на цвят
+заглавие на колона
+кутийка за избор от определени стойности
+редактор на дата
+икона за работния плот
+рамка на работния плот
+скала
+диалогова кутия
+изглед към папки
+област за рисуване
+избор на файл
+пълнител
+избор на шрифт
+рамка
+най-горна рамка
+контейнер с код на html
+икона
+картина
+вътрешна рамка
+етикет
+рамка със слоеве обекти
+списък
+елемент на списък
+меню
+лента с менюта
+елемент от меню
+панел с опции
+таб за страница
+списък с табове
+панел
+текстово поле за парола
+изскачащо меню
+лента за прогрес
+бутон
+радио-бутон
+радио-елемент от меню
+основна рамка
+заглавие на ред
+лента за прелистване
+рамка, която се прелиства
+разделител
+плъзгач
+разделителна рамка
+бутон за последователен избор
+лента за състояние
+таблица
+клетка от таблица
+заглавие на колона в таблица
+заглавие на ред в таблица
+елемент на менюто, който може да се отдели от него
+терминал
+текст
+превключващ бутон
+лента с инструменти
+подсказка
+дърво
+дървовидна таблица
+непознато
+изглед
+прозорец
+горен колонтитул
+долен колонтитул
+абзац
+приложение
+автоматично довършване
+лента за редакция
+вграден компонент
+Достъпно име
+Име на обект от някакъв клас. Името е форматирано за технологии за достъпност
+Достъпно описание
+Описание на обект, форматиран за технологии за достъпност
+Достъпен родител
+Използва се, за да уведоми за промяна в родителя
+Достъпна стойност
+Използва се, за да се уведоми за промяна на стойността
+
+Izabrani link
+Označava da li je izabran objekt AtkHyperlink
+Broj sidara
+Broj sidara združenih s objektom AtkHyperlink
+Završni indeks
+Završni indeks objekta AtkHyperlink
+Početni indeks
+Početni indeks objekta AtkHyperlink
+nevažeće
+oznaka akceleratora
+uzbuna
+animacija
+strelica
+kalendar
+kanafas
+okvir za izbor
+stavka menija za izbor
+birač boja
+zaglavlje kolone
+kombinovani okvir
+editor datuma
+desktop ikona
+okvir za desktop
+biranje broja
+dijalog
+okno za direktorije
+područje za crtanje
+birač datoteka
+punjač
+birač fontova
+okvir
+stakleno okno
+html spremište
+ikona
+slika
+interni okvir
+oznaka
+okno sa slojevima
+lista
+stavka liste
+meni
+traka menija
+stavka menija
+okno za opcije
+kartica
+lista kartica
+panel
+tekst šifre
+popup meni
+traka napredovanja
+dugme
+radio dugme
+stavka radio menija
+glavno okno
+zaglavlje reda
+traka s klizačem
+okno sa klizačem
+linija razdvajanja
+klizač
+razdijeljeno okno
+spin dugme
+statusna traka
+tablica
+polje tablice
+zaglavlje kolone tablice
+zaglavlje reda tablice
+odvojiva stavka menija
+terminal
+tekst
+dugme prekidač
+traka s alatima
+opis alata
+stablo
+tablica stabla
+nepoznato
+port pregleda
+prozor
+zaglavlje
+tekst na dnu
+paragraf
+aplikacija
+samodopuna
+traka za izmjene
+ugrađena komponenta
+Dostupno ime
+Ime primjerka objekta je formatirano za dostup uz pomoćnu tehnologiju
+Dostupan opis
+Opis objekta, formatiran za dostup uz pomoćnu tehnologiju
+Dostupno porijeklo
+Koristi se za obavijest o promjeni porijekla
+Dostupna vrijednost
+Koristi se za obavijest o promjeni vrijednosti
+Dostupna uloga
+Dostupna uloga ovog objekta
+Dostupan sloj
+Dostupan sloj ovog objekta
+Dostupna MDI vrijednost
+Dostupna MDI vrijednost ovog objekta
+Dostupan natpis tablice
+Koristi se za obavijest o promjeni natpisa tablice. Ova osobina se ne bi trebala
+Pot ser voleu actualitzar a una versió nova del sistema %s
+Seleccioneu el producte per a l'informe d'error.
+Escolliu un component, versió, i nivell de gravetat per al producte %s
+Seleccioneu una aplicació per a l'informe d'error.
+Escolliu un component, versió, i nivell de gravetat per a l'aplicació %s
+Aquesta aplicació té informació d'error, però Bug Buddy no sap res d'ella. Seleccioneu una altra aplicació.
+Heu d'indicar el component a què es refereix l'informe d'error.
+Nom de l'informador de l'error
+Adreça electrònica
+Adreça de correu amb la qual enviar errors al Bugzilla del GNOME. Aquesta adreça s'utilitzarà per a la correspondència relacionada amb l'error que esteu enviant. Si ja teniu un compte al Bugzilla del GNOME, utilitzeu-la com la vostra adreça de correu.
+Fitxer on desar els informes d'error
+Fitxer on voleu desar el vostre informe d'error per a enviar-lo més tard.
+Última vegada que Bug Buddy va comprovar si hi ha actualitzacions
+Camí al vostre sistema de fitxers local on es troba sendmail o un d'equivalent.
+Camí al programa de correu semblant a sendmail
+Nom real de l'usuari que està enviant l'informe d'error.
+Aquesta és l'última vegada (marca de temps UNIX) que Bug Buddy va comprovar si hi havien actualitzacions de la informació de Bugzilla.
+Utilitza sendmail per a enviar els informes d'error al Bugzilla del GNOME. És l'únic mètode suportat per ara.
+Utilitza sendmail per a enviar informes d'error
+Vybraný odkaz
+Určuje, jestli je objekt AtkHyperlink vybrán
+Počet ukotvení
+Počet ukotvení asociovaných s objektem AtkHyperlink
+Index konce
+Index konce objektu AtkHyperlink
+Index začátku
+Indek začátku objektu AtkHyperlink
+neplatný
+popisek klávesové zkratky
+upozornění
+animace
+šipka
+kalendář
+plátno
+zaškrtávací políčko
+zaškrtávací položka menu
+výběr barvy
+záhlaví sloupce
+kombo box
+editor data
+ikona pracovní plochy
+rám pracovní plochy
+vytáčení
+dialog
+panel adresářů
+kreslicí oblast
+výběr souboru
+plnič
+výběr písma
+rám
+skleněný panel
+kontejner html
+ikona
+obrázek
+interní rám
+popisek
+vrstvený panel
+seznam
+položka seznamu
+menu
+lišta menu
+položka menu
+panel voleb
+záložka stránky
+seznam záložek stránky
+panel
+text hesla
+vyskakovací menu
+lišta průběhu
+tlačítko
+rádiové tlačítko
+rádiová položka menu
+kořenový panel
+záhlaví řádku
+posuvná lišta
+posuvný panel
+oddělovač
+posunovač
+oddělený panel
+otáčecí tlačítko
+stavová-lišta
+tabulka
+buňka tabulky
+záhlaví sloupce tabulky
+záhlaví řádku tabulky
+odtrhávací položka menu
+terminál
+text
+přepínač
+nástrojová lišta
+tip
+strom
+stromová tabulka
+neznámý
+pohled
+okno
+záhlaví
+zápatí
+odstavec
+aplikace
+autodoplnění
+lišta úprav
+vložená komponenta
+Zpřístupněný název
+Název instance objektu formátovaný pro použití technologiemi zpřístupnění
+Zpřístupněný popis
+Popis objektu formátovaný pro použití technologiemi zpřístupnění
+Zpřístupněný rodič
+Používá se pro upozornění, že rodič byl změněn
+Zpřístupněná hodnota
+Používá se pro upozornění, že hodnota byla změněna
+Zpřístupněná role
+Zpřístupněná role tohoto objektu
+Zpřístupněná vrstva
+Zpřístupněná vrstva tohoto objektu
+Zpřístupněná hodnota MDI
+Zpřístupněná hodnota MDI tohoto objektu
+Zpřístupněný nadpis tabulky
+Používá se pro upozornění, že nadpis tabulky byl změn
+Valgt henvisning
+Angiver om AtkHyperlink-objektet er valgt
+Antal ankre
+Antallet af ankre der er associeret med AtkHyperlink-objektet
+Slutindeks
+Slutindeks for AtkHyperlink-objektet
+Startindeks
+Startindeks for AtkHyperlink-objektet
+ugyldig
+genvejsetiket
+advarsel
+animation
+pil
+kalender
+lærred
+afkrydsningsboks
+afkrydsningsmenupunkt
+farvevælger
+kolonnetitel
+kombinationsboks
+datoredigering
+skrivebordsikon
+skrivebordsramme
+opkald
+vindue
+mappepanel
+tegneområde
+filvælger
+udfylder
+skrifttypevælger
+ramme
+glaspanel
+html-beholder
+ikon
+billede
+intern ramme
+etiket
+lagdelt panel
+liste
+listepunkt
+menu
+menulinje
+menupunkt
+indstillingspanel
+sidefane
+sidefaneliste
+panel
+adgangskodetekst
+pop-op-menu
+fremgangslinje
+trykknap
+radioknap
+radiomenupunkt
+rodpanel
+rækketitel
+rulleskakt
+rullepanel
+adskiller
+skyder
+delt panel
+talindtastning
+statuslinje
+tabel
+tabelcelle
+tabelkolonnetitel
+tabelrækketitel
+afrivningsmenupunkt
+terminal
+tekst
+skifteknap
+værktøjslinje
+værktøjstip
+træ
+trætabel
+ukendt
+visningsområde
+vindue
+sidehoved
+sidefod
+afsnit
+program
+autofuldførelse
+redigér linje
+indlejret komponent
+Tilgængelighedsnavn
+Objektinstansens navn formateret til assisterende teknologier
+Tilgængelighedsbeskrivelse
+Beskrivelse af eet objekt, formateret til assisterende teknologier
+Tilgængelighedsophav
+Bruges til at bekendtgøre at ophavet er ændret
+Tilgængelighedsværdi
+Bruges til at bekendtgøre at værdien er ændret
+Tilgængelighedsrolle
+Tilgængelighedsrolle for dette objekt
+Tilgængelighedslag
+Tilgængelighedslaget for dette objekt
+Tilgængeligheds-MDI-værdi
+Tilgængeligheds-MDI-værdien for dette objekt
+Tilgængelighedstabeltitel
+Bruges til at bekendtgøre at tabeltitlen er ændret; denne egenskab bør ikke benyttes. accessible-table-caption-object bør bruges i
+Ausgewählter Link
+Gibt an, ob das AtkHyperlink-Objekt ausgewählt ist
+Ankeranzahl
+Die Anzahl der mit dem AtkHyperlink-Objekt assoziierten Anker
+Endindex
+Der Endindex des AtkHyperlink-Objekts
+Anfangsindex
+Der Anfangsindex des AtkHyperlink-Objekts
+ungültig
+Kürzelbeschriftung
+Alarm
+Animation
+Pfeil
+Kalender
+Leinwand
+Kontrollkästchen
+Kontrollmenüobjekt
+Farbwähler
+Spaltenkopf
+Kombinationsfeld
+Datumseditor
+Desktop-Symbol
+Desktop-Rahmen
+wählen
+Dialog
+Verzeichnisleiste
+Zeichenfeld
+Dateiwähler
+Füller
+Schriftwähler
+Rahmen
+Glasleiste
+HTML-Container
+Symbol
+Bild
+interner Rahmen
+Beschriftung
+Schichtleiste
+Liste
+Listenobjekt
+Menü
+Menüleiste
+Menüobjekt
+Optionsleiste
+Seitenreiter
+Seitenreiter-Liste
+Panel
+Passworttext
+Popup-Menü
+Fortschrittsleiste
+Druckknopf
+Radioknopf
+Radiomenüobjekt
+Wurzelleiste
+Zeilenkopf
+Rollbalken
+Rollleiste
+Trennlinie
+Schieber
+geteilte Leiste
+Spin-Knopf
+Statusleiste
+Tabelle
+Tabellenzelle
+Spaltenkopf einer Tabelle
+Zeilenkopf einer Tabelle
+Objekt in Abrissmenü
+Terminal
+Text
+Auslöseknopf
+Werkzeugleiste
+Minihilfe
+Baum
+Baumtabelle
+unbekannt
+Sichtfeld
+Fenster
+Kopfzeilen
+Fußzeilen
+Absatz
+Anwendung
+Auto-Vervollständigung
+Bearbeitungsleiste
+eingebettete Komponente
+Barrierefreier Name
+Name der Objektinstanz, formatiert für den Zugriff durch Hilfstechnologien
+Barrierefreie Beschreibung
+Beschreibung eines Objekts, formatiert für den Zugriff durch Hilfstechnologien
+Barrierefreies Eltern-Element
+Wird zur Benachrichtigung bei Änderungen am Eltern-Element verwendet
+Barrierefreier Wert
+Wird zur Benachrichtigung bei Wertänderungen verwendet
+Barrierefreie Rolle
+Die barrierefreie Rolle dieses Objekts
+Barrierefreie Ebene
+Die barrierefreie Ebene dieses Objekts
+Barrierefreier MDI-Wert
+Der barrierefreie MDI-Wert dieses Objekts
+Barr
+Επιλεγμένος Σύνδεσμος
+Καθορίζει αν το αντικείμενο AtkHyperlink είναι επιλεγμένο
+Αριθμός Αγκύρων
+Ο αριθμός από άγκυρες που σχετίζονται με το αντικείμενο AtkHyperlink
+End index
+Το end index του αντικειμένου AtkHyperlink
+Start index
+Το start index του αντικειμένου AtkHyperlink
+μη έγκυρο
+ετικέτα συντόμ
+ειδοποίηση
+κινούμενο σχέδιο
+βέλος
+ημερολόγιο
+canvas
+κουτί επιλογής
+αντικείμενο μενού επιλογής
+επιλογέας χρώματος
+κεφαλίδα στήλης
+κουτί πολλαπλών
+επεξεργαστής-ημερομηνίας
+εικονίδιο επιφάνειας
+πλαίσιο επιφάνειας εργασίας
+dial
+διάλογος
+ταμπλώ καταλόγου
+περιοχή σχεδίασης
+επιλογέας αρχείου
+filler
+επιλογέας γραμματοσειράς
+πλαίσιο
+glass pane
+html container
+εικονίδιο
+εικόνα
+εσωτερικό πλαίσιο
+ετικέτα
+layered pane
+λίστα
+αντικείμενο λίστας
+μενού
+εργαλειοθήκη μενού
+αντικείμενο μενού
+ταμπλώ επιλογών
+στήλη σελίδας
+λίστα στήλης σελίδας
+ταμπλώ
+κείμενο κωδικού
+αναδυόμενο μενού
+μπάρα προόδου
+κουμπί πίεσης
+κουμπί radio
+αντικείμενο μενού radio
+ταμπλώ root
+κεφαλίδα γραμμής
+γραμμή κύλισης
+ταμπλώ κύλισης
+διαχωριστικό
+μπάρα κύλισης
+διαχωρ ταμπλώ
+κουμπί στροβιλισμού (spin)
+γραμμή κατάστασης
+πίνακας
+κελί πίνακα
+κεφαλίδα στήλης πίνακα
+κεφαλίδα γραμμής πίνακα
+αντικείμενο αποσπώμενου μενού
+τερματικό
+κείμενο
+κουμπί εναλλαγής
+εργαλειοθήκη
+συμβουλή εργαλείου
+δένδρο
+δένδρο πίνακα
+άγνωστο
+θύρα όψης
+παράθυρο
+κεφαλίδα
+υποσέλιδο
+παράγραφος
+εφαρμογή
+αυτόματη συμπλήρωση
+επεξεργασία εργαλειοθήκης
+ενσωματομένο συστατικό
+Προσβάσιμο Όνομα
+Το όνομα της εμφάνισης του αντικειμένου μορφοποιημένο για πρόσβαση από την βοηθητική τεχνολογία
+Προσιτή περιγραφή
+Περιγραφή του αντικειμένου μορφοποιημένη για πρόσβαση από την βοηθητική τεχνολογία
+Προσβάσιμο Γονικό
+Χρησιμοποιείται για ειδοποίηση ότι το μητρικό έχει αλλαξει
+Προσβάσιμη Τιμή
+La información de errores almacenada en su sistema no está actualizada. Elija «Actualizar» para hacerlo.  Si elije «No actualizar» forzará a informar el error usando los datos antiguos.
+Avanzado
+Fenómeno Assbarn
+Archivo binario:
+Bug Buddy
+Bug Buddy puede enviar información de depuración junto a su informe de error.
+Las opciones correctas se deben haber seleccionado automáticamente.
+Bug Buddy está recogiendo información sobre su cuelgue para enviarla al sistema de seguimiento de errores. Este proceso está automatizado, y tardará unos pocos minutos. Cuando haya terminado, puede pulsar «Mostrar detalles de depuración» para ver la información o pulsar «Continuar» para moverse al siguiente paso en el proceso.
+Bug Buddy usa el correo electrónico para enviar un informe de errores.
+Elija cómo le gustaría que Bug Buddy envíe el correo-e.
+Cc:
+Archivo core
+D_epurar una aplicación colgada o una aplicación en funcionamiento (sólo expertos)
+Depuración
+Descripción
+Descargando archivos
+Correo-e:
+Incluir un archivo de texto
+Guard_arlo en un archivo para que pueda enviar el informe manualmente
+Nombre:
+Ruta de sendmail:
+Elija un componente, versión y nivel de severidad.
+Haga cualquier corrección final al informe de errores. Dese cuenta de que será mostrado en http://bugzilla.gnome.org Incluirá su nombre, dirección de correo-e, y quizá alguna información acerca de cómo falló la aplicación. Si el documento en el que estaba trabajando contenía información sensible, quizá no quiera enviar este informe
+Ühtegi rakendust "%s"-i avamiseks ei ole. Sa saad selle asemel selle alla laadida.
+Salvesta _kui...
+"%s" protokoll ei ole toetatud.
+Toetatud protokollid on "http", "https", "ftp", "file", "smb" ja "sftp".
+Faili “%s” ei leitud.
+Kontrolli faili asukohta ja proovi uuesti.
+“%s” pole võimalik leida.
+Kontrolli kas oled ühendatud internetti ja kas aadress on korrektne.
+Juhul kui see leht oli varem olemas, siis arhiveeritud versiooni võid leida:
+"%s" keeldus ühendusest.
+“%s” katkestas ühenduse.
+“%s” ei vasta.
+Vigane aadress
+Sinu sisestatud aadress on vigane.
+“%s” suunati ümber liiga palju kordi.
+Turvakaalutlustel ümbersuunamine lõpetati.
+“%s” nõuab krüptitud ühendust.
+“%s” loobus ühendusest.
+Ühendus serveriga katkes enne kui andmeid lugeda jõuti.
+Autonoomses režiimis pole võimalik dokumenti laadida.
+“%s” keelab ligipääsu pordile “%d”.
+Proksiserveriga pole võimalik ühenduda.
+Google'i vahemälust
+Internetiarhiivist
+Nimetu
+Kõik failid
+Veebilehed
+Tekstifailid
+Pildid
+XML failid
+XUL failid
+_Vali sertifikaat
+Enda tõendamiseks kasutatava sertifikaadi valimine.
+Sertifikaadi ü_ksikasjad
+_Ava sertifikaat
+_Nõustu
+Kas usaldad ebakorrektset turvainfot?
+Kas ühenduda ebausaldusväärsesse saiti?
+_Usalda seda turvainfot edaspidigi
+Üh_endu
+Kas võtad vastu kehtivuse kaotanud turvainfo?
+"%s" turvaandmed aegusid %s.
+Kas võtad vastu veel mittekehtiva turvainfo?
+%a, %d, %b %Y
+Sa peaks veenduma, et su arvuti kell on õige.
+Ühendust "%s"-ga pole võimalik luua.
+"%s" sertifikaatide tühistusnimekiri (CRL) vajab uuendamist.
+Palun pöördu nõuannete saamiseks oma süsteemihalduri poole.
+Kas usaldada sertifitseerimiskeskust?
+_Usalda sertifitseerimiskeskust
+Kas usaldada uut sertifitseerimiskeskust "%s" veebisaitide tuvastamiseks?
+Lien sélectionné
+Spécifie si l'objet AtkHyperlink est sélectionné
+Nombre d'ancres
+Le nombre d'ancres associés avec l'objet AtkHyperlink
+Fin d'index
+La fin de l'index de l'objet AtkHyperlink
+Début d'index
+Le début de l'index de l'objet AtkHyperlink
+non valide
+étiquette du raccourci
+alerte
+animation
+curseur
+calendrier
+canevas
+case à cocher
+élément de menu avec case à cocher
+sélecteur de couleurs
+en-tête de colonne
+liste combinée
+éditeur de dates
+icône du bureau
+cadre du bureau
+bouton de réglage
+boîte de dialogue
+panneau des répertoires
+zone de dessin
+sélecteur de fichiers
+caractère de remplissage
+sélecteur de polices
+cadre
+panneau de verre
+conteneur html
+icône
+image
+cadre interne
+étiquette
+panneau superposé
+liste
+élément de liste
+menu
+barre de menus
+élément de menu
+panneau d'options
+onglet de page
+liste d'onglets de page
+tableau de bord
+champ de mot de passe
+menu contextuel
+barre de progression
+bouton poussoir
+bouton radio
+élément de menu avec bouton radio
+panneau racine
+en-tête de ligne
+barre de défilement
+panneau de défilement
+séparateur
+case de défilement
+panneau divisible
+bouton de réglages
+barre d'état
+tableau
+cellule de tableau
+en-tête de colonne de tableau
+en-tête de ligne de tableau
+élément de menu détachable
+console
+texte
+bouton à état
+barre d'outils
+bulle d'aide
+arbre
+Tableau arborescent
+inconnu
+fenêtre de travail
+fenêtre
+en-tête de page
+bas de page
+paragraphe
+application
+Autocomplétion
+barre d'édition
+composant incorporé
+Nom accessible
+Nom d'une instance d'objet formaté pour être accessible par les aides techniques
+Description accessible
+Description d'un objet, formaté pour être accessible par les aides techniques
+Parent accessible
+Est utilisé pour notifier que le parent a changé
+Valeur accessible
+ሬዲዮ-ቁልፍ
+ዶሴ `%s'ን ማስፈጠር አልተቻለም፦
+አዲስ ዶሴ ፍጠር
+በመጫን ላይ...
+Ne cúðe findan þone pæþ
+Onlícnesgesceap ungecnáwen
+لتنقيح أيّة عمليّة يطلب اسم التّطبيق أيضاً.رجاءً زوّد أيضاً بمعامل سطر أوامر --appname.
+الملف الذي فيه سيحفظ تقرير الخلال
+تعذّر تحديد نسق الملف %s
+^إرسال تقرير خلل
+ارسال تقريرا لك فقط
+حفظ التقرير في ملف
+التطبيق المنهار
+الملف النواة
+ﻻ شيء
+اسم الموصول
+اﻻسم
+عنوان البريد الالكتروني للموصول
+البريد اﻻلكتروني
+الرزمة المحتوية على البرنامج
+الرزمة
+اصدارة الرزمة
+اﻻصدارة
+اسم ملف البرنامج المنهار
+الملف
+PID البرنامج المنهار
+PID
+الملف النواة من البرنامج
+ملف النص الذي سيُضمن في التقرير
+لم يمكن العثور على قطعة باسم %s عند %s
+لم ينته gdb من تلقي معلومات التنقيح.
+ا اقتل عملية gdb (ستكون مصفوفة تتبع السير منقوصة)؟
+لقد خرج gdb مسبقا
+حفظ تتبع السير
+الرجاء الانتظار حالما يحفظ باك بدي مصفوفة تتيع السير...
+لم تحفظ مصفوفة تتبع السير في %s:
+সংলাপ পৰিচয় প্রমাণ
+সংলাপ সংক্রান্ত তথ্য
+সংলাপ সংক্রান্ত সতর্কবাণী
+সংলাপ সংকপ্রশ্ন
+টনা আৰু এৰি দিয়া
+বহুবাৰ টনা আৰু এৰি দিয়া
+যোগ
+কার্যকৰ
+ডাঠ
+বাতিল
+সিডৰূপান্তৰ কৰা
+কপি
+কটা
+মোছা
+চলোৱা
+বিচৰা
+বিচৰা আৰু পৰিবৰতন কৰা
+ফ্লপি
+তলিলৈ @মূধচলৈ যোৱা
+পিছলৈ যোৱা
+তললৈ যোৱা
+আগলৈ যোৱা
+উপৰলৈ যোৱা
+সহায়
+ঘৰ
+সূচিপত্র
+টিফাই কৰা
+সুষমভাবে জাস্টিফাই কৰা
+বাঁও পিনৰ পৰা জাস্টিফাই কৰা
+সোঁ পিনৰ পৰা জাসয়
+ঠিক আছে
+খোলা
+আঠা দিয়া
+পছন্দ
+ছপা কৰা
+ছপাৰ আগতে ছোৱা
+বৈশিষ্ট
+প্রস্থান
+আ
+সংৰক্ষিত কপি ব্যবহাৰ কৰা
+সংৰক্ষণ
+নতুন নামেৰে সংৰক্ষণ
+ৰং বাছা
+ফন্ট বাছা
+উর
+বানান-পৰীক্ষণ
+ৰখা
+মাজেৰে ৰেখা অকাঁ
+মোছা ৰদ্দ কৰা
+তলেৰে ৰেখা অকাঁ
+হয়
+১০০ ডাঙৰ কৰা
+সৰু কৰা
+সময়ৰক্ষক
+সময়ৰক্ষক স্থগিত কৰা
+আবর্জনা
+আবর্জনা পূর্ণ
+নম্বৰ^মিডি
+মাইক্রোফোন
+লাইন ইন
+মেইল
+মেইল গ্রহণ
+মেইল প্রেৰণ
+মেইলৰ উত্তৰ
+মেইল আগলৈক্ত কৰা
+কিতাপ ৰঙা
+কিতাপ সেউজীয়া
+কিতাপ নীলা
+কিতাপ হালধীয়া
+কিতাপ খোলা
+একাধিক পূর্ণ কৰা
+টেক্সট অবচ্ছেদ(Indent)
+টেক্সট অবচ্ছেদ(Indent) ৰদ্দ কৰা
+টেক্সট বুলেৰযুক্ত তালিকা
+পৰিচয় প্রমাণ প্রক্রিয়া
+(অঙ্কুর বাংলা প্রকল্পের তরফ থেকে)
+ড্যাশার
+ড্যাশার একটি প্রেডিকটিভ টেক্সট এন্ট %ld সেকেন্ডেেশন
+%d অক্ষর আউটপুট
+৫:
+৬:
+৭:
+৮:
+৯:
+<b>বর্ণ নির্বাচন:</b>
+<b>বাটন নিয়ন্ত্রণ সেটাপ:</b>
+<b>রং
+<b>নিয়ন্ত্রণের ধরণ:</b>
+<b>অন্যান্য পছন্দসমূহ:</b>
+<b>পারিপার্শ্বিক অবস্থান:
+<b>চালু করা হচ্ছে ও বন্ধ করা হচ্ছে:</b>
+<b>টগল বাটন মোড:</b>
+<b>প্রদর্শন সম্/b>
+<b>X/Y অক্ষ:</b>
+<b>Y অক্ষ সম্বন্ধীয় পছন্দসমূহ:</b>
+অগ্রসর
+বর্ণ
+বর্ণ ডিউপর
+বাটন নিয়ন্ত্রণ সেটাপ
+বাটন মোড
+বাটন:
+স্বয়ংক্রীয়ভাবে রঙের স্কীম বদলাও
+রং^ কিছু কপি কর (_স)
+থামার পরে সমস্ত কিছু কপি কর
+কাটো
+আবর্তমান বাটন মোড
+ড্যাশারসের অবস্থানে শুরুর জন্যে মধ্যম রেখার থেকে দুরত্ব:
+নীচে/৩:
+বাক্সের সীমা আঁকো
+কবাটন নিয়ন্ত্রণ সম্বন্ধীয় পছন্দ সম্পাদন করুন
+অন্য উইন্ডো-তে লেখো
+আইট্র্যাকার মোপর এবং নিচ ব্যবহারেিত থাকলে, উ
+কোঅর্ডিনেট সামনের বা পেছনের দিকে আবর্ত হবে। আর ডান এ নির্বাচিত মানটি নিশ্চিত করব
+নতুন ফাইল
+সাধারণ
+y অংশটিকে যতগুলি পিক্সেল দিয়ে ঢাকা হবে
+এক মাত্রিক মোড
+ফাইয়িক বিরতি
+ডান থেকে বামদিকে
+ডান/৪
+ফাইল সংরক্ষণ করো
+নতুন নামে ফাইল সংরক্ষণ
+ফনস্থান দেখাও
+গতি নির্দেশক স্লাইডার দেখাও
+টুলবার দেখাও
+থামলে কথা বোলো
+গতি
+বামরা হলে শুরু কোরো
+স্পেস বার ব্যবহার করা হলে শুরু কোরো
+মাউসের অবস্থান বদল করা হলম্প কোরো
+উপর থেকে নীচে
+প্রশিক্ষণ চলছে
+ড্যাশারকে প্রশিক্ষণ দেওয়া হচ্ছে - অনুগ্এই কন্ট্রোলটি ব্যবহার করুন যদি আপনি আপনার লেটার বক্সের
+আকার সমন্বয় করতে চান। মনে রাখবেন উচ্চ মান নির্বাচন
+আপনার লেখার গতিকে কমিয়ে দিবে
+খুব বড়
+দর্শন
+পরিচিতি (_প)
+ফাইলের শেষে যট (_ড)
+ড্যাশার ফন্টের সাইজ (_ড)
+সম্পাদন (_ম)
+ফন্ট সম্পাদন (_ট)
+ফাইল (_ফ)
+সহক্ষণ টেক্সট ইমপোর্ট করো (_ই)
+পছন্দসমূহ (_প)
+পুরোনো ফন্টে ফেরত যাও (_ফ)
+অআইঈউঊ</b>
+এই মোডটি নির্বাচিত থাকলে, উপর এবং নিচ ব্যবহারে
+ির্বাচন সীমা
+কার্সার থেকে নির্বাচি
+諾してみますか？
+かしな認証ドメイン: %s
+発行者: %s
+IMAP サーバから予期しない応答がありました: %s
+%s (ポート %s) へ接続できませんでした: %s
+ニュース・ストアにフォルダを生成できません: 代わりに購読を申請して下さい。
+指定されたフォルダ名は不適切です: %s
+작업중인 문서 내에 공개하기 민감한 정보가 들어 있다면,
+이 버그 보고서를 보내지 않는 편이 좋을 것입니다.
+꼭 영어로 보고서를 작성하십시>오.
+버그를 알릴 제품이름이나 프로그램을 선택하십시오.
+보고하려는 버그가 가장 >자주 보고되는 버그 중에 들어 있다면 잠시 기다려 주십시오.
+버그가 이미 보고되어 있다면, 또 보고하지는 말아 주십시오.
+버그버디가 제품 목록>을 갱신하는 동안
+기다려 주십시오.
+프로세스 ID:
+저장할 파일:
+보고를 새 이름으로 저장하기...
+저
+장:
+sendmail 설정
+심각성:
+프로그램 보기(_A)
+디버깅 정보 보여주기(_D)
+제품 보기(_P)
+다음의 가장 많이 보고되는 버그 보여주기:
+간단히
+시작
+중지
+또다른 >버그를 보내기
+요약
+프로그램이 올바르게 동작하지 않습니다(_A)
+문서가 틀렸습니>다(_D)
+번역이 틀렸습니다(_T)
+받는 사람:
+sendmail 직접 사용(_S)
+버전:
+업데이
+트 하지 않음(_D)
+빠진 기능을 요청하기(_R)
+업데이트(_U)
+컴포넌트
+설명
+전자메
+일 정보
+완료됨
+gdb
+소개
+메일 설정
+가장 잦은
+제품
+%2$d개중 %1$d개 ID
+제>품명
+컴포넌트
+버그버디에서 '%s'을(를) 열 수 없습니다.
+버그버디가 제대로 설치되었는지 확인하십시오.
+버그버디는 지금 종료합니다.
+버그버디에서 버그를 어디에 제출할 지에 관한 정보를 읽지 못했습니다.
+버그버디가 제대로 설치되었는 지 확인하십시오.
+@圖像/標籤框
+在警告對話視窗中，包圍標籤及圖像框線的闊度
+警告類型
+警告的類型
+警告按鈕
+出現在警告對話視窗中的按鈕
+顯示更多訊息(_D)
+文字
+標籤中的文>字。
+對齊方式
+文字在標籤中排列時的對齊方式。它不會影響標籤元件本身在空位內排列
+的位置。該方面的資料請參考 GtkMisc::xalign。
+換行
+如選用本選項，當字句太長時會
+自動換行。
+游標位置
+游標目前的位置，以字元表示。
+選擇範圍
+從游標位置至選擇區
+域末端之間的字元數目。
+全部選取
+輸入法
+GConf 錯誤：
+GConf 錯誤： %s
+所有進一步的錯誤訊息只會在終端機中顯示。
+GConf 錯誤
+01/01/00, 01:00 上午
+1/1/00, 1:00 上午
+ 1/ 1/00,  1:00 上午
+沒有選取任何圖像。
+請按下圖像來選取它。
+沒有選取任何東西
+預設
+圖示
+名稱
+<i>沒有選取任何程式</i>
+%s 文件
+不明
+選取一程式來開啟 <i>%s</i> 及類型為“%s”的檔案
+無法執行程式
+>無法找到‘%s’
+無法找到程式
+無法加入程式
+無法將程式加入程式資料庫中
+選取一個程
+式
+以其它應用程式開啟
+選取一程式來檢視它的描述。
+使用自訂的指令(_C)
+瀏覽(_B)...
+開啟(_O)
+以其它程式開啟 <i>%s</i>及類型為“%s”的檔案：
+加入(_A)
+加入程式
+您可以按下取消來停止這次操作。
+資訊
+警告
+錯誤
+問題
+（無效的統一碼）
+覆寫檔案 %s？
+檔案已經存在。您確定要覆蓋它？
+略過
+覆寫
+儲存 %s 時發生錯>誤。
+重試
+無法決定目的地 uri。
+無法決定 %s 的檔案格式
+請使用一個合適的檔案名
+稱後置字，或選擇一個檔案格式。
+儲存圖片時發生錯誤。
+列印
+預覽列印
+您確定要將
+ %i 個檔案丟進回收筒？
+無法存取回收筒。
+當刪除圖片 %s 時發生錯誤
+%i x %i 像素
+  %s    %i%%
+原因：%s
+載入 %s 的圖片失敗
+檔案(_F)
+編輯(_E)
+顯示(_V)
+圖片(_I)
+求助(_H)
+新增視窗(_N)
+開啟新視窗
+開啟(_O)...
+開啟檔案
+開啟資料夾(_F)...
+開啟資料夾
+關閉(_C)
+關閉視窗
+偏好設定(_N)
+Eye of GNOME 偏好設定
+內容(_C)
+本應用程式的說明文件
+關於(_A)
+關於本程式
+工具列(_T)
+在目前的視窗中切換是否>顯示工具列
+狀態列(_S)
+在目前的視窗中切換是否顯示狀態列
+儲存(_S)
+另存新檔(_A)
+復原(_U)
+左右相反(_H)
+上下顛倒(_V)
+順時針方向旋轉(_R)
+逆時針方向旋轉(_L)
+180 度旋轉(_E)
+刪除
+全螢幕(_F)
+投影片(_S)
+拉近(_Z)
+拉遠(_O)
+原來大小(_N)
+最適大小(_F)
+圖片資訊(_I)
+在目前的視窗中切換是否顯示資訊窗格
+新增
+開啟
+關閉
+儲存
+復原
+右
+左
+拉近
+拉遠
+原來大小
+符合
+找不到使用者介面的描述。
+無法
+建立 Eye of GNOME 使用者介面
+是否同時開啟多個的個別視窗？
+這樣將會同時開啟 %i 個視窗。您是否想以圖片集的方式開啟？
+單一視窗
+圖片集
+找不到檔案
+無法開啟‘%s’
+حاشیهی تصویر/برچسب
+عرض حاشیهی دور برچسب و تصویر در محاورهی آژیر
+نوع آژیر
+نوع آژیر
+دکمههای آژیر
+دکمههای نشان داده شده در محاورهی آژیر
+نشان دادن _جزئیات بیشتر
+متن
+متن برچسب
+تراز کردن
+پیچش سطرها
+اگر یک شود، اگر سطرها خیلی عریض شوند میپیچند.
+موقعیت مکاننما
+موقعیت فعلی مکاننمای درج در نویسهها.
+موقعیت طرف دیگر انتخاب نسبت به مکاننما به نویسه.
+انتخاب همه
+روشهای ورودی
+خطای GConf:
+  %s
+خطای GConf: %s
+همهی خطاهای بعدی فقط روی پایانه نمایش مییابند.
+خطای GConf
+تصویری انتخاب نشد.
+برای انتخاب یک تصویر باید رویش کلیک کنید.
+انتخابی انجام نشد
+پیشفرضنام
+<i>برنامهای انتخاب نشد</i>
+%s نوشتار
+نامعلوم
+برنامهای برای باز کردن <i>%s</i> و دیگر پروندههای از نوع "%s" انتخاب کنید
+برنامه اجرا نشد
+'%s' پیدا نشد
+برنامه پیدا نشد
+افزودن برنامه ممکن نیست
+افزودن برنامه به پایگاه دادهی برنامه ممکن نیست
+یک برنامه انتخاب کنید
+باز کردن با
+برنامهای برای باز کردن <i>%s</i> و دیگر پروندههای از نوع "%s" انتخاب کنید _مرور... باز کردن <i>%s</i> و دیگر پروندههای نوع "%s" با:
+_افزودن
+افزودن برنامه
+میتوانید با کلیک کردن روی انصراف، این عملیات را متوقف کنید.
+اطلاعات
+هشدار
+خطا
+سؤال
+ (یونیکد نامعتبر)
