@@ -181,7 +181,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     private void clearUsedIovArrays() {
-        for (int i = 0; i < iovArrayIdx; i++) {
+        for (int i = 0; i <= iovArrayIdx; i++) {
             iovArrays[i].clear();
         }
         iovArrayIdx = 0;
