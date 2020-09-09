@@ -65,6 +65,7 @@ final class IOUringSubmissionQueue {
     private final int ringSize;
     private final long ringAddress;
     private final int ringFd;
+    private final Runnable submissionCallback;
 
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
@@ -74,7 +75,7 @@ final class IOUringSubmissionQueue {
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long fFlagsAdress, long kDroppedAddress, long arrayAddress,
                            long submissionQueueArrayAddress, int ringSize,
-                           long ringAddress, int ringFd) {
+                           long ringAddress, int ringFd, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kRingMaskAddress = kRingMaskAddress;
@@ -86,7 +87,7 @@ final class IOUringSubmissionQueue {
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
-
+        this.submissionCallback = submissionCallback;
         timeoutMemory = Buffer.allocateDirectWithNativeOrder(KERNEL_TIMESPEC_SIZE);
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
     }
@@ -347,7 +348,9 @@ final class IOUringSubmissionQueue {
                 throw new RuntimeException("ioUringEnter syscall");
             }
         }
+        submissionCallback.run();
     }
+
     private void setTimeout(long timeoutNanoSeconds) {
         long seconds, nanoSeconds;
 

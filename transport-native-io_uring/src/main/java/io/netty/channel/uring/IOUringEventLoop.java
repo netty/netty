@@ -65,7 +65,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         for (int i = 0; i < iovArrays.length; i++) {
             iovArrays[i] = new IovArray();
         }
-        ringBuffer = Native.createRingBuffer();
+        ringBuffer = Native.createRingBuffer(new Runnable() {
+            @Override
+            public void run() {
+                // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
+                clearUsedIovArrays();
+            }
+        });
+
         eventfd = Native.newEventFd();
         logger.trace("New EventLoop: {}", this.toString());
     }
@@ -160,15 +167,11 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             // Always call runAllTasks() as it will also fetch the scheduled tasks that are ready.
             runAllTasks();
 
-            // Once we submitted its safe to clear the iovArray and so be able to re-use it.
             submissionQueue.submit();
-            clearUsedIovArrays();
             try {
                 if (isShuttingDown()) {
                     closeAll();
-                    // Once we submitted its safe to clear the iovArray and so be able to re-use it.
                     submissionQueue.submit();
-                    clearUsedIovArrays();
 
                     if (confirmShutdown()) {
                         break;
@@ -318,7 +321,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             } else {
                 // No array left to use. Submit so we can reuse all of the arrays.
                 ringBuffer.getIoUringSubmissionQueue().submit();
-                clearUsedIovArrays();
                 iovArray = iovArrays[iovArrayIdx];
             }
             assert !iovArray.isFull();
