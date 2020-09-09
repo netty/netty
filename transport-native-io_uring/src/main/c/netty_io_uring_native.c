@@ -397,6 +397,10 @@ static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
     return IORING_OP_CONNECT;
 }
 
+static jint netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
+    return IORING_OP_CLOSE;
+}
+
 static jint netty_io_uring_ioringEnterGetevents(JNIEnv* env, jclass clazz) {
     return IORING_ENTER_GETEVENTS;
 }
@@ -422,6 +426,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
+  { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 

@@ -46,6 +46,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioringOpRead();
     static native int ioringOpWrite();
     static native int ioringOpConnect();
+    static native int ioringOpClose();
     static native int ioringEnterGetevents();
     static native int iosqeAsync();
 }
