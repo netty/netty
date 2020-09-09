@@ -64,6 +64,9 @@ public class PollRemoveTest {
     @Test
     public void test() throws Exception {
         io_uring_test();
+
+        Thread.sleep(1000);
+
         io_uring_test();
     }
 }

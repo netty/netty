@@ -196,8 +196,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         super.doRegister();
         if (active) {
             // Register for POLLRDHUP if this channel is already considered active.
-            IOUringSubmissionQueue submissionQueue = submissionQueue();
-            submissionQueue.addPollRdHup(fd().intValue());
+            schedulePollRdHup();
         }
     }
 
