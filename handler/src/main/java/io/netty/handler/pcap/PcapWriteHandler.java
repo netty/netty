@@ -114,8 +114,10 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
      * {@code writePcapGlobalHeader} is set to {@code true}.
      *
      * @param outputStream OutputStream where Pcap data will be written
+     * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
+     *                              {@link NullPointerException}
      */
-    public PcapWriteHandler(OutputStream outputStream) {
+    public PcapWriteHandler(OutputStream outputStream) throws NullPointerException {
         this(outputStream, false, true);
     }
 
