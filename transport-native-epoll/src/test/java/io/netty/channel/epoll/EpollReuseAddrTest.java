@@ -28,6 +28,9 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.internal.logging.InternalLogLevel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
@@ -44,6 +47,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EpollReuseAddrTest {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollReuseAddrTest.class);
+
     private static final int MAJOR;
     private static final int MINOR;
     private static final int BUGFIX;
@@ -58,12 +63,24 @@ public class EpollReuseAddrTest {
             MAJOR = Integer.parseInt(versionParts[0]);
             MINOR = Integer.parseInt(versionParts[1]);
             if (versionParts.length == 3) {
-                BUGFIX = Integer.parseInt(versionParts[2]);
+                int bugFix;
+                try {
+                    bugFix = Integer.parseInt(versionParts[2]);
+                } catch (NumberFormatException ignore) {
+                    // the last part of the version may include all kind of different things. Especially when
+                    // someone compiles his / her own kernel.
+                    // Just ignore a parse error here and use 0.
+                    bugFix = 0;
+                }
+                BUGFIX = bugFix;
             } else {
                 BUGFIX = 0;
             }
         } else {
-            throw new IllegalStateException("Can not parse kernel version " + kernelVersion);
+            LOGGER.log(InternalLogLevel.INFO, "Unable to parse kernel version: " + kernelVersion);
+            MAJOR = 0;
+            MINOR = 0;
+            BUGFIX = 0;
         }
     }
 
