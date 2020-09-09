@@ -429,7 +429,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
-    {"newBlockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
+    {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
     {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
     {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}

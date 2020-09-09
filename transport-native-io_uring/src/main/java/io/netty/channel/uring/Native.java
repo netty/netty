@@ -111,13 +111,13 @@ final class Native {
 
     public static native void eventFdWrite(int fd, long value);
 
-    public static FileDescriptor newEventFd() {
-        return new FileDescriptor(newBlockingEventFd());
+    public static FileDescriptor newBlockingEventFd() {
+        return new FileDescriptor(blockingEventFd());
     }
 
     public static native void ioUringExit(RingBuffer ringBuffer);
 
-    private static native int newBlockingEventFd();
+    private static native int blockingEventFd();
 
     // for testing(it is only temporary)
     public static native int createFile();

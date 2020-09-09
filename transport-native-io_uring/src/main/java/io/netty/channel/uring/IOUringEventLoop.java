@@ -71,7 +71,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             }
         });
 
-        eventfd = Native.newEventFd();
+        eventfd = Native.newBlockingEventFd();
         logger.trace("New EventLoop: {}", this.toString());
     }
 
