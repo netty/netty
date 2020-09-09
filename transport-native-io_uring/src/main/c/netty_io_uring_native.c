@@ -178,7 +178,7 @@ static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint 
     return -err;
 }
 
-static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
+static jint netty_epoll_native_blocking_event_fd(JNIEnv* env, jclass clazz) {
     // We use a blocking fd with io_uring FAST_POLL read
     jint eventFD = eventfd(0, EFD_CLOEXEC);
 
@@ -209,16 +209,6 @@ static jint netty_io_uring_unregister_event_fd(JNIEnv *env, jclass class1, jint 
     }
 
 	return 0;
-}
-
-
-static void netty_io_uring_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
-    uint64_t eventfd_t;
-
-    if (eventfd_read(fd, &eventfd_t) != 0) {
-        // something is serious wrong
-        netty_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
-    }
 }
 
 static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
@@ -439,9 +429,8 @@ static const JNINativeMethod method_table[] = {
     {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
-    {"eventFd", "()I", (void *) netty_epoll_native_eventFd},
+    {"newBlockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
-    {"eventFdRead", "(I)V", (void *) netty_io_uring_eventFdRead },
     {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
     {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
     };
