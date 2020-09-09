@@ -77,6 +77,7 @@ final class Native {
     static final int IORING_OP_WRITE = NativeStaticallyReferencedJniMethods.ioringOpWrite();
     static final int IORING_OP_POLL_REMOVE = NativeStaticallyReferencedJniMethods.ioringOpPollRemove();
     static final int IORING_OP_CONNECT = NativeStaticallyReferencedJniMethods.ioringOpConnect();
+    static final int IORING_OP_CLOSE = NativeStaticallyReferencedJniMethods.ioringOpClose();
     static final int IORING_OP_WRITEV = NativeStaticallyReferencedJniMethods.ioringOpWritev();
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();

@@ -167,7 +167,15 @@ void setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
 
 static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint to_submit,
                                  jint min_complete, jint flags) {
-    return sys_io_uring_enter(ring_fd, to_submit, min_complete, flags, NULL);
+    int result;
+    int err;
+    do {
+        result = sys_io_uring_enter(ring_fd, to_submit, min_complete, flags, NULL);
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+    return -err;
 }
 
 static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
@@ -389,6 +397,10 @@ static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
     return IORING_OP_CONNECT;
 }
 
+static jint netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
+    return IORING_OP_CLOSE;
+}
+
 static jint netty_io_uring_ioringEnterGetevents(JNIEnv* env, jclass clazz) {
     return IORING_ENTER_GETEVENTS;
 }
@@ -414,6 +426,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
+  { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 

@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -71,9 +72,13 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Different masks for outstanding I/O operations.
     private static final int POLL_IN_SCHEDULED = 1;
     private static final int POLL_OUT_SCHEDULED = 1 << 2;
-    private static final int WRITE_SCHEDULED = 1 << 3;
-    private static final int READ_SCHEDULED = 1 << 4;
+    private static final int POLL_RDHUP_SCHEDULED = 1 << 3;
+    private static final int WRITE_SCHEDULED = 1 << 4;
+    private static final int READ_SCHEDULED = 1 << 5;
+    private static final int CONNECT_SCHEDULED = 1 << 6;
     private int ioState;
+
+    private ChannelPromise delayedClose;
 
     boolean inputClosedSeenErrorOnRead;
 
@@ -86,6 +91,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
     private ByteBuffer remoteAddressMemory;
+    private IOUringSubmissionQueue submissionQueue;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -202,8 +208,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     IOUringSubmissionQueue submissionQueue() {
-        IOUringEventLoop ioUringEventLoop = (IOUringEventLoop) eventLoop();
-        return ioUringEventLoop.getRingBuffer().getIoUringSubmissionQueue();
+        return submissionQueue;
     }
 
     private void freeRemoteAddressMemory() {
@@ -213,24 +218,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+    boolean ioScheduled() {
+        return ioState != 0;
+    }
+
     @Override
     protected void doClose() throws Exception {
         freeRemoteAddressMemory();
         active = false;
-
-        // doClose() may be called by closeForcibly() before the Channel is registered on the EventLoop.
-        if (isRegistered()) {
-            IOUringSubmissionQueue submissionQueue = submissionQueue();
-            if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
-                ioState &= ~POLL_IN_SCHEDULED;
-            }
-            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
-                ioState &= ~POLL_OUT_SCHEDULED;
-            }
-            submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
-        }
 
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
@@ -245,29 +240,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             cancelConnectTimeoutFuture();
 
-            if (isRegistered()) {
-                // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
-                // if SO_LINGER is used.
-                //
-                // See https://github.com/netty/netty/issues/7159
-                EventLoop loop = eventLoop();
-                if (loop.inEventLoop()) {
-                    doDeregister();
-                } else {
-                    loop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                doDeregister();
-                            } catch (Throwable cause) {
-                                pipeline().fireExceptionCaught(cause);
-                            }
-                        }
-                    });
-                }
-            }
+            doDeregister();
         } finally {
-            socket.close();
+            if (submissionQueue != null) {
+                if (socket.markClosed()) {
+                    submissionQueue.addClose(fd().intValue());
+                }
+            } else {
+                // This one was never registered just use a syscall to close.
+                socket.close();
+            }
         }
     }
 
@@ -284,6 +266,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected void doWrite(ChannelOutboundBuffer in) {
         if ((ioState & WRITE_SCHEDULED) != 0) {
+            return;
+        }
+        scheduleWrite(in);
+    }
+
+    private void scheduleWrite(ChannelOutboundBuffer in) {
+        if (delayedClose != null) {
+            return;
+        }
+        if (in == null) {
             return;
         }
 
@@ -316,6 +308,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
      }
 
     protected final void doWriteSingle(ByteBuf buf) {
+        assert (ioState & WRITE_SCHEDULED) == 0;
         IOUringSubmissionQueue submissionQueue = submissionQueue();
         submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
                 buf.writerIndex());
@@ -323,15 +316,45 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     //POLLOUT
-    private void addPollOut() {
+    private void schedulePollOut() {
         assert (ioState & POLL_OUT_SCHEDULED) == 0;
-        ioState |= POLL_OUT_SCHEDULED;
         IOUringSubmissionQueue submissionQueue = submissionQueue();
         submissionQueue.addPollOut(socket.intValue());
+        ioState |= POLL_OUT_SCHEDULED;
+    }
+
+    void schedulePollRdHup() {
+        assert (ioState & POLL_RDHUP_SCHEDULED) == 0;
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+        submissionQueue.addPollRdHup(fd().intValue());
+        ioState |= POLL_RDHUP_SCHEDULED;
     }
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
         private IOUringRecvByteAllocatorHandle allocHandle;
+
+        @Override
+        public void close(ChannelPromise promise) {
+            if ((ioState & (WRITE_SCHEDULED | READ_SCHEDULED | CONNECT_SCHEDULED)) == 0) {
+                forceClose(promise);
+            } else {
+                if (delayedClose == null || delayedClose.isVoid()) {
+                    // We have a write operation pending that should be completed asap.
+                    // We will do the actual close operation one this write result is returned as otherwise
+                    // we may get into trouble as we may close the fd while we did not process the write yet.
+                    delayedClose = promise;
+                } else {
+                    if (promise.isVoid()) {
+                        return;
+                    }
+                    delayedClose.addListener(new ChannelPromiseNotifier(promise));
+                }
+            }
+        }
+
+        private void forceClose(ChannelPromise promise) {
+            super.close(promise);
+        }
 
         @Override
         protected final void flush0() {
@@ -367,8 +390,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             computeRemote();
 
             // Register POLLRDHUP
-            IOUringSubmissionQueue submissionQueue = submissionQueue();
-            submissionQueue.addPollRdHup(fd().intValue());
+            schedulePollRdHup();
 
             // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
@@ -441,6 +463,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             submissionQueue.addPollIn(socket.intValue());
         }
 
+        void processDelayedClose() {
+            ChannelPromise promise = delayedClose;
+            if (promise != null && (ioState & (READ_SCHEDULED | WRITE_SCHEDULED | CONNECT_SCHEDULED)) == 0) {
+                delayedClose = null;
+                forceClose(promise);
+            }
+        }
+
         final void readComplete(int res) {
             ioState &= ~READ_SCHEDULED;
 
@@ -453,6 +483,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLRDHUP event is ready to be processed
          */
         final void pollRdHup(int res) {
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                return;
+            }
             if (isActive()) {
                 if ((ioState & READ_SCHEDULED) == 0) {
                     scheduleFirstRead();
@@ -469,6 +502,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         final void pollIn(int res) {
             ioState &= ~POLL_IN_SCHEDULED;
 
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                return;
+            }
+
             if ((ioState & READ_SCHEDULED) == 0) {
                 scheduleFirstRead();
             }
@@ -484,7 +521,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
         protected final void scheduleRead() {
             // Only schedule another read if the fd is still open.
-            if (fd().isOpen()) {
+            if (delayedClose == null && fd().isOpen()) {
                 ioState |= READ_SCHEDULED;
                 scheduleRead0();
             }
@@ -498,6 +535,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         final void pollOut(int res) {
             ioState &= ~POLL_OUT_SCHEDULED;
 
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                return;
+            }
             // pending connect
             if (connectPromise != null) {
                 // Note this method is invoked by the event loop only if the connection attempt was
@@ -524,7 +564,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                         connectPromise = null;
                     } else {
                         // The connect was not done yet, register for POLLOUT again
-                        addPollOut();
+                        schedulePollOut();
                     }
                 }
             } else if (!getSocket().isOutputShutdown()) {
@@ -537,7 +577,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
-
                 // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
                 // while still removing messages internally in removeBytes(...) which then may corrupt state.
                 ioState &= ~WRITE_SCHEDULED;
@@ -547,7 +586,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 try {
                     if (ioResult("io_uring write", res) == 0) {
                         // We were not able to write everything, let's register for POLLOUT
-                        addPollOut();
+                        schedulePollOut();
                     }
                 } catch (Throwable cause) {
                     handleWriteError(cause);
@@ -556,6 +595,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         final void connectComplete(int res) {
+            ioState &= ~CONNECT_SCHEDULED;
             freeRemoteAddressMemory();
 
             if (res == 0) {
@@ -563,7 +603,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             } else {
                 if (res == ERRNO_EINPROGRESS_NEGATIVE) {
                     // connect not complete yet need to wait for poll_out event
-                    addPollOut();
+                    schedulePollOut();
                 } else {
                     try {
                         Errors.throwConnectException("io_uring connect", res);
@@ -587,6 +627,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
 
+            if (delayedClose != null) {
+                promise.tryFailure(annotateConnectException(new ClosedChannelException(), remoteAddress));
+                return;
+            }
             try {
                 if (connectPromise != null) {
                     throw new ConnectionPendingException();
@@ -603,6 +647,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                         remoteAddressMemoryAddress);
                 final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
                 ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
+                ioState |= CONNECT_SCHEDULED;
             } catch (Throwable t) {
                 closeIfClosed();
                 promise.tryFailure(annotateConnectException(t, remoteAddress));
@@ -651,12 +696,26 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doRegister() throws Exception {
-        ((IOUringEventLoop) eventLoop()).add(this);
+        IOUringEventLoop eventLoop = (IOUringEventLoop) eventLoop();
+        eventLoop.add(this);
+        submissionQueue = eventLoop.getRingBuffer().getIoUringSubmissionQueue();
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        ((IOUringEventLoop) eventLoop()).remove(this);
+        IOUringSubmissionQueue submissionQueue = submissionQueue();
+
+        if (submissionQueue != null) {
+            if ((ioState & POLL_IN_SCHEDULED) != 0) {
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
+            }
+            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
+            }
+            if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
+            }
+        }
     }
 
     @Override
