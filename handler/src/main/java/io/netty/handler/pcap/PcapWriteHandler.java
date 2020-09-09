@@ -129,7 +129,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
      *                              Otherwise, if set to {@code false}, Pcap Global Header will not be written
      *                              on initialization. This could when writing Pcap data on a existing file where
      *                              Pcap Global Header is already present.
-     * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an {@link NullPointerException}
+     * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
+     *                              {@link NullPointerException}
      */
     public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader)
             throws NullPointerException {
