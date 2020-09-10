@@ -44,4 +44,9 @@ public final class MqttMessageIdAndPropertiesVariableHeader extends MqttMessageI
                 ", properties=" + properties +
                 ']';
     }
+
+    @Override
+    MqttMessageIdAndPropertiesVariableHeader withDefaultEmptyProperties() {
+        return this;
+    }
 }
