@@ -138,56 +138,78 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         addEventFdRead(submissionQueue);
 
         for (;;) {
-            logger.trace("Run IOUringEventLoop {}", this.toString());
-
-            // Prepare to block wait
-            long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
-            if (curDeadlineNanos == -1L) {
-                curDeadlineNanos = NONE; // nothing on the calendar
-            }
-            nextWakeupNanos.set(curDeadlineNanos);
-
-            // Only submit a timeout if there are no tasks to process and do a blocking operation
-            // on the completionQueue.
             try {
-                if (!hasTasks()) {
-                    if (curDeadlineNanos != prevDeadlineNanos) {
-                        prevDeadlineNanos = curDeadlineNanos;
-                        submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
-                    }
+                logger.trace("Run IOUringEventLoop {}", this);
 
-                    // Check there were any completion events to process
-                    if (!completionQueue.hasCompletions()) {
-                        // Block if there is nothing to process after this try again to call process(....)
-                        logger.trace("submitAndWait {}", this);
-                        submissionQueue.submitAndWait();
-                    }
+                // Prepare to block wait
+                long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
+                if (curDeadlineNanos == -1L) {
+                    curDeadlineNanos = NONE; // nothing on the calendar
                 }
-            } catch (Throwable t) {
-                //Todo handle exception
-            } finally {
-                if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
-                    pendingWakeup = true;
-                }
-            }
+                nextWakeupNanos.set(curDeadlineNanos);
 
-            // avoid blocking for as long as possible - loop until two consecutive "empty" results
-            boolean maybeMoreTasks;
-            boolean maybeMoreIo;
-            do {
-                maybeMoreIo = completionQueue.process(this) != 0;
-                maybeMoreTasks = runAllTasks();
+                // Only submit a timeout if there are no tasks to process and do a blocking operation
+                // on the completionQueue.
                 try {
-                    if (isShuttingDown()) {
-                        closeAll();
-                        if (confirmShutdown()) {
-                            return;
+                    if (!hasTasks()) {
+                        if (curDeadlineNanos != prevDeadlineNanos) {
+                            prevDeadlineNanos = curDeadlineNanos;
+                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
+                        }
+
+                        // Check there were any completion events to process
+                        if (!completionQueue.hasCompletions()) {
+                            // Block if there is nothing to process after this try again to call process(....)
+                            logger.trace("submitAndWait {}", this);
+                            submissionQueue.submitAndWait();
                         }
                     }
-                } catch (Throwable t) {
-                    logger.info("Exception error: {}", t);
+                } finally {
+                    if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
+                        pendingWakeup = true;
+                    }
                 }
-            } while (maybeMoreTasks | maybeMoreIo);
+
+                // avoid blocking for as long as possible - loop until available work exhausted
+                boolean maybeMoreWork = true;
+                do {
+                    try {
+                        maybeMoreWork = completionQueue.process(this) != 0 | runAllTasks();
+                    } finally {
+                        // Always handle shutdown even if the loop processing threw an exception
+                        try {
+                            if (isShuttingDown()) {
+                                closeAll();
+                                if (confirmShutdown()) {
+                                    return;
+                                }
+                                if (!maybeMoreWork) {
+                                    maybeMoreWork = hasTasks() || completionQueue.hasCompletions();
+                                }
+                            }
+                        } catch (Throwable t) {
+                            handleLoopException(t);
+                        }
+                    }
+                } while (maybeMoreWork);
+            } catch (Throwable t) {
+                handleLoopException(t);
+            }
+        }
+    }
+
+    /**
+     * Visible only for testing!
+     */
+    void handleLoopException(Throwable t) {
+        logger.warn("Unexpected exception in the io_uring event loop", t);
+
+        // Prevent possible consecutive immediate failures that lead to
+        // excessive CPU consumption.
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            // Ignore.
         }
     }
 
