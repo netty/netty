@@ -587,10 +587,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(cause);
-
-                // If oom will close the read event, release connection.
-                // See https://github.com/netty/netty/issues/10434
-                if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+                if (close || cause instanceof IOException) {
                     shutdownInput(false);
                 }
             }
