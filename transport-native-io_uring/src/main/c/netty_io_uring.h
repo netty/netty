@@ -38,9 +38,6 @@ struct io_uring_sq {
     unsigned *array;
     struct io_uring_sqe *sqes;
 
-    unsigned sqe_head;
-    unsigned sqe_tail;
-
     size_t ring_sz;
     void *ring_ptr;
 };
