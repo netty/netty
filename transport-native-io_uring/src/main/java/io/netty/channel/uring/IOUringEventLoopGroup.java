@@ -23,6 +23,7 @@ import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -92,6 +93,7 @@ public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
             throw new IllegalArgumentException("Illegal amount of extra arguments");
         }
         int ringSize = (Integer) args[0];
+        ObjectUtil.checkPositiveOrZero(ringSize, "ringSize");
         if (ringSize == 0) {
             ringSize = Native.DEFAULT_RING_SIZE;
         }
