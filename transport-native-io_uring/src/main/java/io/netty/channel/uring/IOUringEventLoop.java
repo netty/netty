@@ -35,6 +35,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                                                            IOUringCompletionQueue.IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
+    private final long eventfdReadBuf = PlatformDependent.allocateMemory(8);
+
     private final IntObjectMap<AbstractIOUringChannel> channels = new IntObjectHashMap<AbstractIOUringChannel>(4096);
     private final RingBuffer ringBuffer;
 
@@ -69,7 +71,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             }
         });
 
-        eventfd = Native.newEventFd();
+        eventfd = Native.newBlockingEventFd();
         logger.trace("New EventLoop: {}", this.toString());
     }
 
@@ -122,7 +124,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
 
         // Lets add the eventfd related events before starting to do any real work.
-        submissionQueue.addPollIn(eventfd.intValue());
+        addEventFdRead(submissionQueue);
         submissionQueue.submit();
 
         for (;;) {
@@ -181,23 +183,21 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     @Override
     public boolean handle(int fd, int res, long flags, int op, int pollMask) {
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
         final AbstractIOUringChannel channel;
         if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
-            channel = handleRead(fd, res);
+            if (eventfd.intValue() == fd) {
+                channel = null;
+                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                    pendingWakeup = false;
+                    addEventFdRead(ringBuffer.getIoUringSubmissionQueue());
+                }
+            } else {
+                channel = handleRead(fd, res);
+            }
         } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
             channel = handleWrite(fd, res);
         } else if (op == Native.IORING_OP_POLL_ADD) {
-            if (eventfd.intValue() == fd) {
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                    return true;
-                }
-                channel = null;
-                pendingWakeup = false;
-                handleEventFd(submissionQueue);
-            } else {
-                channel = handlePollAdd(fd, res, pollMask);
-            }
+            channel = handlePollAdd(fd, res, pollMask);
         } else if (op == Native.IORING_OP_POLL_REMOVE) {
             if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
                 logger.trace("IORING_POLL_REMOVE not successful");
@@ -258,13 +258,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         return channel;
     }
 
-    private void handleEventFd(IOUringSubmissionQueue submissionQueue) {
-        // We need to consume the data as otherwise we would see another event
-        // in the completionQueue without
-        // an extra eventfd_write(....)
-        Native.eventFdRead(eventfd.intValue());
-
-        submissionQueue.addPollIn(eventfd.intValue());
+    private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
+        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8);
     }
 
     private AbstractIOUringChannel handleConnect(int fd, int res) {
@@ -284,6 +279,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
         ringBuffer.close();
         iovArrays.release();
+        PlatformDependent.freeMemory(eventfdReadBuf);
     }
 
     public RingBuffer getRingBuffer() {
