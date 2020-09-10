@@ -14,7 +14,7 @@
  * under the License.
  */
 #define _GNU_SOURCE // RTLD_DEFAULT
-#include "io_uring.h"
+#include "netty_io_uring.h"
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -151,18 +151,9 @@ err:
 	return ret;
 }
 
-void setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
+int setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
                     struct io_uring_params *p) {
-    int ret;
-
-    ret = io_uring_mmap(ring_fd, p, &io_uring_ring->sq, &io_uring_ring->cq);
-    if (ret == 0) {
-        io_uring_ring->flags = p->flags;
-        io_uring_ring->ring_fd = ring_fd;
-    } else {
-        //Todo signal this back to EventLoop
-        perror("setup_io_uring error \n");
-    }
+    return io_uring_mmap(ring_fd, p, &io_uring_ring->sq, &io_uring_ring->cq);
 }
 
 static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint to_submit,
@@ -186,29 +177,6 @@ static jint netty_epoll_native_blocking_event_fd(JNIEnv* env, jclass clazz) {
         netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd() failed: ", errno);
     }
     return eventFD;
-}
-
-static jint netty_io_uring_register_event_fd(JNIEnv *env, jclass class1, jint ring_fd, jint event_fd) {
-    int ret;
-    ret = sys_io_uring_register(ring_fd, IORING_REGISTER_EVENTFD,
-					&event_fd, 1);
-	if (ret < 0) {
-		return -errno;
-    }
-
-	return 0;
-}
-
-static jint netty_io_uring_unregister_event_fd(JNIEnv *env, jclass class1, jint ring_fd) {
-    int ret;
-
-	ret = sys_io_uring_register(ring_fd, IORING_UNREGISTER_EVENTFD,
-					NULL, 0);
-	if (ret < 0) {
-		return -errno;
-    }
-
-	return 0;
 }
 
 static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
@@ -274,28 +242,23 @@ static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass class, jobject r
 	close(submissionQueueRingFd);
 }
 
-static int nettyBlockingSocket(int domain, int type, int protocol) {
-    return socket(domain, type, protocol);
-}
-
 static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jobject submitCallback) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
 
     int ring_fd = sys_io_uring_setup((int)entries, &p);
 
-    //Todo
     if (ring_fd < 0) {
-      printf("RingFd error: %d\n", ring_fd);
-      //throw Exception
-      return NULL;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to create io_uring ring fd ", errno);
+        return NULL;
     }
     struct io_uring io_uring_ring;
-    //Todo memset instead
-    io_uring_ring.flags = 0;
-    io_uring_ring.sq.sqe_tail = 0;
-    io_uring_ring.sq.sqe_head = 0;
-    setup_io_uring(ring_fd, &io_uring_ring, &p);
+    int ret = setup_io_uring(ring_fd, &io_uring_ring, &p);
+
+    if (ret != 0) {
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer", ret);
+        return NULL;
+    }
 
     jobject ioUringSubmissionQueue = (*env)->NewObject(
         env, ioUringSubmissionQueueClass, ioUringSubmissionQueueMethodId,
@@ -428,9 +391,7 @@ static const JNINativeMethod method_table[] = {
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
-    {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
-    {"ioUringRegisterEventFd", "(II)I", (void *) netty_io_uring_register_event_fd},
-    {"ioUringUnregisterEventFd", "(I)I", (void *) netty_io_uring_unregister_event_fd}
+    {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite }
     };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);
