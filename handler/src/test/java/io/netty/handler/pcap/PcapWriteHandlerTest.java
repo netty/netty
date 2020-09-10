@@ -116,8 +116,8 @@ public class PcapWriteHandlerTest {
 
         // Verify UDP Packet
         ByteBuf udpPacket = ipv4Packet.readBytes(12);
-        assertEquals(cltAddr.getPort() & 0xffff, udpPacket.readShort() & 0xffff); // Source Port
-        assertEquals(srvAddr.getPort() & 0xffff, udpPacket.readShort() & 0xffff); // Destination Port
+        assertEquals(cltAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Source Port
+        assertEquals(srvAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Destination Port
         assertEquals(12, udpPacket.readShort());     // Length
         assertEquals(0x0001, udpPacket.readShort()); // Checksum
 
