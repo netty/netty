@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,44 +21,65 @@ import io.netty.handler.codec.http.HttpRequest;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Test DeleteFileOnExitHook
  */
 public class DeleteFileOnExitHookTest {
     private static final HttpRequest req1 = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
+    final String dir = "target/DeleteFileOnExitHookTest/tmp";
 
     @Test
-    public void customBaseDirAndDeleteOnHookExit() throws IOException {
+    public void testTriggerDeleteFileOnExitHook() throws IOException {
         final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
-        final String dir = "target/DeleteFileOnExitHookTest/customBaseDirAndDeleteOnHookExit";
         File baseDir = new File(dir);
         baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
 
         defaultHttpDataFactory.setBaseDir(dir);
         defaultHttpDataFactory.setDeleteOnExit(true);
-        final Attribute attr = defaultHttpDataFactory.createAttribute(req1, "attribute1");
         final FileUpload fu = defaultHttpDataFactory.createFileUpload(
                 req1, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
-        //DeleteFileOnExitHook.add(new File(dir, fu.getFilename()).getAbsolutePath());
-
-        assertEquals(dir, DiskAttribute.class.cast(attr).getBaseDirectory());
-        assertEquals(dir, DiskFileUpload.class.cast(fu).getBaseDirectory());
-        assertTrue(DiskAttribute.class.cast(attr).deleteOnExit());
-        assertTrue(DiskFileUpload.class.cast(fu).deleteOnExit());
 
         fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
         assertTrue(fu.getFile().exists());
-        //fu.delete();
+    }
 
-        assertEquals(0, fu.getFile().length());
-        fu.delete();
-        //fu.release();
+    @Test
+    public void testDeleteFileOnExitHookExecutionSuccessful() {
+        File[] files = new File(dir).listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.startsWith(DiskFileUpload.prefix);
+            }
+        });
+
+        assertEquals(0, files.length);
+    }
+
+    @Test
+    public void testRemoveDeleteFileOnExitHook() throws IOException {
+        final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
+        File baseDir = new File(dir);
+        baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
+
+        defaultHttpDataFactory.setBaseDir(dir);
+        defaultHttpDataFactory.setDeleteOnExit(true);
+        final FileUpload fu = defaultHttpDataFactory.createFileUpload(
+                req1, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
+
+        fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
+        assertTrue(fu.getFile().exists());
+
+        String filePath = fu.getFile().getPath();
+        assertTrue(DeleteFileOnExitHook.checkFileExist(filePath));
+
+        fu.release();
+        assertFalse(DeleteFileOnExitHook.checkFileExist(filePath));
     }
 }

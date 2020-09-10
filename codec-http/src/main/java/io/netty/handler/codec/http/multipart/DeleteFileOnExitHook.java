@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,19 +15,16 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
 import java.io.File;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Extend {@link java.io.DeleteOnExitHook} to dynamically manipulate hook records.
+ * DeleteFileOnExitHook.
  */
-public final class DeleteFileOnExitHook {
-    private static Set<String> files = new HashSet<String>();
-    static final InternalLogger logger = InternalLoggerFactory.getInstance(DeleteFileOnExitHook.class);
+final class DeleteFileOnExitHook {
+    private final static Set<String> FILES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     private DeleteFileOnExitHook() {
     }
@@ -51,14 +48,8 @@ public final class DeleteFileOnExitHook {
      *
      * @param file tmp file path
      */
-    public static synchronized void remove(String file) {
-        try {
-            if (files != null) {
-                files.remove(file);
-            }
-        } catch (Exception e) {
-            logger.warn("The cleanup file path failed.", e);
-        }
+    public static void remove(String file) {
+        FILES.remove(file);
     }
 
     /**
@@ -66,26 +57,24 @@ public final class DeleteFileOnExitHook {
      *
      * @param file tmp file path
      */
-    public static synchronized void add(String file) {
-        if (files == null) {
-            files = new HashSet<String>();
-        }
-
-        files.add(file);
+    public static void add(String file) {
+        FILES.add(file);
     }
 
+    /**
+     * check in records.
+     *
+     * @param file target file
+     * @return true or false
+     */
+    public static boolean checkFileExist(String file) {
+        return FILES.contains(file);
+    }
+
+
     static void runHooks() {
-        Set<String> toBeDeleted;
-
-        synchronized (DeleteFileOnExitHook.class) {
-            toBeDeleted = files;
-            files = null;
-        }
-
-        if (!toBeDeleted.isEmpty()) {
-            for (String filename : toBeDeleted) {
-                (new File(filename)).delete();
-            }
+        for (String filename : FILES) {
+            (new File(filename)).delete();
         }
     }
 }
