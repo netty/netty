@@ -15,13 +15,14 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -55,15 +56,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
-    IOUringEventLoop(final EventLoopGroup parent, final Executor executor, final boolean addTaskWakesUp) {
-        super(parent, executor, addTaskWakesUp);
+    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize,
+                     RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
+        super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
+                rejectedExecutionHandler);
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IOUring.ensureAvailability();
 
         // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
         //       allow to change this in the future.
         iovArrays = new IovArrays(8);
-        ringBuffer = Native.createRingBuffer(new Runnable() {
+        ringBuffer = Native.createRingBuffer(ringSize, new Runnable() {
             @Override
             public void run() {
                 // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
@@ -73,6 +76,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
         eventfd = Native.newBlockingEventFd();
         logger.trace("New EventLoop: {}", this.toString());
+    }
+
+    private static Queue<Runnable> newTaskQueue(
+            EventLoopTaskQueueFactory queueFactory) {
+        if (queueFactory == null) {
+            return newTaskQueue0(DEFAULT_MAX_PENDING_TASKS);
+        }
+        return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
     }
 
     @Override
