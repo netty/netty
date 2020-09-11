@@ -19,8 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.tests.DetectPeerCloseWithoutReadTest;
-import org.junit.Ignore;
-import org.junit.Test;
 
 public class IOUringDetectPeerCloseWithReadTest extends DetectPeerCloseWithoutReadTest {
     @Override
@@ -36,19 +34,5 @@ public class IOUringDetectPeerCloseWithReadTest extends DetectPeerCloseWithoutRe
     @Override
     protected Class<? extends Channel> clientChannel() {
         return IOUringSocketChannel.class;
-    }
-
-    @Ignore("FIX ME")
-    @Test
-    @Override
-    public void clientCloseWithoutServerReadIsDetectedNoExtraReadRequested() throws InterruptedException {
-        super.clientCloseWithoutServerReadIsDetectedNoExtraReadRequested();
-    }
-
-    @Ignore("FIX ME")
-    @Test
-    @Override
-    public void serverCloseWithoutClientReadIsDetectedNoExtraReadRequested() throws InterruptedException {
-        super.serverCloseWithoutClientReadIsDetectedNoExtraReadRequested();
     }
 }
