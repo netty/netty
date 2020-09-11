@@ -30,6 +30,12 @@ final class IOUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
         super(handle);
     }
 
+    private boolean rdHupReceived;
+
+    void rdHupReceived() {
+        this.rdHupReceived = true;
+    }
+
     @Override
     public ByteBuf allocate(ByteBufAllocator alloc) {
         // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
@@ -38,7 +44,15 @@ final class IOUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     }
 
     @Override
+    public boolean continueReading() {
+        // If we received an POLLRDHUP we need to continue draining the input until there is nothing left.
+        return super.continueReading() || rdHupReceived;
+    }
+
+    @Override
     public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return ((RecvByteBufAllocator.ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
+        // If we received an POLLRDHUP we need to continue draining the input until there is nothing left.
+        return ((RecvByteBufAllocator.ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier)
+                || rdHupReceived;
     }
 }

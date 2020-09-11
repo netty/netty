@@ -79,10 +79,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private int ioState;
 
     private ChannelPromise delayedClose;
-
-    boolean inputClosedSeenErrorOnRead;
-
-    static final int SOCK_ADDR_LEN = 128;
+    private boolean inputClosedSeenErrorOnRead;
+    private static final int SOCK_ADDR_LEN = 128;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
@@ -486,6 +484,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
+
+            // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
+            recvBufAllocHandle().rdHupReceived();
+
             if (isActive()) {
                 if ((ioState & READ_SCHEDULED) == 0) {
                     scheduleFirstRead();
