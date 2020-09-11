@@ -29,7 +29,7 @@ public final class MqttUnsubAckPayload {
 
     private final List<Short> unsubscribeReasonCodes;
 
-    public static final MqttUnsubAckPayload EMPTY = new MqttUnsubAckPayload();
+    private static final MqttUnsubAckPayload EMPTY = new MqttUnsubAckPayload();
 
     public static MqttUnsubAckPayload withEmptyDefaults(MqttUnsubAckPayload payload) {
         if (payload == null) {

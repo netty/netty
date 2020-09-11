@@ -388,8 +388,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                     message.idAndPropertiesVariableHeader().properties());
             try {
                 int variableHeaderBufferSize = 2 + propertiesBuf.readableBytes();
-                int payloadBufferSize =
-                        message.payload() == null ? 0 : message.payload().unsubscribeReasonCodes().size();
+                MqttUnsubAckPayload payload = message.payload();
+                int payloadBufferSize = payload == null ? 0 : payload.unsubscribeReasonCodes().size();
                 int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
                 int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
                 ByteBuf buf = ctx.alloc().buffer(fixedHeaderBufferSize + variablePartSize);
@@ -398,8 +398,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 buf.writeShort(message.variableHeader().messageId());
                 buf.writeBytes(propertiesBuf);
 
-                if (message.payload() != null) {
-                    for (Short reasonCode : message.payload().unsubscribeReasonCodes()) {
+                if (payload != null) {
+                    for (Short reasonCode : payload.unsubscribeReasonCodes()) {
                         buf.writeByte(reasonCode);
                     }
                 }
