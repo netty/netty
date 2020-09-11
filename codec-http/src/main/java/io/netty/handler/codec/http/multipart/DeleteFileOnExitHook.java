@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * DeleteFileOnExitHook.
  */
 final class DeleteFileOnExitHook {
-    private final static Set<String> FILES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<String> FILES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     private DeleteFileOnExitHook() {
     }
@@ -62,7 +62,7 @@ final class DeleteFileOnExitHook {
     }
 
     /**
-     * check in records.
+     * Check in the hook files.
      *
      * @param file target file
      * @return true or false
@@ -71,10 +71,12 @@ final class DeleteFileOnExitHook {
         return FILES.contains(file);
     }
 
-
-    static void runHooks() {
+    /**
+     * Clean up all the files.
+     */
+    private static void runHooks() {
         for (String filename : FILES) {
-            (new File(filename)).delete();
+            new File(filename).delete();
         }
     }
 }

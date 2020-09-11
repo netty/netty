@@ -32,19 +32,19 @@ import static org.junit.Assert.*;
  * Test DeleteFileOnExitHook
  */
 public class DeleteFileOnExitHookTest {
-    private static final HttpRequest req1 = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
-    final String dir = "target/DeleteFileOnExitHookTest/tmp";
+    private static final HttpRequest REQUEST = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
+    private static final String HOOK_TEST_TMP = "target/DeleteFileOnExitHookTest/tmp";
 
     @Test
     public void testTriggerDeleteFileOnExitHook() throws IOException {
         final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
-        File baseDir = new File(dir);
+        File baseDir = new File(HOOK_TEST_TMP);
         baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
 
-        defaultHttpDataFactory.setBaseDir(dir);
+        defaultHttpDataFactory.setBaseDir(HOOK_TEST_TMP);
         defaultHttpDataFactory.setDeleteOnExit(true);
         final FileUpload fu = defaultHttpDataFactory.createFileUpload(
-                req1, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
+                REQUEST, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
 
         fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
         assertTrue(fu.getFile().exists());
@@ -52,7 +52,7 @@ public class DeleteFileOnExitHookTest {
 
     @Test
     public void testDeleteFileOnExitHookExecutionSuccessful() {
-        File[] files = new File(dir).listFiles(new FilenameFilter() {
+        File[] files = new File(HOOK_TEST_TMP).listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.startsWith(DiskFileUpload.prefix);
@@ -63,15 +63,15 @@ public class DeleteFileOnExitHookTest {
     }
 
     @Test
-    public void testRemoveDeleteFileOnExitHook() throws IOException {
+    public void testAfterHttpDataReleaseCheckFileExist() throws IOException {
         final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
-        File baseDir = new File(dir);
+        File baseDir = new File(HOOK_TEST_TMP);
         baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
 
-        defaultHttpDataFactory.setBaseDir(dir);
+        defaultHttpDataFactory.setBaseDir(HOOK_TEST_TMP);
         defaultHttpDataFactory.setDeleteOnExit(true);
         final FileUpload fu = defaultHttpDataFactory.createFileUpload(
-                req1, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
+                REQUEST, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
 
         fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
         assertTrue(fu.getFile().exists());
