@@ -30,10 +30,9 @@ import java.util.Locale;
 
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
-    // Todo expose this via the EventLoopGroup constructor as well.
-    private static final int DEFAULT_RING_SIZE = SystemPropertyUtil.getInt("io.netty.uring.ringSize", 4096);
+    static final int DEFAULT_RING_SIZE = Math.max(64, SystemPropertyUtil.getInt("io.netty.uring.ringSize", 4096));
 
-     static {
+    static {
         Selector selector = null;
         try {
             // We call Selector.open() as this will under the hood cause IOUtil to be loaded.
