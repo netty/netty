@@ -74,7 +74,7 @@ final class DeleteFileOnExitHook {
     /**
      * Clean up all the files.
      */
-    private static void runHooks() {
+    static void runHooks() {
         for (String filename : FILES) {
             new File(filename).delete();
         }

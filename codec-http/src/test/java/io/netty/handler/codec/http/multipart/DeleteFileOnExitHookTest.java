@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,24 +35,30 @@ import static org.junit.Assert.*;
 public class DeleteFileOnExitHookTest {
     private static final HttpRequest REQUEST = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
     private static final String HOOK_TEST_TMP = "target/DeleteFileOnExitHookTest/tmp";
+    private FileUpload fu;
 
-    @Test
-    public void testTriggerDeleteFileOnExitHook() throws IOException {
-        final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
+    @Before
+    public void setUp() throws IOException {
+        DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
+        defaultHttpDataFactory.setBaseDir(HOOK_TEST_TMP);
+        defaultHttpDataFactory.setDeleteOnExit(true);
+
         File baseDir = new File(HOOK_TEST_TMP);
         baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
 
-        defaultHttpDataFactory.setBaseDir(HOOK_TEST_TMP);
-        defaultHttpDataFactory.setDeleteOnExit(true);
-        final FileUpload fu = defaultHttpDataFactory.createFileUpload(
+        fu = defaultHttpDataFactory.createFileUpload(
                 REQUEST, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
-
         fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
+
         assertTrue(fu.getFile().exists());
     }
 
     @Test
-    public void testDeleteFileOnExitHookExecutionSuccessful() {
+    public void testSimulateTriggerDeleteFileOnExitHook() {
+
+        // simulate app exit
+        DeleteFileOnExitHook.runHooks();
+
         File[] files = new File(HOOK_TEST_TMP).listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
@@ -64,17 +71,6 @@ public class DeleteFileOnExitHookTest {
 
     @Test
     public void testAfterHttpDataReleaseCheckFileExist() throws IOException {
-        final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
-        File baseDir = new File(HOOK_TEST_TMP);
-        baseDir.mkdirs();  // we don't need to clean it since it is in volatile files anyway
-
-        defaultHttpDataFactory.setBaseDir(HOOK_TEST_TMP);
-        defaultHttpDataFactory.setDeleteOnExit(true);
-        final FileUpload fu = defaultHttpDataFactory.createFileUpload(
-                REQUEST, "attribute1", "tmp_f.txt", "text/plain", null, null, 0);
-
-        fu.setContent(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
-        assertTrue(fu.getFile().exists());
 
         String filePath = fu.getFile().getPath();
         assertTrue(DeleteFileOnExitHook.checkFileExist(filePath));

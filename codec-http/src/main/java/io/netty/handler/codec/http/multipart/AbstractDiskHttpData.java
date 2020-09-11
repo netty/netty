@@ -267,6 +267,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             if (file != null && file.exists()) {
                 filePath = file.getPath();
                 if (!file.delete()) {
+                    filePath = null;
                     logger.warn("Failed to delete: {}", file);
                 }
             }
