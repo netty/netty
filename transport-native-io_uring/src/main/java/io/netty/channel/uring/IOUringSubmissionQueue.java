@@ -198,6 +198,7 @@ final class IOUringSubmissionQueue {
         if (submit > 0) {
             return submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
         }
+        assert submit == 0;
         int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
             throw new RuntimeException("ioUringEnter syscall returned " + ret);

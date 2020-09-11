@@ -218,92 +218,72 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     @Override
-    public boolean handle(int fd, int res, long flags, int op, int pollMask) {
-        final AbstractIOUringChannel channel;
-        if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
-            if (eventfd.intValue() == fd) {
-                channel = null;
-                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                    pendingWakeup = false;
-                    addEventFdRead(ringBuffer.getIoUringSubmissionQueue());
-                }
-            } else {
-                channel = handleRead(fd, res);
+    public void handle(int fd, int res, int flags, int op, int pollMask) {
+        if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
+            if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                pendingWakeup = false;
+                addEventFdRead(ringBuffer.getIoUringSubmissionQueue());
             }
-        } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
-            channel = handleWrite(fd, res);
-        } else if (op == Native.IORING_OP_POLL_ADD) {
-            channel = handlePollAdd(fd, res, pollMask);
-        } else if (op == Native.IORING_OP_POLL_REMOVE) {
-            if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
-                logger.trace("IORING_POLL_REMOVE not successful");
-            } else if (res == 0) {
-                logger.trace("IORING_POLL_REMOVE successful");
-            }
-
-            channel = channels.get(fd);
-            if (channel != null && !channel.ioScheduled()) {
-                // We cancelled the POLL ops which means we are done and should remove the mapping.
-                channels.remove(fd);
-            }
-        } else if (op == Native.IORING_OP_CONNECT) {
-            channel = handleConnect(fd, res);
         } else if (op == Native.IORING_OP_TIMEOUT) {
             if (res == Native.ERRNO_ETIME_NEGATIVE) {
                 prevDeadlineNanos = NONE;
             }
-            channel = null;
         } else {
-            return true;
+            // Remaining events should be channel-specific
+            final AbstractIOUringChannel channel = channels.get(fd);
+            if (channel == null) {
+                return;
+            }
+            if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
+                handleRead(channel, res);
+            } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
+                handleWrite(channel, res);
+            } else if (op == Native.IORING_OP_POLL_ADD) {
+                handlePollAdd(channel, res, pollMask);
+            } else if (op == Native.IORING_OP_POLL_REMOVE) {
+                if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
+                    logger.trace("IORING_POLL_REMOVE not successful");
+                } else if (res == 0) {
+                    logger.trace("IORING_POLL_REMOVE successful");
+                }
+                if (!channel.ioScheduled()) {
+                    // We cancelled the POLL ops which means we are done and should remove the mapping.
+                    channels.remove(fd);
+                    return;
+                }
+            } else if (op == Native.IORING_OP_CONNECT) {
+                handleConnect(channel, res);
+            }
+            channel.unsafe().processDelayedClose();
         }
-        if (channel != null) {
-            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).processDelayedClose();
-        }
-        return true;
     }
 
-    private AbstractIOUringChannel handleRead(int fd, int res) {
-        AbstractIOUringChannel readChannel = channels.get(fd);
-        if (readChannel != null) {
-            ((AbstractIOUringChannel.AbstractUringUnsafe) readChannel.unsafe()).readComplete(res);
-        }
-        return readChannel;
+    private void handleRead(AbstractIOUringChannel channel, int res) {
+        channel.unsafe().readComplete(res);
     }
 
-    private AbstractIOUringChannel handleWrite(int fd, int res) {
-        AbstractIOUringChannel writeChannel = channels.get(fd);
-        if (writeChannel != null) {
-            ((AbstractIOUringChannel.AbstractUringUnsafe) writeChannel.unsafe()).writeComplete(res);
-        }
-        return writeChannel;
+    private void handleWrite(AbstractIOUringChannel channel, int res) {
+        channel.unsafe().writeComplete(res);
     }
 
-    private AbstractIOUringChannel handlePollAdd(int fd, int res, int pollMask) {
-        AbstractIOUringChannel channel = channels.get(fd);
-        if (channel != null) {
-            if ((pollMask & Native.POLLOUT) != 0) {
-                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollOut(res);
-            }
-            if ((pollMask & Native.POLLIN) != 0) {
-                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollIn(res);
-            }
-            if ((pollMask & Native.POLLRDHUP) != 0) {
-                ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).pollRdHup(res);
-            }
+    private void handlePollAdd(AbstractIOUringChannel channel, int res, int pollMask) {
+        if ((pollMask & Native.POLLOUT) != 0) {
+            channel.unsafe().pollOut(res);
         }
-        return channel;
+        if ((pollMask & Native.POLLIN) != 0) {
+            channel.unsafe().pollIn(res);
+        }
+        if ((pollMask & Native.POLLRDHUP) != 0) {
+            channel.unsafe().pollRdHup(res);
+        }
     }
 
     private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
         submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8);
     }
 
-    private AbstractIOUringChannel handleConnect(int fd, int res) {
-        AbstractIOUringChannel channel = channels.get(fd);
-        if (channel != null) {
-            ((AbstractIOUringChannel.AbstractUringUnsafe) channel.unsafe()).connectComplete(res);
-        }
-        return channel;
+    private void handleConnect(AbstractIOUringChannel channel, int res) {
+        channel.unsafe().connectComplete(res);
     }
 
     @Override

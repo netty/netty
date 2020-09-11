@@ -83,15 +83,13 @@ final class IOUringCompletionQueue {
           int mask = opMask & 0xffff;
 
           i++;
-          if (!callback.handle(fd, res, flags, op, mask)) {
-              break;
-          }
+          callback.handle(fd, res, flags, op, mask);
       }
       return i;
   }
 
   interface IOUringCompletionQueueCallback {
-      boolean handle(int fd, int res, long flags, int op, int mask);
+      void handle(int fd, int res, int flags, int op, int mask);
   }
 
   public boolean ioUringWaitCqe() {
