@@ -163,9 +163,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected abstract AbstractUringUnsafe newUnsafe();
 
-    @Override
-    public AbstractUringUnsafe unsafe() {
-        return (AbstractUringUnsafe) super.unsafe();
+    AbstractUringUnsafe ioUringUnsafe() {
+        return (AbstractUringUnsafe) unsafe();
     }
 
     @Override
@@ -261,7 +260,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected void doBeginRead() {
         if ((ioState & POLL_IN_SCHEDULED) == 0) {
-            unsafe().schedulePollIn();
+            ioUringUnsafe().schedulePollIn();
         }
     }
 

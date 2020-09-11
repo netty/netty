@@ -254,27 +254,27 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             } else if (op == Native.IORING_OP_CONNECT) {
                 handleConnect(channel, res);
             }
-            channel.unsafe().processDelayedClose();
+            channel.ioUringUnsafe().processDelayedClose();
         }
     }
 
     private void handleRead(AbstractIOUringChannel channel, int res) {
-        channel.unsafe().readComplete(res);
+        channel.ioUringUnsafe().readComplete(res);
     }
 
     private void handleWrite(AbstractIOUringChannel channel, int res) {
-        channel.unsafe().writeComplete(res);
+        channel.ioUringUnsafe().writeComplete(res);
     }
 
     private void handlePollAdd(AbstractIOUringChannel channel, int res, int pollMask) {
         if ((pollMask & Native.POLLOUT) != 0) {
-            channel.unsafe().pollOut(res);
+            channel.ioUringUnsafe().pollOut(res);
         }
         if ((pollMask & Native.POLLIN) != 0) {
-            channel.unsafe().pollIn(res);
+            channel.ioUringUnsafe().pollIn(res);
         }
         if ((pollMask & Native.POLLRDHUP) != 0) {
-            channel.unsafe().pollRdHup(res);
+            channel.ioUringUnsafe().pollRdHup(res);
         }
     }
 
@@ -283,7 +283,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     private void handleConnect(AbstractIOUringChannel channel, int res) {
-        channel.unsafe().connectComplete(res);
+        channel.ioUringUnsafe().connectComplete(res);
     }
 
     @Override
