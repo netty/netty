@@ -216,23 +216,23 @@ static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass class, jobject r
     jclass submissionQueueClass = (*env)->GetObjectClass(env, submissionQueue);
     jclass completionQueueClass = (*env)->GetObjectClass(env, completionQueue);
 
-    jmethodID submissionQueueArrayAddressMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getSubmissionQueueArrayAddress", "()J");
-    jmethodID submissionQueueRingEntriesMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingEntries", "()I");
-    jmethodID submissionQueueRingFdMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingFd", "()I");
-    jmethodID submissionQueueRingAddressMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingAddress", "()J");
-    jmethodID submissionQueueRingSizeMethodId = (*env)->GetMethodID(env, submissionQueueClass, "getRingSize", "()I");
+    jfieldID submissionQueueArrayAddressFieldId = (*env)->GetFieldID(env, submissionQueueClass, "submissionQueueArrayAddress", "J");
+    jfieldID submissionQueueRingEntriesFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringEntries", "I");
+    jfieldID submissionQueueRingFdFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringFd", "I");
+    jfieldID submissionQueueRingAddressFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringAddress", "J");
+    jfieldID submissionQueueRingSizeFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringSize", "I");
 
-    jmethodID completionQueueRingAddressMethodId = (*env)->GetMethodID(env, completionQueueClass, "getRingAddress", "()J");
-    jmethodID completionQueueRingSizeMethodId = (*env)->GetMethodID(env, completionQueueClass, "getRingSize", "()I");
+    jfieldID completionQueueRingAddressFieldId = (*env)->GetFieldID(env, completionQueueClass, "ringAddress", "J");
+    jfieldID completionQueueRingSizeFieldId = (*env)->GetFieldID(env, completionQueueClass, "ringSize", "I");
 
-    jlong submissionQueueArrayAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueArrayAddressMethodId);
-    jint submissionQueueKringEntries = (*env)->CallIntMethod(env, submissionQueue, submissionQueueRingEntriesMethodId);
-    jint submissionQueueRingFd = (*env)->CallIntMethod(env, submissionQueue, submissionQueueRingFdMethodId);
-    jlong submissionQueueRingAddress = (*env)->CallLongMethod(env, submissionQueue, submissionQueueRingAddressMethodId);
-    jint submissionQueueRingSize = (*env)->CallIntMethod(env, submissionQueue, submissionQueueRingSizeMethodId);
+    jlong submissionQueueArrayAddress = (*env)->GetLongField(env, submissionQueue, submissionQueueArrayAddressFieldId);
+    jint submissionQueueKringEntries = (*env)->GetIntField(env, submissionQueue, submissionQueueRingEntriesFieldId);
+    jint submissionQueueRingFd = (*env)->GetIntField(env, submissionQueue, submissionQueueRingFdFieldId);
+    jlong submissionQueueRingAddress = (*env)->GetLongField(env, submissionQueue, submissionQueueRingAddressFieldId);
+    jint submissionQueueRingSize = (*env)->GetIntField(env, submissionQueue, submissionQueueRingSizeFieldId);
 
-    jlong completionQueueRingAddress = (*env)->CallLongMethod(env, completionQueue, completionQueueRingAddressMethodId);
-    jint completionQueueRingSize = (*env)->CallIntMethod(env, completionQueue, completionQueueRingSizeMethodId);
+    jlong completionQueueRingAddress = (*env)->GetLongField(env, completionQueue, completionQueueRingAddressFieldId);
+    jint completionQueueRingSize = (*env)->GetIntField(env, completionQueue, completionQueueRingSizeFieldId);
 
     munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueKringEntries * sizeof(struct io_uring_sqe));
     munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
