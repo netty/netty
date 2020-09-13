@@ -101,15 +101,18 @@ final class IOUringSubmissionQueue {
     }
 
     private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
-        boolean submitted = false;
         int pending = tail - head;
-        if (pending == ringEntries) {
-            submit();
-            submitted = true;
+        boolean submit = pending == ringEntries;
+        if (submit) {
+            int submitted = submit();
+            if (submitted == 0) {
+                // We have a problem, could not submit to make more room in the ring
+                throw new RuntimeException("SQ ring full and no submissions accepted");
+            }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
         setData(sqe, op, rwFlags, fd, bufferAddress, length, offset);
-        return submitted;
+        return submit;
     }
 
     private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
@@ -185,20 +188,36 @@ final class IOUringSubmissionQueue {
         return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
     }
 
-    public void submit() {
+    public int submit() {
+        int submit = tail - head;
+        return submit > 0 ? submit(submit, 0, 0) : 0;
+    }
+
+    public int submitAndWait() {
         int submit = tail - head;
         if (submit > 0) {
-            PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
-            int ret = Native.ioUringEnter(ringFd, submit, 0, 0);
-            head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
-            if (ret != submit) {
-                if (ret < 0) {
-                    throw new RuntimeException("ioUringEnter syscall");
-                }
-                logger.warn("Not all submissions succeeded");
-            }
-            submissionCallback.run();
+            return submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
         }
+        assert submit == 0;
+        int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
+        if (ret < 0) {
+            throw new RuntimeException("ioUringEnter syscall returned " + ret);
+        }
+        return ret; // should be 0
+    }
+
+    private int submit(int toSubmit, int minComplete, int flags) {
+        PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
+        int ret = Native.ioUringEnter(ringFd, toSubmit, minComplete, flags);
+        head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
+        if (ret != toSubmit) {
+            if (ret < 0) {
+                throw new RuntimeException("ioUringEnter syscall returned " + ret);
+            }
+            logger.warn("Not all submissions succeeded");
+        }
+        submissionCallback.run();
+        return ret;
     }
 
     private void setTimeout(long timeoutNanoSeconds) {
@@ -231,6 +250,8 @@ final class IOUringSubmissionQueue {
         PlatformDependent.freeMemory(timeoutMemoryAddress);
     }
 
+    // The getters below are called from JNI code
+
     public int getRingEntries() {
         return this.ringEntries;
     }
@@ -254,5 +275,4 @@ final class IOUringSubmissionQueue {
     public long getRingAddress() {
         return this.ringAddress;
     }
-
 }

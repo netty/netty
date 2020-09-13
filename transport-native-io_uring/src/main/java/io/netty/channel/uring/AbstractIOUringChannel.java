@@ -163,6 +163,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected abstract AbstractUringUnsafe newUnsafe();
 
+    AbstractUringUnsafe ioUringUnsafe() {
+        return (AbstractUringUnsafe) unsafe();
+    }
+
     @Override
     protected boolean isCompatible(final EventLoop loop) {
         return loop instanceof IOUringEventLoop;
@@ -255,9 +259,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
-        final AbstractUringUnsafe unsafe = (AbstractUringUnsafe) unsafe();
         if ((ioState & POLL_IN_SCHEDULED) == 0) {
-            unsafe.schedulePollIn();
+            ioUringUnsafe().schedulePollIn();
         }
     }
 

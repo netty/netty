@@ -61,10 +61,9 @@ public class NativeTest {
         assertTrue(completionQueue.ioUringWaitCqe());
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
-            public boolean handle(int fd, int res, long flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, int mask) {
                 assertEquals(inputString.length(), res);
                 writeEventByteBuf.release();
-                return true;
             }
         }));
 
@@ -76,10 +75,9 @@ public class NativeTest {
         assertTrue(completionQueue.ioUringWaitCqe());
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
-            public boolean handle(int fd, int res, long flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, int mask) {
                 assertEquals(inputString.length(), res);
                 readEventByteBuf.writerIndex(res);
-                return true;
             }
         }));
         byte[] dataRead = new byte[inputString.length()];
@@ -109,9 +107,8 @@ public class NativeTest {
                 try {
                     completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                         @Override
-                        public boolean handle(int fd, int res, long flags, int op, int mask) {
+                        public void handle(int fd, int res, int flags, int op, int mask) {
                             assertEquals(-62, res);
-                            return true;
                         }
                     });
                 } catch (Exception e) {
@@ -158,9 +155,8 @@ public class NativeTest {
         assertTrue(completionQueue.ioUringWaitCqe());
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
-            public boolean handle(int fd, int res, long flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, int mask) {
                 assertEquals(1, res);
-                return true;
             }
         }));
         try {
@@ -190,9 +186,8 @@ public class NativeTest {
                 assertTrue(completionQueue.ioUringWaitCqe());
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                     @Override
-                    public boolean handle(int fd, int res, long flags, int op, int mask) {
+                    public void handle(int fd, int res, int flags, int op, int mask) {
                         assertEquals(1, res);
-                        return true;
                     }
                 }));
             }
@@ -242,7 +237,7 @@ public class NativeTest {
             private final IOUringCompletionQueue.IOUringCompletionQueueCallback verifyCallback =
                     new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                 @Override
-                public boolean handle(int fd, int res, long flags, int op, int mask) {
+                public void handle(int fd, int res, int flags, int op, int mask) {
                     if (op == Native.IORING_OP_POLL_ADD) {
                         assertEquals(Native.ERRNO_ECANCELED_NEGATIVE, res);
                     } else if (op == Native.IORING_OP_POLL_REMOVE) {
@@ -250,7 +245,6 @@ public class NativeTest {
                     } else {
                         fail("op " + op);
                     }
-                    return false;
                 }
             };
 
@@ -258,9 +252,7 @@ public class NativeTest {
             public void run() {
                 try {
                     assertTrue(completionQueue.ioUringWaitCqe());
-                    assertEquals(1, completionQueue.process(verifyCallback));
-                    assertTrue(completionQueue.ioUringWaitCqe());
-                    assertEquals(1, completionQueue.process(verifyCallback));
+                    assertEquals(2, completionQueue.process(verifyCallback));
                 } catch (AssertionError error) {
                     errorRef.set(error);
                 }
