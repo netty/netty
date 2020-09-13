@@ -249,30 +249,4 @@ final class IOUringSubmissionQueue {
     public void release() {
         PlatformDependent.freeMemory(timeoutMemoryAddress);
     }
-
-    // The getters below are called from JNI code
-
-    public int getRingEntries() {
-        return this.ringEntries;
-    }
-
-    public long getArrayAddress() {
-        return this.arrayAddress;
-    }
-
-    public long getSubmissionQueueArrayAddress() {
-        return this.submissionQueueArrayAddress;
-    }
-
-    public int getRingFd() {
-        return this.ringFd;
-    }
-
-    public int getRingSize() {
-        return this.ringSize;
-    }
-
-    public long getRingAddress() {
-        return this.ringAddress;
-    }
 }
