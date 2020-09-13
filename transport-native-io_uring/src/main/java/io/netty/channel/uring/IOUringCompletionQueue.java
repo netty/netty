@@ -40,6 +40,9 @@ final class IOUringCompletionQueue {
   private final long ringAddress;
   private final int ringFd;
 
+  private final int ringMask;
+  private int ringHead;
+
   IOUringCompletionQueue(long kHeadAddress, long kTailAddress, long kringMaskAddress, long kringEntries,
       long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress, int ringFd) {
     this.kHeadAddress = kHeadAddress;
@@ -51,44 +54,42 @@ final class IOUringCompletionQueue {
     this.ringSize = ringSize;
     this.ringAddress = ringAddress;
     this.ringFd = ringFd;
+
+    this.ringMask = PlatformDependent.getIntVolatile(kringMaskAddress);
+    this.ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
+  }
+
+  public boolean hasCompletions() {
+      return ringHead != PlatformDependent.getIntVolatile(kTailAddress);
   }
 
   public int process(IOUringCompletionQueueCallback callback) {
+      int tail = PlatformDependent.getIntVolatile(kTailAddress);
       int i = 0;
-      for (;;) {
-          long head = toUnsignedLong(PlatformDependent.getIntVolatile(kHeadAddress));
-          if (head != toUnsignedLong(PlatformDependent.getInt(kTailAddress))) {
-              long index = head & toUnsignedLong(PlatformDependent.getInt(kringMaskAddress));
-              long cqe = index * CQE_SIZE + completionQueueArrayAddress;
+      while (ringHead != tail) {
+          long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
 
-              long udata = PlatformDependent.getLong(cqe + CQE_USER_DATA_FIELD);
-              int res = PlatformDependent.getInt(cqe + CQE_RES_FIELD);
-              long flags = toUnsignedLong(PlatformDependent.getInt(cqe + CQE_FLAGS_FIELD));
+          long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
+          int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
+          int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
 
-              //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-              PlatformDependent.putIntOrdered(kHeadAddress, (int) (head + 1));
+          //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
+          ringHead++;
+          PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
-              int fd = (int) (udata >> 32);
-              int opMask = (int) udata;
-              short op = (short) (opMask >> 16);
-              short mask = (short) opMask;
+          int fd = (int) (udata >>> 32);
+          int opMask = (int) (udata & 0xFFFFFFFFL);
+          int op = opMask >>> 16;
+          int mask = opMask & 0xffff;
 
-              i++;
-              if (!callback.handle(fd, res, flags, op, mask)) {
-                  break;
-              }
-          } else {
-              if (i == 0) {
-                  return -1;
-              }
-              return i;
-          }
+          i++;
+          callback.handle(fd, res, flags, op, mask);
       }
       return i;
   }
 
   interface IOUringCompletionQueueCallback {
-      boolean handle(int fd, int res, long flags, int op, int mask);
+      void handle(int fd, int res, int flags, int op, int mask);
   }
 
   public boolean ioUringWaitCqe() {
