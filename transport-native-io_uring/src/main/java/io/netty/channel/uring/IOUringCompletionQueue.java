@@ -105,38 +105,6 @@ final class IOUringCompletionQueue {
     return false;
   }
 
-  public long getKHeadAddress() {
-    return this.kHeadAddress;
-  }
-
-  public long getKTailAddress() {
-    return this.kTailAddress;
-  }
-
-  public long getKringMaskAddress() {
-    return this.kringMaskAddress;
-  }
-
-  public long getKringEntries() {
-    return this.kringEntries;
-  }
-
-  public long getKOverflowAddress() {
-    return this.kOverflowAddress;
-  }
-
-  public long getCompletionQueueArrayAddress() {
-    return this.completionQueueArrayAddress;
-  }
-
-  public int getRingSize() {
-    return this.ringSize;
-  }
-
-  public long getRingAddress() {
-    return this.ringAddress;
-  }
-
   //Todo Integer.toUnsignedLong -> maven checkstyle error
   public static long toUnsignedLong(int x) {
     return ((long) x) & 0xffffffffL;
