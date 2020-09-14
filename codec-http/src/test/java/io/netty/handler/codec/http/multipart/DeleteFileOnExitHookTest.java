@@ -57,7 +57,7 @@ public class DeleteFileOnExitHookTest {
     public void testSimulateTriggerDeleteFileOnExitHook() {
 
         // simulate app exit
-        DeleteFileOnExitHook.runHooks();
+        DeleteFileOnExitHook.runHook();
 
         File[] files = new File(HOOK_TEST_TMP).listFiles(new FilenameFilter() {
             @Override

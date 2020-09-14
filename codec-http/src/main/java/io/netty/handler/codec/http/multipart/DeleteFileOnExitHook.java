@@ -38,7 +38,7 @@ final class DeleteFileOnExitHook {
 
             @Override
             public void run() {
-                runHooks();
+                runHook();
             }
         });
     }
@@ -74,7 +74,7 @@ final class DeleteFileOnExitHook {
     /**
      * Clean up all the files.
      */
-    static void runHooks() {
+    static void runHook() {
         for (String filename : FILES) {
             new File(filename).delete();
         }
