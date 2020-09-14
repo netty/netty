@@ -24,7 +24,7 @@ public final class MqttUnsubAckMessage extends MqttMessage {
     public MqttUnsubAckMessage(MqttFixedHeader mqttFixedHeader,
                                MqttMessageIdAndPropertiesVariableHeader variableHeader,
                                MqttUnsubAckPayload payload) {
-        super(mqttFixedHeader, variableHeader, payload);
+        super(mqttFixedHeader, variableHeader, MqttUnsubAckPayload.withEmptyDefaults(payload));
     }
 
     public MqttUnsubAckMessage(MqttFixedHeader mqttFixedHeader,
