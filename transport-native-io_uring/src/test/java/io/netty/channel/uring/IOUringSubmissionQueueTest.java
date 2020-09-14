@@ -33,8 +33,8 @@ public class IOUringSubmissionQueueTest {
     public void sqeFullTest() {
         RingBuffer ringBuffer = Native.createRingBuffer(8);
         try {
-            IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-            final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+            IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
             assertNotNull(ringBuffer);
             assertNotNull(submissionQueue);
