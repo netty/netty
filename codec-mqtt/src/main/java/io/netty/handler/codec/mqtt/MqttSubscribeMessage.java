@@ -33,7 +33,7 @@ public final class MqttSubscribeMessage extends MqttMessage {
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttSubscribePayload payload) {
-        this(mqttFixedHeader, variableHeader.withEmptyProperties(), payload);
+        this(mqttFixedHeader, variableHeader.withDefaultEmptyProperties(), payload);
     }
 
     @Override
