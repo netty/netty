@@ -671,6 +671,14 @@ static jlong netty_io_uring_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint
 
     return res;
 }
+
+static int netty_io_uring_linuxsocket_initInetSocketAddressArray(JNIEnv* env, jclass clazz, jlong acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress, jbyteArray array) {
+    const struct sockaddr_storage* addr = (const struct sockaddr_storage*) acceptedAddressMemoryAddress;
+    jsize len = netty_unix_socket_addressArrayLength(addr);
+    netty_unix_socket_initInetSocketAddressArray(env, addr, array, 0, len);
+    return len;
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -714,7 +722,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "joinSsmGroup", "(IZ[B[BII[B)V", (void *) netty_io_uring_linuxsocket_joinSsmGroup },
   { "leaveGroup", "(IZ[B[BII)V", (void *) netty_io_uring_linuxsocket_leaveGroup },
   { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty_io_uring_linuxsocket_leaveSsmGroup },
-  {"initAddress", "(IZ[BIIJ)I", (void *) netty_io_uring_initAddress }
+  { "initAddress", "(IZ[BIIJ)I", (void *) netty_io_uring_initAddress },
+  { "initInetSocketAddressArray", "(JJ[B)I", netty_io_uring_linuxsocket_initInetSocketAddressArray }
   // "sendFile" has a dynamic signature
 };
 

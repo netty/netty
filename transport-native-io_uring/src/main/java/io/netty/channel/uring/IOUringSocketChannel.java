@@ -20,6 +20,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 public final class IOUringSocketChannel extends AbstractIOUringStreamChannel implements SocketChannel {
     private final IOUringSocketChannelConfig config;
@@ -31,6 +32,11 @@ public final class IOUringSocketChannel extends AbstractIOUringStreamChannel imp
 
     IOUringSocketChannel(final Channel parent, final LinuxSocket fd) {
         super(parent, fd);
+        this.config = new IOUringSocketChannelConfig(this);
+    }
+
+    IOUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(parent, fd, remote);
         this.config = new IOUringSocketChannelConfig(this);
     }
 

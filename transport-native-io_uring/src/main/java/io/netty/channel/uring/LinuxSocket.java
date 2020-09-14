@@ -393,4 +393,6 @@ final class LinuxSocket extends Socket {
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
     private static native int initAddress(
             int fd, boolean ipv6, byte[] address, int scopeId, int port, long memoryAddress);
+
+    static native int initInetSocketAddressArray(long addr, long addressLen, byte[] array);
 }

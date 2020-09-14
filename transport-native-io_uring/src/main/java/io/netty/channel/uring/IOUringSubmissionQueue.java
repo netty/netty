@@ -166,8 +166,9 @@ final class IOUringSubmissionQueue {
         return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
     }
 
-    public boolean addAccept(int fd) {
-        return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd, 0, 0, 0);
+    public boolean addAccept(int fd, long address, long addressLength) {
+        return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
+                address, 0, addressLength);
     }
 
     //fill the address which is associated with server poll link user_data
