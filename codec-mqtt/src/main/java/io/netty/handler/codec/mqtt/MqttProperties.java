@@ -117,6 +117,14 @@ public final class MqttProperties {
             this.propertyId = propertyId;
             this.value = value;
         }
+
+        public T value() {
+            return value;
+        }
+
+        public int propertyId() {
+            return propertyId;
+        }
     }
 
     public static final class IntegerProperty extends MqttProperty<Integer> {
