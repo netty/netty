@@ -703,7 +703,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     protected void doRegister() throws Exception {
         IOUringEventLoop eventLoop = (IOUringEventLoop) eventLoop();
         eventLoop.add(this);
-        submissionQueue = eventLoop.getRingBuffer().getIoUringSubmissionQueue();
+        submissionQueue = eventLoop.getRingBuffer().ioUringSubmissionQueue();
     }
 
     @Override

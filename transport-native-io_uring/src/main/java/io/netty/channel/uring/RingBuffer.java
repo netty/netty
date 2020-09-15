@@ -17,24 +17,31 @@ package io.netty.channel.uring;
 
 
 final class RingBuffer {
-  private final IOUringSubmissionQueue ioUringSubmissionQueue;
-  private final IOUringCompletionQueue ioUringCompletionQueue;
+    private final IOUringSubmissionQueue ioUringSubmissionQueue;
+    private final IOUringCompletionQueue ioUringCompletionQueue;
 
-  RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
-    this.ioUringSubmissionQueue = ioUringSubmissionQueue;
-    this.ioUringCompletionQueue = ioUringCompletionQueue;
-  }
+    RingBuffer(IOUringSubmissionQueue ioUringSubmissionQueue, IOUringCompletionQueue ioUringCompletionQueue) {
+        this.ioUringSubmissionQueue = ioUringSubmissionQueue;
+        this.ioUringCompletionQueue = ioUringCompletionQueue;
+    }
 
-  public IOUringSubmissionQueue getIoUringSubmissionQueue() {
-    return this.ioUringSubmissionQueue;
-  }
+     IOUringSubmissionQueue ioUringSubmissionQueue() {
+        return this.ioUringSubmissionQueue;
+    }
 
-  public IOUringCompletionQueue getIoUringCompletionQueue() {
-    return this.ioUringCompletionQueue;
-  }
+    IOUringCompletionQueue ioUringCompletionQueue() {
+        return this.ioUringCompletionQueue;
+    }
 
-  public void close() {
-      getIoUringSubmissionQueue().release();
-      Native.ioUringExit(this);
-  }
+    void close() {
+        ioUringSubmissionQueue.release();
+        Native.ioUringExit(
+                ioUringSubmissionQueue.submissionQueueArrayAddress,
+                ioUringSubmissionQueue.ringEntries,
+                ioUringSubmissionQueue.ringAddress,
+                ioUringSubmissionQueue.ringSize,
+                ioUringCompletionQueue.ringAddress,
+                ioUringCompletionQueue.ringSize,
+                ioUringCompletionQueue.ringFd);
+    }
 }

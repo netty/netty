@@ -37,8 +37,8 @@ public class IOUringSubmissionQueueTest {
         RingBuffer ringBuffer = Native.createRingBuffer(8);
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(128);
         try {
-            IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-            final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+            IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
             assertNotNull(ringBuffer);
             assertNotNull(submissionQueue);
