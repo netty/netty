@@ -80,7 +80,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     private ChannelPromise delayedClose;
     private boolean inputClosedSeenErrorOnRead;
-    private static final int SOCK_ADDR_LEN = 128;
+    static final int SOCK_ADDR_LEN = 128;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.

@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.NativeInetAddress;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -35,8 +36,8 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     }
 
     @Override
-    Channel newChildChannel(int fd) throws Exception {
-        return new IOUringSocketChannel(this, new LinuxSocket(fd));
+    Channel newChildChannel(int fd, byte[] array, int offset, int len) {
+        return new IOUringSocketChannel(this, new LinuxSocket(fd), NativeInetAddress.address(array, offset, len));
     }
 
     @Override

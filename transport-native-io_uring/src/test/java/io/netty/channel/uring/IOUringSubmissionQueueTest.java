@@ -15,8 +15,11 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Buffer;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -32,6 +35,7 @@ public class IOUringSubmissionQueueTest {
     @Test
     public void sqeFullTest() {
         RingBuffer ringBuffer = Native.createRingBuffer(8);
+        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(128);
         try {
             IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
             final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
@@ -40,12 +44,14 @@ public class IOUringSubmissionQueueTest {
             assertNotNull(submissionQueue);
             assertNotNull(completionQueue);
 
+            long address = Buffer.memoryAddress(buffer);
             int counter = 0;
-            while (!submissionQueue.addAccept(-1)) {
+            while (!submissionQueue.addAccept(-1, address, 128)) {
                 counter++;
             }
             assertEquals(8, counter);
         } finally {
+            Buffer.free(buffer);
             ringBuffer.close();
         }
     }

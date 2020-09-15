@@ -121,7 +121,7 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
     return obj;
 }
 
-static jsize addressLength(const struct sockaddr_storage* addr) {
+jsize netty_unix_socket_addressArrayLength(const struct sockaddr_storage* addr) {
     int len = netty_unix_socket_ipAddressLength(addr);
     if (len == 4) {
         // Only encode port into it
@@ -131,7 +131,7 @@ static jsize addressLength(const struct sockaddr_storage* addr) {
     return len + 8;
 }
 
-static void initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr, jbyteArray bArray, int offset, jsize len) {
+void netty_unix_socket_initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr, jbyteArray bArray, int offset, jsize len) {
     int port;
     if (addr->ss_family == AF_INET) {
         struct sockaddr_in* s = (struct sockaddr_in*) addr;
@@ -180,12 +180,12 @@ static void initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storag
 }
 
 jbyteArray netty_unix_socket_createInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
-    jsize len = addressLength(addr);
+    jsize len = netty_unix_socket_addressArrayLength(addr);
     jbyteArray bArray = (*env)->NewByteArray(env, len);
     if (bArray == NULL) {
         return NULL;
     }
-    initInetSocketAddressArray(env, addr, bArray, 0, len);
+    netty_unix_socket_initInetSocketAddressArray(env, addr, bArray, 0, len);
     return bArray;
 }
 
@@ -564,7 +564,6 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
 #ifdef SOCK_NONBLOCK
         }
 #endif
-
         if (socketFd != -1) {
             break;
         }
@@ -573,12 +572,12 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
         }
     }
 
-    len = addressLength(&addr);
+    len = netty_unix_socket_addressArrayLength(&addr);
     len_b = (jbyte) len;
 
     // Fill in remote address details
     (*env)->SetByteArrayRegion(env, acceptedAddress, 0, 1, (jbyte*) &len_b);
-    initInetSocketAddressArray(env, &addr, acceptedAddress, 1, len);
+    netty_unix_socket_initInetSocketAddressArray(env, &addr, acceptedAddress, 1, len);
 
     if (accept4)  {
         return socketFd;
