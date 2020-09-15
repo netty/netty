@@ -48,48 +48,58 @@ public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
      * Create a new instance using the default number of threads and the given {@link ThreadFactory}.
      */
     public IOUringEventLoopGroup(ThreadFactory threadFactory) {
-        this(0, threadFactory, 0);
+        this(0, threadFactory, 0, Native.DEFAULT_USE_IOSEQ_ASYNC);
     }
 
     /**
      * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
      */
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        this(nThreads, threadFactory, 0);
-    }
-
-    public IOUringEventLoopGroup(int nThreads, Executor executor) {
-        this(nThreads, executor, 0);
+        this(nThreads, threadFactory, 0, Native.DEFAULT_USE_IOSEQ_ASYNC);
     }
 
     /**
-     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
-     * maximal size of the used ringbuffer.
+     * Create a new instance using the specified number of threads and the given {@link Executor}.
      */
-    public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory, int ringSize) {
-        this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), ringSize);
+    public IOUringEventLoopGroup(int nThreads, Executor executor) {
+        this(nThreads, executor, 0, Native.DEFAULT_USE_IOSEQ_ASYNC);
     }
 
-    public IOUringEventLoopGroup(int nThreads, Executor executor, int ringsize) {
+    /**
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory}, the given
+     * size of the used ringbuffer and
+     * if <a href=https://manpages.debian.org/unstable/liburing-dev/io_uring_enter.2.en.html>IOSEQ_ASYNC</a> should be
+     * used for  IO operations.
+     */
+    public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory, int ringSize, boolean iosqeAsync) {
+        this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), ringSize, iosqeAsync);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads, the given {@link Executor}, the given
+     * size of the used ringbuffer and
+     * if <a href=https://manpages.debian.org/unstable/liburing-dev/io_uring_enter.2.en.html>IOSEQ_ASYNC</a> should be
+     * used for  IO operations.
+     */
+    public IOUringEventLoopGroup(int nThreads, Executor executor, int ringsize, boolean iosqeAsync) {
         this(nThreads, executor, DefaultEventExecutorChooserFactory.INSTANCE,
-                ringsize, RejectedExecutionHandlers.reject());
+                ringsize, iosqeAsync, RejectedExecutionHandlers.reject());
     }
 
     private IOUringEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
-                                  int ringSize, RejectedExecutionHandler rejectedExecutionHandler) {
-        this(nThreads, executor, chooserFactory, ringSize, rejectedExecutionHandler, null);
+                                  int ringSize, boolean iosqeAsync, RejectedExecutionHandler rejectedExecutionHandler) {
+        this(nThreads, executor, chooserFactory, ringSize, iosqeAsync, rejectedExecutionHandler, null);
     }
 
     private IOUringEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
-                                  int ringSize, RejectedExecutionHandler rejectedExecutionHandler,
+                                  int ringSize, boolean iosqeAsync, RejectedExecutionHandler rejectedExecutionHandler,
                                   EventLoopTaskQueueFactory queueFactory) {
-        super(nThreads, executor, chooserFactory, ringSize, rejectedExecutionHandler, queueFactory);
+        super(nThreads, executor, chooserFactory, ringSize, iosqeAsync, rejectedExecutionHandler, queueFactory);
     }
 
-    //Todo
     @Override
     protected EventLoop newChild(Executor executor, Object... args) {
-        if (args.length != 3) {
+        if (args.length != 4) {
             throw new IllegalArgumentException("Illegal amount of extra arguments");
         }
         int ringSize = (Integer) args[0];
@@ -97,8 +107,9 @@ public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
         if (ringSize == 0) {
             ringSize = Native.DEFAULT_RING_SIZE;
         }
-        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[1];
-        EventLoopTaskQueueFactory taskQueueFactory = (EventLoopTaskQueueFactory) args[2];
-        return new IOUringEventLoop(this, executor, ringSize, rejectedExecutionHandler, taskQueueFactory);
+        boolean iosqeAsync = (Boolean) args[1];
+        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[2];
+        EventLoopTaskQueueFactory taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+        return new IOUringEventLoop(this, executor, ringSize, iosqeAsync, rejectedExecutionHandler, taskQueueFactory);
     }
 }

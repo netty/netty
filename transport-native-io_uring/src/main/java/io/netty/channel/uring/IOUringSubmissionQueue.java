@@ -67,7 +67,8 @@ final class IOUringSubmissionQueue {
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long fFlagsAdress, long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress,
-                           int ringSize, long ringAddress, int ringFd, Runnable submissionCallback) {
+                           int ringSize, long ringAddress, int ringFd,
+                           boolean iosqeAsync, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.fFlagsAdress = fFlagsAdress;
@@ -91,10 +92,10 @@ final class IOUringSubmissionQueue {
         // Fill SQ array indices (1-1 with SQE array) and set nonzero constant SQE fields
         long address = arrayAddress;
         long sqeFlagsAddress = submissionQueueArrayAddress + SQE_FLAGS_FIELD;
+        byte flag = iosqeAsync ? (byte) Native.IOSQE_ASYNC : 0;
         for (int i = 0; i < ringEntries; i++, address += INT_SIZE, sqeFlagsAddress += SQE_SIZE) {
             PlatformDependent.putInt(address, i);
-            // TODO: Make it configurable if we should use this flag or not.
-            PlatformDependent.putByte(sqeFlagsAddress, (byte) Native.IOSQE_ASYNC);
+            PlatformDependent.putByte(sqeFlagsAddress, flag);
         }
     }
 
