@@ -56,7 +56,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
-    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize,
+    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
@@ -66,7 +66,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
         //       allow to change this in the future.
         iovArrays = new IovArrays(8);
-        ringBuffer = Native.createRingBuffer(ringSize, new Runnable() {
+        ringBuffer = Native.createRingBuffer(ringSize, ioseqAsync, new Runnable() {
             @Override
             public void run() {
                 // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
