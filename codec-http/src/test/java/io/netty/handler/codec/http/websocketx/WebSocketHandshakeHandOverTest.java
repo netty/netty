@@ -193,24 +193,29 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(null);
         EmbeddedChannel serverChannel = createServerChannel(null);
 
-        // Start handshake from client to server but don't complete the handshake for the purpose of this test.
-        transferAllDataWithMerge(clientChannel, serverChannel);
+        try {
+            // Start handshake from client to server but don't complete the handshake for the purpose of this test.
+            transferAllDataWithMerge(clientChannel, serverChannel);
 
-        final WebSocketClientProtocolHandler clientWsHandler =
-                clientChannel.pipeline().get(WebSocketClientProtocolHandler.class);
-        final WebSocketClientProtocolHandshakeHandler clientWsHandshakeHandler =
-                clientChannel.pipeline().get(WebSocketClientProtocolHandshakeHandler.class);
+            final WebSocketClientProtocolHandler clientWsHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandler.class);
+            final WebSocketClientProtocolHandshakeHandler clientWsHandshakeHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandshakeHandler.class);
 
-        final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
+            final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
 
-        // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
-        // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
-        // we would manually close the channel.
-        clientWsHandler.close(ctx, ctx.newPromise());
+            // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
+            // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
+            // we would manually close the channel.
+            clientWsHandler.close(ctx, ctx.newPromise());
 
-        // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
-        // channel is closed.
-        assertTrue(clientWsHandshakeHandler.getHandshakeFuture().isDone());
+            // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
+            // channel is closed.
+            assertTrue(clientWsHandshakeHandler.getHandshakeFuture().isDone());
+        } finally {
+            serverChannel.finishAndReleaseAll();
+            clientChannel.finishAndReleaseAll();
+        }
     }
 
     @Test(timeout = 10000)
