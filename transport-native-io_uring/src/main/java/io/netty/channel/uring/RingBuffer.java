@@ -40,8 +40,6 @@ final class RingBuffer {
                 ioUringSubmissionQueue.ringEntries,
                 ioUringSubmissionQueue.ringAddress,
                 ioUringSubmissionQueue.ringSize,
-                ioUringSubmissionQueue.ringFd,
-
                 ioUringCompletionQueue.ringAddress,
                 ioUringCompletionQueue.ringSize,
                 ioUringCompletionQueue.ringFd);

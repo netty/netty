@@ -131,10 +131,6 @@ final class Native {
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
-    public static native int ioUringRegisterEventFd(int ringFd, int eventFd);
-
-    public static native int ioUringUnregisterEventFd(int ringFd);
-
     public static native void eventFdWrite(int fd, long value);
 
     public static FileDescriptor newBlockingEventFd() {
@@ -143,9 +139,8 @@ final class Native {
 
     public static native void ioUringExit(long submissionQueueArrayAddress, int submissionQueueRingEntries,
                                           long submissionQueueRingAddress, int submissionQueueRingSize,
-                                          int submissionQueueRingFd,
                                           long completionQueueRingAddress, int completionQueueRingSize,
-                                          int completionQueueRingfd);
+                                          int ringFd);
 
     private static native int blockingEventFd();
 

@@ -195,18 +195,15 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
 }
 
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
-        jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize, jint submissionQueueRingFd,
-        jlong completionQueueRingAddress, jint completionQueueRingSize, jint completionQueueRingfd) {
+        jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize,
+        jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd) {
     munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
     munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
 
     if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
         munmap((void *)completionQueueRingAddress, completionQueueRingSize);
     }
-    close(submissionQueueRingFd);
-    if (completionQueueRingfd != submissionQueueRingFd) {
-        close(completionQueueRingfd);
-    }
+    close(ringFd);
 }
 
 static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) {
@@ -379,7 +376,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(I)[[J", (void *) netty_io_uring_setup},
-    {"ioUringExit", "(JIJIIJII)V", (void *) netty_io_uring_ring_buffer_exit},
+    {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
