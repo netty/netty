@@ -30,7 +30,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * Abstract Disk HttpData implementation
@@ -93,7 +94,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     getBaseDirectory()));
         }
         if (deleteOnExit()) {
-            tmpFile.deleteOnExit();
+            // See https://github.com/netty/netty/issues/10351
+            DeleteFileOnExitHook.add(tmpFile.getPath());
         }
         return tmpFile;
     }
@@ -270,11 +272,20 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             }
             fileChannel = null;
         }
-        if (! isRenamed) {
+        if (!isRenamed) {
+            String filePath = null;
+
             if (file != null && file.exists()) {
+                filePath = file.getPath();
                 if (!file.delete()) {
+                    filePath = null;
                     logger.warn("Failed to delete: {}", file);
                 }
+            }
+
+            // If you turn on deleteOnExit make sure it is executed.
+            if (deleteOnExit() && filePath != null) {
+                DeleteFileOnExitHook.remove(filePath);
             }
             file = null;
         }
@@ -378,7 +389,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     if (chunkSize < size - position) {
                         chunkSize = size - position;
                     }
-                    position += in.transferTo(position, chunkSize , out);
+                    position += in.transferTo(position, chunkSize, out);
                 }
             } catch (IOException e) {
                 exception = e;
@@ -430,6 +441,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     /**
      * Utility function
+     *
      * @return the array of bytes
      */
     private static byte[] readFrom(File src) throws IOException {
