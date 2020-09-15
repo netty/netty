@@ -58,18 +58,29 @@ public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
         this(nThreads, threadFactory, 0, Native.DEFAULT_USE_IOSEQ_ASYNC);
     }
 
+    /**
+     * Create a new instance using the specified number of threads and the given {@link Executor}.
+     */
     public IOUringEventLoopGroup(int nThreads, Executor executor) {
         this(nThreads, executor, 0, Native.DEFAULT_USE_IOSEQ_ASYNC);
     }
 
     /**
-     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
-     * maximal size of the used ringbuffer.
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory}, the given
+     * size of the used ringbuffer and
+     * if <a href=https://manpages.debian.org/unstable/liburing-dev/io_uring_enter.2.en.html>IOSEQ_ASYNC</a> should be
+     * used for  IO operations.
      */
     public IOUringEventLoopGroup(int nThreads, ThreadFactory threadFactory, int ringSize, boolean iosqeAsync) {
         this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), ringSize, iosqeAsync);
     }
 
+    /**
+     * Create a new instance using the specified number of threads, the given {@link Executor}, the given
+     * size of the used ringbuffer and
+     * if <a href=https://manpages.debian.org/unstable/liburing-dev/io_uring_enter.2.en.html>IOSEQ_ASYNC</a> should be
+     * used for  IO operations.
+     */
     public IOUringEventLoopGroup(int nThreads, Executor executor, int ringsize, boolean iosqeAsync) {
         this(nThreads, executor, DefaultEventExecutorChooserFactory.INSTANCE,
                 ringsize, iosqeAsync, RejectedExecutionHandlers.reject());
@@ -86,7 +97,6 @@ public final class IOUringEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, executor, chooserFactory, ringSize, iosqeAsync, rejectedExecutionHandler, queueFactory);
     }
 
-    //Todo
     @Override
     protected EventLoop newChild(Executor executor, Object... args) {
         if (args.length != 4) {
