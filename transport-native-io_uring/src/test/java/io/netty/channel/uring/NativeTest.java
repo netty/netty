@@ -47,8 +47,8 @@ public class NativeTest {
         int fd = Native.createFile();
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
         assertNotNull(ringBuffer);
         assertNotNull(submissionQueue);
@@ -93,8 +93,8 @@ public class NativeTest {
     public void timeoutTest() throws Exception {
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
         assertNotNull(ringBuffer);
         assertNotNull(submissionQueue);
@@ -134,8 +134,8 @@ public class NativeTest {
     @Test
     public void eventfdTest() throws Exception {
         RingBuffer ringBuffer = Native.createRingBuffer(32);
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
         assertNotNull(ringBuffer);
         assertNotNull(submissionQueue);
@@ -173,8 +173,8 @@ public class NativeTest {
     public void eventfdNoSignal() throws Exception {
 
         RingBuffer ringBuffer = Native.createRingBuffer(32);
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
         assertNotNull(ringBuffer);
         assertNotNull(submissionQueue);
@@ -223,8 +223,8 @@ public class NativeTest {
     @Test
     public void ioUringPollRemoveTest() throws Exception {
         RingBuffer ringBuffer = Native.createRingBuffer(32);
-        IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
-        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
 
         FileDescriptor eventFd = Native.newBlockingEventFd();
         submissionQueue.addPollIn(eventFd.intValue());

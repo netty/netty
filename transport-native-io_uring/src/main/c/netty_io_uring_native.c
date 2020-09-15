@@ -59,12 +59,7 @@
 #include <sys/eventfd.h>
 #include <poll.h>
 
-static jmethodID ringBufferMethodId = NULL;
-static jmethodID ioUringSubmissionQueueMethodId = NULL;
-static jmethodID ioUringCommpletionQueueMethodId = NULL;
-static jclass ringBufferClass = NULL;
-static jclass ioUringCompletionQueueClass = NULL;
-static jclass ioUringSubmissionQueueClass = NULL;
+static jclass longArrayClass = NULL;
 
 static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_unix_limits_JNI_OnUnLoad(env);
@@ -73,12 +68,7 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_unix_socket_JNI_OnUnLoad(env);
     netty_unix_buffer_JNI_OnUnLoad(env);
 
-    ringBufferMethodId = NULL;
-    ioUringSubmissionQueueMethodId = NULL;
-    ioUringCommpletionQueueMethodId = NULL;
-    ringBufferClass = NULL;
-    ioUringCompletionQueueClass = NULL;
-    ioUringSubmissionQueueClass = NULL;
+    longArrayClass = NULL;
 }
 
 void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq) {
@@ -204,47 +194,38 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     }
 }
 
-static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass class, jobject ringBuffer) {
-     // Find the id of the Java method to be called
-
-    jclass ringBufferClass = (*env)->GetObjectClass(env, ringBuffer);
-    jmethodID submissionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringSubmissionQueue", "()Lio/netty/channel/uring/IOUringSubmissionQueue;");
-    jmethodID completionQueueMethodId = (*env)->GetMethodID(env, ringBufferClass, "getIoUringCompletionQueue", "()Lio/netty/channel/uring/IOUringCompletionQueue;");
-
-    jobject submissionQueue = (*env)->CallObjectMethod(env, ringBuffer, submissionQueueMethodId);
-    jobject completionQueue = (*env)->CallObjectMethod(env, ringBuffer, completionQueueMethodId);
-    jclass submissionQueueClass = (*env)->GetObjectClass(env, submissionQueue);
-    jclass completionQueueClass = (*env)->GetObjectClass(env, completionQueue);
-
-    jfieldID submissionQueueArrayAddressFieldId = (*env)->GetFieldID(env, submissionQueueClass, "submissionQueueArrayAddress", "J");
-    jfieldID submissionQueueRingEntriesFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringEntries", "I");
-    jfieldID submissionQueueRingFdFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringFd", "I");
-    jfieldID submissionQueueRingAddressFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringAddress", "J");
-    jfieldID submissionQueueRingSizeFieldId = (*env)->GetFieldID(env, submissionQueueClass, "ringSize", "I");
-
-    jfieldID completionQueueRingAddressFieldId = (*env)->GetFieldID(env, completionQueueClass, "ringAddress", "J");
-    jfieldID completionQueueRingSizeFieldId = (*env)->GetFieldID(env, completionQueueClass, "ringSize", "I");
-
-    jlong submissionQueueArrayAddress = (*env)->GetLongField(env, submissionQueue, submissionQueueArrayAddressFieldId);
-    jint submissionQueueKringEntries = (*env)->GetIntField(env, submissionQueue, submissionQueueRingEntriesFieldId);
-    jint submissionQueueRingFd = (*env)->GetIntField(env, submissionQueue, submissionQueueRingFdFieldId);
-    jlong submissionQueueRingAddress = (*env)->GetLongField(env, submissionQueue, submissionQueueRingAddressFieldId);
-    jint submissionQueueRingSize = (*env)->GetIntField(env, submissionQueue, submissionQueueRingSizeFieldId);
-
-    jlong completionQueueRingAddress = (*env)->GetLongField(env, completionQueue, completionQueueRingAddressFieldId);
-    jint completionQueueRingSize = (*env)->GetIntField(env, completionQueue, completionQueueRingSizeFieldId);
-
-    munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueKringEntries * sizeof(struct io_uring_sqe));
+static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
+        jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize,
+        jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd) {
+    munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
     munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
-	if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
-		munmap((void *)completionQueueRingAddress, completionQueueRingSize);
-	}
-	close(submissionQueueRingFd);
+
+    if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
+        munmap((void *)completionQueueRingAddress, completionQueueRingSize);
+    }
+    close(ringFd);
 }
 
-static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jobject submitCallback) {
+static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
+
+    jobjectArray array = (*env)->NewObjectArray(env, 2, longArrayClass, NULL);
+    if (array == NULL) {
+        // This will put an OOME on the stack
+        return NULL;
+    }
+    jlongArray submissionArray = (*env)->NewLongArray(env, 11);
+    if (submissionArray == NULL) {
+        // This will put an OOME on the stack
+        return NULL;
+
+    }
+    jlongArray completionArray = (*env)->NewLongArray(env, 9);
+    if (completionArray == NULL) {
+        // This will put an OOME on the stack
+        return NULL;
+    }
 
     int ring_fd = sys_io_uring_setup((int)entries, &p);
 
@@ -260,29 +241,37 @@ static jobject netty_io_uring_setup(JNIEnv *env, jclass class1, jint entries, jo
         return NULL;
     }
 
-    jobject ioUringSubmissionQueue = (*env)->NewObject(
-        env, ioUringSubmissionQueueClass, ioUringSubmissionQueueMethodId,
-        (jlong)io_uring_ring.sq.khead, (jlong)io_uring_ring.sq.ktail,
+    jlong submissionArrayElements[] = {
+        (jlong)io_uring_ring.sq.khead,
+        (jlong)io_uring_ring.sq.ktail,
         (jlong)io_uring_ring.sq.kring_mask,
-        (jlong)io_uring_ring.sq.kring_entries, (jlong)io_uring_ring.sq.kflags,
-        (jlong)io_uring_ring.sq.kdropped, (jlong)io_uring_ring.sq.array,
-        (jlong)io_uring_ring.sq.sqes, (jlong)io_uring_ring.sq.ring_sz,
-        (jlong)io_uring_ring.cq.ring_ptr, (jint)ring_fd, submitCallback);
+        (jlong)io_uring_ring.sq.kring_entries,
+        (jlong)io_uring_ring.sq.kflags,
+        (jlong)io_uring_ring.sq.kdropped,
+        (jlong)io_uring_ring.sq.array,
+        (jlong)io_uring_ring.sq.sqes,
+        (jlong)io_uring_ring.sq.ring_sz,
+        (jlong)io_uring_ring.cq.ring_ptr,
+        (jlong)ring_fd
+    };
+    (*env)->SetLongArrayRegion(env, submissionArray, 0, 11, submissionArrayElements);
 
-    jobject ioUringCompletionQueue = (*env)->NewObject(
-        env, ioUringCompletionQueueClass, ioUringCommpletionQueueMethodId,
-        (jlong)io_uring_ring.cq.khead, (jlong)io_uring_ring.cq.ktail,
+    jlong completionArrayElements[] = {
+        (jlong)io_uring_ring.cq.khead,
+        (jlong)io_uring_ring.cq.ktail,
         (jlong)io_uring_ring.cq.kring_mask,
         (jlong)io_uring_ring.cq.kring_entries,
-        (jlong)io_uring_ring.cq.koverflow, (jlong)io_uring_ring.cq.cqes,
-        (jlong)io_uring_ring.cq.ring_sz, (jlong)io_uring_ring.cq.ring_ptr,
-        (jint)ring_fd);
+        (jlong)io_uring_ring.cq.koverflow,
+        (jlong)io_uring_ring.cq.cqes,
+        (jlong)io_uring_ring.cq.ring_sz,
+        (jlong)io_uring_ring.cq.ring_ptr,
+        (jlong)ring_fd
+    };
+    (*env)->SetLongArrayRegion(env, completionArray, 0, 9, completionArrayElements);
 
-    jobject ringBuffer =
-        (*env)->NewObject(env, ringBufferClass, ringBufferMethodId,
-                        ioUringSubmissionQueue, ioUringCompletionQueue);
-
-    return ringBuffer;
+    (*env)->SetObjectArrayElement(env, array, 0, submissionArray);
+    (*env)->SetObjectArrayElement(env, array, 1, completionArray);
+    return array;
 }
 
 static jint netty_create_file(JNIEnv *env, jclass class) {
@@ -386,8 +375,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
 static const JNINativeMethod method_table[] = {
-    {"ioUringSetup", "(ILjava/lang/Runnable;)Lio/netty/channel/uring/RingBuffer;", (void *) netty_io_uring_setup},
-    {"ioUringExit", "(Lio/netty/channel/uring/RingBuffer;)V", (void *) netty_io_uring_ring_buffer_exit},
+    {"ioUringSetup", "(I)[[J", (void *) netty_io_uring_setup},
+    {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *)netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
@@ -477,27 +466,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     linuxsocketOnLoadCalled = 1;
 
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/RingBuffer",
-                nettyClassName, done);
-    NETTY_LOAD_CLASS(env, ringBufferClass, nettyClassName, done);
-    NETTY_GET_METHOD(env, ringBufferClass, ringBufferMethodId, "<init>",
-                   "(Lio/netty/channel/uring/IOUringSubmissionQueue;Lio/netty/"
-                   "channel/uring/IOUringCompletionQueue;)V",
-                   done);
-
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/IOUringSubmissionQueue",
-                nettyClassName, done);
-    NETTY_LOAD_CLASS(env, ioUringSubmissionQueueClass, nettyClassName, done);
-    NETTY_GET_METHOD(env, ioUringSubmissionQueueClass,
-                   ioUringSubmissionQueueMethodId, "<init>", "(JJJJJJJJIJILjava/lang/Runnable;)V",
-                   done);
-
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/uring/IOUringCompletionQueue",
-                nettyClassName, done);
-    NETTY_LOAD_CLASS(env, ioUringCompletionQueueClass, nettyClassName, done);
-    NETTY_GET_METHOD(env, ioUringCompletionQueueClass,
-                   ioUringCommpletionQueueMethodId, "<init>", "(JJJJJJIJI)V",
-                   done);
+    NETTY_LOAD_CLASS(env, longArrayClass, "[J", done);
     ret = NETTY_JNI_VERSION;
 done:
     //unload
@@ -522,14 +491,6 @@ done:
         if (linuxsocketOnLoadCalled == 1) {
             netty_io_uring_linuxsocket_JNI_OnUnLoad(env);
         }
-
-        ringBufferMethodId = NULL;
-        ioUringSubmissionQueueMethodId = NULL;
-        ioUringCommpletionQueueMethodId = NULL;
-        ringBufferClass = NULL;
-        ioUringCompletionQueueClass = NULL;
-        ioUringSubmissionQueueClass = NULL;
-
     }
     return ret;
 }

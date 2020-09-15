@@ -36,9 +36,9 @@ final class IOUringCompletionQueue {
 
   private final long completionQueueArrayAddress;
 
-  private final int ringSize;
-  private final long ringAddress;
-  private final int ringFd;
+  final int ringSize;
+  final long ringAddress;
+  final int ringFd;
 
   private final int ringMask;
   private int ringHead;

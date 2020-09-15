@@ -131,8 +131,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     @Override
     protected void run() {
-        final IOUringCompletionQueue completionQueue = ringBuffer.getIoUringCompletionQueue();
-        final IOUringSubmissionQueue submissionQueue = ringBuffer.getIoUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        final IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
         // Lets add the eventfd related events before starting to do any real work.
         addEventFdRead(submissionQueue);
@@ -222,7 +222,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
                 pendingWakeup = false;
-                addEventFdRead(ringBuffer.getIoUringSubmissionQueue());
+                addEventFdRead(ringBuffer.ioUringSubmissionQueue());
             }
         } else if (op == Native.IORING_OP_TIMEOUT) {
             if (res == Native.ERRNO_ETIME_NEGATIVE) {
@@ -313,7 +313,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     public IovArray iovArray() {
         IovArray iovArray = iovArrays.next();
         if (iovArray == null) {
-            ringBuffer.getIoUringSubmissionQueue().submit();
+            ringBuffer.ioUringSubmissionQueue().submit();
             iovArray = iovArrays.next();
             assert iovArray != null;
         }

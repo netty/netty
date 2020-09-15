@@ -51,17 +51,15 @@ final class IOUringSubmissionQueue {
     private final long fFlagsAdress;
     private final long kDroppedAddress;
     private final long arrayAddress;
+    final long submissionQueueArrayAddress;
 
-    private final long submissionQueueArrayAddress;
-
-    private final int ringEntries;
+    final int ringEntries;
     private final int ringMask; // = ringEntries - 1
 
-    private final int ringSize;
-    private final long ringAddress;
-    private final int ringFd;
+    final int ringSize;
+    final long ringAddress;
+    final int ringFd;
     private final Runnable submissionCallback;
-
     private final long timeoutMemoryAddress;
 
     private int head;

@@ -82,8 +82,7 @@ final class Native {
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
     static RingBuffer createRingBuffer(int ringSize) {
-        //Todo throw Exception if it's null
-        return ioUringSetup(ringSize, new Runnable() {
+        return createRingBuffer(ringSize, new Runnable() {
             @Override
             public void run() {
                 // Noop
@@ -92,21 +91,45 @@ final class Native {
     }
 
     static RingBuffer createRingBuffer(int ringSize, Runnable submissionCallback) {
-        //Todo throw Exception if it's null
-        return ioUringSetup(ringSize, submissionCallback);
+        long[][] values = ioUringSetup(ringSize);
+        assert values.length == 2;
+        long[] submissionQueueArgs = values[0];
+        assert submissionQueueArgs.length == 11;
+        IOUringSubmissionQueue submissionQueue = new IOUringSubmissionQueue(
+                submissionQueueArgs[0],
+                submissionQueueArgs[1],
+                submissionQueueArgs[2],
+                submissionQueueArgs[3],
+                submissionQueueArgs[4],
+                submissionQueueArgs[5],
+                submissionQueueArgs[6],
+                submissionQueueArgs[7],
+                (int) submissionQueueArgs[8],
+                submissionQueueArgs[9],
+                (int) submissionQueueArgs[10],
+                submissionCallback);
+        long[] completionQueueArgs = values[1];
+        assert completionQueueArgs.length == 9;
+        IOUringCompletionQueue completionQueue = new IOUringCompletionQueue(
+                completionQueueArgs[0],
+                completionQueueArgs[1],
+                completionQueueArgs[2],
+                completionQueueArgs[3],
+                completionQueueArgs[4],
+                completionQueueArgs[5],
+                (int) completionQueueArgs[6],
+                completionQueueArgs[7],
+                (int) completionQueueArgs[8]);
+        return new RingBuffer(submissionQueue, completionQueue);
     }
 
     static RingBuffer createRingBuffer(Runnable submissionCallback) {
         return createRingBuffer(DEFAULT_RING_SIZE, submissionCallback);
     }
 
-    private static native RingBuffer ioUringSetup(int entries, Runnable submissionCallback);
+    private static native long[][] ioUringSetup(int entries);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
-
-    public static native int ioUringRegisterEventFd(int ringFd, int eventFd);
-
-    public static native int ioUringUnregisterEventFd(int ringFd);
 
     public static native void eventFdWrite(int fd, long value);
 
@@ -114,7 +137,10 @@ final class Native {
         return new FileDescriptor(blockingEventFd());
     }
 
-    public static native void ioUringExit(RingBuffer ringBuffer);
+    public static native void ioUringExit(long submissionQueueArrayAddress, int submissionQueueRingEntries,
+                                          long submissionQueueRingAddress, int submissionQueueRingSize,
+                                          long completionQueueRingAddress, int completionQueueRingSize,
+                                          int ringFd);
 
     private static native int blockingEventFd();
 
