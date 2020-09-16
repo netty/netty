@@ -29,7 +29,6 @@ int sys_io_uring_enter(int fd, unsigned to_submit, unsigned min_complete,
                  _NSIG / 8);
 }
 
-int sys_io_uring_register(int fd, unsigned opcode, const void *arg,
-			    unsigned nr_args) {
-	return syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
+int sys_io_uring_register(int fd, unsigned opcode, const void *arg, unsigned nr_args) {
+    return syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
 }
