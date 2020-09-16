@@ -115,7 +115,15 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     private boolean isNotWebSocketPath(FullHttpRequest req) {
         String websocketPath = serverConfig.websocketPath();
-        return serverConfig.checkStartsWith() ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
+        boolean checkNextUri = true;
+        if (req.uri().length() > websocketPath.length()) {
+            char nextUri = req.uri().charAt(websocketPath.length());
+            if (nextUri != '/' && nextUri != '?') {
+                checkNextUri = false;
+            }
+        }
+        boolean checkStartUri = req.uri().startsWith(websocketPath);
+        return serverConfig.checkStartsWith() ? !(checkStartUri && checkNextUri) : !req.uri().equals(websocketPath);
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
