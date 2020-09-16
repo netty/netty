@@ -87,10 +87,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     exception = t;
                 }
 
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
+                for (Object o : readBuf) {
                     readPending = false;
-                    pipeline.fireChannelRead(readBuf.get(i));
+                    pipeline.fireChannelRead(o);
                 }
                 readBuf.clear();
                 allocHandle.readComplete();
