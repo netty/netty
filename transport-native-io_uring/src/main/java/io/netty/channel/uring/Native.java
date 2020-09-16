@@ -149,10 +149,6 @@ final class Native {
     // for testing(it is only temporary)
     public static native int createFile();
 
-    public static Socket newSocketStream() {
-        return Socket.newSocketStream();
-    }
-
     private Native() {
         // utility
     }
