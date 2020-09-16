@@ -267,6 +267,22 @@ static jint netty_io_uring_sockCloexec(JNIEnv* env, jclass clazz) {
     return SOCK_CLOEXEC;
 }
 
+static jint netty_io_uring_afInet(JNIEnv* env, jclass clazz) {
+    return AF_INET;
+}
+
+static jint netty_io_uring_afInet6(JNIEnv* env, jclass clazz) {
+    return AF_INET6;
+}
+
+static jint netty_io_uring_sizeofSockaddrIn(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_in);
+}
+
+static jint netty_io_uring_sizeofSockaddrIn6(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_in6);
+}
+
 static jint netty_io_uring_etime(JNIEnv* env, jclass clazz) {
     return ETIME;
 }
@@ -331,10 +347,15 @@ static jint netty_io_uring_iosqeAsync(JNIEnv* env, jclass clazz) {
     return IOSQE_ASYNC;
 }
 
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
+  { "afInet", "()I", (void *) netty_io_uring_afInet },
+  { "afInet6", "()I", (void *) netty_io_uring_afInet6 },
+  { "sizeofSockaddrIn", "()I", (void *) netty_io_uring_sizeofSockaddrIn },
+  { "sizeofSockaddrIn6", "()I", (void *) netty_io_uring_sizeofSockaddrIn6 },
   { "etime", "()I", (void *) netty_io_uring_etime },
   { "ecanceled", "()I", (void *) netty_io_uring_ecanceled },
   { "pollin", "()I", (void *) netty_io_uring_pollin },
