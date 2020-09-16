@@ -63,7 +63,7 @@ final class IOUringCompletionQueue {
       return ringHead != PlatformDependent.getIntVolatile(kTailAddress);
   }
 
-  public int process(IOUringCompletionQueueCallback callback) {
+  int process(IOUringCompletionQueueCallback callback) {
       int tail = PlatformDependent.getIntVolatile(kTailAddress);
       int i = 0;
       while (ringHead != tail) {
@@ -92,7 +92,7 @@ final class IOUringCompletionQueue {
       void handle(int fd, int res, int flags, int op, int mask);
   }
 
-  public boolean ioUringWaitCqe() {
+  boolean ioUringWaitCqe() {
     //IORING_ENTER_GETEVENTS -> wait until an event is completely processed
     int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
     if (ret < 0) {
@@ -103,10 +103,5 @@ final class IOUringCompletionQueue {
     }
     //Todo throw Exception!
     return false;
-  }
-
-  //Todo Integer.toUnsignedLong -> maven checkstyle error
-  public static long toUnsignedLong(int x) {
-    return ((long) x) & 0xffffffffL;
   }
 }

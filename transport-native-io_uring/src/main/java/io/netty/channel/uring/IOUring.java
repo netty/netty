@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
-final class IOUring {
+public final class IOUring {
 
     private static final Throwable UNAVAILABILITY_CAUSE;
 

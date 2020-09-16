@@ -49,6 +49,7 @@ final class LinuxSocket extends Socket {
         return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
     }
 
+    @Override
     public boolean markClosed() {
         return super.markClosed();
     }
@@ -71,7 +72,7 @@ final class LinuxSocket extends Socket {
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
     }
 
-    public int initAddress(byte[] address, int scopeId, int port, long addressMemory) {
+    int initAddress(byte[] address, int scopeId, int port, long addressMemory) {
         return initAddress(intValue(), ipv6, address, scopeId, port, addressMemory);
     }
 
