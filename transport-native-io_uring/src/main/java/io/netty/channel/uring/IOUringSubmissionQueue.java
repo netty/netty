@@ -135,20 +135,20 @@ final class IOUringSubmissionQueue {
         logger.trace("Offset: {}", offset);
     }
 
-    public boolean addTimeout(long nanoSeconds) {
+    boolean addTimeout(long nanoSeconds) {
         setTimeout(nanoSeconds);
         return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
     }
 
-    public boolean addPollIn(int fd) {
+    boolean addPollIn(int fd) {
         return addPoll(fd, Native.POLLIN);
     }
 
-    public boolean addPollRdHup(int fd) {
+    boolean addPollRdHup(int fd) {
         return addPoll(fd, Native.POLLRDHUP);
     }
 
-    public boolean addPollOut(int fd) {
+    boolean addPollOut(int fd) {
         return addPoll(fd, Native.POLLOUT);
     }
 
@@ -157,43 +157,43 @@ final class IOUringSubmissionQueue {
     }
 
     //return true -> submit() was called
-    public boolean addRead(int fd, long bufferAddress, int pos, int limit) {
+    boolean addRead(int fd, long bufferAddress, int pos, int limit) {
         return enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
     }
 
-    public boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
+    boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
         return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
     }
 
-    public boolean addAccept(int fd, long address, long addressLength) {
+    boolean addAccept(int fd, long address, long addressLength) {
         return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
                 address, 0, addressLength);
     }
 
     //fill the address which is associated with server poll link user_data
-    public boolean addPollRemove(int fd, int pollMask) {
+    boolean addPollRemove(int fd, int pollMask) {
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
                 convertToUserData(Native.IORING_OP_POLL_ADD, fd, pollMask), 0, 0);
     }
 
-    public boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
+    boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
         return enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
     }
 
-    public boolean addWritev(int fd, long iovecArrayAddress, int length) {
+    boolean addWritev(int fd, long iovecArrayAddress, int length) {
         return enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
     }
 
-    public boolean addClose(int fd) {
+    boolean addClose(int fd) {
         return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
     }
 
-    public int submit() {
+    int submit() {
         int submit = tail - head;
         return submit > 0 ? submit(submit, 0, 0) : 0;
     }
 
-    public int submitAndWait() {
+    int submitAndWait() {
         int submit = tail - head;
         if (submit > 0) {
             return submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
@@ -223,7 +223,6 @@ final class IOUringSubmissionQueue {
     private void setTimeout(long timeoutNanoSeconds) {
         long seconds, nanoSeconds;
 
-        //Todo
         if (timeoutNanoSeconds == 0) {
             seconds = 0;
             nanoSeconds = 0;

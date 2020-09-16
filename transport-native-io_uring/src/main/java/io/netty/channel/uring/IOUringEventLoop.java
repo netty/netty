@@ -97,14 +97,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
-    public void add(AbstractIOUringChannel ch) {
+    void add(AbstractIOUringChannel ch) {
         logger.trace("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
         channels.put(fd, ch);
     }
 
-    public void remove(AbstractIOUringChannel ch) {
+    void remove(AbstractIOUringChannel ch) {
         logger.trace("Remove Channel: {}", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
@@ -298,7 +298,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         PlatformDependent.freeMemory(eventfdReadBuf);
     }
 
-    public RingBuffer getRingBuffer() {
+    RingBuffer getRingBuffer() {
         return ringBuffer;
     }
 
@@ -310,7 +310,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         }
     }
 
-    public IovArray iovArray() {
+    IovArray iovArray() {
         IovArray iovArray = iovArrays.next();
         if (iovArray == null) {
             ringBuffer.ioUringSubmissionQueue().submit();
