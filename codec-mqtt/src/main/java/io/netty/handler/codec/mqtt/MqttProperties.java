@@ -109,6 +109,11 @@ public final class MqttProperties {
         return properties;
     }
 
+    /**
+     * MQTT property base class
+     *
+     * @param <T> property type
+     */
     public abstract static class MqttProperty<T> {
         final T value;
         final int propertyId;
@@ -116,6 +121,23 @@ public final class MqttProperties {
         protected MqttProperty(int propertyId, T value) {
             this.propertyId = propertyId;
             this.value = value;
+        }
+
+        /**
+         * Get MQTT property value
+         *
+         * @return property value
+         */
+        public T value() {
+            return value;
+        }
+
+        /**
+         * Get MQTT property ID
+         * @return property ID
+         */
+        public int propertyId() {
+            return propertyId;
         }
     }
 
