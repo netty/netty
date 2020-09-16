@@ -51,11 +51,11 @@ public final class ObjectUtil {
      * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static long checkPositive(long i, String name) {
-        if (i <= 0) {
-            throw new IllegalArgumentException(name + ": " + i + " (expected: > 0)");
+    public static long checkPositive(long l, String name) {
+        if (l <= 0) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: > 0)");
         }
-        return i;
+        return l;
     }
 
     /**
@@ -73,11 +73,11 @@ public final class ObjectUtil {
      * Checks that the given argument is positive or zero. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static long checkPositiveOrZero(long i, String name) {
-        if (i < 0) {
-            throw new IllegalArgumentException(name + ": " + i + " (expected: >= 0)");
+    public static long checkPositiveOrZero(long l, String name) {
+        if (l < 0) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: >= 0)");
         }
-        return i;
+        return l;
     }
 
     /**
