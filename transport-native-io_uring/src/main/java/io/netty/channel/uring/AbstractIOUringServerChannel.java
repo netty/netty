@@ -39,12 +39,12 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     protected AbstractIOUringServerChannel(LinuxSocket socket, boolean active) {
         super(null, socket, active);
 
-        acceptedAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
+        acceptedAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
         acceptedAddressMemoryAddress = Buffer.memoryAddress(acceptedAddressMemory);
         acceptedAddressLengthMemory = Buffer.allocateDirectWithNativeOrder(Long.BYTES);
         // Needs to be initialized to the size of acceptedAddressMemory.
         // See https://man7.org/linux/man-pages/man2/accept.2.html
-        acceptedAddressLengthMemory.putLong(0, SOCK_ADDR_LEN);
+        acceptedAddressLengthMemory.putLong(0, Native.SIZEOF_SOCKADDR_STORAGE);
         acceptedAddressLengthMemoryAddress = Buffer.memoryAddress(acceptedAddressLengthMemory);
     }
 
@@ -73,6 +73,16 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) throws Exception;
 
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
+
+        @Override
+        protected void scheduleWriteMultiple(ChannelOutboundBuffer in) {
+            // Do nothing
+        }
+
+        @Override
+        protected void scheduleWriteSingle(Object msg) {
+            // Do nothing
+        }
 
         @Override
         protected void scheduleRead0() {

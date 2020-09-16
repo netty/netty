@@ -323,6 +323,56 @@ static jint netty_io_uring_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
     return offsetof(struct in6_addr, s6_addr);
 }
 
+static jint netty_io_uring_sizeofSockaddrStorage(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_storage);
+}
+
+static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
+    return sizeof(size_t);
+}
+
+static jint netty_io_uring_sizeofIovec(JNIEnv* env, jclass clazz) {
+    return sizeof(struct iovec);
+}
+
+static jint netty_io_uring_iovecOffsetofIovBase(JNIEnv* env, jclass clazz) {
+    return offsetof(struct iovec, iov_base);
+}
+
+static jint netty_io_uring_iovecOffsetofIovLen(JNIEnv* env, jclass clazz) {
+    return offsetof(struct iovec, iov_len);
+}
+
+static jint netty_io_uring_sizeofMsghdr(JNIEnv* env, jclass clazz) {
+    return sizeof(struct msghdr);
+}
+
+static jint netty_io_uring_msghdrOffsetofMsgName(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_name);
+}
+
+static jint netty_io_uring_msghdrOffsetofMsgNamelen(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_namelen);
+}
+static jint netty_io_uring_msghdrOffsetofMsgIov(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_iov);
+}
+static jint netty_io_uring_msghdrOffsetofMsgIovlen(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_iovlen);
+}
+
+static jint netty_io_uring_msghdrOffsetofMsgControl(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_control);
+}
+
+static jint netty_io_uring_msghdrOffsetofMsgControllen(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_controllen);
+}
+
+static jint netty_io_uring_msghdrOffsetofMsgFlags(JNIEnv* env, jclass clazz) {
+    return offsetof(struct msghdr, msg_flags);
+}
+
 static jint netty_io_uring_etime(JNIEnv* env, jclass clazz) {
     return ETIME;
 }
@@ -379,6 +429,14 @@ static jint netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
     return IORING_OP_CLOSE;
 }
 
+static jint netty_io_uring_ioringOpSendmsg(JNIEnv* env, jclass clazz) {
+    return IORING_OP_SENDMSG;
+}
+
+static jint netty_io_uring_ioringOpRecvmsg(JNIEnv* env, jclass clazz) {
+    return IORING_OP_RECVMSG;
+}
+
 static jint netty_io_uring_ioringEnterGetevents(JNIEnv* env, jclass clazz) {
     return IORING_ENTER_GETEVENTS;
 }
@@ -406,6 +464,19 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrIn6OffsetofSin6Addr", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6Addr },
   { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6ScopeId },
   { "in6AddressOffsetofS6Addr", "()I", (void *) netty_io_uring_in6AddressOffsetofS6Addr },
+  { "sizeofSockaddrStorage", "()I", (void *) netty_io_uring_sizeofSockaddrStorage },
+  { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
+  { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
+  { "iovecOffsetofIovBase", "()I", (void *) netty_io_uring_iovecOffsetofIovBase },
+  { "iovecOffsetofIovLen", "()I", (void *) netty_io_uring_iovecOffsetofIovLen },
+  { "sizeofMsghdr", "()I", (void *) netty_io_uring_sizeofMsghdr },
+  { "msghdrOffsetofMsgName", "()I", (void *) netty_io_uring_msghdrOffsetofMsgName },
+  { "msghdrOffsetofMsgNamelen", "()I", (void *) netty_io_uring_msghdrOffsetofMsgNamelen },
+  { "msghdrOffsetofMsgIov", "()I", (void *) netty_io_uring_msghdrOffsetofMsgIov },
+  { "msghdrOffsetofMsgIovlen", "()I", (void *) netty_io_uring_msghdrOffsetofMsgIovlen },
+  { "msghdrOffsetofMsgControl", "()I", (void *) netty_io_uring_msghdrOffsetofMsgControl },
+  { "msghdrOffsetofMsgControllen", "()I", (void *) netty_io_uring_msghdrOffsetofMsgControllen },
+  { "msghdrOffsetofMsgFlags", "()I", (void *) netty_io_uring_msghdrOffsetofMsgFlags },
   { "etime", "()I", (void *) netty_io_uring_etime },
   { "ecanceled", "()I", (void *) netty_io_uring_ecanceled },
   { "pollin", "()I", (void *) netty_io_uring_pollin },
@@ -420,6 +491,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
   { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
   { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
+  { "ioringOpSendmsg", "()I", (void *) netty_io_uring_ioringOpSendmsg },
+  { "ioringOpRecvmsg", "()I", (void *) netty_io_uring_ioringOpRecvmsg },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 };

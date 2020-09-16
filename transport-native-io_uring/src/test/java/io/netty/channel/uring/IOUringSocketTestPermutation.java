@@ -17,7 +17,11 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -108,6 +112,49 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
                     }
                 }
         );
+    }
+
+    @Override
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
+            final InternetProtocolFamily family) {
+        // Make the list of Bootstrap factories.
+        List<BootstrapFactory<Bootstrap>> bfs = Arrays.<BootstrapFactory<Bootstrap>>asList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_WORKER_GROUP)
+                                .channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new IOUringDatagramChannel(family);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return InternetProtocolFamily.class.getSimpleName() + ".class";
+                            }
+                        });
+                    }
+                },
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new NioDatagramChannel(family);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return NioDatagramChannel.class.getSimpleName() + ".class";
+                            }
+                        });
+                    }
+                }
+        );
+
+        return combo(bfs, bfs);
     }
 
     public boolean isServerFastOpen() {
