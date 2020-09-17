@@ -69,12 +69,10 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
         return this;
     }
 
-    abstract Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception;
+    abstract Channel newChildChannel(
+            int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) throws Exception;
 
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
-        // Will hold the remote address after accept4(...) was successful.
-        // We need 24 bytes for the address as maximum
-        private final byte[] acceptedAddress = new byte[24];
 
         @Override
         protected void scheduleRead0() {
@@ -96,9 +94,8 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             if (res >= 0) {
                 allocHandle.incMessagesRead(1);
                 try {
-                    int len = LinuxSocket.initInetSocketAddressArray(
-                            acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, acceptedAddress);
-                    Channel channel = newChildChannel(res, acceptedAddress, 0, len);
+                    Channel channel = newChildChannel(
+                            res, acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress);
                     pipeline.fireChannelRead(channel);
                     if (allocHandle.continueReading()) {
                         scheduleRead();

@@ -64,12 +64,15 @@ final class Native {
     }
     static final int SOCK_NONBLOCK = NativeStaticallyReferencedJniMethods.sockNonblock();
     static final int SOCK_CLOEXEC = NativeStaticallyReferencedJniMethods.sockCloexec();
+    static final short AF_INET = (short) NativeStaticallyReferencedJniMethods.afInet();
+    static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
+    static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
+    static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
     static final int POLLIN = NativeStaticallyReferencedJniMethods.pollin();
     static final int POLLOUT = NativeStaticallyReferencedJniMethods.pollout();
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
-
     static final int IORING_OP_POLL_ADD = NativeStaticallyReferencedJniMethods.ioringOpPollAdd();
     static final int IORING_OP_TIMEOUT = NativeStaticallyReferencedJniMethods.ioringOpTimeout();
     static final int IORING_OP_ACCEPT = NativeStaticallyReferencedJniMethods.ioringOpAccept();

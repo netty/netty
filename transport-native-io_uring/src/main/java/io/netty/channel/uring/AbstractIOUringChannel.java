@@ -48,6 +48,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -643,13 +645,18 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
                 doConnect(remoteAddress, localAddress);
                 InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
 
                 remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
                 long remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
 
-                socket.initAddress(address.address(), address.scopeId(), inetSocketAddress.getPort(),
-                        remoteAddressMemoryAddress);
+                if (socket.isIpv6()) {
+                    SockaddrIn.writeIPv6(remoteAddressMemoryAddress, inetSocketAddress.getAddress(),
+                            inetSocketAddress.getPort());
+                } else {
+                    SockaddrIn.writeIPv4(remoteAddressMemoryAddress, inetSocketAddress.getAddress(),
+                            inetSocketAddress.getPort());
+                }
+
                 final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
                 ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
                 ioState |= CONNECT_SCHEDULED;

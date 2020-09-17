@@ -72,10 +72,6 @@ final class LinuxSocket extends Socket {
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
     }
 
-    int initAddress(byte[] address, int scopeId, int port, long addressMemory) {
-        return initAddress(intValue(), ipv6, address, scopeId, port, addressMemory);
-    }
-
     InetAddress getInterface() throws IOException {
         NetworkInterface inf = getNetworkInterface();
         if (inf != null) {
@@ -314,6 +310,10 @@ final class LinuxSocket extends Socket {
         return ipAny;
     }
 
+    boolean isIpv6() {
+        return ipv6;
+    }
+
     public static LinuxSocket newSocketStream(boolean ipv6) {
         return new LinuxSocket(newSocketStream0(ipv6));
     }
@@ -392,8 +392,4 @@ final class LinuxSocket extends Socket {
     private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
     private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
-    private static native int initAddress(
-            int fd, boolean ipv6, byte[] address, int scopeId, int port, long memoryAddress);
-
-    static native int initInetSocketAddressArray(long addr, long addressLen, byte[] array);
 }
