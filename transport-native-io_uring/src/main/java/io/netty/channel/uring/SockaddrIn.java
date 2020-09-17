@@ -59,7 +59,9 @@ final class SockaddrIn {
         PlatformDependent.copyMemory(bytes, offset, memory + written, 4);
         written += 4;
 
-        written += writePadding(memory + written, Native.SIZEOF_SOCKADDR_IN - written);
+        int padding = Native.SIZEOF_SOCKADDR_IN - written;
+        PlatformDependent.setMemory(memory + written, padding, (byte) 0);
+        written += padding;
         assert written == Native.SIZEOF_SOCKADDR_IN;
         return written;
     }
@@ -100,7 +102,9 @@ final class SockaddrIn {
             PlatformDependent.putInt(memory + written, ((Inet6Address) address).getScopeId());
             written += 4;
         }
-        written += writePadding(memory + written, Native.SIZEOF_SOCKADDR_IN6 - written);
+        int padding = Native.SIZEOF_SOCKADDR_IN6 - written;
+        PlatformDependent.setMemory(memory + written, padding, (byte) 0);
+        written += padding;
         assert written == Native.SIZEOF_SOCKADDR_IN6;
         return written;
     }
@@ -130,36 +134,5 @@ final class SockaddrIn {
 
     private static short handleNetworkOrder(short v) {
         return BIG_ENDIAN_NATIVE_ORDER ? v : Short.reverseBytes(v);
-    }
-
-    /**
-     * Fill with {@code 0}s if any padding is needed.
-     */
-    private static int writePadding(long memoryAddress, int length) {
-        if (length == 0) {
-            return length;
-        }
-        int nLong = length >>> 3;
-        int nBytes = length & 7;
-        for (int i = nLong; i > 0; i --) {
-            PlatformDependent.putLong(memoryAddress, 0);
-            memoryAddress += 8;
-        }
-        if (nBytes == 4) {
-            PlatformDependent.putInt(memoryAddress, 0);
-        } else if (nBytes < 4) {
-            for (int i = nBytes; i > 0; i --) {
-                PlatformDependent.putByte(memoryAddress, (byte) 0);
-                memoryAddress++;
-            }
-        } else {
-            PlatformDependent.putInt(memoryAddress, 0);
-            memoryAddress += 4;
-            for (int i = nBytes - 4; i > 0; i --) {
-                PlatformDependent.putByte(memoryAddress, (byte) 0);
-                memoryAddress++;
-            }
-        }
-        return length;
     }
 }
