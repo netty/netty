@@ -189,7 +189,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             for (ChannelFuture future: futures) {
                 future.sync();
             }
-            if (!latch.await(10, TimeUnit.SECONDS)) {
+            if (!latch.await(100000, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();
                 if (error != null) {
                     throw error;
