@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.unix.NativeInetAddress;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -36,8 +35,17 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     }
 
     @Override
-    Channel newChildChannel(int fd, byte[] array, int offset, int len) {
-        return new IOUringSocketChannel(this, new LinuxSocket(fd), NativeInetAddress.address(array, offset, len));
+    Channel newChildChannel(int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) {
+        final InetSocketAddress address;
+        if (socket.isIpv6()) {
+            byte[] addressArray = ((IOUringEventLoop) eventLoop()).inet6AddressArray();
+            address = SockaddrIn.readIPv6(acceptedAddressLengthMemoryAddress, addressArray);
+        } else {
+            byte[] addressArray = ((IOUringEventLoop) eventLoop()).inet4AddressArray();
+            address = SockaddrIn.readIPv4(acceptedAddressLengthMemoryAddress, addressArray);
+        }
+
+        return new IOUringSocketChannel(this, new LinuxSocket(fd), address);
     }
 
     @Override

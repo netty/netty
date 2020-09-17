@@ -32,6 +32,11 @@ final class NativeStaticallyReferencedJniMethods {
 
     static native int sockNonblock();
     static native int sockCloexec();
+    static native int afInet();
+    static native int afInet6();
+    static native int sizeofSockaddrIn();
+    static native int sizeofSockaddrIn6();
+
     static native int etime();
     static native int ecanceled();
     static native int pollin();

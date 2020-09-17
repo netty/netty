@@ -52,6 +52,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final FileDescriptor eventfd;
 
     private final IovArrays iovArrays;
+    // The maximum number of bytes for an InetAddress / Inet6Address
+    private final byte[] inet4AddressArray = new byte[4];
+    private final byte[] inet6AddressArray = new byte[16];
 
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
@@ -318,5 +321,19 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             assert iovArray != null;
         }
         return iovArray;
+    }
+
+    /**
+     * {@code byte[]} that can be used as temporary storage to encode the ipv4 address
+     */
+    byte[] inet4AddressArray() {
+        return inet4AddressArray;
+    }
+
+    /**
+     * {@code byte[]} that can be used as temporary storage to encode the ipv6 address
+     */
+    byte[] inet6AddressArray() {
+        return inet6AddressArray;
     }
 }
