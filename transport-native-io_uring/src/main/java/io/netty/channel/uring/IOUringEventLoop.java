@@ -57,7 +57,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final byte[] inet6AddressArray = new byte[16];
 
     private long prevDeadlineNanos = NONE;
-    private boolean pendingWakeup;
 
     IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
@@ -107,20 +106,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         channels.put(fd, ch);
     }
 
-    void remove(AbstractIOUringChannel ch) {
-        logger.trace("Remove Channel: {}", ch.socket.intValue());
-        int fd = ch.socket.intValue();
-
-        AbstractIOUringChannel old = channels.remove(fd);
-        if (old != null && old != ch) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
-
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !ch.isOpen();
-        }
-    }
-
     private void closeAll() {
         logger.trace("CloseAll IOUringEvenloop");
         // Using the intermediate collection to prevent ConcurrentModificationException.
@@ -168,8 +153,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         }
                     }
                 } finally {
-                    if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
-                        pendingWakeup = true;
+                    if (nextWakeupNanos.get() == AWAKE) {
+                        nextWakeupNanos.getAndSet(AWAKE);
                     }
                 }
             } catch (Throwable t) {
@@ -224,7 +209,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     public void handle(int fd, int res, int flags, int op, int data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                pendingWakeup = false;
                 addEventFdRead(ringBuffer.ioUringSubmissionQueue());
             }
         } else if (op == Native.IORING_OP_TIMEOUT) {
