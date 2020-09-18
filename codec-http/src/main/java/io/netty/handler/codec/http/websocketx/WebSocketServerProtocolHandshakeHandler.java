@@ -61,7 +61,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         final FullHttpRequest req = (FullHttpRequest) msg;
-        if (isNotWebSocketPath(req)) {
+        if (!isWebSocketPath(req)) {
             ctx.fireChannelRead(msg);
             return;
         }
@@ -113,17 +113,21 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
     }
 
-    private boolean isNotWebSocketPath(FullHttpRequest req) {
+    private boolean isWebSocketPath(FullHttpRequest req) {
         String websocketPath = serverConfig.websocketPath();
-        boolean checkNextUri = true;
-        if (req.uri().length() > websocketPath.length()) {
-            char nextUri = req.uri().charAt(websocketPath.length());
-            if (nextUri != '/' && nextUri != '?') {
-                checkNextUri = false;
-            }
+        String uri = req.uri();
+        boolean checkStartUri = uri.startsWith(websocketPath);
+        boolean checkNextUri = checkNextUri(uri, websocketPath);
+        return serverConfig.checkStartsWith() ? (checkStartUri && checkNextUri) : uri.equals(websocketPath);
+    }
+
+    private boolean checkNextUri(String uri, String websocketPath) {
+        int len = websocketPath.length();
+        if (uri.length() > len) {
+            char nextUri = uri.charAt(len);
+            return nextUri == '/' || nextUri == '?';
         }
-        boolean checkStartUri = req.uri().startsWith(websocketPath);
-        return serverConfig.checkStartsWith() ? !(checkStartUri && checkNextUri) : !req.uri().equals(websocketPath);
+        return true;
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
