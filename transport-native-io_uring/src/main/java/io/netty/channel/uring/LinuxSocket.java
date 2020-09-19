@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.ChannelException;
-import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
@@ -30,8 +29,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
-
-import static io.netty.channel.unix.Errors.*;
 
 /**
  * A socket which provides access Linux native methods.
@@ -283,18 +280,6 @@ final class LinuxSocket extends Socket {
         setIpMulticastLoop(intValue(), ipv6, loopbackModeDisabled ? 0 : 1);
     }
 
-    long sendFile(DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
-        // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
-        // the FileChannel field via JNI.
-        src.open();
-
-        long res = sendFile(intValue(), src, baseOffset, offset, length);
-        if (res >= 0) {
-            return res;
-        }
-        return ioResult("sendfile", (int) res);
-    }
-
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
         final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
         if (netInterface != null) {
@@ -350,8 +335,6 @@ final class LinuxSocket extends Socket {
                                           int scopeId, int interfaceIndex) throws IOException;
     private static native void leaveSsmGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
                                              int scopeId, int interfaceIndex, byte[] source) throws IOException;
-    private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,
-                                        long offset, long length) throws IOException;
 
     private static native int getTcpDeferAccept(int fd) throws IOException;
     private static native int isTcpQuickAck(int fd) throws IOException;
