@@ -36,13 +36,21 @@ final class NativeStaticallyReferencedJniMethods {
     static native int afInet6();
     static native int sizeofSockaddrIn();
     static native int sizeofSockaddrIn6();
-
+    static native int sockaddrInOffsetofSinFamily();
+    static native int sockaddrInOffsetofSinPort();
+    static native int sockaddrInOffsetofSinAddr();
+    static native int inAddressOffsetofSAddr();
+    static native int sockaddrIn6OffsetofSin6Family();
+    static native int sockaddrIn6OffsetofSin6Port();
+    static native int sockaddrIn6OffsetofSin6Flowinfo();
+    static native int sockaddrIn6OffsetofSin6Addr();
+    static native int sockaddrIn6OffsetofSin6ScopeId();
+    static native int in6AddressOffsetofS6Addr();
     static native int etime();
     static native int ecanceled();
     static native int pollin();
     static native int pollout();
     static native int pollrdhup();
-
     static native int ioringOpWritev();
     static native int ioringOpPollAdd();
     static native int ioringOpPollRemove();

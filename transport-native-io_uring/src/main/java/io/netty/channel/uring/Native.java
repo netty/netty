@@ -68,6 +68,24 @@ final class Native {
     static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
     static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
     static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinFamily();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_PORT = NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinPort();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_ADDR = NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinAddr();
+    static final int IN_ADDRESS_OFFSETOF_S_ADDR = NativeStaticallyReferencedJniMethods.inAddressOffsetofSAddr();
+
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Family();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_PORT =
+            NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Port();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_FLOWINFO =
+            NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Flowinfo();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_ADDR =
+            NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Addr();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID =
+            NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6ScopeId();
+    static final int IN6_ADDRESS_OFFSETOF_S6_ADDR = NativeStaticallyReferencedJniMethods.in6AddressOffsetofS6Addr();
+
     static final int POLLIN = NativeStaticallyReferencedJniMethods.pollin();
     static final int POLLOUT = NativeStaticallyReferencedJniMethods.pollout();
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
