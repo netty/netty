@@ -25,7 +25,6 @@
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
-#include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 
 #include "netty_io_uring_linuxsocket.h"
@@ -57,11 +56,6 @@
 
 static jclass peerCredentialsClass = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
-
-static jfieldID fileChannelFieldId = NULL;
-static jfieldID transferredFieldId = NULL;
-static jfieldID fdFieldId = NULL;
-static jfieldID fileDescriptorFieldId = NULL;
 
 // JNI Registered Methods Begin
 static void netty_io_uring_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -625,40 +619,6 @@ static jobject netty_io_uring_linuxsocket_getPeerCredentials(JNIEnv *env, jclass
      (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.gid);
      return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
 }
-
-static jlong netty_io_uring_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
-    jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
-    if (fileChannel == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
-        return -1;
-    }
-    jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
-    if (fileDescriptor == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
-        return -1;
-    }
-    jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
-    if (srcFd == -1) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
-        return -1;
-    }
-    ssize_t res;
-    off_t offset = base_off + off;
-    int err;
-    do {
-      res = sendfile(fd, srcFd, &offset, (size_t) len);
-    } while (res == -1 && ((err = errno) == EINTR));
-    if (res < 0) {
-        return -err;
-    }
-    if (res > 0) {
-        // update the transferred field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + res);
-    }
-
-    return res;
-}
-
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -707,7 +667,7 @@ static const JNINativeMethod fixed_method_table[] = {
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    return fixed_method_table_size + 2; // 2 is for the dynamic method signatures.
+    return fixed_method_table_size + 1; // 1 is for the dynamic method signatures.
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
@@ -726,13 +686,6 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     dynamicMethod->name = "getPeerCredentials";
     dynamicMethod->fnPtr = (void *) netty_io_uring_linuxsocket_getPeerCredentials;
     netty_unix_util_free_dynamic_name(&dynamicTypeName);
-
-    ++dynamicMethod;
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
-    NETTY_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
-    dynamicMethod->name = "sendFile";
-    dynamicMethod->fnPtr = (void *) netty_io_uring_linuxsocket_sendFile;
-    netty_unix_util_free_dynamic_name(&dynamicTypeName);
     return dynamicMethods;
 error:
     free(dynamicTypeName);
@@ -745,9 +698,6 @@ error:
 jint netty_io_uring_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
-    jclass fileRegionCls = NULL;
-    jclass fileChannelCls = NULL;
-    jclass fileDescriptorCls = NULL;
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
@@ -766,19 +716,6 @@ jint netty_io_uring_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
     netty_unix_util_free_dynamic_name(&nettyClassName);
 
     NETTY_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
-
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
-    NETTY_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
-    netty_unix_util_free_dynamic_name(&nettyClassName);
-
-    NETTY_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
-    NETTY_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
-
-    NETTY_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
-    NETTY_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
-
-    NETTY_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
-    NETTY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I", done);
 
     ret = NETTY_JNI_VERSION;
 done:
