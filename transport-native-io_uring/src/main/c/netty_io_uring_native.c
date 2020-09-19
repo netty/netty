@@ -283,6 +283,46 @@ static jint netty_io_uring_sizeofSockaddrIn6(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_in6);
 }
 
+static jint netty_io_uring_sockaddrInOffsetofSinFamily(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_family);
+}
+
+static jint netty_io_uring_sockaddrInOffsetofSinPort(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_port);
+}
+
+static jint netty_io_uring_sockaddrInOffsetofSinAddr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_addr);
+}
+
+static jint netty_io_uring_inAddressOffsetofSAddr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct in_addr, s_addr);
+}
+
+static jint netty_io_uring_sockaddrIn6OffsetofSin6Family(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_family);
+}
+
+static jint netty_io_uring_sockaddrIn6OffsetofSin6Port(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_port);
+}
+
+static jint netty_io_uring_sockaddrIn6OffsetofSin6Flowinfo(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_flowinfo);
+}
+
+static jint netty_io_uring_sockaddrIn6OffsetofSin6Addr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_addr);
+}
+
+static jint netty_io_uring_sockaddrIn6OffsetofSin6ScopeId(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_scope_id);
+}
+
+static jint netty_io_uring_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct in6_addr, s6_addr);
+}
+
 static jint netty_io_uring_etime(JNIEnv* env, jclass clazz) {
     return ETIME;
 }
@@ -356,6 +396,16 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "afInet6", "()I", (void *) netty_io_uring_afInet6 },
   { "sizeofSockaddrIn", "()I", (void *) netty_io_uring_sizeofSockaddrIn },
   { "sizeofSockaddrIn6", "()I", (void *) netty_io_uring_sizeofSockaddrIn6 },
+  { "sockaddrInOffsetofSinFamily", "()I", (void *) netty_io_uring_sockaddrInOffsetofSinFamily },
+  { "sockaddrInOffsetofSinPort", "()I", (void *) netty_io_uring_sockaddrInOffsetofSinPort },
+  { "sockaddrInOffsetofSinAddr", "()I", (void *) netty_io_uring_sockaddrInOffsetofSinAddr },
+  { "inAddressOffsetofSAddr", "()I", (void *) netty_io_uring_inAddressOffsetofSAddr },
+  { "sockaddrIn6OffsetofSin6Family", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6Family },
+  { "sockaddrIn6OffsetofSin6Port", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6Port },
+  { "sockaddrIn6OffsetofSin6Flowinfo", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6Flowinfo },
+  { "sockaddrIn6OffsetofSin6Addr", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6Addr },
+  { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6ScopeId },
+  { "in6AddressOffsetofS6Addr", "()I", (void *) netty_io_uring_in6AddressOffsetofS6Addr },
   { "etime", "()I", (void *) netty_io_uring_etime },
   { "ecanceled", "()I", (void *) netty_io_uring_ecanceled },
   { "pollin", "()I", (void *) netty_io_uring_pollin },
