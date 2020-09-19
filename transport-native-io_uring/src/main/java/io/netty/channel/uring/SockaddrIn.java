@@ -87,7 +87,8 @@ final class SockaddrIn {
         } else {
             PlatformDependent.copyMemory(bytes, 0,
                     memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR, 16);
-            PlatformDependent.putInt(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID, ((Inet6Address) address).getScopeId());
+            PlatformDependent.putInt(
+                    memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID, ((Inet6Address) address).getScopeId());
         }
         return Native.SIZEOF_SOCKADDR_IN6;
     }
@@ -107,8 +108,10 @@ final class SockaddrIn {
 
     static InetSocketAddress readIPv6(long memory, byte[] tmpArray) {
         assert tmpArray.length == 16;
-        int port = handleNetworkOrder(PlatformDependent.getShort(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
-        PlatformDependent.copyMemory(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR,
+        int port = handleNetworkOrder(PlatformDependent.getShort(
+                memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
+        PlatformDependent.copyMemory(
+                memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR,
                 tmpArray, 0, 16);
         int scopeId = PlatformDependent.getInt(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID);
         try {

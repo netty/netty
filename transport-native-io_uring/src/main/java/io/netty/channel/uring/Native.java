@@ -68,7 +68,8 @@ final class Native {
     static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
     static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
     static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
-    static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY = NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinFamily();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinFamily();
     static final int SOCKADDR_IN_OFFSETOF_SIN_PORT = NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinPort();
     static final int SOCKADDR_IN_OFFSETOF_SIN_ADDR = NativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinAddr();
     static final int IN_ADDRESS_OFFSETOF_S_ADDR = NativeStaticallyReferencedJniMethods.inAddressOffsetofSAddr();
