@@ -106,6 +106,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
         channels.put(fd, ch);
     }
 
+    void remove(AbstractIOUringChannel ch) {
+        channels.remove(ch.socket.intValue());
+    }
+
     private void closeAll() {
         logger.trace("CloseAll IOUringEvenloop");
         // Using the intermediate collection to prevent ConcurrentModificationException.
@@ -235,7 +239,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 }
                 if (!channel.ioScheduled()) {
                     // We cancelled the POLL ops which means we are done and should remove the mapping.
-                    channels.remove(fd);
+                    remove(channel);
                     return;
                 }
             } else if (op == Native.IORING_OP_CONNECT) {
