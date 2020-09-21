@@ -40,10 +40,10 @@ public class MqttSubAckPayload {
         this.reasonCodes = Collections.unmodifiableList(list);
     }
 
-    public MqttSubAckPayload(Iterable<Integer> grantedQoSLevels) {
-        ObjectUtil.checkNotNull(grantedQoSLevels, "reasonCodes");
+    public MqttSubAckPayload(Iterable<Integer> reasonCodes) {
+        ObjectUtil.checkNotNull(reasonCodes, "reasonCodes");
         List<Integer> list = new ArrayList<Integer>();
-        for (Integer v: grantedQoSLevels) {
+        for (Integer v: reasonCodes) {
             if (v == null) {
                 break;
             }
