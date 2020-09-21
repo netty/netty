@@ -553,9 +553,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
                             ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
-                            ConnectTimeoutException cause =
-                                    new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                            if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                            if (connectPromise != null && !connectPromise.isDone()
+                                    && connectPromise.tryFailure(new ConnectTimeoutException(
+                                    "connection timed out: " + remoteAddress))) {
                                 close(voidPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
