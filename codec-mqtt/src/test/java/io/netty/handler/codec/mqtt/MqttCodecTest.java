@@ -596,6 +596,10 @@ public class MqttCodecTest {
                 (MqttMessageIdAndPropertiesVariableHeader) message.variableHeader(),
                 (MqttMessageIdAndPropertiesVariableHeader) decodedMessage.variableHeader());
         validateSubAckPayload(message.payload(), decodedMessage.payload());
+        assertArrayEquals(
+                "MqttSubAckPayload QoS mismatch ",
+                new Integer[] {1, 2, 0, 0x80},
+                decodedMessage.payload().grantedQoSLevels().toArray());
     }
 
     @Test
@@ -987,7 +991,11 @@ public class MqttCodecTest {
 
     private static void validateSubAckPayload(MqttSubAckPayload expected, MqttSubAckPayload actual) {
         assertArrayEquals(
-                "MqttSubAckPayload GrantedQosLevels mismatch ",
+                "MqttSubAckPayload reason codes mismatch ",
+                expected.reasonCodes().toArray(),
+                actual.reasonCodes().toArray());
+        assertArrayEquals(
+                "MqttSubAckPayload QoS level mismatch ",
                 expected.grantedQoSLevels().toArray(),
                 actual.grantedQoSLevels().toArray());
     }
