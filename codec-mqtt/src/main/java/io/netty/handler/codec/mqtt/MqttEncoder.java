@@ -368,7 +368,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             writeVariableLengthInt(buf, variablePartSize);
             buf.writeShort(message.variableHeader().messageId());
             buf.writeBytes(propertiesBuf);
-            for (int code: message.payload().reasonCodes()) {
+            for (int code : message.payload().reasonCodes()) {
                 buf.writeByte(code);
             }
 
