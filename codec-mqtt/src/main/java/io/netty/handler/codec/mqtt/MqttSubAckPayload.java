@@ -29,16 +29,16 @@ import java.util.List;
  */
 public class MqttSubAckPayload {
 
-    private final List<Integer> grantedQoSLevels;
+    private final List<Integer> reasonCodes;
 
-    public MqttSubAckPayload(int... grantedQoSLevels) {
-        requireNonNull(grantedQoSLevels, "grantedQoSLevels");
+    public MqttSubAckPayload(int... reasonCodes) {
+        requireNonNull(reasonCodes, "reasonCodes");
 
-        List<Integer> list = new ArrayList<>(grantedQoSLevels.length);
-        for (int v: grantedQoSLevels) {
+        List<Integer> list = new ArrayList<Integer>(reasonCodes.length);
+        for (int v: reasonCodes) {
             list.add(v);
         }
-        this.grantedQoSLevels = Collections.unmodifiableList(list);
+        this.reasonCodes = Collections.unmodifiableList(list);
     }
 
     public MqttSubAckPayload(Iterable<Integer> grantedQoSLevels) {
@@ -50,18 +50,30 @@ public class MqttSubAckPayload {
             }
             list.add(v);
         }
-        this.grantedQoSLevels = Collections.unmodifiableList(list);
+        this.reasonCodes = Collections.unmodifiableList(list);
     }
 
     public List<Integer> grantedQoSLevels() {
-        return grantedQoSLevels;
+        List<Integer> qosLevels = new ArrayList<>(reasonCodes.size());
+        for (int code: reasonCodes) {
+            if (code > MqttQoS.EXACTLY_ONCE.value()) {
+                qosLevels.add(MqttQoS.FAILURE.value());
+            } else {
+                qosLevels.add(code);
+            }
+        }
+        return qosLevels;
+    }
+
+    public List<Integer> reasonCodes() {
+        return reasonCodes;
     }
 
     @Override
     public String toString() {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
-            .append("grantedQoSLevels=").append(grantedQoSLevels)
+            .append("reasonCodes=").append(reasonCodes)
             .append(']')
             .toString();
     }

@@ -562,7 +562,7 @@ public class MqttCodecTest {
     public void testSubAckMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
         props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
-        final MqttSubAckMessage message = createSubAckMessage(props);
+        final MqttSubAckMessage message = createSubAckMessage(props, new int[] {1, 2, 0, 0x87 /* not authorized */});
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
         ArgumentCaptor<MqttSubAckMessage> captor = ArgumentCaptor.forClass(MqttSubAckMessage.class);
@@ -575,6 +575,11 @@ public class MqttCodecTest {
         validatePacketIdAndPropertiesVariableHeader(
                 (MqttMessageIdAndPropertiesVariableHeader) message.variableHeader(),
                 (MqttMessageIdAndPropertiesVariableHeader) decodedMessage.variableHeader());
+        validateSubAckPayload(message.payload(), decodedMessage.payload());
+        assertArrayEquals(
+                "MqttSubAckPayload QoS mismatch ",
+                new Integer[] {1, 2, 0, 0x80},
+                decodedMessage.payload().grantedQoSLevels().toArray());
     }
 
     @Test
@@ -847,14 +852,14 @@ public class MqttCodecTest {
     }
 
     private static MqttSubAckMessage createSubAckMessage() {
-        return createSubAckMessage(MqttProperties.NO_PROPERTIES);
+        return createSubAckMessage(MqttProperties.NO_PROPERTIES, new int[] {1, 2, 0});
     }
 
-    private static MqttSubAckMessage createSubAckMessage(MqttProperties properties) {
+    private static MqttSubAckMessage createSubAckMessage(MqttProperties properties, int[] reasonCodes) {
         MqttFixedHeader mqttFixedHeader =
                 new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
-        MqttSubAckPayload mqttSubAckPayload = new MqttSubAckPayload(1, 2, 0);
+        MqttSubAckPayload mqttSubAckPayload = new MqttSubAckPayload(reasonCodes);
         return new MqttSubAckMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttSubAckPayload);
     }
 
@@ -961,7 +966,11 @@ public class MqttCodecTest {
 
     private static void validateSubAckPayload(MqttSubAckPayload expected, MqttSubAckPayload actual) {
         assertArrayEquals(
-                "MqttSubAckPayload GrantedQosLevels mismatch ",
+                "MqttSubAckPayload reason codes mismatch ",
+                expected.reasonCodes().toArray(),
+                actual.reasonCodes().toArray());
+        assertArrayEquals(
+                "MqttSubAckPayload QoS level mismatch ",
                 expected.grantedQoSLevels().toArray(),
                 actual.grantedQoSLevels().toArray());
     }
