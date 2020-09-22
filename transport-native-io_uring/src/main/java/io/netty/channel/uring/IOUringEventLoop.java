@@ -107,7 +107,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     void remove(AbstractIOUringChannel ch) {
-        channels.remove(ch.socket.intValue());
+        logger.trace("Remove Channel: {}", ch.socket.intValue());
+        int fd = ch.socket.intValue();
+
+        AbstractIOUringChannel old = channels.remove(fd);
+        if (old != null && old != ch) {
+            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+            channels.put(fd, old);
+
+            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
+            assert !ch.isOpen();
+        }
     }
 
     private void closeAll() {
@@ -157,9 +167,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         }
                     }
                 } finally {
-                    if (nextWakeupNanos.get() == AWAKE) {
-                        nextWakeupNanos.getAndSet(AWAKE);
-                    }
+                    nextWakeupNanos.set(AWAKE);
                 }
             } catch (Throwable t) {
                 handleLoopException(t);
