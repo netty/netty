@@ -221,7 +221,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     }
 
     @Override
-    public void handle(int fd, int res, int flags, int op, int pollMask) {
+    public void handle(int fd, int res, int flags, int op, int data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
                 pendingWakeup = false;
@@ -242,7 +242,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
                 handleWrite(channel, res);
             } else if (op == Native.IORING_OP_POLL_ADD) {
-                handlePollAdd(channel, res, pollMask);
+                handlePollAdd(channel, res, data);
             } else if (op == Native.IORING_OP_POLL_REMOVE) {
                 if (res == Errors.ERRNO_ENOENT_NEGATIVE) {
                     logger.trace("IORING_POLL_REMOVE not successful");

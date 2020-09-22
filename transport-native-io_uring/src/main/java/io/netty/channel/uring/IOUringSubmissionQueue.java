@@ -99,7 +99,7 @@ final class IOUringSubmissionQueue {
         }
     }
 
-    private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
+    private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset, int data) {
         int pending = tail - head;
         boolean submit = pending == ringEntries;
         if (submit) {
@@ -110,11 +110,11 @@ final class IOUringSubmissionQueue {
             }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
-        setData(sqe, op, rwFlags, fd, bufferAddress, length, offset);
+        setData(sqe, op, rwFlags, fd, bufferAddress, length, offset, data);
         return submit;
     }
 
-    private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset) {
+    private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset, int data) {
         //set sqe(submission queue) properties
 
         PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) op);
@@ -126,7 +126,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
         PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, rwFlags);
-        long userData = convertToUserData(op, fd, rwFlags);
+        long userData = convertToUserData(fd, op, data);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, userData);
 
         logger.trace("UserDataField: {}", userData);
@@ -137,7 +137,7 @@ final class IOUringSubmissionQueue {
 
     boolean addTimeout(long nanoSeconds) {
         setTimeout(nanoSeconds);
-        return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0);
+        return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0, 0);
     }
 
     boolean addPollIn(int fd) {
@@ -153,39 +153,39 @@ final class IOUringSubmissionQueue {
     }
 
     private boolean addPoll(int fd, int pollMask) {
-        return enqueueSqe(Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0);
+        return enqueueSqe(Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0, pollMask);
     }
 
     //return true -> submit() was called
     boolean addRead(int fd, long bufferAddress, int pos, int limit) {
-        return enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0);
+        return enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0, 0);
     }
 
     boolean addWrite(int fd, long bufferAddress, int pos, int limit) {
-        return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0);
+        return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0, 0);
     }
 
     boolean addAccept(int fd, long address, long addressLength) {
         return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
-                address, 0, addressLength);
+                address, 0, addressLength, 0);
     }
 
     //fill the address which is associated with server poll link user_data
     boolean addPollRemove(int fd, int pollMask) {
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
-                convertToUserData(Native.IORING_OP_POLL_ADD, fd, pollMask), 0, 0);
+                convertToUserData(fd, Native.IORING_OP_POLL_ADD, pollMask), 0, 0, 0);
     }
 
     boolean addConnect(int fd, long socketAddress, long socketAddressLength) {
-        return enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength);
+        return enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength, 0);
     }
 
     boolean addWritev(int fd, long iovecArrayAddress, int length) {
-        return enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0);
+        return enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0, 0);
     }
 
     boolean addClose(int fd) {
-        return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0);
+        return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0, 0);
     }
 
     int submit() {
@@ -235,8 +235,10 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
     }
 
-    private static long convertToUserData(int op, int fd, int pollMask) {
-        int opMask = op << 16 | (pollMask & 0xFFFF);
+    private static long convertToUserData(int fd, int op, int data) {
+        assert op <= Short.MAX_VALUE;
+        assert data <= Short.MAX_VALUE;
+        int opMask = op << 16 | (data & 0xFFFF);
         return (long) fd << 32 | opMask & 0xFFFFFFFFL;
     }
 

@@ -80,16 +80,16 @@ final class IOUringCompletionQueue {
           int fd = (int) (udata >>> 32);
           int opMask = (int) (udata & 0xFFFFFFFFL);
           int op = opMask >>> 16;
-          int mask = opMask & 0xffff;
+          int data = opMask & 0xffff;
 
           i++;
-          callback.handle(fd, res, flags, op, mask);
+          callback.handle(fd, res, flags, op, data);
       }
       return i;
   }
 
   interface IOUringCompletionQueueCallback {
-      void handle(int fd, int res, int flags, int op, int mask);
+      void handle(int fd, int res, int flags, int op, int data);
   }
 
   boolean ioUringWaitCqe() {
