@@ -75,26 +75,33 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
 
         @Override
-        protected void scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            // Do nothing
+        protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void scheduleWriteSingle(Object msg) {
-            // Do nothing
+        protected int scheduleWriteSingle(Object msg) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void scheduleRead0() {
+        boolean writeComplete0(int res, int data, int outstanding) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected int scheduleRead0() {
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.attemptedBytesRead(1);
 
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addAccept(fd().intValue(),
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, (short) 0);
+            return 1;
         }
 
-        protected void readComplete0(int res) {
+        @Override
+        protected void readComplete0(int res, int data, int outstanding) {
             final IOUringRecvByteAllocatorHandle allocHandle =
                     (IOUringRecvByteAllocatorHandle) unsafe()
                             .recvBufAllocHandle();

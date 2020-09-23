@@ -29,11 +29,11 @@ final class SockaddrIn {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
     private SockaddrIn() { }
 
-    static void write(boolean ipv6, long memory, InetSocketAddress address) {
+    static int write(boolean ipv6, long memory, InetSocketAddress address) {
         if (ipv6) {
-            SockaddrIn.writeIPv6(memory, address.getAddress(), address.getPort());
+            return SockaddrIn.writeIPv6(memory, address.getAddress(), address.getPort());
         } else {
-            SockaddrIn.writeIPv4(memory, address.getAddress(), address.getPort());
+            return SockaddrIn.writeIPv4(memory, address.getAddress(), address.getPort());
         }
     }
 

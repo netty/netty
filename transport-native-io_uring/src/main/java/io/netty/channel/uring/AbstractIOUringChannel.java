@@ -73,7 +73,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private static final int WRITE_SCHEDULED = 1 << 4;
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
-    private int ioState;
+    // A byte is enough for now.
+    private byte ioState;
+
+    // It's possible that multiple read / writes are issued. We need to keep track of these.
+    // Let's limit the amount of pending writes and reads by Short.MAX_VALUE. Maybe Byte.MAX_VALUE would also be good
+    // enough but let's be a bit more flexible for now.
+    private short numOutstandingWrites;
+    private short numOutstandingReads;
 
     private ChannelPromise delayedClose;
     private boolean inputClosedSeenErrorOnRead;
@@ -263,34 +270,37 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if ((ioState & WRITE_SCHEDULED) != 0) {
             return;
         }
-        scheduleWrite(in);
+        if (scheduleWrite(in) > 0) {
+            ioState |= WRITE_SCHEDULED;
+        }
     }
 
-    private void scheduleWrite(ChannelOutboundBuffer in) {
-        if (delayedClose != null) {
-            return;
+    private int scheduleWrite(ChannelOutboundBuffer in) {
+        if (delayedClose != null || numOutstandingWrites == Short.MAX_VALUE) {
+            return 0;
         }
         if (in == null) {
-            return;
+            return 0;
         }
 
         int msgCount = in.size();
         if (msgCount == 0) {
-            return;
+            return 0;
         }
         Object msg = in.current();
 
-        assert (ioState & WRITE_SCHEDULED) == 0;
         if (msgCount > 1) {
-            ioUringUnsafe().scheduleWriteMultiple(in);
+            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
         } else if ((msg instanceof ByteBuf) && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     ((msg instanceof ByteBufHolder) && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
             // We also need some special handling for CompositeByteBuf
-            ioUringUnsafe().scheduleWriteMultiple(in);
+            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
         } else {
-            ioUringUnsafe().scheduleWriteSingle(msg);
+            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteSingle(msg);
         }
-        ioState |= WRITE_SCHEDULED;
+        // Ensure we never overflow
+        assert numOutstandingWrites > 0;
+        return numOutstandingWrites;
     }
 
     private void schedulePollOut() {
@@ -316,14 +326,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         private IOUringRecvByteAllocatorHandle allocHandle;
 
         /**
-         * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer}.
+         * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
+         * {@link #writeComplete(int, int)} calls that are expected because of the scheduled write.
          */
-        protected abstract void scheduleWriteMultiple(ChannelOutboundBuffer in);
+        protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
 
         /**
-         * Schedule the write of a singe message.
+         * Schedule the write of a single message and returns the number of {@link #writeComplete(int, int)} calls
+         * that are expected because of the scheduled write
          */
-        protected abstract void scheduleWriteSingle(Object msg);
+        protected abstract int scheduleWriteSingle(Object msg);
 
         @Override
         public void close(ChannelPromise promise) {
@@ -463,16 +475,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        final void readComplete(int res) {
-            ioState &= ~READ_SCHEDULED;
+        final void readComplete(int res, int data) {
+            assert numOutstandingReads > 0;
+            if (--numOutstandingReads == 0) {
+                ioState &= ~READ_SCHEDULED;
+            }
 
-            readComplete0(res);
+            readComplete0(res, data, numOutstandingReads);
         }
 
         /**
          * Called once a read was completed.
          */
-        protected abstract void readComplete0(int res);
+        protected abstract void readComplete0(int res, int data, int outstandingCompletes);
 
         /**
          * Called once POLLRDHUP event is ready to be processed
@@ -486,9 +501,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             recvBufAllocHandle().rdHupReceived();
 
             if (isActive()) {
-                if ((ioState & READ_SCHEDULED) == 0) {
-                    scheduleFirstRead();
-                }
+                scheduleFirstReadIfNeeded();
             } else {
                 // Just to be safe make sure the input marked as closed.
                 shutdownInput(true);
@@ -505,6 +518,10 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
 
+            scheduleFirstReadIfNeeded();
+        }
+
+        private void scheduleFirstReadIfNeeded() {
             if ((ioState & READ_SCHEDULED) == 0) {
                 scheduleFirstRead();
             }
@@ -520,16 +537,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
         protected final void scheduleRead() {
             // Only schedule another read if the fd is still open.
-            if (delayedClose == null && fd().isOpen()) {
-                ioState |= READ_SCHEDULED;
-                scheduleRead0();
+            if (delayedClose == null && fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
+                numOutstandingReads = (short) scheduleRead0();
+                if (numOutstandingReads > 0) {
+                    ioState |= READ_SCHEDULED;
+                }
             }
         }
 
         /**
-         * A read should be scheduled.
+         * Schedule a read and returns the number of {@link #readComplete(int, int)} calls that are expected because of
+         * the scheduled read.
          */
-        protected abstract void scheduleRead0();
+        protected abstract int scheduleRead0();
 
         /**
          * Called once POLLOUT event is ready to be processed
@@ -578,33 +598,32 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once a write was completed.
          */
-        final void writeComplete(int res) {
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-            if (res >= 0) {
-                removeFromOutboundBuffer(channelOutboundBuffer, res);
-                // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
-                // while still removing messages internally in removeBytes(...) which then may corrupt state.
+        final void writeComplete(int res, int data) {
+            assert numOutstandingWrites > 0;
+            --numOutstandingWrites;
+
+            boolean writtenAll = writeComplete0(res, data, numOutstandingWrites);
+            if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+                // We were not able to write everything, let's register for POLLOUT
+                schedulePollOut();
+            }
+
+            // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
+            // while still removing messages internally in removeBytes(...) which then may corrupt state.
+            if (numOutstandingWrites == 0) {
                 ioState &= ~WRITE_SCHEDULED;
-                doWrite(channelOutboundBuffer);
-            } else {
-                ioState &= ~WRITE_SCHEDULED;
-                try {
-                    if (ioResult("io_uring write", res) == 0) {
-                        // We were not able to write everything, let's register for POLLOUT
-                        schedulePollOut();
-                    }
-                } catch (Throwable cause) {
-                    handleWriteError(cause);
+
+                // If we could write all and we did not schedule a pollout yet let us try to write again
+                if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+                    doWrite(unsafe().outboundBuffer());
                 }
             }
         }
 
         /**
-         * Called once a write completed and we should remove message(s) from the {@link ChannelOutboundBuffer}
+         * Called once a write was completed.
          */
-        protected void removeFromOutboundBuffer(ChannelOutboundBuffer outboundBuffer, int bytes) {
-            outboundBuffer.removeBytes(bytes);
-        }
+        abstract boolean writeComplete0(int res, int data, int outstanding);
 
         /**
          * Connect was completed.

@@ -235,10 +235,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
                 return;
             }
             if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT || op == Native.IORING_OP_RECVMSG) {
-                handleRead(channel, res);
+                handleRead(channel, res, data);
             } else if (op == Native.IORING_OP_WRITEV ||
                     op == Native.IORING_OP_WRITE || op == Native.IORING_OP_SENDMSG) {
-                handleWrite(channel, res);
+                handleWrite(channel, res, data);
             } else if (op == Native.IORING_OP_POLL_ADD) {
                 handlePollAdd(channel, res, data);
             } else if (op == Native.IORING_OP_POLL_REMOVE) {
@@ -259,12 +259,12 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         }
     }
 
-    private void handleRead(AbstractIOUringChannel channel, int res) {
-        channel.ioUringUnsafe().readComplete(res);
+    private void handleRead(AbstractIOUringChannel channel, int res, int data) {
+        channel.ioUringUnsafe().readComplete(res, data);
     }
 
-    private void handleWrite(AbstractIOUringChannel channel, int res) {
-        channel.ioUringUnsafe().writeComplete(res);
+    private void handleWrite(AbstractIOUringChannel channel, int res, int data) {
+        channel.ioUringUnsafe().writeComplete(res, data);
     }
 
     private void handlePollAdd(AbstractIOUringChannel channel, int res, int pollMask) {
