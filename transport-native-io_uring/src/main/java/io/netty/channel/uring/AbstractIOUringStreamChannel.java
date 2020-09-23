@@ -19,10 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -207,6 +209,28 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         }
 
         private ByteBuf readBuffer;
+
+        @Override
+        protected void scheduleWriteMultiple(ChannelOutboundBuffer in) {
+            final IovArray iovecArray = ((IOUringEventLoop) eventLoop()).iovArray();
+            try {
+                int offset = iovecArray.count();
+                in.forEachFlushedMessage(iovecArray);
+                submissionQueue().addWritev(socket.intValue(),
+                        iovecArray.memoryAddress(offset), iovecArray.count() - offset);
+            } catch (Exception e) {
+                // This should never happen, anyway fallback to single write.
+                scheduleWriteSingle(in.current());
+            }
+        }
+
+        @Override
+        protected void scheduleWriteSingle(Object msg) {
+            ByteBuf buf = (ByteBuf) msg;
+            IOUringSubmissionQueue submissionQueue = submissionQueue();
+            submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
+                    buf.writerIndex());
+        }
 
         @Override
         protected void scheduleRead0() {
