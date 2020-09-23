@@ -233,9 +233,10 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
             if (channel == null) {
                 return;
             }
-            if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT) {
+            if (op == Native.IORING_OP_READ || op == Native.IORING_OP_ACCEPT || op == Native.IORING_OP_RECVMSG) {
                 handleRead(channel, res);
-            } else if (op == Native.IORING_OP_WRITEV || op == Native.IORING_OP_WRITE) {
+            } else if (op == Native.IORING_OP_WRITEV ||
+                    op == Native.IORING_OP_WRITE || op == Native.IORING_OP_SENDMSG) {
                 handleWrite(channel, res);
             } else if (op == Native.IORING_OP_POLL_ADD) {
                 handlePollAdd(channel, res, data);

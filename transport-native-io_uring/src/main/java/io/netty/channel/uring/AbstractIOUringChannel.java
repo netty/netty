@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
@@ -29,7 +30,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.ConnectTimeoutException;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -38,9 +38,6 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.IovArray;
-import io.netty.channel.unix.NativeInetAddress;
-import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -48,8 +45,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -82,7 +77,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
     private ChannelPromise delayedClose;
     private boolean inputClosedSeenErrorOnRead;
-    static final int SOCK_ADDR_LEN = 128;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
@@ -257,8 +251,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    //deregister
-    // Channel/ChannelHandlerContext.read() was called
     @Override
     protected void doBeginRead() {
         if ((ioState & POLL_IN_SCHEDULED) == 0) {
@@ -286,39 +278,21 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (msgCount == 0) {
             return;
         }
-        ByteBuf msg = (ByteBuf) in.current();
-        if (msgCount > 1 ||
-                // We also need some special handling for CompositeByteBuf
-                msg.nioBufferCount() > 1) {
-            doWriteMultiple(in);
-        } else if (msgCount == 1) {
-            doWriteSingle(msg);
-        }
-    }
+        Object msg = in.current();
 
-     private void doWriteMultiple(ChannelOutboundBuffer in) {
-         final IovArray iovecArray = ((IOUringEventLoop) eventLoop()).iovArray();
-         try {
-             int offset = iovecArray.count();
-             in.forEachFlushedMessage(iovecArray);
-             submissionQueue().addWritev(socket.intValue(),
-                     iovecArray.memoryAddress(offset), iovecArray.count() - offset);
-             ioState |= WRITE_SCHEDULED;
-         } catch (Exception e) {
-             // This should never happen, anyway fallback to single write.
-             doWriteSingle((ByteBuf) in.current());
-         }
-     }
-
-    protected final void doWriteSingle(ByteBuf buf) {
         assert (ioState & WRITE_SCHEDULED) == 0;
-        IOUringSubmissionQueue submissionQueue = submissionQueue();
-        submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
-                buf.writerIndex());
+        if (msgCount > 1) {
+            ioUringUnsafe().scheduleWriteMultiple(in);
+        } else if ((msg instanceof ByteBuf) && ((ByteBuf) msg).nioBufferCount() > 1 ||
+                    ((msg instanceof ByteBufHolder) && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
+            // We also need some special handling for CompositeByteBuf
+            ioUringUnsafe().scheduleWriteMultiple(in);
+        } else {
+            ioUringUnsafe().scheduleWriteSingle(msg);
+        }
         ioState |= WRITE_SCHEDULED;
     }
 
-    //POLLOUT
     private void schedulePollOut() {
         assert (ioState & POLL_OUT_SCHEDULED) == 0;
         IOUringSubmissionQueue submissionQueue = submissionQueue();
@@ -326,15 +300,30 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         ioState |= POLL_OUT_SCHEDULED;
     }
 
-    void schedulePollRdHup() {
+    final void schedulePollRdHup() {
         assert (ioState & POLL_RDHUP_SCHEDULED) == 0;
         IOUringSubmissionQueue submissionQueue = submissionQueue();
         submissionQueue.addPollRdHup(fd().intValue());
         ioState |= POLL_RDHUP_SCHEDULED;
     }
 
+    final void resetCachedAddresses() {
+        local = socket.localAddress();
+        remote = socket.remoteAddress();
+    }
+
     abstract class AbstractUringUnsafe extends AbstractUnsafe {
         private IOUringRecvByteAllocatorHandle allocHandle;
+
+        /**
+         * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer}.
+         */
+        protected abstract void scheduleWriteMultiple(ChannelOutboundBuffer in);
+
+        /**
+         * Schedule the write of a singe message.
+         */
+        protected abstract void scheduleWriteSingle(Object msg);
 
         @Override
         public void close(ChannelPromise promise) {
@@ -414,19 +403,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        final IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
             return new IOUringRecvByteAllocatorHandle(handle);
         }
 
         @Override
-        public IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
+        public final IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
                 allocHandle = newIOUringHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
             }
             return allocHandle;
         }
 
-        void shutdownInput(boolean rdHup) {
+        final void shutdownInput(boolean rdHup) {
             logger.trace("shutdownInput Fd: {}", fd().intValue());
             if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
@@ -456,7 +445,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             close(voidPromise());
         }
 
-        void schedulePollIn() {
+        final void schedulePollIn() {
             assert (ioState & POLL_IN_SCHEDULED) == 0;
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
@@ -466,7 +455,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             submissionQueue.addPollIn(socket.intValue());
         }
 
-        void processDelayedClose() {
+        final void processDelayedClose() {
             ChannelPromise promise = delayedClose;
             if (promise != null && (ioState & (READ_SCHEDULED | WRITE_SCHEDULED | CONNECT_SCHEDULED)) == 0) {
                 delayedClose = null;
@@ -480,6 +469,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             readComplete0(res);
         }
 
+        /**
+         * Called once a read was completed.
+         */
         protected abstract void readComplete0(int res);
 
         /**
@@ -534,6 +526,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
+        /**
+         * A read should be scheduled.
+         */
         protected abstract void scheduleRead0();
 
         /**
@@ -574,16 +569,19 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                         schedulePollOut();
                     }
                 }
-            } else if (!getSocket().isOutputShutdown()) {
+            } else if (!socket.isOutputShutdown()) {
                 // Try writing again
                 super.flush0();
             }
         }
 
+        /**
+         * Called once a write was completed.
+         */
         final void writeComplete(int res) {
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (res >= 0) {
-                channelOutboundBuffer.removeBytes(res);
+                removeFromOutboundBuffer(channelOutboundBuffer, res);
                 // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
                 // while still removing messages internally in removeBytes(...) which then may corrupt state.
                 ioState &= ~WRITE_SCHEDULED;
@@ -601,7 +599,17 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        final void connectComplete(int res) {
+        /**
+         * Called once a write completed and we should remove message(s) from the {@link ChannelOutboundBuffer}
+         */
+        protected void removeFromOutboundBuffer(ChannelOutboundBuffer outboundBuffer, int bytes) {
+            outboundBuffer.removeBytes(bytes);
+        }
+
+        /**
+         * Connect was completed.
+         */
+        void connectComplete(int res) {
             ioState &= ~CONNECT_SCHEDULED;
             freeRemoteAddressMemory();
 
@@ -646,19 +654,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 doConnect(remoteAddress, localAddress);
                 InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
 
-                remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(SOCK_ADDR_LEN);
+                remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
                 long remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
 
-                if (socket.isIpv6()) {
-                    SockaddrIn.writeIPv6(remoteAddressMemoryAddress, inetSocketAddress.getAddress(),
-                            inetSocketAddress.getPort());
-                } else {
-                    SockaddrIn.writeIPv4(remoteAddressMemoryAddress, inetSocketAddress.getAddress(),
-                            inetSocketAddress.getPort());
-                }
+                SockaddrIn.write(socket.isIpv6(), remoteAddressMemoryAddress, inetSocketAddress);
 
                 final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
-                ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress, SOCK_ADDR_LEN);
+                ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress,
+                        Native.SIZEOF_SOCKADDR_STORAGE);
                 ioState |= CONNECT_SCHEDULED;
             } catch (Throwable t) {
                 closeIfClosed();
@@ -714,7 +717,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doDeregister() {
+    protected final void doDeregister() {
         IOUringSubmissionQueue submissionQueue = submissionQueue();
 
         if (submissionQueue != null) {
@@ -735,7 +738,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    public void doBind(final SocketAddress local) throws Exception {
+    protected void doBind(final SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) local);
         }
@@ -750,9 +753,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    public abstract DefaultChannelConfig config();
-
-    @Override
     protected SocketAddress localAddress0() {
         return local;
     }
@@ -760,10 +760,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected SocketAddress remoteAddress0() {
         return remote;
-    }
-
-    protected Socket getSocket() {
-        return socket;
     }
 
     /**
