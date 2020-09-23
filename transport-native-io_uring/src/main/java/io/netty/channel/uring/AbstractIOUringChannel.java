@@ -714,10 +714,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister() {
         IOUringSubmissionQueue submissionQueue = submissionQueue();
 
         if (submissionQueue != null) {
+            if ((ioState & (POLL_IN_SCHEDULED | POLL_OUT_SCHEDULED | POLL_RDHUP_SCHEDULED)) == 0) {
+                ((IOUringEventLoop) eventLoop()).remove(this);
+                return;
+            }
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
                 submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
             }

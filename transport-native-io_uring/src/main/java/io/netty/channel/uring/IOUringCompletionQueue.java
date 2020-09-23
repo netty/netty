@@ -33,8 +33,8 @@ final class IOUringCompletionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
-    private final long kringMaskAddress;
-    private final long kringEntries;
+    private final long kRingMaskAddress;
+    private final long kRingEntriesAddress;
     private final long kOverflowAddress;
 
     private final long completionQueueArrayAddress;
@@ -46,20 +46,20 @@ final class IOUringCompletionQueue {
     private final int ringMask;
     private int ringHead;
 
-    IOUringCompletionQueue(long kHeadAddress, long kTailAddress, long kringMaskAddress, long kringEntries,
+    IOUringCompletionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress,
                            int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        this.kringMaskAddress = kringMaskAddress;
-        this.kringEntries = kringEntries;
+        this.kRingMaskAddress = kRingMaskAddress;
+        this.kRingEntriesAddress = kRingEntriesAddress;
         this.kOverflowAddress = kOverflowAddress;
         this.completionQueueArrayAddress = completionQueueArrayAddress;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
 
-        this.ringMask = PlatformDependent.getIntVolatile(kringMaskAddress);
+        this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
         this.ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
     }
 
