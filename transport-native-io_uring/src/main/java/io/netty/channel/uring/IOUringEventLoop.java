@@ -57,7 +57,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final byte[] inet6AddressArray = new byte[16];
 
     private long prevDeadlineNanos = NONE;
-    private boolean pendingWakeup;
 
     IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
@@ -168,9 +167,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         }
                     }
                 } finally {
-                    if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
-                        pendingWakeup = true;
-                    }
+                    nextWakeupNanos.set(AWAKE);
                 }
             } catch (Throwable t) {
                 handleLoopException(t);
@@ -224,7 +221,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     public void handle(int fd, int res, int flags, int op, int data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                pendingWakeup = false;
                 addEventFdRead(ringBuffer.ioUringSubmissionQueue());
             }
         } else if (op == Native.IORING_OP_TIMEOUT) {
@@ -251,7 +247,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                 }
                 if (!channel.ioScheduled()) {
                     // We cancelled the POLL ops which means we are done and should remove the mapping.
-                    channels.remove(fd);
+                    remove(channel);
                     return;
                 }
             } else if (op == Native.IORING_OP_CONNECT) {

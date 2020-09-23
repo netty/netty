@@ -48,9 +48,9 @@ final class IOUringSubmissionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
-    private final long fFlagsAdress;
+    private final long kFlagsAddress;
     private final long kDroppedAddress;
-    private final long arrayAddress;
+    private final long kArrayAddress;
     final long submissionQueueArrayAddress;
 
     final int ringEntries;
@@ -66,14 +66,14 @@ final class IOUringSubmissionQueue {
     private int tail;
 
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
-                           long fFlagsAdress, long kDroppedAddress, long arrayAddress, long submissionQueueArrayAddress,
-                           int ringSize, long ringAddress, int ringFd,
+                           long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
+                           long submissionQueueArrayAddress, int ringSize, long ringAddress, int ringFd,
                            boolean iosqeAsync, Runnable submissionCallback) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        this.fFlagsAdress = fFlagsAdress;
+        this.kFlagsAddress = kFlagsAddress;
         this.kDroppedAddress = kDroppedAddress;
-        this.arrayAddress = arrayAddress;
+        this.kArrayAddress = kArrayAddress;
         this.submissionQueueArrayAddress = submissionQueueArrayAddress;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
@@ -90,7 +90,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.setMemory(submissionQueueArrayAddress, ringEntries * SQE_SIZE, (byte) 0);
 
         // Fill SQ array indices (1-1 with SQE array) and set nonzero constant SQE fields
-        long address = arrayAddress;
+        long address = kArrayAddress;
         long sqeFlagsAddress = submissionQueueArrayAddress + SQE_FLAGS_FIELD;
         byte flag = iosqeAsync ? (byte) Native.IOSQE_ASYNC : 0;
         for (int i = 0; i < ringEntries; i++, address += INT_SIZE, sqeFlagsAddress += SQE_SIZE) {
