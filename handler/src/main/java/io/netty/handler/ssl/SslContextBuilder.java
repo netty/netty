@@ -165,7 +165,7 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext} with {@link KeyManager}.
      *
-     * @param KeyManager non-{@code null} KeyManager for server's private key
+     * @param keyManager non-{@code null} KeyManager for server's private key
      */
     public static SslContextBuilder forServer(KeyManager keyManager) {
         return new SslContextBuilder(true).keyManager(keyManager);
