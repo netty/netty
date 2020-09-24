@@ -13,8 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#include <linux/io_uring.h>
+ /* SPDX-License-Identifier: MIT */
 #include <signal.h>
+#include "io_uring.h"
 #ifndef LIBURING_SYSCALL_H
 #define LIBURING_SYSCALL_H
 
