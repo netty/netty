@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#include <linux/io_uring.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "io_uring.h"
 #include "netty_unix_buffer.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"

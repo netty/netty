@@ -246,3 +246,11 @@ This private header is also used by Apple's open source
     * license/LICENSE.dnsinfo.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://www.opensource.apple.com/source/configd/configd-453.19/dnsinfo/dnsinfo.h
+
+
+This product contains the a few files forked from liburing to allow building on systems that dont have kernel 5.9+.
+
+ * LICENSE:
+    * license/LICENSE.liburing.txt (MIT)
+  * HOMEPAGE:
+    * https://github.com/axboe/liburing
