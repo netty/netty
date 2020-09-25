@@ -89,7 +89,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.X509ExtendedTrustManager;
 
@@ -1371,11 +1370,13 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeFailureCipherMissmatchTLSv12OpenSsl() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
         testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, false);
     }
 
     @Test
     public void testHandshakeFailureCipherMissmatchTLSv13OpenSsl() throws Exception {
+         Assume.assumeTrue(OpenSsl.isAvailable());
         Assume.assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
         Assume.assumeFalse("BoringSSL does not support setting ciphers for TLSv1.3 explicit", OpenSsl.isBoringSSL());
         testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, true);
@@ -1458,21 +1459,21 @@ public class SslHandlerTest {
             cc = future.syncUninterruptibly().channel();
 
             Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
-            assertThat(clientCause, CoreMatchers.<Throwable>instanceOf(SSLHandshakeException.class));
+            assertThat(clientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
             assertThat(clientCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
             Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
-            assertThat(serverCause, CoreMatchers.<Throwable>instanceOf(SSLHandshakeException.class));
+            assertThat(serverCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
             assertThat(serverCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
             cc.close().syncUninterruptibly();
             sc.close().syncUninterruptibly();
 
             Throwable eventClientCause = clientEvent.get().cause();
-            assertThat(eventClientCause, CoreMatchers.<Throwable>instanceOf(SSLHandshakeException.class));
+            assertThat(eventClientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
             assertThat(eventClientCause.getCause(),
                     not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
             Throwable serverEventCause = serverEvent.get().cause();
 
-            assertThat(serverEventCause, CoreMatchers.<Throwable>instanceOf(SSLHandshakeException.class));
+            assertThat(serverEventCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
             assertThat(serverEventCause.getCause(),
                     not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
         } finally {
