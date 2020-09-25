@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+  /* SPDX-License-Identifier: MIT */
 #include "syscall.h"
 #include <signal.h>
 #include <sys/syscall.h>
