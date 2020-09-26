@@ -23,10 +23,8 @@ import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -73,28 +71,23 @@ final class OpenSslKeyMaterialManager {
             throw new SSLHandshakeException("Unable to find key material");
         }
 
-        boolean matched = false;
-        // authMethods may contain duplicates but call chooseServerAlias(...) may be expensive. So let's ensure
+        // authMethods may contain duplicates or may result in the same type
+        // but call chooseServerAlias(...) may be expensive. So let's ensure
         // we filter out duplicates.
-        Set<String> authMethodsSet = new LinkedHashSet<String>(authMethods.length);
-        Collections.addAll(authMethodsSet, authMethods);
-        Set<String> aliases = new HashSet<String>(authMethodsSet.size());
-        for (String authMethod : authMethodsSet) {
+        Set<String> typeSet = new HashSet<String>(KEY_TYPES.size());
+        for (String authMethod : authMethods) {
             String type = KEY_TYPES.get(authMethod);
-            if (type != null) {
+            if (type != null && typeSet.add(type)) {
                 String alias = chooseServerAlias(engine, type);
-                if (alias != null && aliases.add(alias)) {
-                    if (!setKeyMaterial(engine, alias)) {
-                        return;
-                    }
-                    matched = true;
+                if (alias != null) {
+                    // We found a match... let's set the key material and return.
+                    setKeyMaterial(engine, alias);
+                    return;
                 }
             }
         }
-        if (!matched) {
-            throw new SSLHandshakeException("Unable to find key material for auth method(s): "
-                    + Arrays.toString(authMethods));
-        }
+        throw new SSLHandshakeException("Unable to find key material for auth method(s): "
+                + Arrays.toString(authMethods));
     }
 
     void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
@@ -108,11 +101,14 @@ final class OpenSslKeyMaterialManager {
         }
     }
 
-    private boolean setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
+    private void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
         OpenSslKeyMaterial keyMaterial = null;
         try {
             keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
-            return keyMaterial == null || engine.setKeyMaterial(keyMaterial);
+            if (keyMaterial == null) {
+                return;
+            }
+            engine.setKeyMaterial(keyMaterial);
         } catch (SSLException e) {
             throw e;
         } catch (Exception e) {
