@@ -62,6 +62,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -70,6 +71,7 @@ import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
@@ -91,10 +93,7 @@ import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1357,4 +1356,130 @@ public class SslHandlerTest {
             group.shutdownGracefully();
         }
     }
+
+    @Test
+    public void testHandshakeFailureCipherMissmatchTLSv12Jdk() throws Exception {
+        testHandshakeFailureCipherMissmatch(SslProvider.JDK, false);
+    }
+
+    @Test
+    public void testHandshakeFailureCipherMissmatchTLSv13Jdk() throws Exception {
+        Assume.assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testHandshakeFailureCipherMissmatch(SslProvider.JDK, true);
+    }
+
+    @Test
+    public void testHandshakeFailureCipherMissmatchTLSv12OpenSsl() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, false);
+    }
+
+    @Test
+    public void testHandshakeFailureCipherMissmatchTLSv13OpenSsl() throws Exception {
+         Assume.assumeTrue(OpenSsl.isAvailable());
+        Assume.assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        Assume.assumeFalse("BoringSSL does not support setting ciphers for TLSv1.3 explicit", OpenSsl.isBoringSSL());
+        testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, true);
+    }
+
+    private static void testHandshakeFailureCipherMissmatch(SslProvider provider, boolean tls13) throws Exception {
+        final String clientCipher;
+        final String serverCipher;
+        final String protocol;
+
+        if (tls13) {
+            clientCipher = "TLS_AES_128_GCM_SHA256";
+            serverCipher = "TLS_AES_256_GCM_SHA384";
+            protocol = SslUtils.PROTOCOL_TLS_V1_3;
+        } else {
+            clientCipher = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
+            serverCipher = "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+            protocol = SslUtils.PROTOCOL_TLS_V1_2;
+        }
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .protocols(protocol)
+                .ciphers(Collections.singleton(clientCipher))
+                .sslProvider(provider).build();
+
+        final SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .protocols(protocol)
+                .ciphers(Collections.singleton(serverCipher))
+                .sslProvider(provider).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+
+        class SslEventHandler extends ChannelInboundHandlerAdapter {
+            private final AtomicReference<SslHandshakeCompletionEvent> ref;
+
+            SslEventHandler(AtomicReference<SslHandshakeCompletionEvent> ref) {
+                this.ref = ref;
+            }
+
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof SslHandshakeCompletionEvent) {
+                    ref.set((SslHandshakeCompletionEvent) evt);
+                }
+                super.userEventTriggered(ctx, evt);
+            }
+        }
+        final AtomicReference<SslHandshakeCompletionEvent> clientEvent =
+                new AtomicReference<SslHandshakeCompletionEvent>();
+        final AtomicReference<SslHandshakeCompletionEvent> serverEvent =
+                new AtomicReference<SslHandshakeCompletionEvent>();
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(serverSslHandler);
+                            ch.pipeline().addLast(new SslEventHandler(serverEvent));
+                        }
+                    })
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            ChannelFuture future = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new SslEventHandler(clientEvent));
+                        }
+                    }).connect(sc.localAddress());
+            cc = future.syncUninterruptibly().channel();
+
+            Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
+            assertThat(clientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertThat(clientCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
+            assertThat(serverCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertThat(serverCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            cc.close().syncUninterruptibly();
+            sc.close().syncUninterruptibly();
+
+            Throwable eventClientCause = clientEvent.get().cause();
+            assertThat(eventClientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertThat(eventClientCause.getCause(),
+                    not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            Throwable serverEventCause = serverEvent.get().cause();
+
+            assertThat(serverEventCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertThat(serverEventCause.getCause(),
+                    not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+        } finally {
+            group.shutdownGracefully();
+            ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
 }

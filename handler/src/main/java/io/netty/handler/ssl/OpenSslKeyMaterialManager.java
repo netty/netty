@@ -16,11 +16,13 @@
 package io.netty.handler.ssl;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,8 +70,10 @@ final class OpenSslKeyMaterialManager {
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
         String[] authMethods = engine.authMethods();
         if (authMethods.length == 0) {
-            return;
+            throw new SSLHandshakeException("Unable to find key material");
         }
+
+        boolean matched = false;
         // authMethods may contain duplicates but call chooseServerAlias(...) may be expensive. So let's ensure
         // we filter out duplicates.
         Set<String> authMethodsSet = new LinkedHashSet<String>(authMethods.length);
@@ -83,8 +87,13 @@ final class OpenSslKeyMaterialManager {
                     if (!setKeyMaterial(engine, alias)) {
                         return;
                     }
+                    matched = true;
                 }
             }
+        }
+        if (!matched) {
+            throw new SSLHandshakeException("Unable to find key material for auth method(s): "
+                    + Arrays.toString(authMethods));
         }
     }
 
