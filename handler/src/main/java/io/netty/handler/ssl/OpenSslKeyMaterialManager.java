@@ -23,8 +23,10 @@ import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -70,9 +72,14 @@ final class OpenSslKeyMaterialManager {
         if (authMethods.length == 0) {
             throw new SSLHandshakeException("Unable to find key material");
         }
-        Set<String> aliases = new HashSet<String>(authMethods.length);
+
         boolean matched = false;
-        for (String authMethod : authMethods) {
+        // authMethods may contain duplicates but call chooseServerAlias(...) may be expensive. So let's ensure
+        // we filter out duplicates.
+        Set<String> authMethodsSet = new LinkedHashSet<String>(authMethods.length);
+        Collections.addAll(authMethodsSet, authMethods);
+        Set<String> aliases = new HashSet<String>(authMethodsSet.size());
+        for (String authMethod : authMethodsSet) {
             String type = KEY_TYPES.get(authMethod);
             if (type != null) {
                 String alias = chooseServerAlias(engine, type);
