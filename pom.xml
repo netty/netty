@@ -442,6 +442,7 @@
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native-image</module>
+    <module>testsuite-native-image-client</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
