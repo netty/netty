@@ -20,13 +20,21 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslSessionReuseTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketSslSessionReuseTest extends SocketSslSessionReuseTest {
 
     public IOUringSocketSslSessionReuseTest(SslContext serverCtx, SslContext clientCtx) {
         super(serverCtx, clientCtx);
+    }
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
     }
 
     @Override

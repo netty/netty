@@ -21,14 +21,22 @@ import io.netty.channel.Channel;
 import io.netty.channel.unix.Errors;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketRstTest;
+import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketRstTest extends SocketRstTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();

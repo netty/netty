@@ -19,10 +19,19 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringDatagramUnicastTest extends DatagramUnicastTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);

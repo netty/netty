@@ -18,10 +18,18 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.WriteBeforeRegisteredTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {

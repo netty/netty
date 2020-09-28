@@ -20,11 +20,19 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {

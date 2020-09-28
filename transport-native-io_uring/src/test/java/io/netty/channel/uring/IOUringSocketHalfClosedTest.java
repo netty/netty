@@ -21,12 +21,21 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringSocketHalfClosedTest extends SocketHalfClosedTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();

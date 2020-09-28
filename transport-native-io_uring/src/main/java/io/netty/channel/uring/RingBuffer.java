@@ -25,6 +25,10 @@ final class RingBuffer {
         this.ioUringCompletionQueue = ioUringCompletionQueue;
     }
 
+    int fd() {
+        return ioUringCompletionQueue.ringFd;
+    }
+
     IOUringSubmissionQueue ioUringSubmissionQueue() {
         return this.ioUringSubmissionQueue;
     }
