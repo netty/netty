@@ -55,13 +55,13 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         assertFalse(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
-                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex(), 0));
+                writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex(), (short) 0));
         submissionQueue.submit();
 
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, short mask) {
                 assertEquals(inputString.length(), res);
                 writeEventByteBuf.release();
             }
@@ -69,13 +69,13 @@ public class NativeTest {
 
         final ByteBuf readEventByteBuf = allocator.directBuffer(100);
         assertFalse(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
-                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity(), 0));
+                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity(), (short) 0));
         submissionQueue.submit();
 
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, short mask) {
                 assertEquals(inputString.length(), res);
                 readEventByteBuf.writerIndex(res);
             }
@@ -107,7 +107,7 @@ public class NativeTest {
                 try {
                     completionQueue.process(new IOUringCompletionQueueCallback() {
                         @Override
-                        public void handle(int fd, int res, int flags, int op, int mask) {
+                        public void handle(int fd, int res, int flags, int op, short mask) {
                             assertEquals(-62, res);
                         }
                     });
@@ -123,7 +123,7 @@ public class NativeTest {
             e.printStackTrace();
         }
 
-        submissionQueue.addTimeout(0, 0);
+        submissionQueue.addTimeout(0, (short) 0);
         submissionQueue.submit();
 
         thread.join();
@@ -155,7 +155,7 @@ public class NativeTest {
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, int mask) {
+            public void handle(int fd, int res, int flags, int op, short mask) {
                 assertEquals(1, res);
             }
         }));
@@ -186,7 +186,7 @@ public class NativeTest {
                 completionQueue.ioUringWaitCqe();
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
                     @Override
-                    public void handle(int fd, int res, int flags, int op, int mask) {
+                    public void handle(int fd, int res, int flags, int op, short mask) {
                         assertEquals(1, res);
                     }
                 }));
@@ -229,7 +229,7 @@ public class NativeTest {
         FileDescriptor eventFd = Native.newBlockingEventFd();
         submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
-        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN, 0);
+        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN, (short) 0);
         submissionQueue.submit();
 
         final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
@@ -237,7 +237,7 @@ public class NativeTest {
             private final IOUringCompletionQueueCallback verifyCallback =
                     new IOUringCompletionQueueCallback() {
                 @Override
-                public void handle(int fd, int res, int flags, int op, int mask) {
+                public void handle(int fd, int res, int flags, int op, short mask) {
                     if (op == Native.IORING_OP_POLL_ADD) {
                         assertEquals(Native.ERRNO_ECANCELED_NEGATIVE, res);
                     } else if (op == Native.IORING_OP_POLL_REMOVE) {
@@ -280,12 +280,12 @@ public class NativeTest {
         try {
             // Ensure userdata works with negative and positive values
             for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; i++) {
-                submissionQueue.addWrite(-1, -1, -1, -1, i);
+                submissionQueue.addWrite(-1, -1, -1, -1, (short) i);
                 assertEquals(1, submissionQueue.submitAndWait());
                 final int expectedData = i;
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
                     @Override
-                    public void handle(int fd, int res, int flags, int op, int data) {
+                    public void handle(int fd, int res, int flags, int op, short data) {
                         assertEquals(-1, fd);
                         assertTrue(res < 0);
                         assertEquals(Native.IORING_OP_WRITE, op);

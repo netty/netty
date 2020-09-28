@@ -28,11 +28,11 @@ public class UserDataTest {
                 for (int data = Short.MIN_VALUE; data <= Short.MAX_VALUE; data++) {
                     final int expectedFd = fd;
                     final int expectedOp = op;
-                    final int expectedData = data;
+                    final short expectedData = (short) data;
                     long udata = UserData.encode(expectedFd, expectedOp, expectedData);
                     UserData.decode(0, 0, udata, new IOUringCompletionQueueCallback() {
                         @Override
-                        public void handle(int actualFd, int res, int flags, int actualOp, int actualData) {
+                        public void handle(int actualFd, int res, int flags, int actualOp, short actualData) {
                             assertEquals(expectedFd, actualFd);
                             assertEquals(expectedOp, actualOp);
                             assertEquals(expectedData, actualData);

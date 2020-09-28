@@ -100,7 +100,7 @@ final class IOUringSubmissionQueue {
         }
     }
 
-    private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset, int data) {
+    private boolean enqueueSqe(int op, int rwFlags, int fd, long bufferAddress, int length, long offset, short data) {
         int pending = tail - head;
         boolean submit = pending == ringEntries;
         if (submit) {
@@ -115,7 +115,8 @@ final class IOUringSubmissionQueue {
         return submit;
     }
 
-    private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length, long offset, int data) {
+    private void setData(long sqe, int op, int rwFlags, int fd, long bufferAddress, int length,
+                         long offset, short data) {
         //set sqe(submission queue) properties
 
         PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) op);
@@ -136,7 +137,7 @@ final class IOUringSubmissionQueue {
         logger.trace("Offset: {}", offset);
     }
 
-    boolean addTimeout(long nanoSeconds, int extraData) {
+    boolean addTimeout(long nanoSeconds, short extraData) {
         setTimeout(nanoSeconds);
         return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, -1, timeoutMemoryAddress, 1, 0, extraData);
     }
@@ -154,45 +155,45 @@ final class IOUringSubmissionQueue {
     }
 
     private boolean addPoll(int fd, int pollMask) {
-        return enqueueSqe(Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0, pollMask);
+        return enqueueSqe(Native.IORING_OP_POLL_ADD, pollMask, fd, 0, 0, 0, (short) pollMask);
     }
 
-    boolean addRecvmsg(int fd, long msgHdr, int extraData) {
+    boolean addRecvmsg(int fd, long msgHdr, short extraData) {
         return enqueueSqe(Native.IORING_OP_RECVMSG, 0, fd, msgHdr, 1, 0, extraData);
     }
 
-    boolean addSendmsg(int fd, long msgHdr, int extraData) {
+    boolean addSendmsg(int fd, long msgHdr, short extraData) {
         return enqueueSqe(Native.IORING_OP_SENDMSG, 0, fd, msgHdr, 1, 0, extraData);
     }
 
-    boolean addRead(int fd, long bufferAddress, int pos, int limit, int extraData) {
+    boolean addRead(int fd, long bufferAddress, int pos, int limit, short extraData) {
         return enqueueSqe(Native.IORING_OP_READ, 0, fd, bufferAddress + pos, limit - pos, 0, extraData);
     }
 
-    boolean addWrite(int fd, long bufferAddress, int pos, int limit, int extraData) {
+    boolean addWrite(int fd, long bufferAddress, int pos, int limit, short extraData) {
         return enqueueSqe(Native.IORING_OP_WRITE, 0, fd, bufferAddress + pos, limit - pos, 0, extraData);
     }
 
-    boolean addAccept(int fd, long address, long addressLength, int extraData) {
+    boolean addAccept(int fd, long address, long addressLength, short extraData) {
         return enqueueSqe(Native.IORING_OP_ACCEPT, Native.SOCK_NONBLOCK | Native.SOCK_CLOEXEC, fd,
                 address, 0, addressLength, extraData);
     }
 
     //fill the address which is associated with server poll link user_data
-    boolean addPollRemove(int fd, int pollMask, int extraData) {
+    boolean addPollRemove(int fd, int pollMask, short extraData) {
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
-                          encode(fd, Native.IORING_OP_POLL_ADD, pollMask), 0, 0, extraData);
+                          encode(fd, Native.IORING_OP_POLL_ADD, (short) pollMask), 0, 0, extraData);
     }
 
-    boolean addConnect(int fd, long socketAddress, long socketAddressLength, int extraData) {
+    boolean addConnect(int fd, long socketAddress, long socketAddressLength, short extraData) {
         return enqueueSqe(Native.IORING_OP_CONNECT, 0, fd, socketAddress, 0, socketAddressLength, extraData);
     }
 
-    boolean addWritev(int fd, long iovecArrayAddress, int length, int extraData) {
+    boolean addWritev(int fd, long iovecArrayAddress, int length, short extraData) {
         return enqueueSqe(Native.IORING_OP_WRITEV, 0, fd, iovecArrayAddress, length, 0, extraData);
     }
 
-    boolean addClose(int fd, int extraData) {
+    boolean addClose(int fd, short extraData) {
         return enqueueSqe(Native.IORING_OP_CLOSE, 0, fd, 0, 0, 0, extraData);
     }
 

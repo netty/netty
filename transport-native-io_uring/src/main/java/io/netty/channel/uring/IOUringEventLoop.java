@@ -156,7 +156,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
                     if (!hasTasks()) {
                         if (curDeadlineNanos != prevDeadlineNanos) {
                             prevDeadlineNanos = curDeadlineNanos;
-                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos), 0);
+                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos), (short) 0);
                         }
 
                         // Check there were any completion events to process
@@ -220,7 +220,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     }
 
     @Override
-    public void handle(int fd, int res, int flags, int op, int data) {
+    public void handle(int fd, int res, int flags, int op, short data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             pendingWakeup = false;
             addEventFdRead(ringBuffer.ioUringSubmissionQueue());
@@ -280,7 +280,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     }
 
     private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
-        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8, 0);
+        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8, (short) 0);
     }
 
     private void handleConnect(AbstractIOUringChannel channel, int res) {
@@ -296,7 +296,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
             IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
             IOUringCompletionQueueCallback callback = new IOUringCompletionQueueCallback() {
                 @Override
-                public void handle(int fd, int res, int flags, int op, int data) {
+                public void handle(int fd, int res, int flags, int op, short data) {
                     if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
                         pendingWakeup = false;
                     }
