@@ -20,8 +20,11 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslEchoTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketSslEchoTest extends SocketSslEchoTest {
     public IOUringSocketSslEchoTest(
@@ -32,6 +35,11 @@ public class IOUringSocketSslEchoTest extends SocketSslEchoTest {
         super(serverCtx, clientCtx, renegotiation,
                 serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
                 autoRead, useChunkedWriteHandler, useCompositeByteBuf);
+    }
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
     }
 
     @Override

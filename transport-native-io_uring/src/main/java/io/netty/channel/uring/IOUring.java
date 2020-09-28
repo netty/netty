@@ -39,6 +39,7 @@ public final class IOUring {
                             // Noop
                         }
                     });
+                    Native.checkAllIOSupported(ringBuffer.fd());
                 } catch (Throwable t) {
                     cause = t;
                 } finally {

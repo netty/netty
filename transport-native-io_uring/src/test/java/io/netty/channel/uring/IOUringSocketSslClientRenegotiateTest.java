@@ -20,13 +20,21 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslClientRenegotiateTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketSslClientRenegotiateTest extends SocketSslClientRenegotiateTest {
 
     public IOUringSocketSslClientRenegotiateTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
         super(serverCtx, clientCtx, delegate);
+    }
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
     }
 
     @Override

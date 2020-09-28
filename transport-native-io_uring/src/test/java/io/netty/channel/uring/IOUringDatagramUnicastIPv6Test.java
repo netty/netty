@@ -18,10 +18,19 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastIPv6Test;
+import org.junit.BeforeClass;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringDatagramUnicastIPv6Test extends DatagramUnicastIPv6Test {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());

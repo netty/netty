@@ -21,11 +21,19 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketMultipleConnectTest;
+import org.junit.BeforeClass;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringSocketMultipleConnectTest extends SocketMultipleConnectTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {

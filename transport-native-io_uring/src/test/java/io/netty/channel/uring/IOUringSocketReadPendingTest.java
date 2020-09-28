@@ -19,10 +19,19 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketReadPendingTest;
+import org.junit.BeforeClass;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 public class IOUringSocketReadPendingTest extends SocketReadPendingTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();

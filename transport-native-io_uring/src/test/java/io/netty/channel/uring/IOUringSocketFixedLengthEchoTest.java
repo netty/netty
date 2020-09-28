@@ -27,6 +27,11 @@ import static org.junit.Assume.assumeTrue;
 
 public class IOUringSocketFixedLengthEchoTest extends SocketFixedLengthEchoTest {
 
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();

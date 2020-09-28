@@ -18,18 +18,24 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.unix.IovArray;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assume.assumeTrue;
 
 public class IovArraysTest {
 
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Test
     public void test() {
-        IOUring.ensureAvailability();
         ByteBuf buf = Unpooled.directBuffer(1).writeZero(1);
         IovArrays arrays = new IovArrays(2);
         try {
