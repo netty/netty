@@ -19,6 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.channel.uring.UserData.encode;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -126,7 +127,7 @@ final class IOUringSubmissionQueue {
         PlatformDependent.putLong(sqe + SQE_ADDRESS_FIELD, bufferAddress);
         PlatformDependent.putInt(sqe + SQE_LEN_FIELD, length);
         PlatformDependent.putInt(sqe + SQE_RW_FLAGS_FIELD, rwFlags);
-        long userData = convertToUserData(fd, op, data);
+        long userData = encode(fd, op, data);
         PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, userData);
 
         logger.trace("UserDataField: {}", userData);
@@ -180,7 +181,7 @@ final class IOUringSubmissionQueue {
     //fill the address which is associated with server poll link user_data
     boolean addPollRemove(int fd, int pollMask, int extraData) {
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, fd,
-                convertToUserData(fd, Native.IORING_OP_POLL_ADD, pollMask), 0, 0, extraData);
+                          encode(fd, Native.IORING_OP_POLL_ADD, pollMask), 0, 0, extraData);
     }
 
     boolean addConnect(int fd, long socketAddress, long socketAddressLength, int extraData) {
@@ -240,13 +241,6 @@ final class IOUringSubmissionQueue {
 
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
         PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
-    }
-
-    private static long convertToUserData(int fd, int op, int data) {
-        assert op <= Short.MAX_VALUE;
-        assert data <= Short.MAX_VALUE;
-        int opMask = op << 16 | (((short) data) & 0xFFFF);
-        return ((long) fd) << 32 | opMask & 0xFFFFFFFFL;
     }
 
     public long count() {

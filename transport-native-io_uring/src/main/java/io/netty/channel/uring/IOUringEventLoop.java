@@ -20,7 +20,6 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
-import io.netty.channel.uring.IOUringCompletionQueue.IOUringCompletionQueueCallback;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
