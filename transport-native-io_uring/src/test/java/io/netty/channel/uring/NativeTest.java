@@ -55,7 +55,7 @@ public class NativeTest {
         assertNotNull(completionQueue);
 
         assertFalse(submissionQueue.addWrite(fd, writeEventByteBuf.memoryAddress(),
-                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
+                                            writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex(), 0));
         submissionQueue.submit();
 
         completionQueue.ioUringWaitCqe();
@@ -69,7 +69,7 @@ public class NativeTest {
 
         final ByteBuf readEventByteBuf = allocator.directBuffer(100);
         assertFalse(submissionQueue.addRead(fd, readEventByteBuf.memoryAddress(),
-                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
+                                           readEventByteBuf.writerIndex(), readEventByteBuf.capacity(), 0));
         submissionQueue.submit();
 
         completionQueue.ioUringWaitCqe();
@@ -123,7 +123,7 @@ public class NativeTest {
             e.printStackTrace();
         }
 
-        submissionQueue.addTimeout(0);
+        submissionQueue.addTimeout(0, 0);
         submissionQueue.submit();
 
         thread.join();
@@ -229,7 +229,7 @@ public class NativeTest {
         FileDescriptor eventFd = Native.newBlockingEventFd();
         submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
-        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN);
+        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN, 0);
         submissionQueue.submit();
 
         final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
@@ -265,6 +265,33 @@ public class NativeTest {
             AssertionError error = errorRef.get();
             if (error != null) {
                 throw error;
+            }
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
+    @Test
+    public void testUserData() {
+        RingBuffer ringBuffer = Native.createRingBuffer(32);
+        IOUringSubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+
+        try {
+            // Ensure userdata works with negative and positive values
+            for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; i++) {
+                submissionQueue.addWrite(-1, -1, -1, -1, i);
+                assertEquals(1, submissionQueue.submitAndWait());
+                final int expectedData = i;
+                assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
+                    @Override
+                    public void handle(int fd, int res, int flags, int op, int data) {
+                        assertEquals(-1, fd);
+                        assertTrue(res < 0);
+                        assertEquals(Native.IORING_OP_WRITE, op);
+                        assertEquals(expectedData, data);
+                    }
+                }));
             }
         } finally {
             ringBuffer.close();

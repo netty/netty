@@ -157,7 +157,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
                     if (!hasTasks()) {
                         if (curDeadlineNanos != prevDeadlineNanos) {
                             prevDeadlineNanos = curDeadlineNanos;
-                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos));
+                            submissionQueue.addTimeout(deadlineToDelayNanos(curDeadlineNanos), 0);
                         }
 
                         // Check there were any completion events to process
@@ -281,7 +281,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     }
 
     private void addEventFdRead(IOUringSubmissionQueue submissionQueue) {
-        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8);
+        submissionQueue.addRead(eventfd.intValue(), eventfdReadBuf, 0, 8, 0);
     }
 
     private void handleConnect(AbstractIOUringChannel channel, int res) {

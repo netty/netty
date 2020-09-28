@@ -84,9 +84,9 @@ final class IOUringCompletionQueue {
             PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
             int fd = (int) (udata >>> 32);
-            int opMask = (int) (udata & 0xFFFFFFFFL);
+            int opMask = (int) udata;
             int op = opMask >>> 16;
-            int data = opMask & 0xffff;
+            int data = (short) opMask;
 
             i++;
             callback.handle(fd, res, flags, op, data);
