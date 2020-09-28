@@ -19,8 +19,17 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.tests.DetectPeerCloseWithoutReadTest;
+import org.junit.BeforeClass;
+
+import static org.junit.Assume.assumeTrue;
 
 public class IOUringDetectPeerCloseWithReadTest extends DetectPeerCloseWithoutReadTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
+
     @Override
     protected EventLoopGroup newGroup() {
         return new IOUringEventLoopGroup(2);

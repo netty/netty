@@ -187,6 +187,34 @@ static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
     close(ringFd);
 }
 
+static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, jintArray ops) {
+    jboolean supported = JNI_FALSE;
+    struct io_uring_probe *probe;
+    size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
+    probe = malloc(mallocLen);
+    memset(probe, 0, mallocLen);
+
+    if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to probe via sys_io_uring_register(....) ", errno);
+        goto done;
+    }
+
+    jsize opsLen = (*env)->GetArrayLength(env, ops);
+    jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
+    for (int i = 0; i < opsLen; i++) {
+        int op = opsElements[i];
+        if (op > probe->last_op || (probe->ops[op].flags & IO_URING_OP_SUPPORTED) == 0) {
+            goto done;
+        }
+    }
+    // all supported
+    supported = JNI_TRUE;
+done:
+    free(probe);
+    return supported;
+}
+
+
 static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
@@ -500,6 +528,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(I)[[J", (void *) netty_io_uring_setup},
+    {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
     {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "()I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},

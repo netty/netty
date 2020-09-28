@@ -19,6 +19,7 @@ import io.netty.channel.unix.Buffer;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.Inet6Address;
@@ -26,12 +27,17 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
+import static org.junit.Assume.assumeTrue;
+
 public class SockaddrInTest {
+
+    @BeforeClass
+    public static void loadJNI() {
+        assumeTrue(IOUring.isAvailable());
+    }
 
     @Test
     public void testIp4() throws Exception {
-        Assume.assumeTrue(IOUring.isAvailable());
-
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(64);
         try {
             long memoryAddress = Buffer.memoryAddress(buffer);
@@ -49,8 +55,6 @@ public class SockaddrInTest {
 
     @Test
     public void testIp6() throws Exception {
-        Assume.assumeTrue(IOUring.isAvailable());
-
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(64);
         try {
             long memoryAddress = Buffer.memoryAddress(buffer);
@@ -71,8 +75,6 @@ public class SockaddrInTest {
 
     @Test
     public void testWriteIp4ReadIpv6Mapped() throws Exception {
-        Assume.assumeTrue(IOUring.isAvailable());
-
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(64);
         try {
             long memoryAddress = Buffer.memoryAddress(buffer);

@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.Selector;
+import java.util.Arrays;
 import java.util.Locale;
 
 final class Native {
@@ -117,6 +118,20 @@ final class Native {
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
 
+    private static final int[] REQUIRED_IORING_OPS = {
+            IORING_OP_POLL_ADD,
+            IORING_OP_TIMEOUT,
+            IORING_OP_ACCEPT,
+            IORING_OP_READ,
+            IORING_OP_WRITE,
+            IORING_OP_POLL_REMOVE,
+            IORING_OP_CONNECT,
+            IORING_OP_CLOSE,
+            IORING_OP_WRITEV,
+            IORING_OP_SENDMSG,
+            IORING_OP_RECVMSG
+    };
+
     static RingBuffer createRingBuffer(int ringSize) {
         return createRingBuffer(ringSize, DEFAULT_USE_IOSEQ_ASYNC, new Runnable() {
             @Override
@@ -164,6 +179,14 @@ final class Native {
         return createRingBuffer(DEFAULT_RING_SIZE, DEFAULT_USE_IOSEQ_ASYNC, submissionCallback);
     }
 
+    static void checkAllIOSupported(int ringFd) {
+        if (!ioUringProbe(ringFd, REQUIRED_IORING_OPS)) {
+            throw new UnsupportedOperationException("Not all operations are supported: "
+                    + Arrays.toString(REQUIRED_IORING_OPS));
+        }
+    }
+
+    private static native boolean ioUringProbe(int ringFd, int[] ios);
     private static native long[][] ioUringSetup(int entries);
 
     public static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
