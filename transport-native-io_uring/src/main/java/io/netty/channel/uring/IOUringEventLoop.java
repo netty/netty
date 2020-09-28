@@ -20,6 +20,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.uring.IOUringCompletionQueue.IOUringCompletionQueueCallback;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
@@ -32,8 +33,7 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
-final class IOUringEventLoop extends SingleThreadEventLoop implements
-                                                           IOUringCompletionQueue.IOUringCompletionQueueCallback {
+final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCompletionQueueCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringEventLoop.class);
 
     private final long eventfdReadBuf = PlatformDependent.allocateMemory(8);
@@ -57,6 +57,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     private final byte[] inet6AddressArray = new byte[16];
 
     private long prevDeadlineNanos = NONE;
+    private boolean pendingWakeup;
 
     IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
@@ -167,7 +168,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
                         }
                     }
                 } finally {
-                    nextWakeupNanos.set(AWAKE);
+                    if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
+                        pendingWakeup = true;
+                    }
                 }
             } catch (Throwable t) {
                 handleLoopException(t);
@@ -220,9 +223,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
     @Override
     public void handle(int fd, int res, int flags, int op, int data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
-            if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                addEventFdRead(ringBuffer.ioUringSubmissionQueue());
-            }
+            pendingWakeup = false;
+            addEventFdRead(ringBuffer.ioUringSubmissionQueue());
         } else if (op == Native.IORING_OP_TIMEOUT) {
             if (res == Native.ERRNO_ETIME_NEGATIVE) {
                 prevDeadlineNanos = NONE;
@@ -288,6 +290,25 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements
 
     @Override
     protected void cleanup() {
+        if (pendingWakeup) {
+            // Another thread is in the process of writing to the eventFd. We must wait to
+            // receive the corresponding CQE before closing it or else the fd int may be
+            // reassigned by the kernel in the meantime.
+            IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+            IOUringCompletionQueueCallback callback = new IOUringCompletionQueueCallback() {
+                @Override
+                public void handle(int fd, int res, int flags, int op, int data) {
+                    if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
+                        pendingWakeup = false;
+                    }
+                }
+            };
+            completionQueue.process(callback);
+            while (pendingWakeup) {
+                completionQueue.ioUringWaitCqe();
+                completionQueue.process(callback);
+            }
+        }
         try {
             eventfd.close();
         } catch (IOException e) {
