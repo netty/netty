@@ -33,9 +33,6 @@ final class IOUringCompletionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
-    private final long kRingMaskAddress;
-    private final long kRingEntriesAddress;
-    private final long kOverflowAddress;
 
     private final long completionQueueArrayAddress;
 
@@ -51,9 +48,6 @@ final class IOUringCompletionQueue {
                            int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        this.kRingMaskAddress = kRingMaskAddress;
-        this.kRingEntriesAddress = kRingEntriesAddress;
-        this.kOverflowAddress = kOverflowAddress;
         this.completionQueueArrayAddress = completionQueueArrayAddress;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
@@ -110,16 +104,10 @@ final class IOUringCompletionQueue {
     /**
      * Block until there is at least one completion ready to be processed.
      */
-    boolean ioUringWaitCqe() {
-        //IORING_ENTER_GETEVENTS -> wait until an event is completely processed
+    void ioUringWaitCqe() {
         int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
-            //Todo throw exception!
-            return false;
-        } else if (ret == 0) {
-          return true;
+            throw new RuntimeException("ioUringEnter syscall returned " + ret);
         }
-        //Todo throw Exception!
-        return false;
     }
 }

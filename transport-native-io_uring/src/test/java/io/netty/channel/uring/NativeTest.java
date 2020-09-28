@@ -58,7 +58,7 @@ public class NativeTest {
                                             writeEventByteBuf.readerIndex(), writeEventByteBuf.writerIndex()));
         submissionQueue.submit();
 
-        assertTrue(completionQueue.ioUringWaitCqe());
+        completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
             public void handle(int fd, int res, int flags, int op, int mask) {
@@ -72,7 +72,7 @@ public class NativeTest {
                                            readEventByteBuf.writerIndex(), readEventByteBuf.capacity()));
         submissionQueue.submit();
 
-        assertTrue(completionQueue.ioUringWaitCqe());
+        completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
             public void handle(int fd, int res, int flags, int op, int mask) {
@@ -103,7 +103,7 @@ public class NativeTest {
         Thread thread = new Thread() {
             @Override
             public void run() {
-                assertTrue(completionQueue.ioUringWaitCqe());
+                completionQueue.ioUringWaitCqe();
                 try {
                     completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                         @Override
@@ -152,7 +152,7 @@ public class NativeTest {
             }
         }.start();
 
-        assertTrue(completionQueue.ioUringWaitCqe());
+        completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
             @Override
             public void handle(int fd, int res, int flags, int op, int mask) {
@@ -183,7 +183,7 @@ public class NativeTest {
         Thread waitingCqe = new Thread() {
             @Override
             public void run() {
-                assertTrue(completionQueue.ioUringWaitCqe());
+                completionQueue.ioUringWaitCqe();
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueue.IOUringCompletionQueueCallback() {
                     @Override
                     public void handle(int fd, int res, int flags, int op, int mask) {
@@ -251,7 +251,7 @@ public class NativeTest {
             @Override
             public void run() {
                 try {
-                    assertTrue(completionQueue.ioUringWaitCqe());
+                    completionQueue.ioUringWaitCqe();
                     assertEquals(2, completionQueue.process(verifyCallback));
                 } catch (AssertionError error) {
                     errorRef.set(error);
