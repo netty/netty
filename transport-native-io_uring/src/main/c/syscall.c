@@ -20,6 +20,17 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+// Define syscall numbers if not exists as these are "stable".
+#ifndef __NR_io_uring_setup
+#define __NR_io_uring_setup		425
+#endif
+#ifndef __NR_io_uring_enter
+#define __NR_io_uring_enter		426
+#endif
+#ifndef __NR_io_uring_register
+#define __NR_io_uring_register	427
+#endif
+
 int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return syscall(__NR_io_uring_setup, entries, p);
 }

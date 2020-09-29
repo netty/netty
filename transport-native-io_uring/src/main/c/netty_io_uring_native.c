@@ -201,7 +201,8 @@ static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, ji
 
     jsize opsLen = (*env)->GetArrayLength(env, ops);
     jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
-    for (int i = 0; i < opsLen; i++) {
+    int i;
+    for (i = 0; i < opsLen; i++) {
         int op = opsElements[i];
         if (op > probe->last_op || (probe->ops[op].flags & IO_URING_OP_SUPPORTED) == 0) {
             goto done;
