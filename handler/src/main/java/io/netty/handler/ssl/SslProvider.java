@@ -19,6 +19,8 @@ package io.netty.handler.ssl;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.UnstableApi;
 
+import java.security.Provider;
+
 /**
  * An enumeration of SSL/TLS protocol providers.
  */
@@ -41,6 +43,7 @@ public enum SslProvider {
      * Returns {@code true} if the specified {@link SslProvider} supports
      * <a href="https://tools.ietf.org/html/rfc7301#section-6">TLS ALPN Extension</a>, {@code false} otherwise.
      */
+    @SuppressWarnings("deprecation")
     public static boolean isAlpnSupported(final SslProvider provider) {
         switch (provider) {
             case JDK:
@@ -57,15 +60,23 @@ public enum SslProvider {
      * Returns {@code true} if the specified {@link SslProvider} supports
      * <a href="https://tools.ietf.org/html/rfc8446">TLS 1.3</a>, {@code false} otherwise.
      */
-    public static boolean isTlsv13Supported(final SslProvider provider) {
-        switch (provider) {
+    public static boolean isTlsv13Supported(final SslProvider sslProvider) {
+        return isTlsv13Supported(sslProvider, null);
+    }
+
+    /**
+     * Returns {@code true} if the specified {@link SslProvider} supports
+     * <a href="https://tools.ietf.org/html/rfc8446">TLS 1.3</a>, {@code false} otherwise.
+     */
+    public static boolean isTlsv13Supported(final SslProvider sslProvider, Provider provider) {
+        switch (sslProvider) {
             case JDK:
-                return SslUtils.isTLSv13SupportedByJDK();
+                return SslUtils.isTLSv13SupportedByJDK(provider);
             case OPENSSL:
             case OPENSSL_REFCNT:
                 return OpenSsl.isTlsv13Supported();
             default:
-                throw new Error("Unknown SslProvider: " + provider);
+                throw new Error("Unknown SslProvider: " + sslProvider);
         }
     }
 
@@ -73,15 +84,15 @@ public enum SslProvider {
      * Returns {@code true} if the specified {@link SslProvider} enables
      * <a href="https://tools.ietf.org/html/rfc8446">TLS 1.3</a> by default, {@code false} otherwise.
      */
-    static boolean isTlsv13EnabledByDefault(final SslProvider provider) {
-        switch (provider) {
+    static boolean isTlsv13EnabledByDefault(final SslProvider sslProvider, Provider provider) {
+        switch (sslProvider) {
             case JDK:
-                return SslUtils.isTLSv13EnabledByJDK();
+                return SslUtils.isTLSv13EnabledByJDK(provider);
             case OPENSSL:
             case OPENSSL_REFCNT:
                 return OpenSsl.isTlsv13Supported();
             default:
-                throw new Error("Unknown SslProvider: " + provider);
+                throw new Error("Unknown SslProvider: " + sslProvider);
         }
     }
 }
