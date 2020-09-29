@@ -48,7 +48,10 @@ struct io_uring_sqe {
 	};
 	__u32	len;		/* buffer size or number of iovecs */
 	union {
-		__kernel_rwf_t	rw_flags;
+		// IMPORTANT:
+		// We explicit use 'int __bitwise' here and not ' __kernel_rwf_t' as this may not be present in the
+		// kernel headers that are used on the system.
+		int __bitwise	rw_flags;
 		__u32		fsync_flags;
 		__u16		poll_events;	/* compatibility */
 		__u32		poll32_events;	/* word-reversed for BE */

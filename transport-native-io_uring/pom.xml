@@ -45,11 +45,15 @@
 
   <profiles>
     <profile>
-      <id>iouring-native</id>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
       <properties>
         <skipTests>false</skipTests>
       </properties>
-
       <build>
         <plugins>
           <plugin>
