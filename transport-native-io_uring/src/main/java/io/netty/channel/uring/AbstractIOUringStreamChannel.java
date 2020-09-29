@@ -211,7 +211,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         private ByteBuf readBuffer;
 
         @Override
-        protected void scheduleWriteMultiple(ChannelOutboundBuffer in) {
+        protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             final IovArray iovecArray = ((IOUringEventLoop) eventLoop()).iovArray();
             try {
                 int offset = iovecArray.count();
@@ -222,18 +222,20 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
+            return 1;
         }
 
         @Override
-        protected void scheduleWriteSingle(Object msg) {
+        protected int scheduleWriteSingle(Object msg) {
             ByteBuf buf = (ByteBuf) msg;
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
                     buf.writerIndex(), (short) 0);
+            return 1;
         }
 
         @Override
-        protected void scheduleRead0() {
+        protected int scheduleRead0() {
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             IOUringSubmissionQueue submissionQueue = submissionQueue();
@@ -244,10 +246,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
             submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
                     byteBuf.writerIndex(), byteBuf.capacity(), (short) 0);
+            return 1;
         }
 
         @Override
-        protected void readComplete0(int res) {
+        protected void readComplete0(int res, int data, int outstanding) {
             boolean close = false;
 
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
@@ -314,6 +317,22 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             if (close || cause instanceof IOException) {
                 shutdownInput(false);
             }
+        }
+
+        @Override
+        boolean writeComplete0(int res, int data, int outstanding) {
+            if (res >= 0) {
+                unsafe().outboundBuffer().removeBytes(res);
+            } else {
+                try {
+                    if (ioResult("io_uring write", res) == 0) {
+                        return false;
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
+                }
+            }
+            return true;
         }
     }
 }
