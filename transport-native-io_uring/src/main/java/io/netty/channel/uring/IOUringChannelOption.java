@@ -41,4 +41,6 @@ public class IOUringChannelOption<T> extends UnixChannelOption<T> {
             ChannelOption.valueOf(IOUringChannelOption.class, "TCP_DEFER_ACCEPT");
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(IOUringChannelOption.class, "TCP_QUICKACK");
     public static final ChannelOption<Map<InetAddress, byte[]>> TCP_MD5SIG = valueOf("TCP_MD5SIG");
+
+    public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
 }
