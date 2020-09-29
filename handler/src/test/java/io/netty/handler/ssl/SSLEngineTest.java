@@ -3622,19 +3622,10 @@ public abstract class SSLEngineTest {
             ssc.delete();
         }
 
-        assertEquals(SslProvider.isTlsv13EnabledByDefault(sslClientProvider()),
-                arrayContains(clientProtocols, PROTOCOL_TLS_V1_3));
-        assertEquals(SslProvider.isTlsv13EnabledByDefault(sslServerProvider()),
-                arrayContains(serverProtocols, PROTOCOL_TLS_V1_3));
-    }
-
-    private static boolean arrayContains(String[] array, String value) {
-        for (String v: array) {
-            if (value.equals(v)) {
-                return true;
-            }
-        }
-        return false;
+        assertEquals(SslProvider.isTlsv13EnabledByDefault(sslClientProvider(), clientSslContextProvider()),
+                SslUtils.arrayContains(clientProtocols, PROTOCOL_TLS_V1_3));
+        assertEquals(SslProvider.isTlsv13EnabledByDefault(sslServerProvider(), serverSslContextProvider()),
+                SslUtils.arrayContains(serverProtocols, PROTOCOL_TLS_V1_3));
     }
 
     protected SSLEngine wrapEngine(SSLEngine engine) {
