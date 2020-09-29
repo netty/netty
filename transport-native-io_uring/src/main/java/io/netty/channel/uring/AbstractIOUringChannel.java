@@ -242,7 +242,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         } finally {
             if (submissionQueue != null) {
                 if (socket.markClosed()) {
-                    submissionQueue.addClose(fd().intValue());
+                    submissionQueue.addClose(fd().intValue(), (short) 0);
                 }
             } else {
                 // This one was never registered just use a syscall to close.
@@ -661,7 +661,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
                 final IOUringSubmissionQueue ioUringSubmissionQueue = submissionQueue();
                 ioUringSubmissionQueue.addConnect(socket.intValue(), remoteAddressMemoryAddress,
-                        Native.SIZEOF_SOCKADDR_STORAGE);
+                        Native.SIZEOF_SOCKADDR_STORAGE, (short) 0);
                 ioState |= CONNECT_SCHEDULED;
             } catch (Throwable t) {
                 closeIfClosed();
@@ -726,13 +726,13 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN, (short) 0);
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT, (short) 0);
             }
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP, (short) 0);
             }
         }
     }

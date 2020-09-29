@@ -17,6 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.PlatformDependent;
 
+import static io.netty.channel.uring.UserData.decode;
+
 /**
  * Completion queue implementation for io_uring.
  */
@@ -83,22 +85,11 @@ final class IOUringCompletionQueue {
             ringHead++;
             PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
-            int fd = (int) (udata >>> 32);
-            int opMask = (int) (udata & 0xFFFFFFFFL);
-            int op = opMask >>> 16;
-            int data = opMask & 0xffff;
-
             i++;
-            callback.handle(fd, res, flags, op, data);
+
+            decode(res, flags, udata, callback);
         }
         return i;
-    }
-
-    interface IOUringCompletionQueueCallback {
-        /**
-         * Called for a completion event that was put into the {@link IOUringCompletionQueue}.
-         */
-        void handle(int fd, int res, int flags, int op, int data);
     }
 
     /**

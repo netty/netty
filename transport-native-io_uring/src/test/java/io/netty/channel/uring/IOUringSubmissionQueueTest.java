@@ -46,7 +46,7 @@ public class IOUringSubmissionQueueTest {
 
             long address = Buffer.memoryAddress(buffer);
             int counter = 0;
-            while (!submissionQueue.addAccept(-1, address, 128)) {
+            while (!submissionQueue.addAccept(-1, address, 128, (short) 0)) {
                 counter++;
             }
             assertEquals(8, counter);
