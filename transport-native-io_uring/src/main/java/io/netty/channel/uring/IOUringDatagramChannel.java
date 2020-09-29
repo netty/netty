@@ -465,7 +465,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
             if (!recvMsg) {
                 submissionQueue.addRead(socket.intValue(), bufferAddress,
-                        byteBuf.writerIndex(), byteBuf.capacity());
+                        byteBuf.writerIndex(), byteBuf.capacity(), (short) 0);
             } else {
                 int addrLen = addrLen();
                 long recvmsgBufferAddr = recvmsgBufferAddr();
@@ -474,7 +474,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
                 Iov.write(iovecAddress, bufferAddress + byteBuf.writerIndex(), byteBuf.writableBytes());
                 MsgHdr.write(recvmsgBufferAddr, sockaddrAddress, addrLen, iovecAddress, 1);
-                submissionQueue.addRecvmsg(socket.intValue(), recvmsgBufferAddr);
+                submissionQueue.addRecvmsg(socket.intValue(), recvmsgBufferAddr, (short) 0);
             }
         }
 
@@ -523,7 +523,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             if (remoteAddress == null) {
                 submissionQueue.addWrite(socket.intValue(), bufferAddress, data.readerIndex(),
-                        data.writerIndex());
+                        data.writerIndex(), (short) 0);
             } else {
                 int addrLen = addrLen();
                 long sendmsgBufferAddr = sendmsgBufferAddr();
@@ -533,7 +533,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
                 SockaddrIn.write(socket.isIpv6(), sockaddrAddress, remoteAddress);
                 Iov.write(iovecAddress, bufferAddress + data.readerIndex(), data.readableBytes());
                 MsgHdr.write(sendmsgBufferAddr, sockaddrAddress, addrLen, iovecAddress, 1);
-                submissionQueue.addSendmsg(socket.intValue(), sendmsgBufferAddr);
+                submissionQueue.addSendmsg(socket.intValue(), sendmsgBufferAddr, (short) 0);
             }
         }
     }

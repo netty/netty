@@ -217,7 +217,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 int offset = iovecArray.count();
                 in.forEachFlushedMessage(iovecArray);
                 submissionQueue().addWritev(socket.intValue(),
-                        iovecArray.memoryAddress(offset), iovecArray.count() - offset);
+                        iovecArray.memoryAddress(offset), iovecArray.count() - offset, (short) 0);
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
@@ -229,7 +229,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             ByteBuf buf = (ByteBuf) msg;
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
-                    buf.writerIndex());
+                    buf.writerIndex(), (short) 0);
         }
 
         @Override
@@ -243,7 +243,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             readBuffer = byteBuf;
 
             submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
-                    byteBuf.writerIndex(), byteBuf.capacity());
+                    byteBuf.writerIndex(), byteBuf.capacity(), (short) 0);
         }
 
         @Override
