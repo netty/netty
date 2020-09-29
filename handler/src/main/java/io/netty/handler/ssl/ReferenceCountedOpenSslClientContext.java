@@ -292,8 +292,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 }
                 keyManagerHolder.setKeyMaterialClientSide(engine, keyTypes, issuers);
             } catch (Throwable cause) {
-                logger.debug("request of key failed", cause);
                 engine.initHandshakeException(cause);
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new SSLException(cause);
             }
         }
 
