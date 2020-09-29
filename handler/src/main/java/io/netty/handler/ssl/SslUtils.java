@@ -28,6 +28,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -110,35 +113,8 @@ final class SslUtils {
     private static final boolean TLSV1_3_JDK_DEFAULT_ENABLED;
 
     static {
-        boolean tlsv13Supported = false;
-        boolean tlsv13Enabled = false;
-
-        Throwable cause = null;
-        try {
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, new TrustManager[0], null);
-            for (String supported: context.getSupportedSSLParameters().getProtocols()) {
-                if (PROTOCOL_TLS_V1_3.equals(supported)) {
-                    tlsv13Supported = true;
-                    break;
-                }
-            }
-            for (String enabled: context.getDefaultSSLParameters().getProtocols()) {
-                if (PROTOCOL_TLS_V1_3.equals(enabled)) {
-                    tlsv13Enabled = true;
-                    break;
-                }
-            }
-        } catch (Throwable error) {
-            cause = error;
-        }
-        if (cause == null) {
-            logger.debug("JDK SSLEngine supports TLSv1.3: {}", tlsv13Supported);
-        } else {
-            logger.debug("Unable to detect if JDK SSLEngine supports TLSv1.3, assuming no", cause);
-        }
-        TLSV1_3_JDK_SUPPORTED = tlsv13Supported;
-        TLSV1_3_JDK_DEFAULT_ENABLED = tlsv13Enabled;
+        TLSV1_3_JDK_SUPPORTED = isTLSv13SupportedByJDK0(null);
+        TLSV1_3_JDK_DEFAULT_ENABLED = isTLSv13EnabledByJDK0(null);
         if (TLSV1_3_JDK_SUPPORTED) {
             DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
         } else {
@@ -168,15 +144,64 @@ final class SslUtils {
     /**
      * Returns {@code true} if the JDK itself supports TLSv1.3, {@code false} otherwise.
      */
-    static boolean isTLSv13SupportedByJDK() {
-        return TLSV1_3_JDK_SUPPORTED;
+    static boolean isTLSv13SupportedByJDK(Provider provider) {
+        if (provider == null) {
+            return TLSV1_3_JDK_SUPPORTED;
+        }
+        return isTLSv13SupportedByJDK0(provider);
+    }
+
+    private static boolean isTLSv13SupportedByJDK0(Provider provider) {
+        try {
+            return arrayContains(newInitContext(provider)
+                    .getSupportedSSLParameters().getProtocols(), PROTOCOL_TLS_V1_3);
+        } catch (Throwable cause) {
+            logger.debug("Unable to detect if JDK SSLEngine with provider {} supports TLSv1.3, assuming no",
+                    provider, cause);
+            return false;
+        }
     }
 
     /**
      * Returns {@code true} if the JDK itself supports TLSv1.3 and enabled it by default, {@code false} otherwise.
      */
-    static boolean isTLSv13EnabledByJDK() {
-        return TLSV1_3_JDK_DEFAULT_ENABLED;
+    static boolean isTLSv13EnabledByJDK(Provider provider) {
+        if (provider == null) {
+            return TLSV1_3_JDK_DEFAULT_ENABLED;
+        }
+        return isTLSv13EnabledByJDK0(provider);
+    }
+
+    private static boolean isTLSv13EnabledByJDK0(Provider provider) {
+        try {
+            return arrayContains(newInitContext(provider)
+                    .getDefaultSSLParameters().getProtocols(), PROTOCOL_TLS_V1_3);
+        } catch (Throwable cause) {
+            logger.debug("Unable to detect if JDK SSLEngine with provider {} enables TLSv1.3 by default," +
+                    " assuming no", provider, cause);
+            return false;
+        }
+    }
+
+    private static SSLContext newInitContext(Provider provider)
+            throws NoSuchAlgorithmException, KeyManagementException {
+        final SSLContext context;
+        if (provider == null) {
+            context = SSLContext.getInstance("TLS");
+        } else {
+            context = SSLContext.getInstance("TLS", provider);
+        }
+        context.init(null, new TrustManager[0], null);
+        return context;
+    }
+
+    static boolean arrayContains(String[] array, String value) {
+        for (String v: array) {
+            if (value.equals(v)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
