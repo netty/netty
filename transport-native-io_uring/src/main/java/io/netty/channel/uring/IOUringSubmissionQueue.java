@@ -94,8 +94,7 @@ final class IOUringSubmissionQueue {
 
         // Fill SQ array indices (1-1 with SQE array) and set nonzero constant SQE fields
         long address = kArrayAddress;
-        long sqeFlagsAddress = submissionQueueArrayAddress + SQE_FLAGS_FIELD;
-        for (int i = 0; i < ringEntries; i++, address += INT_SIZE, sqeFlagsAddress += SQE_SIZE) {
+        for (int i = 0; i < ringEntries; i++, address += INT_SIZE) {
             PlatformDependent.putInt(address, i);
         }
     }
