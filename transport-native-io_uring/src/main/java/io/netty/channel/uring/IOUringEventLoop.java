@@ -103,8 +103,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         logger.trace("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
-        channels.put(fd, ch);
-        ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
+        if (channels.put(fd, ch) == null) {
+            ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
+        }
     }
 
     void remove(AbstractIOUringChannel ch) {
