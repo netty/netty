@@ -32,7 +32,7 @@ import java.util.Locale;
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
     static final int DEFAULT_RING_SIZE = Math.max(64, SystemPropertyUtil.getInt("io.netty.uring.ringSize", 4096));
-    static final boolean DEFAULT_USE_IOSEQ_ASYNC = true;
+    static final int DEFAULT_IOSEQ_ASYNC_THRESHOLD = 25;
 
     static {
         Selector selector = null;
@@ -133,7 +133,7 @@ final class Native {
     };
 
     static RingBuffer createRingBuffer(int ringSize) {
-        return createRingBuffer(ringSize, DEFAULT_USE_IOSEQ_ASYNC, new Runnable() {
+        return createRingBuffer(ringSize, DEFAULT_IOSEQ_ASYNC_THRESHOLD, new Runnable() {
             @Override
             public void run() {
                 // Noop
@@ -141,7 +141,7 @@ final class Native {
         });
     }
 
-    static RingBuffer createRingBuffer(int ringSize, boolean iosqeAsync, Runnable submissionCallback) {
+    static RingBuffer createRingBuffer(int ringSize, int iosqeAsyncThreshold, Runnable submissionCallback) {
         long[][] values = ioUringSetup(ringSize);
         assert values.length == 2;
         long[] submissionQueueArgs = values[0];
@@ -158,7 +158,7 @@ final class Native {
                 (int) submissionQueueArgs[8],
                 submissionQueueArgs[9],
                 (int) submissionQueueArgs[10],
-                iosqeAsync,
+                iosqeAsyncThreshold,
                 submissionCallback);
         long[] completionQueueArgs = values[1];
         assert completionQueueArgs.length == 9;
@@ -176,7 +176,7 @@ final class Native {
     }
 
     static RingBuffer createRingBuffer(Runnable submissionCallback) {
-        return createRingBuffer(DEFAULT_RING_SIZE, DEFAULT_USE_IOSEQ_ASYNC, submissionCallback);
+        return createRingBuffer(DEFAULT_RING_SIZE, DEFAULT_IOSEQ_ASYNC_THRESHOLD, submissionCallback);
     }
 
     static void checkAllIOSupported(int ringFd) {
