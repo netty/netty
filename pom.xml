@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.52.Final-SNAPSHOT</version>
+  <version>4.1.53.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -1180,7 +1180,7 @@
           <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
-            <version>1.9.7</version>
+            <version>1.9.15</version>
           </dependency>
           <dependency>
             <groupId>org.apache.ant</groupId>

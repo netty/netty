@@ -16,10 +16,6 @@
 
 package io.netty.handler.codec.mqtt;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Return Code of {@link MqttConnAckMessage}
  */
@@ -54,14 +50,15 @@ public enum MqttConnectReturnCode {
     CONNECTION_REFUSED_SERVER_MOVED((byte) 0x9D),
     CONNECTION_REFUSED_CONNECTION_RATE_EXCEEDED((byte) 0x9F);
 
-    private static final Map<Byte, MqttConnectReturnCode> VALUE_TO_CODE_MAP;
+    private static final MqttConnectReturnCode[] VALUES;
 
     static {
-        final Map<Byte, MqttConnectReturnCode> valueMap = new HashMap<Byte, MqttConnectReturnCode>();
-        for (MqttConnectReturnCode code: values()) {
-            valueMap.put(code.byteValue, code);
+        MqttConnectReturnCode[] values = values();
+        VALUES = new MqttConnectReturnCode[160];
+        for (MqttConnectReturnCode code : values) {
+            final int unsignedByte = code.byteValue & 0xFF;
+            VALUES[unsignedByte] = code;
         }
-        VALUE_TO_CODE_MAP = Collections.unmodifiableMap(valueMap);
     }
 
     private final byte byteValue;
@@ -75,9 +72,16 @@ public enum MqttConnectReturnCode {
     }
 
     public static MqttConnectReturnCode valueOf(byte b) {
-        if (VALUE_TO_CODE_MAP.containsKey(b)) {
-            return VALUE_TO_CODE_MAP.get(b);
+        final int unsignedByte = b & 0xFF;
+        MqttConnectReturnCode mqttConnectReturnCode = null;
+        try {
+            mqttConnectReturnCode = VALUES[unsignedByte];
+        } catch (ArrayIndexOutOfBoundsException ignored) {
+            // no op
         }
-        throw new IllegalArgumentException("unknown connect return code: " + (b & 0xFF));
+        if (mqttConnectReturnCode == null) {
+            throw new IllegalArgumentException("unknown connect return code: " + unsignedByte);
+        }
+        return mqttConnectReturnCode;
     }
 }

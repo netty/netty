@@ -902,6 +902,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 b = null;
                             }
                             finishWrap(ctx, b, p, inUnwrap, false);
+                            // If we are expected to wrap again and we produced some data we need to ensure there
+                            // is something in the queue to process as otherwise we will not try again before there
+                            // was more added. Failing to do so may fail to produce an alert that can be
+                            // consumed by the remote peer.
+                            if (result.bytesProduced() > 0 && pendingUnencryptedWrites.isEmpty()) {
+                                pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER);
+                            }
                             break;
                         }
                         case NEED_UNWRAP:

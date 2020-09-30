@@ -45,7 +45,7 @@ final class LinuxSocket extends Socket {
         super(fd);
     }
 
-    private InternetProtocolFamily family() {
+    InternetProtocolFamily family() {
         return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
     }
 

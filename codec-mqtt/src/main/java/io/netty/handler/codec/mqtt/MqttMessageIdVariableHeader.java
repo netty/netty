@@ -53,4 +53,8 @@ public class MqttMessageIdVariableHeader {
     public MqttMessageIdAndPropertiesVariableHeader withEmptyProperties() {
         return new MqttMessageIdAndPropertiesVariableHeader(messageId, MqttProperties.NO_PROPERTIES);
     }
+
+    MqttMessageIdAndPropertiesVariableHeader withDefaultEmptyProperties() {
+        return withEmptyProperties();
+    }
 }

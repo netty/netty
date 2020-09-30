@@ -33,7 +33,7 @@ public final class MqttUnsubscribeMessage extends MqttMessage {
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttUnsubscribePayload payload) {
-        this(mqttFixedHeader, variableHeader.withEmptyProperties(), payload);
+        this(mqttFixedHeader, variableHeader.withDefaultEmptyProperties(), payload);
     }
 
     @Override

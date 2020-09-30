@@ -32,11 +32,17 @@ public enum MqttQoS {
     }
 
     public static MqttQoS valueOf(int value) {
-        for (MqttQoS q: values()) {
-            if (q.value == value) {
-                return q;
-            }
+        switch (value) {
+        case 0:
+            return AT_MOST_ONCE;
+        case 1:
+            return AT_LEAST_ONCE;
+        case 2:
+            return EXACTLY_ONCE;
+        case 0x80:
+            return FAILURE;
+        default:
+            throw new IllegalArgumentException("invalid QoS: " + value);
         }
-        throw new IllegalArgumentException("invalid QoS: " + value);
     }
 }

@@ -705,7 +705,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             } else {
                 checkIndex(index, length);
             }
-            return ByteBufUtil.writeUtf8(this, index, sequence, sequence.length());
+            return ByteBufUtil.writeUtf8(this, index, length, sequence, sequence.length());
         }
         if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
             int length = sequence.length();

@@ -892,16 +892,12 @@ public abstract class SslContext {
     /**
      * Returns the size of the cache used for storing SSL session objects.
      */
-    public long sessionCacheSize() {
-        return sessionContext().getSessionCacheSize();
-    }
+    public abstract long sessionCacheSize();
 
     /**
      * Returns the timeout for the cached SSL session objects, in seconds.
      */
-    public long sessionTimeout() {
-        return sessionContext().getSessionTimeout();
-    }
+    public abstract long sessionTimeout();
 
     /**
      * @deprecated Use {@link #applicationProtocolNegotiator()} instead.
