@@ -113,6 +113,8 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
 
         AbstractIOUringChannel old = channels.remove(fd);
         if (old != null) {
+            ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
+
             if (old != ch) {
                 // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
                 channels.put(fd, old);
@@ -120,8 +122,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
                 // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be
                 // closed.
                 assert !ch.isOpen();
-            } else {
-                ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
             }
         }
     }
