@@ -24,6 +24,9 @@ public class BrotliDecoder extends ByteToMessageDecoder {
             read = decompressorIS.read();
         }
 
+        byteBufOutputStream.close();
+        decompressorIS.close();
+
         out.add(byteBufOutputStream.buffer());
     }
 }
