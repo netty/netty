@@ -173,6 +173,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
+    private static final long HANDSHAKE_TIMEOUT_MS = Long.getLong("netty_ssl_handshake_timeout_ms", 10000);
+    private static final long NOTIFY_FLUSH_TIMEOUT_MS = Long.getLong("netty_ssl_close_notify_flush_timeout_ms", 3000);
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -405,8 +407,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private boolean firedChannelRead;
 
-    private volatile long handshakeTimeoutMillis = 10000;
-    private volatile long closeNotifyFlushTimeoutMillis = 3000;
+    private volatile long handshakeTimeoutMillis = HANDSHAKE_TIMEOUT_MS;
+    private volatile long closeNotifyFlushTimeoutMillis = NOTIFY_FLUSH_TIMEOUT_MS;
     private volatile long closeNotifyReadTimeoutMillis;
     volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
 
