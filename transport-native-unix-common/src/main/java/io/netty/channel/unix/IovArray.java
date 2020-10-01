@@ -127,7 +127,7 @@ public final class IovArray implements MessageProcessor {
         // will attempt to write some data and make progress.
         if ((maxBytes - len < size && count > 0) ||
                 // Check if we have enough space left
-                memory.capacity() < count * IOV_SIZE + IOV_SIZE) {
+                memory.capacity() < (count + 1) * IOV_SIZE) {
             // If the size + len will overflow SSIZE_MAX we stop populate the IovArray. This is done as linux
             //  not allow to write more bytes then SSIZE_MAX with one writev(...) call and so will
             // return 'EINVAL', which will raise an IOException.
