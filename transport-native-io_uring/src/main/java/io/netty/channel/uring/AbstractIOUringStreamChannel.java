@@ -215,9 +215,8 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert iovArray == null;
-            int numElements = in.size();
-            int bufferSize = Math.min(numElements, Limits.IOV_MAX);
-            ByteBuf iovArrayBuffer = alloc().directBuffer(bufferSize * IovArray.IOV_SIZE);
+            int numElements = Math.min(in.size(), Limits.IOV_MAX);
+            ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
             iovArray = new IovArray(iovArrayBuffer);
             try {
                 int offset = iovArray.count();
@@ -225,6 +224,8 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 submissionQueue().addWritev(socket.intValue(),
                         iovArray.memoryAddress(offset), iovArray.count() - offset, (short) 0);
             } catch (Exception e) {
+                iovArray.release();
+
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
