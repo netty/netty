@@ -141,7 +141,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;
