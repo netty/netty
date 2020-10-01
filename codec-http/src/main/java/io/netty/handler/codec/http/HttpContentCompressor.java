@@ -160,12 +160,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
         switch (wrapper) {
             case GZIP:
                 targetContentEncoding = "gzip";
-                compressor = ZlibCodecFactory.newZlibEncoder(io.netty.handler.codec.compression.ZlibWrapper.GZIP, compressionLevel, windowBits,
+                compressor = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, compressionLevel, windowBits,
                         memLevel);
                 break;
             case ZLIB:
                 targetContentEncoding = "deflate";
-                compressor = ZlibCodecFactory.newZlibEncoder(io.netty.handler.codec.compression.ZlibWrapper.GZIP, compressionLevel, windowBits,
+                compressor = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, compressionLevel, windowBits,
                         memLevel);
                 break;
             case BROTLI:
