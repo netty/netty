@@ -44,6 +44,7 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Create new {@link BrotliEncoder} Instance
+     *
      * @param quality Quality of Encoding (Compression)
      */
     public BrotliEncoder(int quality) {
