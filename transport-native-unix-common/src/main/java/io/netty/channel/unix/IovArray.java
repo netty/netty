@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
@@ -59,21 +60,23 @@ public final class IovArray implements MessageProcessor {
      * The needed memory to hold up to {@code IOV_MAX} iov entries, where {@code IOV_MAX} signified
      * the maximum number of {@code iovec} structs that can be passed to {@code writev(...)}.
      */
-    private static final int DEFAULT_CAPACITY = IOV_MAX * IOV_SIZE;
+    private static final int MAX_CAPACITY = IOV_MAX * IOV_SIZE;
 
     private final ByteBuf memory;
-    private final long memoryAddress;
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
-        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(DEFAULT_CAPACITY)));
+        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)));
     }
 
+    @SuppressWarnings("deprecation")
     public IovArray(ByteBuf memory) {
-        this.memory = memory;
-        memoryAddress = memory.memoryAddress();
+        assert memory.writerIndex() == 0;
+        assert memory.readerIndex() == 0;
+        this.memory = memory.order(
+                PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
     }
 
     public boolean isFull() {
@@ -97,22 +100,25 @@ public final class IovArray implements MessageProcessor {
         if (count == IOV_MAX) {
             // No more room!
             return false;
-        } else if (buf.nioBufferCount() == 1) {
+        }
+        long memoryAddress = memory.memoryAddress();
+        if (buf.nioBufferCount() == 1) {
             if (len == 0) {
                 return true;
             }
             if (buf.hasMemoryAddress()) {
-                return add(buf.memoryAddress() + offset, len);
+                return add(memoryAddress, buf.memoryAddress() + offset, len);
             } else {
                 ByteBuffer nioBuffer = buf.internalNioBuffer(offset, len);
-                return add(Buffer.memoryAddress(nioBuffer) + nioBuffer.position(), len);
+                return add(memoryAddress, Buffer.memoryAddress(nioBuffer) + nioBuffer.position(), len);
             }
         } else {
             ByteBuffer[] buffers = buf.nioBuffers(offset, len);
             for (ByteBuffer nioBuffer : buffers) {
                 final int remaining = nioBuffer.remaining();
                 if (remaining != 0 &&
-                        (!add(Buffer.memoryAddress(nioBuffer) + nioBuffer.position(), remaining) || count == IOV_MAX)) {
+                        (!add(memoryAddress, Buffer.memoryAddress(nioBuffer) + nioBuffer.position(), remaining)
+                                || count == IOV_MAX)) {
                     return false;
                 }
             }
@@ -120,7 +126,7 @@ public final class IovArray implements MessageProcessor {
         }
     }
 
-    private boolean add(long addr, int len) {
+    private boolean add(long memoryAddress, long addr, int len) {
         assert addr != 0;
 
         // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
@@ -204,7 +210,7 @@ public final class IovArray implements MessageProcessor {
      * Returns the {@code memoryAddress} for the given {@code offset}.
      */
     public long memoryAddress(int offset) {
-        return memoryAddress + idx(offset);
+        return memory.memoryAddress() + idx(offset);
     }
 
     /**
