@@ -56,14 +56,14 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
-    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
+    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, int iosqeAsyncThreshold,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IOUring.ensureAvailability();
 
-        ringBuffer = Native.createRingBuffer(ringSize, ioseqAsync, new Runnable() {
+        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold, new Runnable() {
             @Override
             public void run() {
                 // NOOP
@@ -97,7 +97,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         logger.trace("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
-        channels.put(fd, ch);
+        if (channels.put(fd, ch) == null) {
+            ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
+        }
     }
 
     void remove(AbstractIOUringChannel ch) {
@@ -105,12 +107,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         int fd = ch.socket.intValue();
 
         AbstractIOUringChannel old = channels.remove(fd);
-        if (old != null && old != ch) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
+        if (old != null) {
+            ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
 
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !ch.isOpen();
+            if (old != ch) {
+                // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+                channels.put(fd, old);
+
+                // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be
+                // closed.
+                assert !ch.isOpen();
+            }
         }
     }
 
