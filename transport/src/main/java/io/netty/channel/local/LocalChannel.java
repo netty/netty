@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 public class LocalChannel extends AbstractChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
-    @SuppressWarnings({ "rawtypes" })
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -200,7 +200,7 @@ public class LocalChannel extends AbstractChannel {
                         // rejects the close Runnable but give a best effort.
                         peer.close();
                     }
-                    PlatformDependent.throwException(cause);
+                    throw cause;
                 }
             }
         } finally {
@@ -259,7 +259,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
-        final Integer stackDepth = threadLocals.localChannelReaderStackDepth();
+        final int stackDepth = threadLocals.localChannelReaderStackDepth();
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
             try {
@@ -274,7 +274,7 @@ public class LocalChannel extends AbstractChannel {
                 logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
                 close();
                 peer.close();
-                PlatformDependent.throwException(cause);
+                throw cause;
             }
         }
     }
@@ -352,7 +352,7 @@ public class LocalChannel extends AbstractChannel {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
             close();
             peer.close();
-            PlatformDependent.throwException(cause);
+            throw cause;
         }
     }
 

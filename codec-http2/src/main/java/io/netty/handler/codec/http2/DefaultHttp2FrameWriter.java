@@ -22,7 +22,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -393,7 +392,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
             promiseAggregator.doneAllocatingPromises();
-            PlatformDependent.throwException(t);
+            throw t;
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
@@ -540,7 +539,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
             promiseAggregator.doneAllocatingPromises();
-            PlatformDependent.throwException(t);
+            throw t;
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();

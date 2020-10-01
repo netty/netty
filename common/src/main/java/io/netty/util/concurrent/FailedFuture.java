@@ -15,9 +15,9 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.PlatformDependent;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link CompleteFuture} which is failed already.  It is

@@ -387,11 +387,7 @@ public final class PlatformDependent {
      * Raises an exception bypassing compiler checks for checked exceptions.
      */
     public static void throwException(Throwable t) {
-        if (hasUnsafe()) {
-            PlatformDependent0.throwException(t);
-        } else {
-            PlatformDependent.throwException0(t);
-        }
+        throwException0(t);
     }
 
     @SuppressWarnings("unchecked")
@@ -648,8 +644,7 @@ public final class PlatformDependent {
             return PlatformDependent0.allocateDirectNoCleaner(capacity);
         } catch (Throwable e) {
             decrementMemoryCounter(capacity);
-            throwException(e);
-            return null;
+            throw e;
         }
     }
 
@@ -666,8 +661,7 @@ public final class PlatformDependent {
             return PlatformDependent0.reallocateDirectNoCleaner(buffer, capacity);
         } catch (Throwable e) {
             decrementMemoryCounter(len);
-            throwException(e);
-            return null;
+            throw e;
         }
     }
 

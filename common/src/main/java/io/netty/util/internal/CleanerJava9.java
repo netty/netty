@@ -21,7 +21,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -49,10 +48,7 @@ final class CleanerJava9 implements Cleaner {
                             MethodType.methodType(void.class, ByteBuffer.class)).bindTo(PlatformDependent0.UNSAFE);
                     m.invokeExact(buffer);
                     return m;
-                } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                    return e;
                 } catch (Throwable cause) {
-                    PlatformDependent0.throwException(cause);
                     return cause;
                 }
             });
@@ -87,8 +83,10 @@ final class CleanerJava9 implements Cleaner {
         if (System.getSecurityManager() == null) {
             try {
                 INVOKE_CLEANER_HANDLE.invokeExact(buffer);
-            } catch (Throwable cause) {
-                PlatformDependent0.throwException(cause);
+            } catch (RuntimeException exception) {
+                throw exception;
+            } catch (Throwable throwable) {
+                PlatformDependent.throwException(throwable);
             }
         } else {
             freeDirectBufferPrivileged(buffer);
@@ -99,15 +97,15 @@ final class CleanerJava9 implements Cleaner {
         Exception error = AccessController.doPrivileged((PrivilegedAction<Exception>) () -> {
             try {
                 INVOKE_CLEANER_HANDLE.invokeExact(PlatformDependent0.UNSAFE, buffer);
-            } catch (InvocationTargetException | IllegalAccessException e) {
-                return e;
-            } catch (Throwable cause) {
-                PlatformDependent.throwException(cause);
+            } catch (RuntimeException exception) {
+                return exception;
+            } catch (Throwable throwable) {
+                PlatformDependent.throwException(throwable);
             }
             return null;
         });
         if (error != null) {
-            PlatformDependent0.throwException(error);
+            PlatformDependent.throwException(error);
         }
     }
 }

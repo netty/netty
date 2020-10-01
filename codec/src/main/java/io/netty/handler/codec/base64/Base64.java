@@ -19,14 +19,13 @@
  */
 package io.netty.handler.codec.base64;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -327,8 +326,7 @@ public final class Base64 {
                 return dest.slice(0, outBuffPosn);
             } catch (Throwable cause) {
                 dest.release();
-                PlatformDependent.throwException(cause);
-                return null;
+                throw cause;
             }
         }
 

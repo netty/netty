@@ -25,7 +25,6 @@ import java.util.ArrayDeque;
 
 import static io.netty.util.ReferenceCountUtil.safeRelease;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static io.netty.util.internal.PlatformDependent.throwException;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
@@ -181,7 +180,7 @@ public abstract class AbstractCoalescingBufferQueue {
             safeRelease(entryBuffer);
             safeRelease(toReturn);
             aggregatePromise.setFailure(cause);
-            throwException(cause);
+            throw cause;
         }
         decrementReadableBytes(originalBytes - bytes);
         return toReturn;
@@ -281,7 +280,7 @@ public abstract class AbstractCoalescingBufferQueue {
         } catch (Throwable cause) {
             composite.release();
             safeRelease(next);
-            throwException(cause);
+            throw cause;
         }
         return composite;
     }
@@ -300,7 +299,7 @@ public abstract class AbstractCoalescingBufferQueue {
         } catch (Throwable cause) {
             newCumulation.release();
             safeRelease(next);
-            throwException(cause);
+            throw cause;
         }
         cumulation.release();
         next.release();

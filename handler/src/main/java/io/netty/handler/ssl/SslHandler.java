@@ -49,6 +49,13 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -60,14 +67,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
@@ -456,7 +455,7 @@ public class SslHandler extends ByteToMessageDecoder {
         engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
-        this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
+        jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
     }
 
@@ -794,7 +793,7 @@ public class SslHandler extends ByteToMessageDecoder {
             wrapAndFlush(ctx);
         } catch (Throwable cause) {
             setHandshakeFailure(ctx, cause);
-            PlatformDependent.throwException(cause);
+            throw cause;
         }
     }
 
@@ -1086,11 +1085,9 @@ public class SslHandler extends ByteToMessageDecoder {
                 in.skipBytes(result.bytesConsumed());
                 out.writerIndex(out.writerIndex() + result.bytesProduced());
 
-                switch (result.getStatus()) {
-                case BUFFER_OVERFLOW:
+                if (result.getStatus() == Status.BUFFER_OVERFLOW) {
                     out.ensureWritable(engine.getSession().getPacketBufferSize());
-                    break;
-                default:
+                } else {
                     return result;
                 }
             }
@@ -2014,15 +2011,14 @@ public class SslHandler extends ByteToMessageDecoder {
             // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
-        } else {
-            if (handshakePromise.isDone()) {
-                // If the handshake is done already lets just return directly as there is no need to trigger it again.
-                // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
-                // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
-                // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
-                // call fireChannelActive() on the pipeline.
-                return;
-            }
+        }
+        if (handshakePromise.isDone()) {
+            // If the handshake is done already lets just return directly as there is no need to trigger it again.
+            // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
+            // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
+            // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
+            // call fireChannelActive() on the pipeline.
+            return;
         }
 
         // Begin handshake.
@@ -2038,7 +2034,7 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     private void applyHandshakeTimeout() {
-        final Promise<Channel> localHandshakePromise = this.handshakePromise;
+        final Promise<Channel> localHandshakePromise = handshakePromise;
 
         // Set timeout if necessary.
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
@@ -2228,7 +2224,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     first.writeBytes(composite);
                 } catch (Throwable cause) {
                     first.release();
-                    PlatformDependent.throwException(cause);
+                    throw cause;
                 }
                 composite.release();
             }

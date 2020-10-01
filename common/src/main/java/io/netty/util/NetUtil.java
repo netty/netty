@@ -143,22 +143,22 @@ public final class NetUtil {
         byte[] LOCALHOST6_BYTES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
         // Create IPv4 loopback address.
-        Inet4Address localhost4 = null;
+        Inet4Address localhost4;
         try {
             localhost4 = (Inet4Address) InetAddress.getByAddress("localhost", LOCALHOST4_BYTES);
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
             // We should not get here as long as the length of the address is correct.
-            PlatformDependent.throwException(e);
+            throw new ExceptionInInitializerError(e);
         }
         LOCALHOST4 = localhost4;
 
         // Create IPv6 loopback address.
-        Inet6Address localhost6 = null;
+        Inet6Address localhost6;
         try {
             localhost6 = (Inet6Address) InetAddress.getByAddress("localhost", LOCALHOST6_BYTES);
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
-            PlatformDependent.throwException(e);
+            throw new ExceptionInInitializerError(e);
         }
         LOCALHOST6 = localhost6;
 
@@ -544,7 +544,7 @@ public final class NetUtil {
                 if (compressBegin < 0 && colons != 6 ||
                     // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
                     // IPv4 ending, otherwise 7 :'s is bad
-                    (colons == 7 && compressBegin >= start || colons > 7)) {
+                    colons == 7 && compressBegin >= start || colons > 7) {
                     return false;
                 }
 

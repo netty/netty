@@ -15,8 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -34,7 +32,6 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -53,6 +50,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * An NIO datagram {@link Channel} that sends and receives an
@@ -252,10 +251,7 @@ public final class NioDatagramChannel
                     localAddress(), remoteAddress));
             free = false;
             return 1;
-        } catch (Throwable cause) {
-            PlatformDependent.throwException(cause);
-            return -1;
-        }  finally {
+        } finally {
             if (free) {
                 data.release();
             }
@@ -567,12 +563,6 @@ public final class NioDatagramChannel
             promise.setFailure(e);
         }
         return promise;
-    }
-
-    @Override
-    @Deprecated
-    protected void setReadPending(boolean readPending) {
-        super.setReadPending(readPending);
     }
 
     void clearReadPending0() {
