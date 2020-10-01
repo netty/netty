@@ -125,7 +125,9 @@ public final class IovArray implements MessageProcessor {
 
         // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
         // will attempt to write some data and make progress.
-        if (maxBytes - len < size && count > 0) {
+        if ((maxBytes - len < size && count > 0) ||
+                // Check if we have enough space left
+                memory.capacity() < count * IOV_SIZE + IOV_SIZE) {
             // If the size + len will overflow SSIZE_MAX we stop populate the IovArray. This is done as linux
             //  not allow to write more bytes then SSIZE_MAX with one writev(...) call and so will
             // return 'EINVAL', which will raise an IOException.
@@ -155,8 +157,8 @@ public final class IovArray implements MessageProcessor {
                 PlatformDependent.putInt(baseOffset + memoryAddress, (int) addr);
                 PlatformDependent.putInt(lengthOffset + memoryAddress, len);
             } else {
-                memory.setLong(baseOffset, (int) addr);
-                memory.setLong(lengthOffset, len);
+                memory.setInt(baseOffset, (int) addr);
+                memory.setInt(lengthOffset, len);
             }
         }
         return true;
