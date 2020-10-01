@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -52,23 +53,27 @@ public final class IovArray implements MessageProcessor {
      * The size of an {@code iovec} struct in bytes. This is calculated as we have 2 entries each of the size of the
      * address.
      */
-    private static final int IOV_SIZE = 2 * ADDRESS_SIZE;
+    public static final int IOV_SIZE = 2 * ADDRESS_SIZE;
 
     /**
      * The needed memory to hold up to {@code IOV_MAX} iov entries, where {@code IOV_MAX} signified
      * the maximum number of {@code iovec} structs that can be passed to {@code writev(...)}.
      */
-    private static final int CAPACITY = IOV_MAX * IOV_SIZE;
+    private static final int DEFAULT_CAPACITY = IOV_MAX * IOV_SIZE;
 
-    private final ByteBuffer memory;
+    private final ByteBuf memory;
     private final long memoryAddress;
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
-        memory = Buffer.allocateDirectWithNativeOrder(CAPACITY);
-        memoryAddress = Buffer.memoryAddress(memory);
+        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(DEFAULT_CAPACITY)));
+    }
+
+    public IovArray(ByteBuf memory) {
+        this.memory = memory;
+        memoryAddress = memory.memoryAddress();
     }
 
     public boolean isFull() {
@@ -141,8 +146,8 @@ public final class IovArray implements MessageProcessor {
                 PlatformDependent.putLong(baseOffset + memoryAddress, addr);
                 PlatformDependent.putLong(lengthOffset + memoryAddress, len);
             } else {
-                memory.putLong(baseOffset, addr);
-                memory.putLong(lengthOffset, len);
+                memory.setLong(baseOffset, addr);
+                memory.setLong(lengthOffset, len);
             }
         } else {
             assert ADDRESS_SIZE == 4;
@@ -150,8 +155,8 @@ public final class IovArray implements MessageProcessor {
                 PlatformDependent.putInt(baseOffset + memoryAddress, (int) addr);
                 PlatformDependent.putInt(lengthOffset + memoryAddress, len);
             } else {
-                memory.putInt(baseOffset, (int) addr);
-                memory.putInt(lengthOffset, len);
+                memory.setLong(baseOffset, (int) addr);
+                memory.setLong(lengthOffset, len);
             }
         }
         return true;
@@ -204,7 +209,7 @@ public final class IovArray implements MessageProcessor {
      * Release the {@link IovArray}. Once release further using of it may crash the JVM!
      */
     public void release() {
-        Buffer.free(memory);
+        memory.release();
     }
 
     @Override
