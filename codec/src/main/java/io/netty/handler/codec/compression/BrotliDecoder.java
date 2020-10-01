@@ -15,12 +15,15 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
 
@@ -28,6 +31,12 @@ import java.util.List;
  * Brotli Decoder (Decompressor)
  */
 public class BrotliDecoder extends ByteToMessageDecoder {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BrotliDecoder.class);
+
+    static {
+        logger.info("Brotli Loader Status: {}", BrotliLoader.isBrotliAvailable());
+    }
 
     private ByteBufOutputStream byteBufOutputStream;
     private ByteBuf byteBuf;
@@ -42,7 +51,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
         BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in));
 
         int read = brotliInputStream.read();
-        while(read > -1) {
+        while (read > -1) {
             byteBufOutputStream.write(read);
             read = brotliInputStream.read();
         }
