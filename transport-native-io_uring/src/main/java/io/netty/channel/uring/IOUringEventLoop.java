@@ -63,12 +63,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IOUring.ensureAvailability();
 
-        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold, new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
-        });
+        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold);
 
         eventfd = Native.newBlockingEventFd();
         logger.trace("New EventLoop: {}", this.toString());
