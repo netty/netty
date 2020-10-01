@@ -225,6 +225,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                         iovArray.memoryAddress(offset), iovArray.count() - offset, (short) 0);
             } catch (Exception e) {
                 iovArray.release();
+                iovArray = null;
 
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());

@@ -75,7 +75,7 @@ public final class IovArray implements MessageProcessor {
     public IovArray(ByteBuf memory) {
         assert memory.writerIndex() == 0;
         assert memory.readerIndex() == 0;
-        this.memory = memory.order(
+        this.memory = PlatformDependent.hasUnsafe() ? memory : memory.order(
                 PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
     }
 
