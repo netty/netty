@@ -58,7 +58,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     private long prevDeadlineNanos = NONE;
     private boolean pendingWakeup;
 
-    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, boolean ioseqAsync,
+    IOUringEventLoop(IOUringEventLoopGroup parent, Executor executor, int ringSize, int iosqeAsyncThreshold,
                      RejectedExecutionHandler rejectedExecutionHandler, EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
@@ -68,7 +68,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
         //       allow to change this in the future.
         iovArrays = new IovArrays(8);
-        ringBuffer = Native.createRingBuffer(ringSize, ioseqAsync, new Runnable() {
+        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold, new Runnable() {
             @Override
             public void run() {
                 // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
@@ -103,7 +103,9 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         logger.trace("Add Channel: {} ", ch.socket.intValue());
         int fd = ch.socket.intValue();
 
-        channels.put(fd, ch);
+        if (channels.put(fd, ch) == null) {
+            ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
+        }
     }
 
     void remove(AbstractIOUringChannel ch) {
@@ -111,12 +113,17 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         int fd = ch.socket.intValue();
 
         AbstractIOUringChannel old = channels.remove(fd);
-        if (old != null && old != ch) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
+        if (old != null) {
+            ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
 
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !ch.isOpen();
+            if (old != ch) {
+                // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+                channels.put(fd, old);
+
+                // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be
+                // closed.
+                assert !ch.isOpen();
+            }
         }
     }
 
