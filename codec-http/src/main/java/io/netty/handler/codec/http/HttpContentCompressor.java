@@ -15,8 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
@@ -147,33 +149,43 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
+
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;
         }
 
+        ChannelHandler compressor;
         String targetContentEncoding;
         switch (wrapper) {
-        case GZIP:
-            targetContentEncoding = "gzip";
-            break;
-        case ZLIB:
-            targetContentEncoding = "deflate";
-            break;
-        default:
-            throw new Error();
+            case GZIP:
+                targetContentEncoding = "gzip";
+                compressor = ZlibCodecFactory.newZlibEncoder(io.netty.handler.codec.compression.ZlibWrapper.GZIP, compressionLevel, windowBits,
+                        memLevel);
+                break;
+            case ZLIB:
+                targetContentEncoding = "deflate";
+                compressor = ZlibCodecFactory.newZlibEncoder(io.netty.handler.codec.compression.ZlibWrapper.GZIP, compressionLevel, windowBits,
+                        memLevel);
+                break;
+            case BROTLI:
+                targetContentEncoding = "br";
+                compressor = new BrotliEncoder(compressionLevel);
+                break;
+            default:
+                throw new Error();
         }
 
         return new Result(
                 targetContentEncoding,
                 new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                        wrapper, compressionLevel, windowBits, memLevel)));
+                        ctx.channel().config(), compressor));
     }
 
     @SuppressWarnings("FloatingPointEquality")
     protected ZlibWrapper determineWrapper(String acceptEncoding) {
         float starQ = -1.0f;
+        float brQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
         for (String encoding : acceptEncoding.split(",")) {
@@ -189,20 +201,29 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
             if (encoding.contains("*")) {
                 starQ = q;
-            } else if (encoding.contains("gzip") && q > gzipQ) {
+            }
+            else if (encoding.contains("br") && q > brQ) {
+                brQ = q;
+            }
+            else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
             } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
         }
-        if (gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (gzipQ >= deflateQ) {
+        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ >= gzipQ) {
+                return ZlibWrapper.BROTLI;
+            } else if (gzipQ >= deflateQ) {
                 return ZlibWrapper.GZIP;
             } else {
                 return ZlibWrapper.ZLIB;
             }
         }
         if (starQ > 0.0f) {
+            if (brQ == -1.0f) {
+                return ZlibWrapper.BROTLI;
+            }
             if (gzipQ == -1.0f) {
                 return ZlibWrapper.GZIP;
             }

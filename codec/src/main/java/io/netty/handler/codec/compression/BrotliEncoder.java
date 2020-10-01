@@ -7,6 +7,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -19,35 +20,51 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         logger.info("Brotli Loader Status: {}", BrotliLoader.isBrotliAvailable());
     }
 
-    private final Encoder.Parameters params;
-    private BrotliOutputStream compressorOS;
-    private ByteBufOutputStream byteBufOutputStream;
+    private final Encoder.Parameters parameters;
+    private BrotliOutputStream brotliOutputStream;
+    private ByteBuf byteBuf;
 
     public BrotliEncoder(int quality) {
-        this.params = new Encoder.Parameters().setQuality(quality);
+        this.parameters = new Encoder.Parameters().setQuality(quality);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
-        if (compressorOS == null) {
-            byteBufOutputStream = new ByteBufOutputStream(out);
-            compressorOS = new BrotliOutputStream(byteBufOutputStream, params);
+    public void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+        if (msg.readableBytes() == 0) {
+            out.writeBytes(msg);
+            return;
+        }
+
+        if (brotliOutputStream == null) {
+            byteBuf = ctx.alloc().buffer();
+            brotliOutputStream = new BrotliOutputStream(new ByteBufOutputStream(byteBuf), parameters);
         }
 
         if (msg.hasArray()) {
-            compressorOS.write(msg.array());
+            byte[] inAry = msg.array();
+            int offset = msg.arrayOffset() + msg.readerIndex();
+            int len = msg.readableBytes();
+            brotliOutputStream.write(inAry, offset, len);
         } else {
-            compressorOS.write(ByteBufUtil.getBytes(msg));
+            brotliOutputStream.write(ByteBufUtil.getBytes(msg));
         }
 
-        byteBufOutputStream.flush();
-        compressorOS.flush();
+        brotliOutputStream.flush();
+        out.writeBytes(byteBuf);
+        byteBuf.clear();
+
+        if (!out.isWritable()) {
+            out.ensureWritable(out.writerIndex());
+        }
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
-        byteBufOutputStream.close();
-        compressorOS.close();
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (brotliOutputStream != null) {
+            brotliOutputStream.close();
+            byteBuf.release();
+            promise.setSuccess();
+            brotliOutputStream = null;
+        }
     }
 }
