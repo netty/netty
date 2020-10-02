@@ -15,16 +15,57 @@
  */
 package io.netty.handler.ssl;
 
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
+import io.netty.util.ReferenceCounted;
 
-interface OpenSslSession extends SSLSession {
+import javax.net.ssl.SSLSession;
+import java.security.cert.Certificate;
+
+/**
+ * {@link SSLSession} that is specific to our native implementation and {@link ReferenceCounted} to track native
+ * resources.
+ */
+interface OpenSslSession extends SSLSession, ReferenceCounted {
 
     /**
-     * Finish the handshake and so init everything in the {@link OpenSslSession} that should be accessible by
-     * the user.
+     * Return the {@link OpenSslSessionId} that can be used to identify this session.
      */
-    void handshakeFinished() throws SSLException;
+    OpenSslSessionId sessionId();
+
+    /**
+     * Returns {@code true} if this is a {@code NULL} session and so should be replaced once the
+     * handshake is in progress / finished, {@code false} otherwise.
+     */
+    boolean isNullSession();
+
+    /**
+     * Returns {@link true} if the session is still valid for the given current time, {@code false} otherwise.
+     */
+    boolean isValid(long now);
+
+    /**
+     * Returns the native address (pointer) to {@code SSL_SESSION*} if any. Otherwise returns {@code -1}.
+     */
+    long nativeAddr();
+
+    /**
+     * Increment reference count of internal {@code SSL_SESSION*} and returns {@code true} if successful, {@code false}
+     * otherwise.
+     */
+    boolean upRef();
+
+    /**
+     * Returns {@code true} of this session should only be re-used once. This is usually true for {@code TLS1.3}.
+     */
+    boolean shouldBeSingleUse();
+
+    /**
+     * Set the local certificate chain that is used. It is not expected that this array will be changed at all
+     * and so its ok to not copy the array.
+     */
+    void setLocalCertificate(Certificate[] localCertificate);
+
+    @Override
+    OpenSslSessionContext getSessionContext();
 
     /**
      * Expand (or increase) the value returned by {@link #getApplicationBufferSize()} if necessary.
@@ -33,4 +74,26 @@ interface OpenSslSession extends SSLSession {
      * @param packetLengthDataOnly The packet size which exceeds the current {@link #getApplicationBufferSize()}.
      */
     void tryExpandApplicationBufferSize(int packetLengthDataOnly);
+
+    /**
+     * Set the buffer size that is needed as a minimum to encrypt data.
+     */
+    void setPacketBufferSize(int packetBufferSize);
+
+    /**
+     * Update the last accessed time to the current {@link System#currentTimeMillis()}.
+     */
+    void updateLastAccessedTime();
+
+    @Override
+    OpenSslSession retain();
+
+    @Override
+    OpenSslSession retain(int increment);
+
+    @Override
+    OpenSslSession touch();
+
+    @Override
+    OpenSslSession touch(Object hint);
 }

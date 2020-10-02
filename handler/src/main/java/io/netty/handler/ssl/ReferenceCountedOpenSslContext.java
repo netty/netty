@@ -100,8 +100,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     protected long ctx;
     private final List<String> unmodifiableCiphers;
-    private final long sessionCacheSize;
-    private final long sessionTimeout;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
 
@@ -182,8 +180,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean tlsFalseStart;
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                                   long sessionTimeout, int mode, Certificate[] keyCertChain,
+                                   OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                                    boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
@@ -333,22 +330,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
 
-            /* Set session cache size, if specified */
-            if (sessionCacheSize <= 0) {
-                // Get the default session cache size using SSLContext.setSessionCacheSize()
-                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-            }
-            this.sessionCacheSize = sessionCacheSize;
-            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-
-            /* Set session timeout, if specified */
-            if (sessionTimeout <= 0) {
-                // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-            }
-            this.sessionTimeout = sessionTimeout;
-            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
             }
@@ -379,16 +360,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     public final List<String> cipherSuites() {
         return unmodifiableCiphers;
-    }
-
-    @Override
-    public final long sessionCacheSize() {
-        return sessionCacheSize;
-    }
-
-    @Override
-    public final long sessionTimeout() {
-        return sessionTimeout;
     }
 
     @Override
@@ -723,6 +694,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 // May be null if it was destroyed in the meantime.
                 return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
             }
+            engine.setupHandshakeSession();
             X509Certificate[] peerCerts = certificates(chain);
             try {
                 verify(engine, peerCerts, auth);

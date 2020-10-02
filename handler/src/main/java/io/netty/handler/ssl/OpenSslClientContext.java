@@ -188,13 +188,14 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
                          Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain,
                 ClientAuth.NONE, protocols, false, enableOcsp, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                                               sessionCacheSize, sessionTimeout);
             success = true;
         } finally {
             if (!success) {
