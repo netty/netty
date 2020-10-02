@@ -211,12 +211,7 @@ public class NativeTest {
 
     @Test
     public void ioUringExitTest() {
-        RingBuffer ringBuffer = Native.createRingBuffer(new Runnable() {
-            @Override
-            public void run() {
-                // Noop
-            }
-        });
+        RingBuffer ringBuffer = Native.createRingBuffer();
         ringBuffer.close();
     }
 

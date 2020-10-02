@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.Limits;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -209,16 +210,23 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         }
 
         private ByteBuf readBuffer;
+        private IovArray iovArray;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            final IovArray iovecArray = ((IOUringEventLoop) eventLoop()).iovArray();
+            assert iovArray == null;
+            int numElements = Math.min(in.size(), Limits.IOV_MAX);
+            ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
+            iovArray = new IovArray(iovArrayBuffer);
             try {
-                int offset = iovecArray.count();
-                in.forEachFlushedMessage(iovecArray);
+                int offset = iovArray.count();
+                in.forEachFlushedMessage(iovArray);
                 submissionQueue().addWritev(socket.intValue(),
-                        iovecArray.memoryAddress(offset), iovecArray.count() - offset, (short) 0);
+                        iovArray.memoryAddress(offset), iovArray.count() - offset, (short) 0);
             } catch (Exception e) {
+                iovArray.release();
+                iovArray = null;
+
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
@@ -227,6 +235,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
+            assert iovArray == null;
             ByteBuf buf = (ByteBuf) msg;
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             submissionQueue.addWrite(socket.intValue(), buf.memoryAddress(), buf.readerIndex(),
@@ -236,12 +245,13 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
         @Override
         protected int scheduleRead0() {
+            assert readBuffer == null;
+
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             IOUringSubmissionQueue submissionQueue = submissionQueue();
             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
-            assert readBuffer == null;
             readBuffer = byteBuf;
 
             submissionQueue.addRead(socket.intValue(), byteBuf.memoryAddress(),
@@ -321,6 +331,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
         @Override
         boolean writeComplete0(int res, int data, int outstanding) {
+            IovArray iovArray = this.iovArray;
+            if (iovArray != null) {
+                this.iovArray = null;
+                iovArray.release();
+            }
             if (res >= 0) {
                 unsafe().outboundBuffer().removeBytes(res);
             } else {

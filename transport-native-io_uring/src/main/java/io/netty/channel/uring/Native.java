@@ -134,15 +134,10 @@ final class Native {
     };
 
     static RingBuffer createRingBuffer(int ringSize) {
-        return createRingBuffer(ringSize, DEFAULT_IOSEQ_ASYNC_THRESHOLD, new Runnable() {
-            @Override
-            public void run() {
-                // Noop
-            }
-        });
+        return createRingBuffer(ringSize, DEFAULT_IOSEQ_ASYNC_THRESHOLD);
     }
 
-    static RingBuffer createRingBuffer(int ringSize, int iosqeAsyncThreshold, Runnable submissionCallback) {
+    static RingBuffer createRingBuffer(int ringSize, int iosqeAsyncThreshold) {
         long[][] values = ioUringSetup(ringSize);
         assert values.length == 2;
         long[] submissionQueueArgs = values[0];
@@ -159,8 +154,7 @@ final class Native {
                 (int) submissionQueueArgs[8],
                 submissionQueueArgs[9],
                 (int) submissionQueueArgs[10],
-                iosqeAsyncThreshold,
-                submissionCallback);
+                iosqeAsyncThreshold);
         long[] completionQueueArgs = values[1];
         assert completionQueueArgs.length == 9;
         IOUringCompletionQueue completionQueue = new IOUringCompletionQueue(
@@ -176,8 +170,8 @@ final class Native {
         return new RingBuffer(submissionQueue, completionQueue);
     }
 
-    static RingBuffer createRingBuffer(Runnable submissionCallback) {
-        return createRingBuffer(DEFAULT_RING_SIZE, DEFAULT_IOSEQ_ASYNC_THRESHOLD, submissionCallback);
+    static RingBuffer createRingBuffer() {
+        return createRingBuffer(DEFAULT_RING_SIZE, DEFAULT_IOSEQ_ASYNC_THRESHOLD);
     }
 
     static void checkAllIOSupported(int ringFd) {

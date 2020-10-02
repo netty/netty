@@ -19,7 +19,6 @@ import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
@@ -50,7 +49,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private final FileDescriptor eventfd;
 
-    private final IovArrays iovArrays;
     // The maximum number of bytes for an InetAddress / Inet6Address
     private final byte[] inet4AddressArray = new byte[4];
     private final byte[] inet6AddressArray = new byte[16];
@@ -65,16 +63,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IOUring.ensureAvailability();
 
-        // TODO: Let's hard code this to 8 IovArrays to keep the memory overhead kind of small. We may want to consider
-        //       allow to change this in the future.
-        iovArrays = new IovArrays(8);
-        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold, new Runnable() {
-            @Override
-            public void run() {
-                // Once we submitted its safe to clear the IovArrays and so be able to re-use these.
-                iovArrays.clear();
-            }
-        });
+        ringBuffer = Native.createRingBuffer(ringSize, iosqeAsyncThreshold);
 
         eventfd = Native.newBlockingEventFd();
         logger.trace("New EventLoop: {}", this.toString());
@@ -321,7 +310,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
             logger.warn("Failed to close the event fd.", e);
         }
         ringBuffer.close();
-        iovArrays.release();
         PlatformDependent.freeMemory(eventfdReadBuf);
     }
 
@@ -335,16 +323,6 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }
-    }
-
-    IovArray iovArray() {
-        IovArray iovArray = iovArrays.next();
-        if (iovArray == null) {
-            ringBuffer.ioUringSubmissionQueue().submit();
-            iovArray = iovArrays.next();
-            assert iovArray != null;
-        }
-        return iovArray;
     }
 
     /**
