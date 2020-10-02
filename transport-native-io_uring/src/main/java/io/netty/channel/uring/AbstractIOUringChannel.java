@@ -244,8 +244,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
 
             cancelConnectTimeoutFuture();
-
-            doDeregister();
         } finally {
             if (submissionQueue != null) {
                 if (socket.markClosed()) {
@@ -493,6 +491,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLRDHUP event is ready to be processed
          */
         final void pollRdHup(int res) {
+            ioState &= ~POLL_RDHUP_SCHEDULED;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
