@@ -43,7 +43,7 @@ import static io.netty.handler.codec.http.HttpUtil.getContentLength;
  * responses, or after {@link HttpRequestDecoder} and {@link HttpResponseEncoder} in the
  * {@link ChannelPipeline} if being used to handle requests.
  * <blockquote>
- *  <pre>
+ * <pre>
  *  {@link ChannelPipeline} p = ...;
  *  ...
  *  p.addLast("decoder", <b>new {@link HttpRequestDecoder}()</b>);
@@ -59,24 +59,24 @@ import static io.netty.handler.codec.http.HttpUtil.getContentLength;
  * </p>
  * Be aware that {@link HttpObjectAggregator} may end up sending a {@link HttpResponse}:
  * <table border summary="Possible Responses">
- *   <tbody>
- *     <tr>
- *       <th>Response Status</th>
- *       <th>Condition When Sent</th>
- *     </tr>
- *     <tr>
- *       <td>100 Continue</td>
- *       <td>A '100-continue' expectation is received and the 'content-length' doesn't exceed maxContentLength</td>
- *     </tr>
- *     <tr>
- *       <td>417 Expectation Failed</td>
- *       <td>A '100-continue' expectation is received and the 'content-length' exceeds maxContentLength</td>
- *     </tr>
- *     <tr>
- *       <td>413 Request Entity Too Large</td>
- *       <td>Either the 'content-length' or the bytes received so far exceed maxContentLength</td>
- *     </tr>
- *   </tbody>
+ * <tbody>
+ * <tr>
+ * <th>Response Status</th>
+ * <th>Condition When Sent</th>
+ * </tr>
+ * <tr>
+ * <td>100 Continue</td>
+ * <td>A '100-continue' expectation is received and the 'content-length' doesn't exceed maxContentLength</td>
+ * </tr>
+ * <tr>
+ * <td>417 Expectation Failed</td>
+ * <td>A '100-continue' expectation is received and the 'content-length' exceeds maxContentLength</td>
+ * </tr>
+ * <tr>
+ * <td>413 Request Entity Too Large</td>
+ * <td>Either the 'content-length' or the bytes received so far exceed maxContentLength</td>
+ * </tr>
+ * </tbody>
  * </table>
  *
  * @see FullHttpRequest
@@ -84,17 +84,16 @@ import static io.netty.handler.codec.http.HttpUtil.getContentLength;
  * @see HttpResponseDecoder
  * @see HttpServerCodec
  */
-public class HttpObjectAggregator
-        extends MessageAggregator<HttpObject, HttpMessage, HttpContent, FullHttpMessage> {
+public class HttpObjectAggregator extends MessageAggregator<HttpObject, HttpMessage, HttpContent, FullHttpMessage> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpObjectAggregator.class);
-    private static final FullHttpResponse CONTINUE =
-            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
-    private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
-    private static final FullHttpResponse TOO_LARGE_CLOSE = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
-    private static final FullHttpResponse TOO_LARGE = new DefaultFullHttpResponse(
-        HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse CONTINUE = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+            HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+            HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse TOO_LARGE_CLOSE = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+            HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse TOO_LARGE = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+            HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
 
     static {
         EXPECTATION_FAILED.headers().set(CONTENT_LENGTH, 0);
@@ -106,26 +105,38 @@ public class HttpObjectAggregator
 
     private final boolean closeOnExpectationFailed;
 
-    /**
-     * Creates a new instance.
-     * @param maxContentLength the maximum length of the aggregated content in bytes.
-     * If the length of the aggregated content exceeds this value,
-     * {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)} will be called.
-     */
     public HttpObjectAggregator(int maxContentLength) {
-        this(maxContentLength, false);
+        this((long) maxContentLength, false);
     }
 
     /**
      * Creates a new instance.
+     *
      * @param maxContentLength the maximum length of the aggregated content in bytes.
-     * If the length of the aggregated content exceeds this value,
-     * {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)} will be called.
-     * @param closeOnExpectationFailed If a 100-continue response is detected but the content length is too large
-     * then {@code true} means close the connection. otherwise the connection will remain open and data will be
-     * consumed and discarded until the next request is received.
+     *                         If the length of the aggregated content exceeds this value,
+     *                         {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)} will be called.
      */
+    public HttpObjectAggregator(long maxContentLength) {
+        this(maxContentLength, false);
+    }
+
     public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
+        this((long) maxContentLength, closeOnExpectationFailed);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param maxContentLength         the maximum length of the aggregated content in bytes.
+     *                                 If the length of the aggregated content exceeds this value,
+     *                                 {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)}
+     *                                 will be called.
+     * @param closeOnExpectationFailed If a 100-continue response is detected but the content length is too large
+     *                                 then {@code true} means close the connection. otherwise the connection will
+     *                                 remain open and data will be
+     *                                 consumed and discarded until the next request is received.
+     */
+    public HttpObjectAggregator(long maxContentLength, boolean closeOnExpectationFailed) {
         super(maxContentLength);
         this.closeOnExpectationFailed = closeOnExpectationFailed;
     }
@@ -259,7 +270,7 @@ public class HttpObjectAggregator
             // If the client started to send data already, close because it's impossible to recover.
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
+                    !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
                 ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
                 future.addListener(new ChannelFutureListener() {
                     @Override
