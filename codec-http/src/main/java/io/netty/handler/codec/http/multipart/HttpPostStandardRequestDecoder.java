@@ -28,7 +28,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -163,7 +162,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             }
         } catch (Throwable e) {
             destroy();
-            PlatformDependent.throwException(e);
+            throw e;
         }
     }
 
@@ -384,11 +383,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         if (data == null) {
             return;
         }
-        List<InterfaceHttpData> datas = bodyMapHttpData.get(data.getName());
-        if (datas == null) {
-            datas = new ArrayList<>(1);
-            bodyMapHttpData.put(data.getName(), datas);
-        }
+        List<InterfaceHttpData> datas = bodyMapHttpData.computeIfAbsent(
+                data.getName(), k -> new ArrayList<>(1));
         datas.add(data);
         bodyListHttpData.add(data);
     }
@@ -494,11 +490,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw e;
-        } catch (IOException e) {
-            // error while decoding
-            undecodedChunk.readerIndex(firstpos);
-            throw new ErrorDataDecoderException(e);
-        } catch (IllegalArgumentException e) {
+        } catch (IOException | IllegalArgumentException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw new ErrorDataDecoderException(e);

@@ -32,6 +32,18 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
+import javax.net.ssl.SSLSessionContext;
+import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
@@ -46,19 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
-
-import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSessionBindingEvent;
-import javax.net.ssl.SSLSessionBindingListener;
-import javax.net.ssl.SSLSessionContext;
-import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
@@ -355,8 +354,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Call shutdown so we are sure we correctly release all native memory and also guard against the
                 // case when shutdown() will be called by the finalizer again.
                 shutdown();
-
-                PlatformDependent.throwException(cause);
+                throw cause;
             }
         }
 
@@ -573,7 +571,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return buf;
             } catch (Throwable cause) {
                 buf.release();
-                PlatformDependent.throwException(cause);
+                throw cause;
             }
         }
         return null;

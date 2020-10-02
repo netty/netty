@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
@@ -26,7 +24,8 @@ import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -115,7 +114,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             replaceHandler(ctx, hostname, sslContext);
         } catch (Throwable cause) {
             selection = EMPTY_SELECTION;
-            PlatformDependent.throwException(cause);
+            throw cause;
         }
     }
 

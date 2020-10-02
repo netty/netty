@@ -15,8 +15,6 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
@@ -42,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link OrderedEventExecutor}'s implementation that execute all its submitted tasks in a single thread.
@@ -145,7 +145,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     public SingleThreadEventExecutor(Executor executor, int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
         this.executor = ThreadExecutorMap.apply(executor, this);
         taskQueue = newTaskQueue(Math.max(16, maxPendingTasks));
-        this.addTaskWakesUp = taskQueue instanceof BlockingQueue;
+        addTaskWakesUp = taskQueue instanceof BlockingQueue;
         rejectedExecutionHandler = requireNonNull(rejectedHandler, "rejectedHandler");
     }
 
@@ -852,7 +852,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             boolean success = false;
             updateLastExecutionTime();
             try {
-                SingleThreadEventExecutor.this.run();
+                run();
                 success = true;
             } catch (Throwable t) {
                 logger.warn("Unexpected exception from an event executor: ", t);
@@ -860,7 +860,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                 for (;;) {
                     int oldState = state;
                     if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
-                            SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                            this, oldState, ST_SHUTTING_DOWN)) {
                         break;
                     }
                 }
@@ -889,7 +889,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                     for (;;) {
                         int oldState = state;
                         if (oldState >= ST_SHUTDOWN || STATE_UPDATER.compareAndSet(
-                                SingleThreadEventExecutor.this, oldState, ST_SHUTDOWN)) {
+                                this, oldState, ST_SHUTDOWN)) {
                             break;
                         }
                     }
@@ -907,7 +907,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                         // See https://github.com/netty/netty/issues/6596.
                         FastThreadLocal.removeAll();
 
-                        STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
+                        STATE_UPDATER.set(this, ST_TERMINATED);
                         threadLock.countDown();
                         int numUserTasks = drainTasks();
                         if (numUserTasks > 0 && logger.isWarnEnabled()) {

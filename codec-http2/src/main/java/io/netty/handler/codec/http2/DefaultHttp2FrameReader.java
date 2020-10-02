@@ -18,7 +18,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
@@ -166,12 +165,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         } catch (Http2Exception e) {
             readError = !Http2Exception.isStreamError(e);
             throw e;
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
             readError = true;
             throw e;
-        } catch (Throwable cause) {
-            readError = true;
-            PlatformDependent.throwException(cause);
         }
     }
 

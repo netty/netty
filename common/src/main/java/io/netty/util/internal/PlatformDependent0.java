@@ -31,8 +31,6 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -399,11 +397,6 @@ final class PlatformDependent0 {
 
     static boolean unalignedAccess() {
         return UNALIGNED;
-    }
-
-    static void throwException(Throwable cause) {
-        // JVM has been observed to crash when passing a null argument. See https://github.com/netty/netty/issues/4131.
-        UNSAFE.throwException(requireNonNull(cause, "cause"));
     }
 
     static boolean hasDirectBufferNoCleanerConstructor() {

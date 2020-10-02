@@ -112,7 +112,7 @@ final class CleanerJava6 implements Cleaner {
             try {
                 freeDirectBuffer0(buffer);
             } catch (Throwable cause) {
-                PlatformDependent0.throwException(cause);
+                PlatformDependent.throwException(cause);
             }
         } else {
             freeDirectBufferPrivileged(buffer);
@@ -124,12 +124,12 @@ final class CleanerJava6 implements Cleaner {
             try {
                 freeDirectBuffer0(buffer);
                 return null;
-            } catch (Throwable cause1) {
-                return cause1;
+            } catch (Throwable throwable) {
+                return throwable;
             }
         });
         if (cause != null) {
-            PlatformDependent0.throwException(cause);
+            PlatformDependent.throwException(cause);
         }
     }
 
