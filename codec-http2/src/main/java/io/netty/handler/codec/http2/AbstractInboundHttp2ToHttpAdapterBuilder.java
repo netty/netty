@@ -27,7 +27,7 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
         T extends InboundHttp2ToHttpAdapter, B extends AbstractInboundHttp2ToHttpAdapterBuilder<T, B>> {
 
     private final Http2Connection connection;
-    private int maxContentLength;
+    private long maxContentLength;
     private boolean validateHttpHeaders;
     private boolean propagateSettings;
 
@@ -56,7 +56,7 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     /**
      * Returns the maximum length of the message content.
      */
-    protected int maxContentLength() {
+    protected long maxContentLength() {
         return maxContentLength;
     }
 
@@ -68,6 +68,18 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
      * @return {@link AbstractInboundHttp2ToHttpAdapterBuilder} the builder for the {@link InboundHttp2ToHttpAdapter}
      */
     protected B maxContentLength(int maxContentLength) {
+        this.maxContentLength = maxContentLength;
+        return self();
+    }
+
+    /**
+     * Specifies the maximum length of the message content.
+     *
+     * @param maxContentLength the maximum length of the message content. If the length of the message content
+     *        exceeds this value, a {@link TooLongFrameException} will be raised
+     * @return {@link AbstractInboundHttp2ToHttpAdapterBuilder} the builder for the {@link InboundHttp2ToHttpAdapter}
+     */
+    protected B maxContentLength(long maxContentLength) {
         this.maxContentLength = maxContentLength;
         return self();
     }
@@ -131,6 +143,6 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     /**
      * Creates a new {@link InboundHttp2ToHttpAdapter} with the specified properties.
      */
-    protected abstract T build(Http2Connection connection, int maxContentLength,
+    protected abstract T build(Http2Connection connection, long maxContentLength,
                                boolean validateHttpHeaders, boolean propagateSettings) throws Exception;
 }

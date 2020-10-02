@@ -150,8 +150,11 @@ public class HttpObjectAggregator
         return msg instanceof FullHttpMessage;
     }
 
-    @Override
     protected boolean isContentLengthInvalid(HttpMessage start, int maxContentLength) {
+        return isContentLengthInvalid(start, (long) maxContentLength);
+    }
+
+    protected boolean isContentLengthInvalid(HttpMessage start, long maxContentLength) {
         try {
             return getContentLength(start, -1L) > maxContentLength;
         } catch (final NumberFormatException e) {
@@ -160,6 +163,10 @@ public class HttpObjectAggregator
     }
 
     private static Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+        return continueResponse(start, (long) maxContentLength, pipeline);
+    }
+
+    private static Object continueResponse(HttpMessage start, long maxContentLength, ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
@@ -176,8 +183,11 @@ public class HttpObjectAggregator
         return null;
     }
 
-    @Override
     protected Object newContinueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+        return newContinueResponse(start, (long) maxContentLength, pipeline);
+    }
+
+    protected Object newContinueResponse(HttpMessage start, long maxContentLength, ChannelPipeline pipeline) {
         Object response = continueResponse(start, maxContentLength, pipeline);
         // we're going to respond based on the request expectation so there's no
         // need to propagate the expectation further.

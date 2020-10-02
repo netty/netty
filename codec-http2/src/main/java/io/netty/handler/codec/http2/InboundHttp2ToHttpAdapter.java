@@ -62,7 +62,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
     };
 
-    private final int maxContentLength;
+    private final long maxContentLength;
     private final ImmediateSendDetector sendDetector;
     private final Http2Connection.PropertyKey messageKey;
     private final boolean propagateSettings;
@@ -70,6 +70,11 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected final boolean validateHttpHeaders;
 
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
+                                        boolean validateHttpHeaders, boolean propagateSettings) {
+        this(connection, (long) maxContentLength, validateHttpHeaders, propagateSettings);
+    }
+
+    protected InboundHttp2ToHttpAdapter(Http2Connection connection, long maxContentLength,
                                         boolean validateHttpHeaders, boolean propagateSettings) {
 
         if (maxContentLength <= 0) {

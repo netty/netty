@@ -70,13 +70,21 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
         return msg instanceof FullBulkStringRedisMessage;
     }
 
-    @Override
     protected boolean isContentLengthInvalid(BulkStringHeaderRedisMessage start, int maxContentLength)
             throws Exception {
         return start.bulkStringLength() > maxContentLength;
     }
 
-    @Override
+    protected boolean isContentLengthInvalid(BulkStringHeaderRedisMessage start, long maxContentLength)
+            throws Exception {
+        return start.bulkStringLength() > maxContentLength;
+    }
+
+    protected Object newContinueResponse(BulkStringHeaderRedisMessage start, long maxContentLength,
+                                         ChannelPipeline pipeline) throws Exception {
+        return null;
+    }
+
     protected Object newContinueResponse(BulkStringHeaderRedisMessage start, int maxContentLength,
                                          ChannelPipeline pipeline) throws Exception {
         return null;

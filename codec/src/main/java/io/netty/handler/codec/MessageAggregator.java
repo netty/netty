@@ -54,7 +54,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     private static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
 
-    private final int maxContentLength;
+    private final long maxContentLength;
     private O currentMessage;
     private boolean handlingOversizedMessage;
 
@@ -64,26 +64,33 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     private boolean aggregating;
 
+    protected MessageAggregator(int maxContentLength) {
+        this((long) maxContentLength);
+    }
+
     /**
      * Creates a new instance.
      *
-     * @param maxContentLength
-     *        the maximum length of the aggregated content.
-     *        If the length of the aggregated content exceeds this value,
-     *        {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
+     * @param maxContentLength the maximum length of the aggregated content.
+     *                         If the length of the aggregated content exceeds this value,
+     *                         {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
      */
-    protected MessageAggregator(int maxContentLength) {
+    protected MessageAggregator(long maxContentLength) {
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;
     }
 
     protected MessageAggregator(int maxContentLength, Class<? extends I> inboundMessageType) {
+        this((long) maxContentLength, inboundMessageType);
+    }
+
+    protected MessageAggregator(long maxContentLength, Class<? extends I> inboundMessageType) {
         super(inboundMessageType);
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;
     }
 
-    private static void validateMaxContentLength(int maxContentLength) {
+    private static void validateMaxContentLength(long maxContentLength) {
         checkPositiveOrZero(maxContentLength, "maxContentLength");
     }
 
@@ -106,11 +113,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         if (isStartMessage(in)) {
             aggregating = true;
             return true;
-        } else if (aggregating && isContentMessage(in)) {
-            return true;
-        }
-
-        return false;
+        } else return aggregating && isContentMessage(in);
     }
 
     /**
@@ -153,7 +156,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Returns the maximum allowed length of the aggregated message in bytes.
      */
-    public final int maxContentLength() {
+    public final long maxContentLength() {
         return maxContentLength;
     }
 
@@ -178,7 +181,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         if (maxCumulationBufferComponents < 2) {
             throw new IllegalArgumentException(
                     "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
-                    " (expected: >= 2)");
+                            " (expected: >= 2)");
         }
 
         if (ctx == null) {
@@ -283,8 +286,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             // Merge the received chunk into the content of the current message.
             CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
 
-            @SuppressWarnings("unchecked")
-            final C m = (C) msg;
+            @SuppressWarnings("unchecked") final C m = (C) msg;
             // Handle oversized message.
             if (content.readableBytes() > maxContentLength - m.content().readableBytes()) {
                 // By convention, full message type extends first message type.
@@ -337,12 +339,13 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Determine if the message {@code start}'s content length is known, and if it greater than
      * {@code maxContentLength}.
-     * @param start The message which may indicate the content length.
+     *
+     * @param start            The message which may indicate the content length.
      * @param maxContentLength The maximum allowed content length.
      * @return {@code true} if the message {@code start}'s content length is known, and if it greater than
      * {@code maxContentLength}. {@code false} otherwise.
      */
-    protected abstract boolean isContentLengthInvalid(S start, int maxContentLength) throws Exception;
+    protected abstract boolean isContentLengthInvalid(S start, long maxContentLength) throws Exception;
 
     /**
      * Returns the 'continue response' for the specified start message if necessary. For example, this method is
@@ -350,15 +353,16 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      *
      * @return the 'continue response', or {@code null} if there's no message to send
      */
-    protected abstract Object newContinueResponse(S start, int maxContentLength, ChannelPipeline pipeline)
+    protected abstract Object newContinueResponse(S start, long maxContentLength, ChannelPipeline pipeline)
             throws Exception;
 
     /**
      * Determine if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written.
-     * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
+     * {@link #newContinueResponse(Object, long, ChannelPipeline)} is written.
+     *
+     * @param msg The return value from {@link #newContinueResponse(Object, long, ChannelPipeline)}.
      * @return {@code true} if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written. {@code false} otherwise.
+     * {@link #newContinueResponse(Object, long, ChannelPipeline)} is written. {@code false} otherwise.
      */
     protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
 
@@ -366,7 +370,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * Determine if all objects for the current request/response should be ignored or not.
      * Messages will stop being ignored the next time {@link #isContentMessage(Object)} returns {@code true}.
      *
-     * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
+     * @param msg The return value from {@link #newContinueResponse(Object, long, ChannelPipeline)}.
      * @return {@code true} if all objects for the current request/response should be ignored or not.
      * {@code false} otherwise.
      */
@@ -385,7 +389,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * aggregated message already, so that you don't need to.  Use this method to transfer the additional information
      * that the content message provides to {@code aggregated}.
      */
-    protected void aggregate(O aggregated, C content) throws Exception { }
+    protected void aggregate(O aggregated, C content) throws Exception {
+    }
 
     private void finishAggregation0(O aggregated) throws Exception {
         aggregating = false;
@@ -395,7 +400,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Invoked when the specified {@code aggregated} message is about to be passed to the next handler in the pipeline.
      */
-    protected void finishAggregation(O aggregated) throws Exception { }
+    protected void finishAggregation(O aggregated) throws Exception {
+    }
 
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
@@ -412,7 +418,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * Invoked when an incoming request exceeds the maximum content length.  The default behvaior is to trigger an
      * {@code exceptionCaught()} event with a {@link TooLongFrameException}.
      *
-     * @param ctx the {@link ChannelHandlerContext}
+     * @param ctx       the {@link ChannelHandlerContext}
      * @param oversized the accumulated message up to this point, whose type is {@code S} or {@code O}
      */
     protected void handleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {

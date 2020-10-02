@@ -62,13 +62,19 @@ public class StompSubframeAggregator
         return msg instanceof StompFrame;
     }
 
-    @Override
-    protected boolean isContentLengthInvalid(StompHeadersSubframe start, int maxContentLength) {
-        return (int) Math.min(Integer.MAX_VALUE, start.headers().getLong(StompHeaders.CONTENT_LENGTH, -1)) >
-                     maxContentLength;
+    protected boolean isContentLengthInvalid(StompHeadersSubframe start, long maxContentLength) {
+        return Math.min(Long.MAX_VALUE, start.headers().getLong(StompHeaders.CONTENT_LENGTH, -1)) > maxContentLength;
     }
 
-    @Override
+    protected boolean isContentLengthInvalid(StompHeadersSubframe start, int maxContentLength) {
+        return (int) Math.min(Integer.MAX_VALUE, start.headers().getLong(StompHeaders.CONTENT_LENGTH, -1)) >
+                maxContentLength;
+    }
+
+    protected Object newContinueResponse(StompHeadersSubframe start, long maxContentLength, ChannelPipeline pipeline) {
+        return null;
+    }
+
     protected Object newContinueResponse(StompHeadersSubframe start, int maxContentLength, ChannelPipeline pipeline) {
         return null;
     }

@@ -20,8 +20,8 @@ import io.netty.util.internal.UnstableApi;
  * Builds an {@link InboundHttp2ToHttpAdapter}.
  */
 @UnstableApi
-public final class InboundHttp2ToHttpAdapterBuilder
-        extends AbstractInboundHttp2ToHttpAdapterBuilder<InboundHttp2ToHttpAdapter, InboundHttp2ToHttpAdapterBuilder> {
+public final class InboundHttp2ToHttpAdapterBuilder extends
+        AbstractInboundHttp2ToHttpAdapterBuilder<InboundHttp2ToHttpAdapter, InboundHttp2ToHttpAdapterBuilder> {
 
     /**
      * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
@@ -35,6 +35,10 @@ public final class InboundHttp2ToHttpAdapterBuilder
 
     @Override
     public InboundHttp2ToHttpAdapterBuilder maxContentLength(int maxContentLength) {
+        return super.maxContentLength(maxContentLength);
+    }
+
+    public InboundHttp2ToHttpAdapterBuilder maxContentLength(long maxContentLength) {
         return super.maxContentLength(maxContentLength);
     }
 
@@ -53,13 +57,19 @@ public final class InboundHttp2ToHttpAdapterBuilder
         return super.build();
     }
 
-    @Override
     protected InboundHttp2ToHttpAdapter build(Http2Connection connection,
                                               int maxContentLength,
                                               boolean validateHttpHeaders,
                                               boolean propagateSettings) throws Exception {
 
-        return new InboundHttp2ToHttpAdapter(connection, maxContentLength,
-                                             validateHttpHeaders, propagateSettings);
+        return build(connection, (long) maxContentLength, validateHttpHeaders, propagateSettings);
+    }
+
+    protected InboundHttp2ToHttpAdapter build(Http2Connection connection,
+                                              long maxContentLength,
+                                              boolean validateHttpHeaders,
+                                              boolean propagateSettings) throws Exception {
+
+        return new InboundHttp2ToHttpAdapter(connection, maxContentLength, validateHttpHeaders, propagateSettings);
     }
 }
