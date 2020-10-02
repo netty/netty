@@ -43,6 +43,11 @@ public class BrotliDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        if (in.readableBytes() == 0) {
+            out.add(in);
+            return;
+        }
+
         if (byteBufOutputStream == null) {
             byteBuf = ctx.alloc().buffer();
             byteBufOutputStream = new ByteBufOutputStream(byteBuf);
