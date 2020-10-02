@@ -632,24 +632,26 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             ioState &= ~CONNECT_SCHEDULED;
             freeRemoteAddressMemory();
 
-            if (res == 0) {
-                fulfillConnectPromise(connectPromise, active);
+            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
+                // connect not complete yet need to wait for poll_out event
+                schedulePollOut();
             } else {
-                if (res == ERRNO_EINPROGRESS_NEGATIVE) {
-                    // connect not complete yet need to wait for poll_out event
-                    schedulePollOut();
-                } else {
-                    try {
-                        Errors.throwConnectException("io_uring connect", res);
-                    } catch (Throwable cause) {
-                        fulfillConnectPromise(connectPromise, cause);
-                    } finally {
-                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is
-                        // used
-                        // See https://github.com/netty/netty/issues/1770
-                        cancelConnectTimeoutFuture();
-                        connectPromise = null;
+                try {
+                    if (res == 0) {
+                        fulfillConnectPromise(connectPromise, active);
+                    } else {
+                        try {
+                            Errors.throwConnectException("io_uring connect", res);
+                        } catch (Throwable cause) {
+                            fulfillConnectPromise(connectPromise, cause);
+                        }
                     }
+                } finally {
+                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is
+                    // used
+                    // See https://github.com/netty/netty/issues/1770
+                    cancelConnectTimeoutFuture();
+                    connectPromise = null;
                 }
             }
         }
