@@ -154,9 +154,16 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     protected abstract boolean isAggregated(I msg) throws Exception;
 
     /**
-     * Returns the maximum allowed length of the aggregated message in bytes.
+     * Returns the maximum allowed length of the aggregated message in bytes. (int)
      */
-    public final long maxContentLength() {
+    public final int maxContentLength() {
+        return (int) maxContentLength;
+    }
+
+    /**
+     * Returns the maximum allowed length of the aggregated message in bytes. (long)
+     */
+    public final long maxContentLength0() {
         return maxContentLength;
     }
 
@@ -422,8 +429,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @param oversized the accumulated message up to this point, whose type is {@code S} or {@code O}
      */
     protected void handleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
-        ctx.fireExceptionCaught(
-                new TooLongFrameException("content length exceeded " + maxContentLength() + " bytes."));
+        ctx.fireExceptionCaught(new TooLongFrameException("content length exceeded " + maxContentLength + " bytes."));
     }
 
     @Override

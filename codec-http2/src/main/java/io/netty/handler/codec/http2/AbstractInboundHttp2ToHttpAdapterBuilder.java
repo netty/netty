@@ -54,9 +54,16 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     }
 
     /**
-     * Returns the maximum length of the message content.
+     * Returns the maximum length of the message content. (int)
      */
-    protected long maxContentLength() {
+    protected int maxContentLength() {
+        return (int) maxContentLength;
+    }
+
+    /**
+     * Returns the maximum length of the message content. (long)
+     */
+    protected long maxContentLength0() {
         return maxContentLength;
     }
 
