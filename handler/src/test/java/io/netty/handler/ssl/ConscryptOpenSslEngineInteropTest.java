@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 
 import java.security.Provider;
 import java.util.ArrayList;
@@ -148,6 +149,11 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
     public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager();
+    }
+
+    @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
     }
 
     @Override

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;

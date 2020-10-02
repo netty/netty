@@ -473,6 +473,10 @@ final class SslUtils {
         return TLSV13_CIPHERS.contains(cipher);
     }
 
+    static boolean isEmpty(Object[] arr) {
+        return arr == null || arr.length == 0;
+    }
+
     private SslUtils() {
     }
 }

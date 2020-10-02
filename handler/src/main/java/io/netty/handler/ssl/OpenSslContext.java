@@ -29,21 +29,21 @@ import javax.net.ssl.SSLException;
  */
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
-                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain,
+                   int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
+        super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
                 clientAuth, protocols, startTls, enableOcsp, false, options);
     }
 
-    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                   long sessionTimeout, int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth, String[] protocols, boolean startTls,
-                   boolean enableOcsp, Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, mode, keyCertChain, clientAuth, protocols,
-                startTls, enableOcsp, false, options);
+    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
+                   int mode, Certificate[] keyCertChain,
+                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, mode, keyCertChain,
+                clientAuth, protocols, startTls, enableOcsp, false, options);
     }
 
     @Override
