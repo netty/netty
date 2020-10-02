@@ -60,7 +60,6 @@ final class IOUringSubmissionQueue {
     final int ringSize;
     final long ringAddress;
     final int ringFd;
-    private final Runnable submissionCallback;
     private final long timeoutMemoryAddress;
     private final int iosqeAsyncThreshold;
     private int numHandledFds;
@@ -70,7 +69,7 @@ final class IOUringSubmissionQueue {
     IOUringSubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                            long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
                            long submissionQueueArrayAddress, int ringSize, long ringAddress, int ringFd,
-                           int iosqeAsyncThreshold, Runnable submissionCallback) {
+                           int iosqeAsyncThreshold) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kFlagsAddress = kFlagsAddress;
@@ -80,7 +79,6 @@ final class IOUringSubmissionQueue {
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
-        this.submissionCallback = submissionCallback;
         this.ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
         this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
         this.head = PlatformDependent.getIntVolatile(kHeadAddress);
@@ -238,7 +236,6 @@ final class IOUringSubmissionQueue {
             }
             logger.warn("Not all submissions succeeded");
         }
-        submissionCallback.run();
         return ret;
     }
 
