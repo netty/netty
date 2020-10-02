@@ -68,7 +68,7 @@ public final class IovArray implements MessageProcessor {
     private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
-        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)));
+        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)).setIndex(0, 0));
     }
 
     @SuppressWarnings("deprecation")
