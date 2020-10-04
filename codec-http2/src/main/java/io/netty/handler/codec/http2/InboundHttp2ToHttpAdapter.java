@@ -183,7 +183,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
     protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
-                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
+                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer)
+            throws Http2Exception {
         FullHttpMessage msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
@@ -264,7 +265,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                              short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+                              short weight, boolean exclusive, int padding, boolean endOfStream)
+            throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
