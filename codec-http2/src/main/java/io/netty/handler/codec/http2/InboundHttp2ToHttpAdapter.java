@@ -149,7 +149,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      *                            <li>{@code false} not to validate HTTP headers in the http-codec</li>
      *                            </ul>
      * @param alloc               The {@link ByteBufAllocator} to use to generate the content of the message
-     * @throws Http2Exception If there is an error when creating {@link FullHttpMessage from
+     * @throws Http2Exception If there is an error when creating {@link FullHttpMessage} from
      *                        {@link Http2Stream} or {@link Http2Headers}
      */
     protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
