@@ -24,7 +24,7 @@ public final class InboundHttp2ToHttpObjectAdapterBuilder extends AbstractInboun
         <InboundHttp2ToHttpObjectAdapter, InboundHttp2ToHttpObjectAdapterBuilder> {
 
     /**
-     * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
+     * Creates a new {@link InboundHttp2ToHttpObjectAdapter} builder for the specified {@link Http2Connection}.
      *
      * @param connection the object which will provide connection notification events
      *                   for the current connection
