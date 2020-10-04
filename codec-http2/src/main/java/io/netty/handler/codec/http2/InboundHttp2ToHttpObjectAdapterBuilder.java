@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Builds an {@link InboundHttp2ToHttpObjectAdapterBuilder}.
+ * Builds an {@link InboundHttp2ToHttpObjectAdapter}.
  */
 @UnstableApi
 public final class InboundHttp2ToHttpObjectAdapterBuilder extends AbstractInboundHttp2ToHttpObjectAdapterBuilder
