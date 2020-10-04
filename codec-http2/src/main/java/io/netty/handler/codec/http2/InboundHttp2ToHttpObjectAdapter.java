@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -53,13 +54,10 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
     protected final Http2Connection connection;
     protected final boolean validateHttpHeaders;
 
-    protected InboundHttp2ToHttpObjectAdapter(Http2Connection connection, int maxContentLength, boolean validateHttpHeaders,
-                                              boolean propagateSettings) {
-        if (maxContentLength <= 0) {
-            throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
-        }
+    protected InboundHttp2ToHttpObjectAdapter(Http2Connection connection, int maxContentLength,
+                                              boolean validateHttpHeaders, boolean propagateSettings) {
         this.connection = checkNotNull(connection, "connection");
-        this.maxContentLength = maxContentLength;
+        this.maxContentLength = ObjectUtil.checkPositive(maxContentLength, "maxContentLength");
         this.validateHttpHeaders = validateHttpHeaders;
         this.propagateSettings = propagateSettings;
         messageKey = connection.newKey();
@@ -83,7 +81,6 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         if (msg instanceof FullHttpMessage) {
             HttpUtil.setContentLength((FullHttpMessage) msg, ((FullHttpMessage) msg).content().readableBytes());
         }
-        System.err.println(msg);
         ctx.fireChannelRead(msg);
     }
 
@@ -124,7 +121,8 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
                 httpRequest.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
                 return httpRequest;
             } else {
-                HttpResponse httpResponse = HttpConversionUtil.toHttpResponse(stream.id(), headers, validateHttpHeaders);
+                HttpResponse httpResponse = HttpConversionUtil.toHttpResponse(stream.id(), headers,
+                        validateHttpHeaders);
                 httpResponse.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
                 return httpResponse;
             }
@@ -203,7 +201,6 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         }
 
         ByteBuf content = ctx.alloc().buffer();
-
         int dataReadableBytes = data.readableBytes();
         if (dataReadableBytes > maxContentLength) {
             throw connectionError(INTERNAL_ERROR,
@@ -274,11 +271,13 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         }
         HttpMessage msg = processHeadersBegin(ctx, promisedStream, headers, false, false, false);
         if (msg == null) {
-            throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d", promisedStreamId);
+            throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d",
+                    promisedStreamId);
         }
 
         msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
-        msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
+        msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(),
+                Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
 
         processHeadersEnd(ctx, promisedStream, msg, false);
     }
