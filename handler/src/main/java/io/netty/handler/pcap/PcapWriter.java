@@ -60,10 +60,15 @@ final class PcapWriter implements Closeable {
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
         long currentTime = System.currentTimeMillis();
 
+        int micro = (int) TimeUnit.MILLISECONDS.toMicros(currentTime) % 1000000;
+        if (micro < 0) {
+            micro = 0;
+        }
+
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
                 (int) TimeUnit.MILLISECONDS.toSeconds(currentTime),
-                (int) TimeUnit.MILLISECONDS.toMicros(currentTime) % 1000000,
+                micro,
                 packet.readableBytes(),
                 packet.readableBytes()
         );
