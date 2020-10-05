@@ -66,12 +66,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             ctx.write(msg, promise);
             return;
         }
-        boolean endStream = false;
+
         boolean release = true;
         SimpleChannelPromiseAggregator promiseAggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
                 ctx.executor());
         try {
             Http2ConnectionEncoder encoder = encoder();
+            boolean endStream = false;
 
             if (msg instanceof HttpMessage) {
                 final HttpMessage httpMsg = (HttpMessage) msg;
