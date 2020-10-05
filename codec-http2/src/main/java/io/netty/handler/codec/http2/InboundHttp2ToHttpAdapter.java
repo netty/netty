@@ -25,10 +25,10 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
@@ -82,8 +82,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     /**
      * The stream is out of scope for the HTTP message flow and will no longer be tracked
-     *
-     * @param stream  The stream to remove associated state with
+     * @param stream The stream to remove associated state with
      * @param release {@code true} to call release on the value if it is present. {@code false} to not call release.
      */
     protected final void removeMessage(Http2Stream stream, boolean release) {
@@ -95,18 +94,16 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     /**
      * Get the {@link FullHttpMessage} associated with {@code stream}.
-     *
      * @param stream The stream to get the associated state from
      * @return The {@link FullHttpMessage} associated with {@code stream}.
      */
     protected final FullHttpMessage getMessage(Http2Stream stream) {
-        return stream.getProperty(messageKey);
+        return (FullHttpMessage) stream.getProperty(messageKey);
     }
 
     /**
      * Make {@code message} be the state associated with {@code stream}.
-     *
-     * @param stream  The stream which {@code message} is associated with.
+     * @param stream The stream which {@code message} is associated with.
      * @param message The message which contains the HTTP semantics.
      */
     protected final void putMessage(Http2Stream stream, FullHttpMessage message) {
@@ -124,10 +121,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     /**
      * Set final headers and fire a channel read event
      *
-     * @param ctx     The context to fire the event on
-     * @param msg     The message to send
+     * @param ctx The context to fire the event on
+     * @param msg The message to send
      * @param release {@code true} to call release on the value if it is present. {@code false} to not call release.
-     * @param stream  the stream of the message which is being fired
+     * @param stream the stream of the message which is being fired
      */
     protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, boolean release,
                                    Http2Stream stream) {
@@ -139,18 +136,20 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     /**
      * Create a new {@link FullHttpMessage} based upon the current connection parameters
      *
-     * @param stream              The stream to create a message for
-     * @param headers             The headers associated with {@code stream}
-     * @param validateHttpHeaders <ul>
-     *                            <li>{@code true} to validate HTTP headers in the http-codec</li>
-     *                            <li>{@code false} not to validate HTTP headers in the http-codec</li>
-     *                            </ul>
-     * @param alloc               The {@link ByteBufAllocator} to use to generate the content of the message
+     * @param stream The stream to create a message for
+     * @param headers The headers associated with {@code stream}
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @param alloc The {@link ByteBufAllocator} to use to generate the content of the message
      * @throws Http2Exception If there is an error when creating {@link FullHttpMessage} from
      *                        {@link Http2Stream} and {@link Http2Headers}
      */
     protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
-                                         ByteBufAllocator alloc) throws Http2Exception {
+                                         ByteBufAllocator alloc)
+            throws Http2Exception {
         return connection.isServer() ? HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc,
                 validateHttpHeaders) : HttpConversionUtil.toFullHttpResponse(stream.id(), headers, alloc,
                 validateHttpHeaders);
@@ -160,27 +159,28 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * Provides translation between HTTP/2 and HTTP header objects while ensuring the stream
      * is in a valid state for additional headers.
      *
-     * @param ctx             The context for which this message has been received.
-     *                        Used to send informational header if detected.
-     * @param stream          The stream the {@code headers} apply to
-     * @param headers         The headers to process
-     * @param endOfStream     {@code true} if the {@code stream} has received the end of stream flag
-     * @param allowAppend     <ul>
-     *                        <li>{@code true} if headers will be appended if the stream already exists.</li>
-     *                        <li>if {@code false} and the stream already exists this method returns {@code null}.</li>
-     *                        </ul>
-     * @param appendToTrailer <ul>
-     *                        <li>{@code true} if a message {@code stream} already exists then the headers
-     *                        should be added to the trailing headers.</li>
-     *                        <li>{@code false} then appends will be done to the initial headers.</li>
-     *                        </ul>
+     * @param ctx The context for which this message has been received.
+     * Used to send informational header if detected.
+     * @param stream The stream the {@code headers} apply to
+     * @param headers The headers to process
+     * @param endOfStream {@code true} if the {@code stream} has received the end of stream flag
+     * @param allowAppend
+     * <ul>
+     * <li>{@code true} if headers will be appended if the stream already exists.</li>
+     * <li>if {@code false} and the stream already exists this method returns {@code null}.</li>
+     * </ul>
+     * @param appendToTrailer
+     * <ul>
+     * <li>{@code true} if a message {@code stream} already exists then the headers
+     * should be added to the trailing headers.</li>
+     * <li>{@code false} then appends will be done to the initial headers.</li>
+     * </ul>
      * @return The object used to track the stream corresponding to {@code stream}. {@code null} if
-     * {@code allowAppend} is {@code false} and the stream already exists.
+     *         {@code allowAppend} is {@code false} and the stream already exists.
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
     protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
-                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer)
-            throws Http2Exception {
+                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
         FullHttpMessage msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
@@ -208,9 +208,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * After HTTP/2 headers have been processed by {@link #processHeadersBegin} this method either
      * sends the result up the pipeline or retains the message for future processing.
      *
-     * @param ctx         The context for which this message has been received
-     * @param stream      The stream the {@code objAccumulator} corresponds to
-     * @param msg         The object which represents all headers/data for corresponding to {@code stream}
+     * @param ctx The context for which this message has been received
+     * @param stream The stream the {@code objAccumulator} corresponds to
+     * @param msg The object which represents all headers/data for corresponding to {@code stream}
      * @param endOfStream {@code true} if this is the last event for the stream
      */
     private void processHeadersEnd(ChannelHandlerContext ctx, Http2Stream stream, FullHttpMessage msg,
@@ -339,7 +339,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          *
          * @param msg The response to test
          * @return {@code true} if the message should be sent immediately
-         * {@code false) if we should wait for the end of the stream
+         *         {@code false) if we should wait for the end of the stream
          */
         boolean mustSendImmediately(FullHttpMessage msg);
 
@@ -351,7 +351,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * and the data will be queued and sent at the end of the stream.
          *
          * @param allocator The {@link ByteBufAllocator} that can be used to allocate
-         * @param msg       The message which has just been sent due to {@link #mustSendImmediately(FullHttpMessage)}
+         * @param msg The message which has just been sent due to {@link #mustSendImmediately(FullHttpMessage)}
          * @return A modified copy of the {@code msg} or {@code null} if a copy is not needed.
          */
         FullHttpMessage copyIfNeeded(ByteBufAllocator allocator, FullHttpMessage msg);
