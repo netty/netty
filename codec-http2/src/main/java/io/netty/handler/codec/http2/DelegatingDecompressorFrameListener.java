@@ -177,8 +177,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper));
         }
         if ("br".equalsIgnoreCase(contentEncoding.toString())) {
-            final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
-            // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new BrotliDecoder());
         }
