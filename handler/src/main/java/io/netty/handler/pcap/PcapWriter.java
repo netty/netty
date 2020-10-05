@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
 
 final class PcapWriter implements Closeable {
 
@@ -28,6 +27,11 @@ final class PcapWriter implements Closeable {
      * {@link OutputStream} where we'll write Pcap data.
      */
     private final OutputStream outputStream;
+
+    /**
+     * Set to {@code true} if {@link #outputStream} is closed.
+     */
+    private boolean isClosed = false;
 
     /**
      * This uses {@link OutputStream} for writing Pcap.
@@ -58,27 +62,25 @@ final class PcapWriter implements Closeable {
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
-        long currentTime = System.currentTimeMillis();
-
-        int micro = (int) TimeUnit.MILLISECONDS.toMicros(currentTime) % 1000000;
-        if (micro < 0) {
-            micro = 0;
-        }
+        long timestamp = System.currentTimeMillis();
 
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
-                (int) TimeUnit.MILLISECONDS.toSeconds(currentTime),
-                micro,
+                (int) (timestamp / 1000L),
+                (int) (timestamp % 1000L * 1000L),
                 packet.readableBytes(),
                 packet.readableBytes()
         );
 
-        packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
-        packet.readBytes(outputStream, packet.readableBytes());
+        if (!isClosed) {
+            packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
+            packet.readBytes(outputStream, packet.readableBytes());
+        }
     }
 
     @Override
     public void close() throws IOException {
+        isClosed = true;
         outputStream.flush();
         outputStream.close();
     }
