@@ -91,7 +91,7 @@ public class DefaultHttp2TranslatedLastHttpContent extends DefaultHttp2Translate
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(this) + "(streamId: " + super.toString() + ", data: " + content() +
+        return StringUtil.simpleClassName(this) + "(streamId: " + super.getStreamId() + ", data: " + content() +
                 ", decoderResult: " + decoderResult() + ')';
     }
 }
