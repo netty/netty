@@ -180,7 +180,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
     protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
-                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
+                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer) 
+                                                  throws Http2Exception {
         FullHttpMessage msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
