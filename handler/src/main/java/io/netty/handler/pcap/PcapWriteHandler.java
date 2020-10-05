@@ -115,7 +115,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     /**
      * Set to {@code true} if {@link #close()} is called and we should stop writing Pcap.
      */
-    private boolean isClosed = false;
+    private boolean isClosed;
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
@@ -545,8 +545,12 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      */
     @Override
     public void close() throws IOException {
-        isClosed = true;
-        pCapWriter.close();
-        logger.debug("PcapWriterHandler is Closed");
+        if (isClosed) {
+            logger.debug("PcapWriterHandler is already closed");
+        } else {
+            isClosed = true;
+            pCapWriter.close();
+            logger.debug("PcapWriterHandler is now closed");
+        }
     }
 }
