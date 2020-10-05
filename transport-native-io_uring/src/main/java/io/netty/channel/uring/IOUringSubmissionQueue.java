@@ -191,9 +191,9 @@ final class IOUringSubmissionQueue {
     }
 
     //fill the address which is associated with server poll link user_data
-    boolean addPollRemove(int fd, int pollMask, short extraData) {
+    boolean addPollRemove(int fd, int pollMask) {
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, 0, fd,
-                          encode(fd, Native.IORING_OP_POLL_ADD, (short) pollMask), 0, 0, extraData);
+                          encode(fd, Native.IORING_OP_POLL_ADD, (short) pollMask), 0, 0, (short) pollMask);
     }
 
     boolean addConnect(int fd, long socketAddress, long socketAddressLength, short extraData) {

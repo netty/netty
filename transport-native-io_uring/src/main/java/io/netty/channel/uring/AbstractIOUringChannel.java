@@ -742,17 +742,18 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
         if (submissionQueue != null) {
             if ((ioState & (POLL_IN_SCHEDULED | POLL_OUT_SCHEDULED | POLL_RDHUP_SCHEDULED)) == 0) {
+                System.out.println("doDeregister remove Channel");
                 ((IOUringEventLoop) eventLoop()).remove(this);
                 return;
             }
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN, (short) 0);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLIN);
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT, (short) 0);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLOUT);
             }
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP, (short) 0);
+                submissionQueue.addPollRemove(socket.intValue(), Native.POLLRDHUP);
             }
         }
     }
@@ -829,4 +830,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private boolean shouldBreakIoUringInReady(ChannelConfig config) {
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
+
+    public void clearPollFlag(int pollMask) {
+        if (pollMask == Native.POLLIN) {
+            ioState &= ~POLL_IN_SCHEDULED;
+        } else if (pollMask == Native.POLLOUT) {
+            ioState &= ~POLL_OUT_SCHEDULED;
+        } else if (pollMask == Native.POLLRDHUP) {
+            ioState &= ~POLL_RDHUP_SCHEDULED;
+        }
+
+
+     }
 }
