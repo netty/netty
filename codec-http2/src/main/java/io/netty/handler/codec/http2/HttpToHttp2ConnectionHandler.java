@@ -23,15 +23,19 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Translates HTTP/1.x object writes into HTTP/2 frames.
- * <p>
- * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects.
+ * <p> Translates HTTP/1.x {@link HttpObject} writes into HTTP/2 frames. </p>
+ *
+ * <p> See {@link InboundHttp2ToHttpObjectAdapter} to get translation from HTTP/2 frames to HTTP/1.x
+ * {@link HttpMessage} or {@link HttpContent} </p>
+ * <p> See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x
+ * {@link FullHttpMessage} </p>
  */
 @UnstableApi
 public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
@@ -61,7 +65,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-                                  connection().local().incrementAndGetNextStreamId());
+                connection().local().incrementAndGetNextStreamId());
     }
 
     /**
@@ -76,8 +80,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         }
 
         boolean release = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        SimpleChannelPromiseAggregator promiseAggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
+                ctx.executor());
         try {
             Http2ConnectionEncoder encoder = encoder();
             boolean endStream = false;
@@ -132,11 +136,10 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     private static void writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
                                      HttpHeaders headers, Http2Headers http2Headers, boolean endStream,
                                      SimpleChannelPromiseAggregator promiseAggregator) {
-        int dependencyId = headers.getInt(
-                HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
-        short weight = headers.getShort(
-                HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
-        encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false,
-                0, endStream, promiseAggregator.newPromise());
+        int dependencyId = headers.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
+        short weight = headers.getShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(),
+                Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
+        encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false, 0, endStream,
+                promiseAggregator.newPromise());
     }
 }
