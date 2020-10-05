@@ -18,7 +18,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -46,7 +45,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * See {@link HttpToHttp2ConnectionHandler} to get translation from HTTP/1.x objects to HTTP/2 frames for writes.
  */
 @UnstableApi
-public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
+public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
 
     private final int maxContentLength;
     private final Http2Connection.PropertyKey messageKey;
@@ -63,15 +62,15 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         messageKey = connection.newKey();
     }
 
-    protected final void firstHeaderReceived(Http2Stream stream) {
+    protected void firstHeaderReceived(Http2Stream stream) {
         stream.setProperty(messageKey, Boolean.TRUE);
     }
 
-    protected final Boolean isFirstHeaderReceived(Http2Stream stream) {
+    protected Boolean isFirstHeaderReceived(Http2Stream stream) {
         return stream.getProperty(messageKey);
     }
 
-    protected final void removeHeaderRecord(Http2Stream stream) {
+    protected void removeHeaderRecord(Http2Stream stream) {
         stream.removeProperty(messageKey);
     }
 
@@ -227,11 +226,11 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
 
         if (endOfStream) {
             if (dataReadableBytes != 0) {
-                fireChannelRead(ctx, new DefaultHttpContent(content));
+                fireChannelRead(ctx, new DefaultHttp2TranslatedHttpContent(content, streamId));
             }
-            fireChannelRead(ctx, DefaultLastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate());
+            fireChannelRead(ctx, new DefaultHttp2TranslatedLastHttpContent(streamId));
         } else {
-            fireChannelRead(ctx, new DefaultHttpContent(content));
+            fireChannelRead(ctx, new DefaultHttp2TranslatedHttpContent(content, streamId));
         }
 
         return dataReadableBytes;

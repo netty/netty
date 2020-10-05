@@ -30,7 +30,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * <p> Translates HTTP/1.x {@link HttpObject} writes into HTTP/2 frames. </p>
+ * <p>Translates HTTP/1.x {@link HttpObject} writes into HTTP/2 frames. </p>
  *
  * <p> See {@link InboundHttp2ToHttpObjectAdapter} to get translation from HTTP/2 frames to HTTP/1.x
  * {@link HttpMessage} or {@link HttpContent} </p>
@@ -57,18 +57,6 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     }
 
     /**
-     * Get the next stream id either from the {@link HttpHeaders} object or HTTP/2 codec
-     *
-     * @param httpHeaders The HTTP/1.x headers object to look for the stream id
-     * @return The stream id to use with this {@link HttpHeaders} object
-     * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
-     */
-    private int getStreamId(HttpHeaders httpHeaders) throws Exception {
-        return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-                connection().local().incrementAndGetNextStreamId());
-    }
-
-    /**
      * Handles conversion of {@link HttpMessage} and {@link HttpContent} to HTTP/2 frames.
      */
     @Override
@@ -78,13 +66,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             ctx.write(msg, promise);
             return;
         }
-
+        boolean endStream = false;
         boolean release = true;
         SimpleChannelPromiseAggregator promiseAggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
                 ctx.executor());
         try {
             Http2ConnectionEncoder encoder = encoder();
-            boolean endStream = false;
+
             if (msg instanceof HttpMessage) {
                 final HttpMessage httpMsg = (HttpMessage) msg;
 
@@ -109,11 +97,20 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     final LastHttpContent lastContent = (LastHttpContent) msg;
                     trailers = lastContent.trailingHeaders();
                     http2Trailers = HttpConversionUtil.toHttp2Headers(trailers, validateHeaders);
+
+                    if (msg instanceof DefaultHttp2TranslatedLastHttpContent) {
+                        currentStreamId = ((DefaultHttp2TranslatedLastHttpContent) msg).getStreamId();
+                    }
+                }
+
+                if (msg instanceof DefaultHttp2TranslatedHttpContent) {
+                    currentStreamId = ((DefaultHttp2TranslatedHttpContent) msg).getStreamId();
                 }
 
                 // Write the data
                 final ByteBuf content = ((HttpContent) msg).content();
                 endStream = isLastContent && trailers.isEmpty();
+
                 encoder.writeData(ctx, currentStreamId, content, 0, endStream, promiseAggregator.newPromise());
                 release = false;
 
@@ -141,5 +138,17 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
         encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false, 0, endStream,
                 promiseAggregator.newPromise());
+    }
+
+    /**
+     * Get the next stream id either from the {@link HttpHeaders} object or HTTP/2 codec
+     *
+     * @param httpHeaders The HTTP/1.x headers object to look for the stream id
+     * @return The stream id to use with this {@link HttpHeaders} object
+     * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
+     */
+    private int getStreamId(HttpHeaders httpHeaders) throws Exception {
+        return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
+                connection().local().incrementAndGetNextStreamId());
     }
 }
