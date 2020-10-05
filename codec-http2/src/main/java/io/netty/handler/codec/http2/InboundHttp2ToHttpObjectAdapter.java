@@ -71,6 +71,22 @@ public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         return stream.getProperty(messageKey);
     }
 
+    protected final void removeHeaderRecord(Http2Stream stream) {
+        stream.removeProperty(messageKey);
+    }
+
+    @Override
+    public void onStreamRemoved(Http2Stream stream) {
+        removeHeaderRecord(stream);
+    }
+
+    /**
+     * Called if a {@code RST_STREAM} is received but we have some data for that stream.
+     */
+    protected void onRstStreamRead(Http2Stream stream, FullHttpMessage msg) {
+        removeHeaderRecord(stream);
+    }
+
     /**
      * Set final headers and fire a channel read event
      *
