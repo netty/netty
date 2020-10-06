@@ -58,14 +58,18 @@ public class DefaultHttp2Headers
                 }
 
                 if (index != -1) {
-                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
-                            "invalid header name [%s]", name));
+                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]",
+                            name));
                 }
             } else {
+                if (name == null) {
+                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "Header name is null"));
+                    return;
+                }
                 for (int i = 0; i < name.length(); ++i) {
                     if (isUpperCase(name.charAt(i))) {
-                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
-                                "invalid header name [%s]", name));
+                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]",
+                                name));
                     }
                 }
             }

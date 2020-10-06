@@ -828,7 +828,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
                     return;
                 }
             }
-            if (i >= current.length && current == pseudoHeaders) {
+            if (current == pseudoHeaders) {
                 i = 0;
                 current = otherHeaders;
                 calculateNext();
