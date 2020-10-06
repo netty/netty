@@ -189,7 +189,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (targetContentEncoding.equals("gzip")) {
             compressor = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, compressionLevel, windowBits, memLevel);
         } else if (targetContentEncoding.equals("deflate")) {
-            compressor = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, compressionLevel, windowBits, memLevel);
+            compressor = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.ZLIB, compressionLevel, windowBits, memLevel);
         } else if (targetContentEncoding.equals("br")) {
             compressor = new BrotliEncoder(brotliCompressionQuality);
         } else {
