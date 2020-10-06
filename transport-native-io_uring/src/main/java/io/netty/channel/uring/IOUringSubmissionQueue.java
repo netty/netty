@@ -192,6 +192,7 @@ final class IOUringSubmissionQueue {
 
     //fill the address which is associated with server poll link user_data
     boolean addPollRemove(int fd, int pollMask) {
+        assert pollMask <= Short.MAX_VALUE && pollMask >= Short.MIN_VALUE;
         return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, 0, fd,
                           encode(fd, Native.IORING_OP_POLL_ADD, (short) pollMask), 0, 0, (short) pollMask);
     }

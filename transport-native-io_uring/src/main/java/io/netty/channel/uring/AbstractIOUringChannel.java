@@ -742,7 +742,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
         if (submissionQueue != null) {
             if ((ioState & (POLL_IN_SCHEDULED | POLL_OUT_SCHEDULED | POLL_RDHUP_SCHEDULED)) == 0) {
-                System.out.println("doDeregister remove Channel");
                 ((IOUringEventLoop) eventLoop()).remove(this);
                 return;
             }
@@ -839,7 +838,5 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         } else if (pollMask == Native.POLLRDHUP) {
             ioState &= ~POLL_RDHUP_SCHEDULED;
         }
-
-
      }
 }
