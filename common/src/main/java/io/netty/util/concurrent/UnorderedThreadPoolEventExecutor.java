@@ -232,7 +232,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             } else if (!isDone()) {
                 try {
                     // Its a periodic task so we need to ignore the return value
-                    runTask();
+                    future.run();
                 } catch (Throwable cause) {
                     if (!tryFailureInternal(cause)) {
                         logger.warn("Failure during execution of task", cause);

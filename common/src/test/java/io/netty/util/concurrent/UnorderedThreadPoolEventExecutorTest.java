@@ -19,6 +19,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class UnorderedThreadPoolEventExecutorTest {
 
@@ -53,5 +54,17 @@ public class UnorderedThreadPoolEventExecutorTest {
         } finally {
             executor.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void testScheduleAtFixedRate() throws InterruptedException {
+        UnorderedThreadPoolEventExecutor unorderedThreadPoolEventExecutor = new UnorderedThreadPoolEventExecutor(2);
+        unorderedThreadPoolEventExecutor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("test");
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+        unorderedThreadPoolEventExecutor.awaitTermination(10, TimeUnit.SECONDS);
     }
 }
