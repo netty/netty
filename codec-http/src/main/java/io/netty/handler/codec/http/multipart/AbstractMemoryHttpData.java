@@ -237,7 +237,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             return true;
         }
         int length = byteBuf.readableBytes();
-        int written = 0;
+        long written = 0;
         RandomAccessFile accessFile = new RandomAccessFile(dest, "rw");
         try {
             FileChannel fileChannel = accessFile.getChannel();
