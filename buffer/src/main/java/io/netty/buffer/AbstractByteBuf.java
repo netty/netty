@@ -286,11 +286,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
     final void ensureWritable0(int minWritableBytes) {
         final int writerIndex = writerIndex();
         final int targetCapacity = writerIndex + minWritableBytes;
-        if (targetCapacity <= capacity()) {
+        // using non-short-circuit & to reduce branching - this is a hot path and targetCapacity should rarely overflow
+        if (targetCapacity >= 0 & targetCapacity <= capacity()) {
             ensureAccessible();
             return;
         }
-        if (checkBounds && targetCapacity > maxCapacity) {
+        if (checkBounds && (targetCapacity < 0 || targetCapacity > maxCapacity)) {
             ensureAccessible();
             throw new IndexOutOfBoundsException(String.format(
                     "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
