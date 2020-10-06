@@ -27,7 +27,7 @@ public abstract class AbstractInboundHttp2ToHttpObjectAdapterBuilder<
         T extends InboundHttp2ToHttpObjectAdapter, B extends AbstractInboundHttp2ToHttpObjectAdapterBuilder<T, B>> {
 
     private final Http2Connection connection;
-    private int maxContentLength;
+    private long maxContentLength;
     private boolean validateHttpHeaders;
     private boolean propagateSettings;
 
@@ -56,7 +56,7 @@ public abstract class AbstractInboundHttp2ToHttpObjectAdapterBuilder<
     /**
      * Returns the maximum length of the message content.
      */
-    protected int maxContentLength() {
+    protected long maxContentLength() {
         return maxContentLength;
     }
 
@@ -68,7 +68,7 @@ public abstract class AbstractInboundHttp2ToHttpObjectAdapterBuilder<
      * @return {@link AbstractInboundHttp2ToHttpObjectAdapterBuilder} the builder for the
      * {@link InboundHttp2ToHttpObjectAdapter}
      */
-    protected B maxContentLength(int maxContentLength) {
+    protected B maxContentLength(long maxContentLength) {
         this.maxContentLength = maxContentLength;
         return self();
     }
@@ -132,6 +132,6 @@ public abstract class AbstractInboundHttp2ToHttpObjectAdapterBuilder<
     /**
      * Creates a new {@link InboundHttp2ToHttpObjectAdapter} with the specified properties.
      */
-    protected abstract T build(Http2Connection connection, int maxContentLength, boolean validateHttpHeaders,
+    protected abstract T build(Http2Connection connection, long maxContentLength, boolean validateHttpHeaders,
                                boolean propagateSettings) throws Exception;
 }

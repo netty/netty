@@ -45,15 +45,15 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * See {@link HttpToHttp2ConnectionHandler} to get translation from HTTP/1.x objects to HTTP/2 frames for writes.
  */
 @UnstableApi
-public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
+public class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
 
-    private final int maxContentLength;
+    private final long maxContentLength;
     private final Http2Connection.PropertyKey messageKey;
     private final boolean propagateSettings;
     protected final Http2Connection connection;
     protected final boolean validateHttpHeaders;
 
-    protected InboundHttp2ToHttpObjectAdapter(Http2Connection connection, int maxContentLength,
+    protected InboundHttp2ToHttpObjectAdapter(Http2Connection connection, long maxContentLength,
                                               boolean validateHttpHeaders, boolean propagateSettings) {
         this.connection = checkNotNull(connection, "connection");
         this.maxContentLength = ObjectUtil.checkPositive(maxContentLength, "maxContentLength");
@@ -62,28 +62,34 @@ public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
         messageKey = connection.newKey();
     }
 
-    protected void firstHeaderReceived(Http2Stream stream) {
-        stream.setProperty(messageKey, Boolean.TRUE);
+    protected void connectionInitiated(Http2Stream stream) {
+        stream.setProperty(messageKey, 0L);
     }
 
-    protected Boolean isFirstHeaderReceived(Http2Stream stream) {
-        return stream.getProperty(messageKey);
+    protected boolean isConnectionInitiated(Http2Stream stream) {
+        return stream.getProperty(messageKey) != null;
     }
 
-    protected void removeHeaderRecord(Http2Stream stream) {
+    protected long incrementAndGetBytes(Http2Stream stream, int bytes) {
+        long incremented = (Long) stream.getProperty(messageKey) + bytes;
+        stream.setProperty(messageKey, incremented);
+        return incremented;
+    }
+
+    protected void removeBytesRecord(Http2Stream stream) {
         stream.removeProperty(messageKey);
     }
 
     @Override
     public void onStreamRemoved(Http2Stream stream) {
-        removeHeaderRecord(stream);
+        removeBytesRecord(stream);
     }
 
     /**
      * Called if a {@code RST_STREAM} is received but we have some data for that stream.
      */
     protected void onRstStreamRead(Http2Stream stream, FullHttpMessage msg) {
-        removeHeaderRecord(stream);
+        removeBytesRecord(stream);
     }
 
     /**
@@ -177,7 +183,7 @@ public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
          * If First Header is received and `allowAppend` is `true` then we've received trailer header.
          * We'll convert it to `DefaultLastHttpContent`.
          */
-        if (isFirstHeaderReceived(stream) == null) {
+        if (!isConnectionInitiated(stream)) {
             return newMessage(stream, headers, validateHttpHeaders, ctx.alloc(), endOfStream);
         } else if (allowAppend) {
             DefaultLastHttpContent defaultLastHttpContent = new DefaultLastHttpContent(new EmptyByteBuf(ctx.alloc()),
@@ -203,7 +209,7 @@ public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
                                    boolean endOfStream) {
         fireChannelRead(ctx, msg);
         if (!endOfStream) {
-            firstHeaderReceived(stream);
+            connectionInitiated(stream);
         }
     }
 
@@ -211,17 +217,18 @@ public final class InboundHttp2ToHttpObjectAdapter extends Http2EventAdapter {
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
-        if (isFirstHeaderReceived(stream) == null) {
-            throw connectionError(PROTOCOL_ERROR, "Data Frame received for unknown stream id %d", streamId);
+        if (!isConnectionInitiated(stream)) {
+            throw connectionError(PROTOCOL_ERROR, "Data Frame received for unknown Stream ID %d", streamId);
+        }
+
+        int dataReadableBytes = data.readableBytes();
+        long currentBytesWritten = incrementAndGetBytes(stream, dataReadableBytes);
+        if (dataReadableBytes > currentBytesWritten) {
+            throw connectionError(INTERNAL_ERROR, "Content length exceeded max of %d for Stream ID %d",
+                    maxContentLength, streamId);
         }
 
         ByteBuf content = ctx.alloc().buffer();
-        int dataReadableBytes = data.readableBytes();
-        if (dataReadableBytes > maxContentLength) {
-            throw connectionError(INTERNAL_ERROR,
-                    "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
-        }
-
         content.writeBytes(data);
 
         if (endOfStream) {
