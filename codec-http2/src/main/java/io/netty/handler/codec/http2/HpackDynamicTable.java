@@ -83,7 +83,7 @@ final class HpackDynamicTable {
      */
     public HpackHeaderField getEntry(int index) {
         if (index <= 0 || index > length()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Index " + index + " out of bounds for length " + length());
         }
         int i = head - index;
         if (i < 0) {
@@ -109,7 +109,7 @@ final class HpackDynamicTable {
             remove();
         }
         hpackHeaderFields[head++] = header;
-        size += header.size();
+        size += headerSize;
         if (head == hpackHeaderFields.length) {
             head = 0;
         }

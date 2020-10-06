@@ -84,6 +84,32 @@ public class DefaultAttributeMapTest {
     }
 
     @Test
+    public void testHasAttrRemoved() {
+        AttributeKey<Integer>[] keys = new AttributeKey[20];
+        for (int i = 0; i < 20; i++) {
+            keys[i] = AttributeKey.valueOf(Integer.toString(i));
+        }
+        for (int i = 10; i < 20; i++) {
+            map.attr(keys[i]);
+        }
+        for (int i = 0; i < 10; i++) {
+            map.attr(keys[i]);
+        }
+        for (int i = 10; i < 20; i++) {
+            AttributeKey<Integer> key = AttributeKey.valueOf(Integer.toString(i));
+            assertTrue(map.hasAttr(key));
+            map.attr(key).remove();
+            assertFalse(map.hasAttr(key));
+        }
+        for (int i = 0; i < 10; i++) {
+            AttributeKey<Integer> key = AttributeKey.valueOf(Integer.toString(i));
+            assertTrue(map.hasAttr(key));
+            map.attr(key).remove();
+            assertFalse(map.hasAttr(key));
+        }
+    }
+
+    @Test
     public void testGetAndSetWithNull() {
         AttributeKey<Integer> key = AttributeKey.valueOf("key");
 

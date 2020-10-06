@@ -603,7 +603,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void close(final ChannelPromise promise) {
             assertEventLoop();
 
-            ClosedChannelException closedChannelException = new ClosedChannelException();
+            ClosedChannelException closedChannelException =
+                    StacklessClosedChannelException.newInstance(AbstractChannel.class, "close(ChannelPromise)");
             close(promise, closedChannelException, closedChannelException, false);
         }
 
@@ -862,7 +863,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // need to fail the future right away. If it is not null the handling of the rest
                 // will be done in flush0()
                 // See https://github.com/netty/netty/issues/2362
-                safeSetFailure(promise, newClosedChannelException(initialCloseCause));
+                safeSetFailure(promise, newClosedChannelException(initialCloseCause, "write(Object, ChannelPromise)"));
                 // release message now to prevent resource-leak
                 ReferenceCountUtil.release(msg);
                 return;
@@ -914,11 +915,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // Mark all pending write requests as failure if the channel is inactive.
             if (!isActive()) {
                 try {
-                    if (isOpen()) {
-                        outboundBuffer.failFlushed(new NotYetConnectedException(), true);
-                    } else {
-                        // Do not trigger channelWritabilityChanged because the channel is closed already.
-                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause), false);
+                    // Check if we need to generate the exception at all.
+                    if (!outboundBuffer.isEmpty()) {
+                        if (isOpen()) {
+                            outboundBuffer.failFlushed(new NotYetConnectedException(), true);
+                        } else {
+                            // Do not trigger channelWritabilityChanged because the channel is closed already.
+                            outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "flush0()"), false);
+                        }
                     }
                 } finally {
                     inFlush0 = false;
@@ -939,13 +943,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                      * may still return {@code true} even if the channel should be closed as result of the exception.
                      */
                     initialCloseCause = t;
-                    close(voidPromise(), t, newClosedChannelException(t), false);
+                    close(voidPromise(), t, newClosedChannelException(t, "flush0()"), false);
                 } else {
                     try {
                         shutdownOutput(voidPromise(), t);
                     } catch (Throwable t2) {
                         initialCloseCause = t;
-                        close(voidPromise(), t2, newClosedChannelException(t), false);
+                        close(voidPromise(), t2, newClosedChannelException(t, "flush0()"), false);
                     }
                 }
             } finally {
@@ -953,8 +957,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private ClosedChannelException newClosedChannelException(Throwable cause) {
-            ClosedChannelException exception = new ClosedChannelException();
+        private ClosedChannelException newClosedChannelException(Throwable cause, String method) {
+            ClosedChannelException exception =
+                    StacklessClosedChannelException.newInstance(AbstractChannel.AbstractUnsafe.class, method);
             if (cause != null) {
                 exception.initCause(cause);
             }
@@ -973,7 +978,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            safeSetFailure(promise, newClosedChannelException(initialCloseCause));
+            safeSetFailure(promise, newClosedChannelException(initialCloseCause, "ensureOpen(ChannelPromise)"));
             return false;
         }
 

@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -206,6 +207,11 @@ import java.util.NoSuchElementException;
  * // need to specify a group.
  * pipeline.addLast(group, "handler", new MyBusinessLogicHandler());
  * </pre>
+ *
+ * Be aware that while using {@link DefaultEventLoopGroup} will offload the operation from the {@link EventLoop} it will
+ * still process tasks in a serial fashion per {@link ChannelHandlerContext} and so guarantee ordering. Due the ordering
+ * it may still become a bottle-neck. If ordering is not a requirement for your use-case you may want to consider using
+ * {@link UnorderedThreadPoolEventExecutor} to maximize the parallelism of the task execution.
  *
  * <h3>Thread safety</h3>
  * <p>

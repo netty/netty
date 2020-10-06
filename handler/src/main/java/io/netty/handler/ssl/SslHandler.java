@@ -845,7 +845,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (result.getStatus() == Status.CLOSED) {
                     buf.release();
                     buf = null;
-                    SSLException exception = new SSLException("SSLEngine closed already");
+                    // Make a best effort to preserve any exception that way previously encountered from the handshake
+                    // or the transport, else fallback to a general error.
+                    Throwable exception = handshakePromise.cause();
+                    if (exception == null) {
+                        exception = sslClosePromise.cause();
+                        if (exception == null) {
+                            exception = new SSLException("SSLEngine closed already");
+                        }
+                    }
                     promise.tryFailure(exception);
                     promise = null;
                     // SSLEngine has been closed already.
@@ -894,6 +902,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 b = null;
                             }
                             finishWrap(ctx, b, p, inUnwrap, false);
+                            // If we are expected to wrap again and we produced some data we need to ensure there
+                            // is something in the queue to process as otherwise we will not try again before there
+                            // was more added. Failing to do so may fail to produce an alert that can be
+                            // consumed by the remote peer.
+                            if (result.bytesProduced() > 0 && pendingUnencryptedWrites.isEmpty()) {
+                                pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER);
+                            }
                             break;
                         }
                         case NEED_UNWRAP:

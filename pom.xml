@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.51.Final-SNAPSHOT</version>
+  <version>4.1.53.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -97,7 +97,7 @@
         <testJvm />
       </properties>
     </profile>
-    <!-- JDK14 -->
+    <!-- JDK15 -->
     <profile>
       <id>java15</id>
       <activation>
@@ -118,6 +118,7 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
+    <!-- JDK14 -->
     <profile>
       <id>java14</id>
       <activation>
@@ -355,7 +356,7 @@
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.30.Final</tcnative.version>
+    <tcnative.version>2.0.34.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -434,15 +435,6 @@
         <groupId>com.sun.activation</groupId>
         <artifactId>javax.activation</artifactId>
         <version>1.2.0</version>
-      </dependency>
-
-      <!-- Byte code generator - completely optional -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>3.20.0-GA</version>
-        <scope>compile</scope>
-        <optional>true</optional>
       </dependency>
 
       <!-- JBoss Marshalling - completely optional -->
@@ -556,7 +548,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0</version>
       </dependency>
 
       <dependency>
@@ -727,13 +719,6 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- Enable Javassist support for all test runs -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -1195,7 +1180,7 @@
           <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
-            <version>1.9.7</version>
+            <version>1.9.15</version>
           </dependency>
           <dependency>
             <groupId>org.apache.ant</groupId>

@@ -28,17 +28,18 @@ import io.netty.util.concurrent.Promise;
 final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
 
     DnsRecordResolveContext(DnsNameResolver parent, Promise<?> originalPromise, DnsQuestion question,
-                            DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs) {
+                            DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs, int allowedQueries) {
         this(parent, originalPromise, question.name(), question.dnsClass(),
              new DnsRecordType[] { question.type() },
-             additionals, nameServerAddrs);
+             additionals, nameServerAddrs, allowedQueries);
     }
 
     private DnsRecordResolveContext(DnsNameResolver parent, Promise<?> originalPromise, String hostname,
                                     int dnsClass, DnsRecordType[] expectedTypes,
                                     DnsRecord[] additionals,
-                                    DnsServerAddressStream nameServerAddrs) {
-        super(parent, originalPromise, hostname, dnsClass, expectedTypes, additionals, nameServerAddrs);
+                                    DnsServerAddressStream nameServerAddrs,
+                                    int allowedQueries) {
+        super(parent, originalPromise, hostname, dnsClass, expectedTypes, additionals, nameServerAddrs, allowedQueries);
     }
 
     @Override
@@ -46,9 +47,10 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
                                                     String hostname,
                                                     int dnsClass, DnsRecordType[] expectedTypes,
                                                     DnsRecord[] additionals,
-                                                    DnsServerAddressStream nameServerAddrs) {
+                                                    DnsServerAddressStream nameServerAddrs,
+                                                    int allowedQueries) {
         return new DnsRecordResolveContext(parent, originalPromise, hostname, dnsClass,
-                                           expectedTypes, additionals, nameServerAddrs);
+                                           expectedTypes, additionals, nameServerAddrs, allowedQueries);
     }
 
     @Override

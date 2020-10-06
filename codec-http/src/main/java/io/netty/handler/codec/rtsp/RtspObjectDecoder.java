@@ -20,6 +20,8 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 
+import static io.netty.handler.codec.rtsp.RtspDecoder.DEFAULT_MAX_CONTENT_LENGTH;
+
 /**
  * Decodes {@link ByteBuf}s into RTSP messages represented in
  * {@link HttpMessage}s.
@@ -59,7 +61,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
      * {@code maxContentLength (8192)}.
      */
     protected RtspObjectDecoder() {
-        this(4096, 8192, 8192);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CONTENT_LENGTH);
     }
 
     /**

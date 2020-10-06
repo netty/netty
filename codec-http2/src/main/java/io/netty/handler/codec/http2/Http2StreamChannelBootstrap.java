@@ -124,7 +124,11 @@ public final class Http2StreamChannelBootstrap {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        open0(finalCtx, promise);
+                        if (channel.isActive()) {
+                            open0(finalCtx, promise);
+                        } else {
+                            promise.setFailure(new ClosedChannelException());
+                        }
                     }
                 });
             }
@@ -168,10 +172,15 @@ public final class Http2StreamChannelBootstrap {
             return;
         }
         final Http2StreamChannel streamChannel;
-        if (ctx.handler() instanceof Http2MultiplexCodec) {
-            streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
-        } else {
-            streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+        try {
+            if (ctx.handler() instanceof Http2MultiplexCodec) {
+                streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+            } else {
+                streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+            }
+        } catch (Exception e) {
+            promise.setFailure(e);
+            return;
         }
         try {
             init(streamChannel);

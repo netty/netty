@@ -32,8 +32,12 @@ public class MqttConnectPayloadTest {
         byte[] willMessage = null;
         String userName = "userName";
         byte[] password = "password".getBytes(CharsetUtil.UTF_8);
-        MqttConnectPayload mqttConnectPayload =
-            new MqttConnectPayload(clientIdentifier, willTopic, willMessage, userName, password);
+        MqttConnectPayload mqttConnectPayload = new MqttConnectPayload(clientIdentifier,
+                MqttProperties.NO_PROPERTIES,
+                willTopic,
+                willMessage,
+                userName,
+                password);
 
         assertNull(mqttConnectPayload.willMessageInBytes());
         assertNull(mqttConnectPayload.willMessage());
@@ -46,8 +50,12 @@ public class MqttConnectPayloadTest {
         byte[] willMessage = "willMessage".getBytes(CharsetUtil.UTF_8);
         String userName = "userName";
         byte[] password = null;
-        MqttConnectPayload mqttConnectPayload =
-            new MqttConnectPayload(clientIdentifier, willTopic, willMessage, userName, password);
+        MqttConnectPayload mqttConnectPayload = new MqttConnectPayload(clientIdentifier,
+                MqttProperties.NO_PROPERTIES,
+                willTopic,
+                willMessage,
+                userName,
+                password);
 
         assertNull(mqttConnectPayload.passwordInBytes());
         assertNull(mqttConnectPayload.password());

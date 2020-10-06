@@ -36,7 +36,7 @@ import static io.netty.util.internal.ObjectUtil.intValue;
  * A {@link DnsNameResolver} builder.
  */
 public final class DnsNameResolverBuilder {
-    private EventLoop eventLoop;
+    volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
@@ -324,7 +324,10 @@ public final class DnsNameResolverBuilder {
      *
      * @param traceEnabled true if trace is enabled
      * @return {@code this}
+     * @deprecated Prefer to {@linkplain #dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory) configure}
+     * a {@link LoggingDnsQueryLifeCycleObserverFactory} instead.
      */
+    @Deprecated
     public DnsNameResolverBuilder traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
         return this;

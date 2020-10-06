@@ -46,7 +46,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
     }
 
     static X509ExtendedTrustManager wrap(X509ExtendedTrustManager tm) {
-        if (PlatformDependent.javaVersion() < 11 && OpenSsl.isTlsv13Supported()) {
+        if (!SslProvider.isTlsv13Supported(SslProvider.JDK) && SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
             return new OpenSslTlsv13X509ExtendedTrustManager(tm);
         }
         return tm;

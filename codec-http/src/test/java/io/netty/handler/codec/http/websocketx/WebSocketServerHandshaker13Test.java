@@ -40,7 +40,18 @@ import java.util.Iterator;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class WebSocketServerHandshaker13Test {
+public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTest {
+
+    @Override
+    protected WebSocketServerHandshaker newHandshaker(String webSocketURL, String subprotocols,
+            WebSocketDecoderConfig decoderConfig) {
+        return new WebSocketServerHandshaker13(webSocketURL, subprotocols, decoderConfig);
+    }
+
+    @Override
+    protected WebSocketVersion webSocketVersion() {
+        return WebSocketVersion.V13;
+    }
 
     @Test
     public void testPerformOpeningHandshake() {

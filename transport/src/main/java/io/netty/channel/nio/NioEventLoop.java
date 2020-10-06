@@ -738,6 +738,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     invokeChannelUnregistered(task, k, null);
                 }
                 break;
+            default:
+                 break;
             }
         }
     }

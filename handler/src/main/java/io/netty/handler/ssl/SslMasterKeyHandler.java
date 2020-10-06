@@ -62,7 +62,7 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
-        Throwable cause = null;
+        Throwable cause;
         Class<?> clazz = null;
         Field field = null;
         try {
@@ -120,32 +120,39 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         //only try to log the session info if the ssl handshake has successfully completed.
-        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-            boolean shouldHandle = SystemPropertyUtil.getBoolean(SYSTEM_PROP_KEY, false);
+        if (evt == SslHandshakeCompletionEvent.SUCCESS && masterKeyHandlerEnabled()) {
+            final SslHandler handler = ctx.pipeline().get(SslHandler.class);
+            final SSLEngine engine = handler.engine();
+            final SSLSession sslSession = engine.getSession();
 
-            if (shouldHandle) {
-                final SslHandler handler = ctx.pipeline().get(SslHandler.class);
-                final SSLEngine engine = handler.engine();
-                final SSLSession sslSession = engine.getSession();
-
-                //the OpenJDK does not expose a way to get the master secret, so try to use reflection to get it.
-                if (isSunSslEngineAvailable() && sslSession.getClass().equals(SSL_SESSIONIMPL_CLASS)) {
-                    final SecretKey secretKey;
-                    try {
-                        secretKey = (SecretKey) SSL_SESSIONIMPL_MASTER_SECRET_FIELD.get(sslSession);
-                    } catch (IllegalAccessException e) {
-                        throw new IllegalArgumentException("Failed to access the field 'masterSecret' " +
-                                "via reflection.", e);
-                    }
-                    accept(secretKey, sslSession);
-                } else if (OpenSsl.isAvailable() && engine instanceof ReferenceCountedOpenSslEngine) {
-                    SecretKeySpec secretKey = ((ReferenceCountedOpenSslEngine) engine).masterKey();
-                    accept(secretKey, sslSession);
+            //the OpenJDK does not expose a way to get the master secret, so try to use reflection to get it.
+            if (isSunSslEngineAvailable() && sslSession.getClass().equals(SSL_SESSIONIMPL_CLASS)) {
+                final SecretKey secretKey;
+                try {
+                    secretKey = (SecretKey) SSL_SESSIONIMPL_MASTER_SECRET_FIELD.get(sslSession);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalArgumentException("Failed to access the field 'masterSecret' " +
+                            "via reflection.", e);
                 }
+                accept(secretKey, sslSession);
+            } else if (OpenSsl.isAvailable() && engine instanceof ReferenceCountedOpenSslEngine) {
+                SecretKeySpec secretKey = ((ReferenceCountedOpenSslEngine) engine).masterKey();
+                accept(secretKey, sslSession);
             }
         }
 
         ctx.fireUserEventTriggered(evt);
+    }
+
+    /**
+     * Checks if the handler is set up to actually handle/accept the event.
+     * By default the {@link #SYSTEM_PROP_KEY} property is checked, but any implementations of this class are
+     * free to override if they have different mechanisms of checking.
+     *
+     * @return true if it should handle, false otherwise.
+     */
+    protected boolean masterKeyHandlerEnabled() {
+        return SystemPropertyUtil.getBoolean(SYSTEM_PROP_KEY, false);
     }
 
     /**
@@ -170,8 +177,6 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
 
         private static final InternalLogger wireshark_logger =
                 InternalLoggerFactory.getInstance("io.netty.wireshark");
-
-        private static final char[] hexCode = "0123456789ABCDEF".toCharArray();
 
         @Override
         protected void accept(SecretKey masterKey, SSLSession session) {

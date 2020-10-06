@@ -155,9 +155,9 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             logger.debug("WebSocket version 08 server handshake key: {}, response: {}", key, accept);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
-        res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+        res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                     .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
         String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {

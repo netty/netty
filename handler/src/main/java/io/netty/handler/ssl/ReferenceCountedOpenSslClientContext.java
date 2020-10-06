@@ -73,9 +73,6 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
-            if (ENABLE_SESSION_TICKET) {
-                sessionContext.setTicketKeys();
-            }
             success = true;
         } finally {
             if (!success) {
@@ -170,6 +167,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 throw new SSLException("unable to setup trustmanager", e);
             }
             OpenSslClientSessionContext context = new OpenSslClientSessionContext(thiz, keyMaterialProvider);
+            if (ENABLE_SESSION_TICKET) {
+                context.setTicketKeys();
+            }
             keyMaterialProvider = null;
             return context;
         } finally {
@@ -292,8 +292,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 }
                 keyManagerHolder.setKeyMaterialClientSide(engine, keyTypes, issuers);
             } catch (Throwable cause) {
-                logger.debug("request of key failed", cause);
                 engine.initHandshakeException(cause);
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new SSLException(cause);
             }
         }
 

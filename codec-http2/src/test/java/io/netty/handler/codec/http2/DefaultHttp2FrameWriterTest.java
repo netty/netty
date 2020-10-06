@@ -280,6 +280,38 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(expectedOutbound, outbound);
     }
 
+    @Test
+    public void writePriority() {
+        frameWriter.writePriority(
+            ctx, /* streamId= */ 1, /* dependencyId= */ 2, /* weight= */ (short) 256, /* exclusive= */ true, promise);
+
+        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+                (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
+                (byte) 0x02, // payload type = 2
+                (byte) 0x00, // flags = 0x00
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id = 1
+                (byte) 0x80, (byte) 0x00, (byte) 0x00, (byte) 0x02, // dependency id = 2 | exclusive = 1 << 63
+                (byte) 0xFF, // weight = 255 (implicit +1)
+        });
+        assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writePriorityDefaults() {
+        frameWriter.writePriority(
+            ctx, /* streamId= */ 1, /* dependencyId= */ 0, /* weight= */ (short) 16, /* exclusive= */ false, promise);
+
+        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+                (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
+                (byte) 0x02, // payload type = 2
+                (byte) 0x00, // flags = 0x00
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id = 1
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, // dependency id = 0 | exclusive = 0 << 63
+                (byte) 0x0F, // weight = 15 (implicit +1)
+        });
+        assertEquals(expectedOutbound, outbound);
+    }
+
     private byte[] headerPayload(int streamId, Http2Headers headers, byte padding) throws Http2Exception, IOException {
         if (padding == 0) {
             return headerPayload(streamId, headers);

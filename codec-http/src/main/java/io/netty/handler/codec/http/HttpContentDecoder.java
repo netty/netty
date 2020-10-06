@@ -85,7 +85,17 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
-                    contentEncoding = IDENTITY;
+                    String transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
+                    if (transferEncoding != null) {
+                        int idx = transferEncoding.indexOf(",");
+                        if (idx != -1) {
+                            contentEncoding = transferEncoding.substring(0, idx).trim();
+                        } else {
+                            contentEncoding = transferEncoding.trim();
+                        }
+                    } else {
+                        contentEncoding = IDENTITY;
+                    }
                 }
                 decoder = newContentDecoder(contentEncoding);
 

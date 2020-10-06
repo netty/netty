@@ -206,7 +206,8 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
 
     private void checkIndex(int index) {
         if (index >= size) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: index < ("
+                    + size + "),but actual is (" + size + ")");
         }
     }
 

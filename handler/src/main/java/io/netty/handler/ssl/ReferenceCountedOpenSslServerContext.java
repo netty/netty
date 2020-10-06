@@ -228,8 +228,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 // OpenJDK SSLEngineImpl does.
                 keyManagerHolder.setKeyMaterialServerSide(engine);
             } catch (Throwable cause) {
-                logger.debug("Failed to set the server-side key material", cause);
                 engine.initHandshakeException(cause);
+
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new SSLException(cause);
             }
         }
     }

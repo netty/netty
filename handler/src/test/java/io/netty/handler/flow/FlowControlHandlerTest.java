@@ -473,10 +473,69 @@ public class FlowControlHandlerTest {
         channel.flushInbound();
         assertNull(channel.readInbound());
 
-        Thread.sleep(delayMillis);
+        Thread.sleep(delayMillis + 20L);
         channel.runPendingTasks();
         assertEquals(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT, userEvents.poll());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRemoveFlowControl() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(3);
+
+        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                //do the first read
+                ctx.read();
+                super.channelActive(ctx);
+            }
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                latch.countDown();
+                super.channelRead(ctx, msg);
+            }
+        };
+
+        FlowControlHandler flow = new FlowControlHandler() {
+            private int num;
+            @Override
+            public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                super.channelRead(ctx, msg);
+                ++num;
+                if (num >= 3) {
+                    //We have received 3 messages. Remove myself later
+                    final ChannelHandler handler = this;
+                    ctx.channel().eventLoop().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            ctx.pipeline().remove(handler);
+                        }
+                    });
+                }
+            }
+        };
+        ChannelInboundHandlerAdapter tail = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                //consume this msg
+                ReferenceCountUtil.release(msg);
+            }
+        };
+
+        Channel server = newServer(false /* no auto read */, flow, handler, tail);
+        Channel client = newClient(server.localAddress());
+        try {
+            // Write one message
+            client.writeAndFlush(newOneMessage()).sync();
+
+            // We should receive 3 messages
+            assertTrue(latch.await(1L, SECONDS));
+            assertTrue(flow.isQueueEmpty());
+        } finally {
+            client.close();
+            server.close();
+        }
     }
 
     /**

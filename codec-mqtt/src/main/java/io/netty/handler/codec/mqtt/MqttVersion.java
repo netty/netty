@@ -24,7 +24,8 @@ import io.netty.util.internal.ObjectUtil;
  */
 public enum MqttVersion {
     MQTT_3_1("MQIsdp", (byte) 3),
-    MQTT_3_1_1("MQTT", (byte) 4);
+    MQTT_3_1_1("MQTT", (byte) 4),
+    MQTT_5("MQTT", (byte) 5);
 
     private final String name;
     private final byte level;
@@ -47,16 +48,24 @@ public enum MqttVersion {
     }
 
     public static MqttVersion fromProtocolNameAndLevel(String protocolName, byte protocolLevel) {
-        for (MqttVersion mv : values()) {
-            if (mv.name.equals(protocolName)) {
-                if (mv.level == protocolLevel) {
-                    return mv;
-                } else {
-                    throw new MqttUnacceptableProtocolVersionException(protocolName + " and " +
-                            protocolLevel + " are not match");
-                }
-            }
+        MqttVersion mv = null;
+        switch (protocolLevel) {
+        case 3:
+            mv = MQTT_3_1;
+            break;
+        case 4:
+            mv = MQTT_3_1_1;
+            break;
+        case 5:
+            mv = MQTT_5;
+            break;
         }
-        throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
+        if (mv == null) {
+            throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
+        }
+        if (mv.name.equals(protocolName)) {
+            return mv;
+        }
+        throw new MqttUnacceptableProtocolVersionException(protocolName + " and " + protocolLevel + " are not match");
     }
 }

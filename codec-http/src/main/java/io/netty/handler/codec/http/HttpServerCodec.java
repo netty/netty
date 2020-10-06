@@ -23,6 +23,10 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
+
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
  * which enables easier server side HTTP implementation.
@@ -41,7 +45,7 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
      * {@code maxChunkSize (8192)}).
      */
     public HttpServerCodec() {
-        this(4096, 8192, 8192);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE);
     }
 
     /**
@@ -72,6 +76,16 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+                           int initialBufferSize, boolean allowDuplicateContentLengths) {
+        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders,
+                                          initialBufferSize, allowDuplicateContentLengths),
+             new HttpServerResponseEncoder());
+    }
+
+    /**
      * Upgrades to another protocol from HTTP. Removes the {@link HttpRequestDecoder} and
      * {@link HttpResponseEncoder} from the pipeline.
      */
@@ -95,6 +109,12 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
                                         boolean validateHeaders, int initialBufferSize) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
+        }
+
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                                 boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
+                  allowDuplicateContentLengths);
         }
 
         @Override
