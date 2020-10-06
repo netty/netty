@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
@@ -38,6 +39,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private final boolean validateHeaders;
     private int currentStreamId;
+    private HttpScheme httpScheme;
 
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                            Http2Settings initialSettings, boolean validateHeaders) {
@@ -52,6 +54,14 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         this.validateHeaders = validateHeaders;
     }
 
+    protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                           Http2Settings initialSettings, boolean validateHeaders,
+                                           boolean decoupleCloseAndGoAway, HttpScheme httpScheme) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
+        this.validateHeaders = validateHeaders;
+        this.httpScheme = httpScheme;
+    }
+
     /**
      * Get the next stream id either from the {@link HttpHeaders} object or HTTP/2 codec
      *
@@ -60,6 +70,9 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
+        if (httpScheme != null && !httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text())) {
+            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), httpScheme.name());
+        }
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
                                   connection().local().incrementAndGetNextStreamId());
     }
