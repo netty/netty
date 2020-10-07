@@ -62,17 +62,6 @@
         </executions>
       </plugin>
 
-      <!-- Disable animal sniffer -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Disable checkstyle -->
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>

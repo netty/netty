@@ -7,7 +7,7 @@ ENV GCC_VERSION $gcc_version
 RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools
 
 # Install Java
-RUN yum install -y java-1.8.0-openjdk-devel
+RUN yum install -y java-11-openjdk-devel
 
 # Install aarch64 gcc toolchain
 RUN set -x && \
@@ -15,4 +15,4 @@ RUN set -x && \
   tar xvf gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu.tar.xz
 
 ENV PATH="/gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu/bin:${PATH}"
-ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"
+ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk/"
