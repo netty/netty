@@ -16,10 +16,9 @@
 package io.netty.handler.codec.compression;
 
 import com.nixxcode.jvmbrotli.common.BrotliLoader;
-import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
+import com.nixxcode.jvmbrotli.dec.Decoder;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,8 +37,10 @@ public class BrotliDecoder extends ByteToMessageDecoder {
         logger.info("Brotli Loader Status: {}", BrotliLoader.isBrotliAvailable());
     }
 
-    private ByteBufOutputStream byteBufOutputStream;
-    private ByteBuf byteBuf;
+    /**
+     * Aggregate up to a single block
+     */
+    private ByteBuf aggregatingBuf;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -48,30 +49,29 @@ public class BrotliDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        if (byteBufOutputStream == null) {
-            byteBuf = ctx.alloc().buffer();
-            byteBufOutputStream = new ByteBufOutputStream(byteBuf);
+        if (aggregatingBuf == null) {
+            aggregatingBuf = ctx.alloc().buffer();
         }
 
-        BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in));
+        aggregatingBuf.writeBytes(in);
 
-        int read = brotliInputStream.read();
-        while (read > -1) {
-            byteBufOutputStream.write(read);
-            read = brotliInputStream.read();
+        byte[] compressedData = ByteBufUtil.getBytes(aggregatingBuf, aggregatingBuf.readerIndex(),
+                aggregatingBuf.readableBytes(), false);
+        byte[] decompressedData = Decoder.decompress(compressedData);
+
+        if (decompressedData != null) {
+            aggregatingBuf.clear();
+            ByteBuf byteBuf = ctx.alloc().buffer();
+            byteBuf.writeBytes(decompressedData);
+            out.add(byteBuf);
         }
-
-        byteBufOutputStream.flush();
-        brotliInputStream.close();
-
-        out.add(byteBuf);
     }
 
     @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        byteBufOutputStream.close();
-        if (byteBuf.refCnt() > 0) {
-            byteBuf.release();
+    protected void handlerRemoved0(ChannelHandlerContext ctx) {
+        if (aggregatingBuf.refCnt() > 0) {
+            aggregatingBuf.release();
         }
+        aggregatingBuf = null;
     }
 }
