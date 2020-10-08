@@ -30,8 +30,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-
 /**
  * {@link EventExecutor} implementation which makes no guarantees about the ordering of task execution that
  * are submitted because there may be multiple threads executing these tasks.
@@ -160,8 +158,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
-        return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, runnable, task);
+        return new RunnableScheduledFutureTask<V>(this, runnable, task);
     }
 
     @Override
@@ -204,23 +201,18 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         return (Future<T>) super.submit(task);
     }
 
-    @Override
-    public void execute(Runnable command) {
-        super.schedule(new NonNotifyRunnable(command), 0, NANOSECONDS);
-    }
-
     private static final class RunnableScheduledFutureTask<V> extends PromiseTask<V>
             implements RunnableScheduledFuture<V>, ScheduledFuture<V> {
         private final RunnableScheduledFuture<V> future;
 
         RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
-                                           RunnableScheduledFuture<V> future) {
+                                    RunnableScheduledFuture<V> future) {
             super(executor, runnable);
             this.future = future;
         }
 
         RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable,
-                                           RunnableScheduledFuture<V> future) {
+                                    RunnableScheduledFuture<V> future) {
             super(executor, callable);
             this.future = future;
         }
@@ -257,24 +249,4 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         }
     }
 
-    // This is a special wrapper which we will be used in execute(...) to wrap the submitted Runnable. This is needed as
-    // ScheduledThreadPoolExecutor.execute(...) will delegate to submit(...) which will then use decorateTask(...).
-    // The problem with this is that decorateTask(...) needs to ensure we only do our own decoration if we not call
-    // from execute(...) as otherwise we may end up creating an endless loop because DefaultPromise will call
-    // EventExecutor.execute(...) when notify the listeners of the promise.
-    //
-    // See https://github.com/netty/netty/issues/6507
-    private static final class NonNotifyRunnable implements Runnable {
-
-        private final Runnable task;
-
-        NonNotifyRunnable(Runnable task) {
-            this.task = task;
-        }
-
-        @Override
-        public void run() {
-            task.run();
-        }
-    }
 }
