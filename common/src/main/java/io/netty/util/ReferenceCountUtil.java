@@ -162,6 +162,22 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Try to call {@link ReferenceCounted#release()} and release it completely if the specified
+     * message implements {@link ReferenceCounted}. If the specified message doesn't implement
+     * {@link ReferenceCounted}, this method does nothing.Unlike {@link #release(Object)} this method does
+     * not catches an exception raised by {@link ReferenceCounted#release()}.
+     */
+    public static void silentFullRelease(Object msg) {
+        try {
+            if (msg instanceof ReferenceCounted) {
+                release(msg, ((ReferenceCounted) msg).refCnt());
+            }
+        } catch (Throwable t) {
+            // Swallow the throwable
+        }
+    }
+
+    /**
      * Schedules the specified object to be released when the caller thread terminates. Note that this operation is
      * intended to simplify reference counting of ephemeral objects during unit tests. Do not use it beyond the
      * intended use case.
