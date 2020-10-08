@@ -134,6 +134,36 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     * Unlike {@link #release(Object)} this method does not catches an exception raised by
+     * {@link ReferenceCounted#release()}. It is usually recommended to use {@link #release(Object)} instead,
+     * unless you absolutely need to swallow an exception.
+     */
+    public static void silentRelease(Object msg) {
+        try {
+            release(msg);
+        } catch (Throwable t) {
+            // Swallow the throwable
+        }
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     * Unlike {@link #release(Object)} this method does not catches an exception raised by
+     * {@link ReferenceCounted#release()}. It is usually recommended to use {@link #release(Object)} instead,
+     * unless you absolutely need to swallow an exception.
+     */
+    public static void silentRelease(Object msg, int decrement) {
+        try {
+            release(msg, decrement);
+        } catch (Throwable t) {
+            // Swallow the throwable
+        }
+    }
+
+    /**
      * Schedules the specified object to be released when the caller thread terminates. Note that this operation is
      * intended to simplify reference counting of ephemeral objects during unit tests. Do not use it beyond the
      * intended use case.
