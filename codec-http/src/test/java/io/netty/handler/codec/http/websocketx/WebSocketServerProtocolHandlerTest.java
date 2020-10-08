@@ -22,17 +22,18 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
+
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Before;
@@ -192,6 +193,61 @@ public class WebSocketServerProtocolHandlerTest {
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testCheckValidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/test")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
+    public void testCheckInvalidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/testabc")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        assertNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
     }
 
     @Test

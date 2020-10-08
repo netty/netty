@@ -30,6 +30,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -71,12 +72,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                                         boolean validateHttpHeaders, boolean propagateSettings) {
-
-        if (maxContentLength <= 0) {
-            throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
-        }
         this.connection = checkNotNull(connection, "connection");
-        this.maxContentLength = maxContentLength;
+        this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
         this.validateHttpHeaders = validateHttpHeaders;
         this.propagateSettings = propagateSettings;
         sendDetector = DEFAULT_SEND_DETECTOR;
@@ -147,14 +144,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * <li>{@code false} not to validate HTTP headers in the http-codec</li>
      * </ul>
      * @param alloc The {@link ByteBufAllocator} to use to generate the content of the message
-     * @throws Http2Exception
+     * @throws Http2Exception If there is an error when creating {@link FullHttpMessage} from
+     *                        {@link Http2Stream} and {@link Http2Headers}
      */
     protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
-                                         ByteBufAllocator alloc)
-            throws Http2Exception {
+                                         ByteBufAllocator alloc) throws Http2Exception {
         return connection.isServer() ? HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc,
                 validateHttpHeaders) : HttpConversionUtil.toFullHttpResponse(stream.id(), headers, alloc,
-                                                                         validateHttpHeaders);
+                validateHttpHeaders);
     }
 
     /**
@@ -182,7 +179,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
     protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
-                boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
+                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer)
+            throws Http2Exception {
         FullHttpMessage msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
@@ -227,7 +225,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     @Override
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
-                    throws Http2Exception {
+            throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = getMessage(stream);
         if (msg == null) {
@@ -238,7 +236,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         final int dataReadableBytes = data.readableBytes();
         if (content.readableBytes() > maxContentLength - dataReadableBytes) {
             throw connectionError(INTERNAL_ERROR,
-                            "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
+                    "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 
         content.writeBytes(data, data.readerIndex(), dataReadableBytes);
@@ -253,7 +251,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                    boolean endOfStream) throws Http2Exception {
+                              boolean endOfStream) throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
@@ -263,7 +261,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                    short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+                              short weight, boolean exclusive, int padding, boolean endOfStream)
+            throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
@@ -292,7 +291,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
 
     @Override
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-            Http2Headers headers, int padding) throws Http2Exception {
+                                  Http2Headers headers, int padding) throws Http2Exception {
         // A push promise should not be allowed to add headers to an existing stream
         Http2Stream promisedStream = connection.stream(promisedStreamId);
         if (headers.status() == null) {
@@ -306,7 +305,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         FullHttpMessage msg = processHeadersBegin(ctx, promisedStream, headers, false, false, false);
         if (msg == null) {
             throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d",
-                            promisedStreamId);
+                    promisedStreamId);
         }
 
         msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);

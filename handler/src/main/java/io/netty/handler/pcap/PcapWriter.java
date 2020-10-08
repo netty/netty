@@ -16,18 +16,29 @@
 package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
 
 final class PcapWriter implements Closeable {
+
+    /**
+     * Logger
+     */
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PcapWriter.class);
 
     /**
      * {@link OutputStream} where we'll write Pcap data.
      */
     private final OutputStream outputStream;
+
+    /**
+     * Set to {@code true} if {@link #outputStream} is closed.
+     */
+    private boolean isClosed;
 
     /**
      * This uses {@link OutputStream} for writing Pcap.
@@ -58,12 +69,16 @@ final class PcapWriter implements Closeable {
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
     void writePacket(ByteBuf packetHeaderBuf, ByteBuf packet) throws IOException {
-        long currentTime = System.currentTimeMillis();
+        if (isClosed) {
+            logger.debug("Pcap Write attempted on closed PcapWriter");
+        }
+
+        long timestamp = System.currentTimeMillis();
 
         PcapHeaders.writePacketHeader(
                 packetHeaderBuf,
-                (int) TimeUnit.MILLISECONDS.toSeconds(currentTime),
-                (int) TimeUnit.MILLISECONDS.toMicros(currentTime) % 1000000,
+                (int) (timestamp / 1000L),
+                (int) (timestamp % 1000L * 1000L),
                 packet.readableBytes(),
                 packet.readableBytes()
         );
@@ -74,7 +89,13 @@ final class PcapWriter implements Closeable {
 
     @Override
     public void close() throws IOException {
-        outputStream.flush();
-        outputStream.close();
+        if (isClosed) {
+            logger.debug("PcapWriter is already closed");
+        } else {
+            isClosed = true;
+            outputStream.flush();
+            outputStream.close();
+            logger.debug("PcapWriter is now closed");
+        }
     }
 }
