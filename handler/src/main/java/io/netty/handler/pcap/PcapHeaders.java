@@ -17,8 +17,6 @@ package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
 
-import java.util.concurrent.TimeUnit;
-
 final class PcapHeaders {
 
     /**

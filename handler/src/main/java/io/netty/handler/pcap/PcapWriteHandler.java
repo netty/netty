@@ -31,6 +31,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Inet4Address;
@@ -61,8 +62,11 @@ import java.net.InetSocketAddress;
  *    </ul>
  * </p>
  */
-public final class PcapWriteHandler extends ChannelDuplexHandler {
+public final class PcapWriteHandler extends ChannelDuplexHandler implements Closeable {
 
+    /**
+     * Logger for logging events
+     */
     private final InternalLogger logger = InternalLoggerFactory.getInstance(PcapWriteHandler.class);
 
     /**
@@ -109,11 +113,17 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
     private InetSocketAddress dstAddr;
 
     /**
+     * Set to {@code true} if {@link #close()} is called and we should stop writing Pcap.
+     */
+    private boolean isClosed;
+
+    /**
      * Create new {@link PcapWriteHandler} Instance.
      * {@code captureZeroByte} is set to {@code false} and
      * {@code writePcapGlobalHeader} is set to {@code true}.
      *
-     * @param outputStream OutputStream where Pcap data will be written
+     * @param outputStream OutputStream where Pcap data will be written. Call {@link #close()} to close this
+     *                     OutputStream.
      * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
      *                              {@link NullPointerException}
      */
@@ -124,7 +134,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
     /**
      * Create new {@link PcapWriteHandler} Instance
      *
-     * @param outputStream          OutputStream where Pcap data will be written
+     * @param outputStream          OutputStream where Pcap data will be written. Call {@link #close()} to close this
+     *                              OutputStream.
      * @param captureZeroByte       Set to {@code true} to enable capturing packets with empty (0 bytes) payload.
      *                              Otherwise, if set to {@code false}, empty packets will be filtered out.
      * @param writePcapGlobalHeader Set to {@code true} to write Pcap Global Header on initialization.
@@ -214,24 +225,28 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (ctx.channel() instanceof SocketChannel) {
-            handleTCP(ctx, msg, false);
-        } else if (ctx.channel() instanceof DatagramChannel) {
-            handleUDP(ctx, msg);
-        } else {
-            logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+        if (!isClosed) {
+            if (ctx.channel() instanceof SocketChannel) {
+                handleTCP(ctx, msg, false);
+            } else if (ctx.channel() instanceof DatagramChannel) {
+                handleUDP(ctx, msg);
+            } else {
+                logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+            }
         }
         super.channelRead(ctx, msg);
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (ctx.channel() instanceof SocketChannel) {
-            handleTCP(ctx, msg, true);
-        } else if (ctx.channel() instanceof DatagramChannel) {
-            handleUDP(ctx, msg);
-        } else {
-            logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+        if (!isClosed) {
+            if (ctx.channel() instanceof SocketChannel) {
+                handleTCP(ctx, msg, true);
+            } else if (ctx.channel() instanceof DatagramChannel) {
+                handleUDP(ctx, msg);
+            } else {
+                logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+            }
         }
         super.write(ctx, msg, promise);
     }
@@ -495,7 +510,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
             logger.debug("Finished Fake TCP FIN+ACK Flow to close connection");
         }
 
-        this.pCapWriter.close();
+        close();
         super.handlerRemoved(ctx);
     }
 
@@ -517,7 +532,25 @@ public final class PcapWriteHandler extends ChannelDuplexHandler {
             logger.debug("Sent Fake TCP RST to close connection");
         }
 
-        this.pCapWriter.close();
+        close();
         ctx.fireExceptionCaught(cause);
+    }
+
+    /**
+     * <p> Close {@code PcapWriter} and {@link OutputStream}. </p>
+     * <p> Note: Calling this method does not close {@link PcapWriteHandler}.
+     * Only Pcap Writes are closed. </p>
+     *
+     * @throws IOException If {@link OutputStream#close()} throws an exception
+     */
+    @Override
+    public void close() throws IOException {
+        if (isClosed) {
+            logger.debug("PcapWriterHandler is already closed");
+        } else {
+            isClosed = true;
+            pCapWriter.close();
+            logger.debug("PcapWriterHandler is now closed");
+        }
     }
 }
