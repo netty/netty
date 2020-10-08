@@ -137,8 +137,7 @@ public final class ReferenceCountUtil {
      * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      * Unlike {@link #release(Object)} this method does not catches an exception raised by
-     * {@link ReferenceCounted#release()}. It is usually recommended to use {@link #release(Object)} instead,
-     * unless you absolutely need to swallow an exception.
+     * {@link ReferenceCounted#release()}.
      */
     public static void silentRelease(Object msg) {
         try {
@@ -152,8 +151,7 @@ public final class ReferenceCountUtil {
      * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      * Unlike {@link #release(Object)} this method does not catches an exception raised by
-     * {@link ReferenceCounted#release()}. It is usually recommended to use {@link #release(Object)} instead,
-     * unless you absolutely need to swallow an exception.
+     * {@link ReferenceCounted#release()}.
      */
     public static void silentRelease(Object msg, int decrement) {
         try {
