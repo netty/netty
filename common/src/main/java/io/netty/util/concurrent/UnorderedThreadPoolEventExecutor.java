@@ -161,12 +161,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
         return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, runnable, task);
+                task : new RunnableScheduledFutureTask<V>(this, task);
     }
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<V>(this, callable, task);
+        return new RunnableScheduledFutureTask<V>(this, task);
     }
 
     @Override
@@ -213,15 +213,8 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             implements RunnableScheduledFuture<V>, ScheduledFuture<V> {
         private final RunnableScheduledFuture<V> future;
 
-        RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
-                                           RunnableScheduledFuture<V> future) {
-            super(executor, runnable);
-            this.future = future;
-        }
-
-        RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable,
-                                           RunnableScheduledFuture<V> future) {
-            super(executor, callable);
+        RunnableScheduledFutureTask(EventExecutor executor, RunnableScheduledFuture<V> future) {
+            super(executor, future);
             this.future = future;
         }
 
