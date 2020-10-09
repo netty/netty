@@ -206,13 +206,13 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         private final RunnableScheduledFuture<V> future;
 
         RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
-                                    RunnableScheduledFuture<V> future) {
+                                           RunnableScheduledFuture<V> future) {
             super(executor, runnable);
             this.future = future;
         }
 
         RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable,
-                                    RunnableScheduledFuture<V> future) {
+                                           RunnableScheduledFuture<V> future) {
             super(executor, callable);
             this.future = future;
         }
@@ -224,7 +224,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             } else if (!isDone()) {
                 try {
                     // Its a periodic task so we need to ignore the return value
-                    future.run();
+                    runTask();
                 } catch (Throwable cause) {
                     if (!tryFailureInternal(cause)) {
                         logger.warn("Failure during execution of task", cause);
