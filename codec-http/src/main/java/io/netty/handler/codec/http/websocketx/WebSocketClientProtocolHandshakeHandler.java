@@ -73,7 +73,8 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (!handshakePromise.isDone()) {
-            handshakePromise.tryFailure(new WebSocketHandshakeException("channel closed with handshake in progress"));
+            handshakePromise.tryFailure(new WebSocketClientHandshakeException("channel closed with handshake " +
+                                                                              "in progress"));
         }
 
         super.channelInactive(ctx);
@@ -115,7 +116,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     return;
                 }
 
-                if (localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
+                if (localHandshakePromise.tryFailure(new WebSocketClientHandshakeException("handshake timed out"))) {
                     ctx.flush()
                        .fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                        .close();

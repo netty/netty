@@ -126,7 +126,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Serve the WebSocket handshake request.
         if (!req.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)
                 || !HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
-            throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
+            throw new WebSocketServerHandshakeException("not a WebSocket handshake request: missing upgrade", req);
         }
 
         // Hixie 75 does not contain these headers while Hixie 76 does
@@ -136,7 +136,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         String origin = req.headers().get(HttpHeaderNames.ORIGIN);
         //throw before allocating FullHttpResponse
         if (origin == null && !isHixie76) {
-            throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
+            throw new WebSocketServerHandshakeException("Missing origin header, got only " + req.headers().names(),
+                                                        req);
         }
 
         // Create the WebSocket handshake response.

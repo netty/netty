@@ -130,7 +130,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
-            throw new WebSocketHandshakeException("not a WebSocket request: missing key");
+            throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
 
         FullHttpResponse res =

@@ -247,6 +247,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
+    protected WebSocketServerHandshakeException buildHandshakeException(String message) {
+        return new WebSocketServerHandshakeException(message);
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
             FullHttpResponse response = new DefaultFullHttpResponse(
