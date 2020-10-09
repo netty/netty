@@ -84,7 +84,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static int checkInRange(int i, int start, int end, String name) {
-        if (i < start || end > i) {
+        if (i < start || i > end) {
             throw new IllegalArgumentException(name + ": " + i + " (expected: " + start + "-" + end + ")");
         }
         return i;
@@ -95,7 +95,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static long checkInRange(long l, long start, long end, String name) {
-        if (l < start || end > l) {
+        if (l < start || l > end) {
             throw new IllegalArgumentException(name + ": " + l + " (expected: " + start + "-" + end + ")");
         }
         return l;
