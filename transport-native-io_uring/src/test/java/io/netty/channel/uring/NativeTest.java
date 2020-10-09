@@ -224,7 +224,7 @@ public class NativeTest {
         FileDescriptor eventFd = Native.newBlockingEventFd();
         submissionQueue.addPollIn(eventFd.intValue());
         submissionQueue.submit();
-        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN, (short) 0);
+        submissionQueue.addPollRemove(eventFd.intValue(), Native.POLLIN);
         submissionQueue.submit();
 
         final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();

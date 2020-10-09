@@ -243,6 +243,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
                 } else if (res == 0) {
                     logger.trace("IORING_POLL_REMOVE successful");
                 }
+                channel.clearPollFlag(data);
                 if (!channel.ioScheduled()) {
                     // We cancelled the POLL ops which means we are done and should remove the mapping.
                     remove(channel);
