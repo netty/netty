@@ -55,7 +55,7 @@ final class HpackHuffmanDecoder implements ByteProcessor {
      * <p>
      * state<<16 + flags<<8 + output
      */
-    private static final int[] HUFFS = new int[]{
+    private static final int[] HUFFS = new int[] {
             // Node 0 (Root Node, never emits symbols.)
             4 << 16,
             5 << 16,
@@ -4673,8 +4673,7 @@ final class HpackHuffmanDecoder implements ByteProcessor {
     private int k;
     private int state;
 
-    HpackHuffmanDecoder() {
-    }
+    HpackHuffmanDecoder() { }
 
     /**
      * Decompresses the given Huffman coded string literal.
