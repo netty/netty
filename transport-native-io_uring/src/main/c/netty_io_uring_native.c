@@ -261,7 +261,7 @@ static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries
         (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes,
         (jlong)io_uring_ring.sq.ring_sz,
-        (jlong)io_uring_ring.cq.ring_ptr,
+        (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
     (*env)->SetLongArrayRegion(env, submissionArray, 0, 11, submissionArrayElements);
