@@ -80,6 +80,28 @@ public final class ObjectUtil {
     }
 
     /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static int checkInRange(int i, int start, int end, String name) {
+        if (i < start || i > end) {
+            throw new IllegalArgumentException(name + ": " + i + " (expected: " + start + "-" + end + ")");
+        }
+        return i;
+    }
+
+    /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static long checkInRange(long l, long start, long end, String name) {
+        if (l < start || l > end) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: " + start + "-" + end + ")");
+        }
+        return l;
+    }
+
+    /**
      * Checks that the given argument is neither null nor empty.
      * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
