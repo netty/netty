@@ -4924,4 +4924,19 @@ public abstract class AbstractByteBufTest {
         assertEquals(50, buffer.maxFastWritableBytes());
         buffer.release();
     }
+
+    @Test
+    public void testEnsureWritableIntegerOverflow() {
+        ByteBuf buffer = newBuffer(CAPACITY);
+        buffer.writerIndex(buffer.readerIndex());
+        buffer.writeByte(1);
+        try {
+            buffer.ensureWritable(Integer.MAX_VALUE);
+            fail();
+        } catch (IndexOutOfBoundsException e) {
+            // expected
+        } finally {
+            buffer.release();
+        }
+    }
 }
