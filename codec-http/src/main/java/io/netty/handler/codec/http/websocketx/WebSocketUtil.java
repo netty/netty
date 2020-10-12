@@ -31,6 +31,8 @@ import java.security.NoSuchAlgorithmException;
  */
 final class WebSocketUtil {
 
+    // Suppress a warning about weak hash algorithm since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
+    @SuppressWarnings("lgtm[java/weak-cryptographic-algorithm]")
     private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
@@ -44,6 +46,8 @@ final class WebSocketUtil {
         }
     };
 
+    // Suppress a warning about weak hash algorithm since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
+    @SuppressWarnings("lgtm[java/weak-cryptographic-algorithm]")
     private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
