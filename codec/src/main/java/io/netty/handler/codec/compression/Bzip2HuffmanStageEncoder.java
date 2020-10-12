@@ -219,7 +219,7 @@ final class Bzip2HuffmanStageEncoder {
             final int groupEnd = Math.min(groupStart + HUFFMAN_GROUP_RUN_LENGTH, mtfLength) - 1;
 
             // Calculate the cost of this group when encoded by each table
-            short[] cost = new short[totalTables];
+            int[] cost = new int[totalTables];
             for (int i = groupStart; i <= groupEnd; i++) {
                 final int value = mtfBlock[i];
                 for (int j = 0; j < totalTables; j++) {
