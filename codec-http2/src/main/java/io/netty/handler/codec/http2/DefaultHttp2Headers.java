@@ -64,8 +64,8 @@ public class DefaultHttp2Headers
             } else {
                 for (int i = 0; i < name.length(); ++i) {
                     if (isUpperCase(name.charAt(i))) {
-                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]",
-                                name));
+                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                                "invalid header name [%s]", name));
                     }
                 }
             }
