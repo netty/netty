@@ -353,8 +353,6 @@
 
   <properties>
     <javaModuleName>io.netty.transport.kqueue</javaModuleName>
-    <!-- Needed as we use SelfSignedCertificate in our tests -->
-    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
