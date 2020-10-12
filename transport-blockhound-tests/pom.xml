@@ -50,13 +50,27 @@
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
       </properties>
     </profile>
+    <profile>
+      <id>java15</id>
+      <activation>
+        <jdk>15</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java16</id>
+      <activation>
+        <jdk>16</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <!-- Needed for SelfSignedCertificate -->
-    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <skipJapicmp>true</skipJapicmp>
   </properties>
 

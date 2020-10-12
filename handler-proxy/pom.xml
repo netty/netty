@@ -28,8 +28,6 @@
 
   <properties>
     <javaModuleName>io.netty.handler.proxy</javaModuleName>
-    <!-- Needed for SelfSignedCertificate -->
-    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>
 
   <name>Netty/Handler/Proxy</name>
