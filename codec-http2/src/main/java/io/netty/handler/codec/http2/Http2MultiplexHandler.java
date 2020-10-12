@@ -354,4 +354,3 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         }
     }
 }
-
