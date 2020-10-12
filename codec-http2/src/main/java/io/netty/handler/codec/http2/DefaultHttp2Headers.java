@@ -43,7 +43,6 @@ public class DefaultHttp2Headers
             if (name == null || name.length() == 0) {
                 PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
                         "empty headers are not allowed [%s]", name));
-                return;
             }
             if (name instanceof AsciiString) {
                 final int index;
@@ -59,8 +58,8 @@ public class DefaultHttp2Headers
                 }
 
                 if (index != -1) {
-                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]",
-                            name));
+                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                            "invalid header name [%s]", name));
                 }
             } else {
                 for (int i = 0; i < name.length(); ++i) {
