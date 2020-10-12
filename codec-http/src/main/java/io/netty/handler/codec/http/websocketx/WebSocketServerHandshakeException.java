@@ -16,10 +16,15 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.ReferenceCounted;
 
 /**
  * Server exception during handshaking process.
+ *
+ * <p><b>IMPORTANT</b>: This exception should not contains any {@link ReferenceCounted} fields
+ * e.g. {@link FullHttpRequest}, so no special treatment is needed.
  */
 public final class WebSocketServerHandshakeException extends WebSocketHandshakeException {
 
