@@ -27,7 +27,6 @@ import com.sun.nio.sctp.ShutdownNotification;
 
 import io.netty.channel.ChannelPipeline;
 
-
 /**
  * {@link AbstractNotificationHandler} implementation which will handle all {@link Notification}s by trigger a
  * {@link Notification} user event in the {@link ChannelPipeline} of a {@link SctpChannel}.
