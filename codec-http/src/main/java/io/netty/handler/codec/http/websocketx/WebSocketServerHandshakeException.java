@@ -19,9 +19,9 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
- * Server exception during handshaking process
+ * Server exception during handshaking process.
  */
-public class WebSocketServerHandshakeException extends WebSocketHandshakeException {
+public final class WebSocketServerHandshakeException extends WebSocketHandshakeException {
 
     private static final long serialVersionUID = 1L;
 

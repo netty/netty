@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpResponse;
 /**
  * Client exception during handshaking process.
  */
-public class WebSocketClientHandshakeException extends WebSocketHandshakeException {
+public final class WebSocketClientHandshakeException extends WebSocketHandshakeException {
 
     private static final long serialVersionUID = 1L;
 
