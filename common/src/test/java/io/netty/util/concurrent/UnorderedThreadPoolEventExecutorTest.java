@@ -60,12 +60,17 @@ public class UnorderedThreadPoolEventExecutorTest {
     public void scheduledAtFixedRateMustRunTaskRepeatedly() throws InterruptedException {
         UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
         final CountDownLatch latch = new CountDownLatch(3);
-        executor.scheduleAtFixedRate(new Runnable() {
+        Future<?> future = executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
             }
         }, 1, 1, TimeUnit.MILLISECONDS);
-        latch.await();
+        try {
+            latch.await();
+        } finally {
+            future.cancel(true);
+            executor.shutdownGracefully();
+        }
     }
 }
