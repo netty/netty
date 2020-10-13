@@ -336,7 +336,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public boolean contains(String name, String value, boolean ignoreCase) {
-        return contains((CharSequence) name, (CharSequence) value, ignoreCase);
+        return contains(name, (CharSequence) value, ignoreCase);
     }
 
     @Override
@@ -489,12 +489,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     }
                     break;
                 case 1:
-                    switch (character) {
-                        case '\n':
-                            return 2;
-                        default:
-                            throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
+                    if (character == '\n') {
+                        return 2;
                     }
+                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
                 case 2:
                     switch (character) {
                         case '\t':

@@ -232,87 +232,82 @@ public final class CookieDecoder {
             String name;
             String value;
 
-            if (i == headerLen) {
-                name = null;
-                value = null;
-            } else {
-                int newNameStart = i;
-                keyValLoop: for (;;) {
-                    switch (header.charAt(i)) {
-                    case ';':
-                        // NAME; (no value till ';')
-                        name = header.substring(newNameStart, i);
-                        value = null;
+            int newNameStart = i;
+            keyValLoop: for (;;) {
+                switch (header.charAt(i)) {
+                case ';':
+                    // NAME; (no value till ';')
+                    name = header.substring(newNameStart, i);
+                    value = null;
+                    break keyValLoop;
+                case '=':
+                    // NAME=VALUE
+                    name = header.substring(newNameStart, i);
+                    i ++;
+                    if (i == headerLen) {
+                        // NAME= (empty value, i.e. nothing after '=')
+                        value = "";
                         break keyValLoop;
-                    case '=':
-                        // NAME=VALUE
-                        name = header.substring(newNameStart, i);
-                        i ++;
-                        if (i == headerLen) {
-                            // NAME= (empty value, i.e. nothing after '=')
-                            value = "";
-                            break keyValLoop;
-                        }
+                    }
 
-                        int newValueStart = i;
-                        char c = header.charAt(i);
-                        if (c == '"' || c == '\'') {
-                            // NAME="VALUE" or NAME='VALUE'
-                            StringBuilder newValueBuf = new StringBuilder(header.length() - i);
-                            final char q = c;
-                            boolean hadBackslash = false;
-                            i ++;
-                            for (;;) {
-                                if (i == headerLen) {
+                    int newValueStart = i;
+                    char c = header.charAt(i);
+                    if (c == '"' || c == '\'') {
+                        // NAME="VALUE" or NAME='VALUE'
+                        StringBuilder newValueBuf = new StringBuilder(header.length() - i);
+                        final char q = c;
+                        boolean hadBackslash = false;
+                        i ++;
+                        for (;;) {
+                            if (i == headerLen) {
+                                value = newValueBuf.toString();
+                                break keyValLoop;
+                            }
+                            if (hadBackslash) {
+                                hadBackslash = false;
+                                c = header.charAt(i ++);
+                                switch (c) {
+                                case '\\': case '"': case '\'':
+                                    // Escape last backslash.
+                                    newValueBuf.setCharAt(newValueBuf.length() - 1, c);
+                                    break;
+                                default:
+                                    // Do not escape last backslash.
+                                    newValueBuf.append(c);
+                                }
+                            } else {
+                                c = header.charAt(i ++);
+                                if (c == q) {
                                     value = newValueBuf.toString();
                                     break keyValLoop;
                                 }
-                                if (hadBackslash) {
-                                    hadBackslash = false;
-                                    c = header.charAt(i ++);
-                                    switch (c) {
-                                    case '\\': case '"': case '\'':
-                                        // Escape last backslash.
-                                        newValueBuf.setCharAt(newValueBuf.length() - 1, c);
-                                        break;
-                                    default:
-                                        // Do not escape last backslash.
-                                        newValueBuf.append(c);
-                                    }
-                                } else {
-                                    c = header.charAt(i ++);
-                                    if (c == q) {
-                                        value = newValueBuf.toString();
-                                        break keyValLoop;
-                                    }
-                                    newValueBuf.append(c);
-                                    if (c == '\\') {
-                                        hadBackslash = true;
-                                    }
+                                newValueBuf.append(c);
+                                if (c == '\\') {
+                                    hadBackslash = true;
                                 }
                             }
-                        } else {
-                            // NAME=VALUE;
-                            int semiPos = header.indexOf(';', i);
-                            if (semiPos > 0) {
-                                value = header.substring(newValueStart, semiPos);
-                                i = semiPos;
-                            } else {
-                                value = header.substring(newValueStart);
-                                i = headerLen;
-                            }
                         }
-                        break keyValLoop;
-                    default:
-                        i ++;
+                    } else {
+                        // NAME=VALUE;
+                        int semiPos = header.indexOf(';', i);
+                        if (semiPos > 0) {
+                            value = header.substring(newValueStart, semiPos);
+                            i = semiPos;
+                        } else {
+                            value = header.substring(newValueStart);
+                            i = headerLen;
+                        }
                     }
+                    break keyValLoop;
+                default:
+                    i ++;
+                }
 
-                    if (i == headerLen) {
-                        // NAME (no value till the end of string)
-                        name = header.substring(newNameStart);
-                        value = null;
-                        break;
-                    }
+                if (i == headerLen) {
+                    // NAME (no value till the end of string)
+                    name = header.substring(newNameStart);
+                    value = null;
+                    break;
                 }
             }
 
@@ -338,8 +333,7 @@ public final class CookieDecoder {
 
         CharSequence unwrappedValue = unwrapValue(value);
         if (unwrappedValue == null) {
-            logger.debug("Skipping cookie because starting quotes are not properly balanced in '{}'",
-                    unwrappedValue);
+            logger.debug("Skipping cookie because starting quotes are not properly balanced");
             return null;
         }
 

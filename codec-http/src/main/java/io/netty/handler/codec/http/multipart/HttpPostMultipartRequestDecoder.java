@@ -483,7 +483,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             return findMultipartDelimiter(multipartDataBoundary, MultiPartStatus.DISPOSITION,
                     MultiPartStatus.PREEPILOGUE);
         }
-        case DISPOSITION: {
+        case DISPOSITION:
+            case MIXEDDISPOSITION: {
             // content-disposition: form-data; name="field1"
             // content-disposition: form-data; name="pics"; filename="file1.txt"
             // and other immediate values like
@@ -562,18 +563,14 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             return findMultipartDelimiter(multipartMixedBoundary, MultiPartStatus.MIXEDDISPOSITION,
                     MultiPartStatus.HEADERDELIMITER);
         }
-        case MIXEDDISPOSITION: {
-            return findMultipartDisposition();
-        }
-        case MIXEDFILEUPLOAD: {
+            case MIXEDFILEUPLOAD: {
             // eventually restart from existing FileUpload
             return getFileUpload(multipartMixedBoundary);
         }
         case PREEPILOGUE:
-            return null;
-        case EPILOGUE:
-            return null;
-        default:
+            case EPILOGUE:
+                return null;
+            default:
             throw new ErrorDataDecoderException("Shouldn't reach here.");
         }
     }

@@ -276,7 +276,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(message);
                 return;
             default:
-                /**
+                /*
                  * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that if a
                  * request does not have either a transfer-encoding or a content-length header then the message body
                  * length is 0. However for a response the body length is the number of octets received prior to the
@@ -345,9 +345,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             return;
         }
-        /**
-         * everything else after this point takes care of reading chunked content. basically, read chunk size,
-         * read chunk, read and ignore the CRLF and repeat until 0
+        /*
+          everything else after this point takes care of reading chunked content. basically, read chunk size,
+          read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
             AppendableCharSequence line = lineParser.parse(buffer);

@@ -422,7 +422,6 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
                     } else if (read == '&') { // special empty FIELD
-                        currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
@@ -542,7 +541,6 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
                     } else if (read == '&') { // special empty FIELD
-                        currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);

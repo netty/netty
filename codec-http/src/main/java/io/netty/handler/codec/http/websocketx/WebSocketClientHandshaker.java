@@ -59,7 +59,7 @@ public abstract class WebSocketClientHandshaker {
 
     private volatile boolean handshakeComplete;
 
-    private volatile long forceCloseTimeoutMillis = DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS;
+    private volatile long forceCloseTimeoutMillis;
 
     private volatile int forceCloseInit;
 

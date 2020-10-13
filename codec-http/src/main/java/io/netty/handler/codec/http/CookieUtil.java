@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import java.util.BitSet;
 
 /**
- * @deprecated Duplicate of package private ${@link io.netty.handler.codec.http.cookie.CookieUtil}
+ * @deprecated Duplicate of package private {@link io.netty.handler.codec.http.cookie.CookieUtil}
  */
 @Deprecated
 final class CookieUtil {

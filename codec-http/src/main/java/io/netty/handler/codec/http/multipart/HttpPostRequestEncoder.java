@@ -761,10 +761,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             for (String contentType : contentTypes) {
                 // "multipart/form-data; boundary=--89421926422648"
                 String lowercased = contentType.toLowerCase();
-                if (lowercased.startsWith(HttpHeaderValues.MULTIPART_FORM_DATA.toString()) ||
-                        lowercased.startsWith(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
-                    // ignore
-                } else {
+                if (!(lowercased.startsWith(HttpHeaderValues.MULTIPART_FORM_DATA.toString()) ||
+                        lowercased.startsWith(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString()))) {
                     headers.add(HttpHeaderNames.CONTENT_TYPE, contentType);
                 }
             }
@@ -790,9 +788,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             if (transferEncoding != null) {
                 headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
                 for (CharSequence v : transferEncoding) {
-                    if (HttpHeaderValues.CHUNKED.contentEqualsIgnoreCase(v)) {
-                        // ignore
-                    } else {
+                    if (!HttpHeaderValues.CHUNKED.contentEqualsIgnoreCase(v)) {
                         headers.add(HttpHeaderNames.TRANSFER_ENCODING, v);
                     }
                 }

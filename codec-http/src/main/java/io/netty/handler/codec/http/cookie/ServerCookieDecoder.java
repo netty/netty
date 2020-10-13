@@ -84,8 +84,6 @@ public final class ServerCookieDecoder extends CookieDecoder {
 
     /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
-     *
-     * @return the decoded {@link Cookie}
      */
     private void decode(Collection<? super Cookie> cookies, String header) {
         final int headerLen = checkNotNull(header, "header").length();

@@ -246,7 +246,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
 
                 // check opcode vs message fragmentation state 2/2
-                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT) {
                     protocolViolation(ctx, in,
                                       "received non-continuation data frame while inside fragmented message");
                     return;

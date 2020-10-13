@@ -188,7 +188,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
         }
 
         if (succeed) {
-            return new PermessageDeflateExtension(serverNoContext, serverWindowSize,
+            return new PermessageDeflateExtension(serverNoContext,
                     clientNoContext, clientWindowSize, extensionFilterProvider);
         } else {
             return null;
@@ -198,7 +198,6 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
     private final class PermessageDeflateExtension implements WebSocketClientExtension {
 
         private final boolean serverNoContext;
-        private final int serverWindowSize;
         private final boolean clientNoContext;
         private final int clientWindowSize;
         private final WebSocketExtensionFilterProvider extensionFilterProvider;
@@ -208,11 +207,9 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
             return RSV1;
         }
 
-        PermessageDeflateExtension(boolean serverNoContext, int serverWindowSize,
-                boolean clientNoContext, int clientWindowSize,
-                WebSocketExtensionFilterProvider extensionFilterProvider) {
+        PermessageDeflateExtension(boolean serverNoContext, boolean clientNoContext, int clientWindowSize,
+                                   WebSocketExtensionFilterProvider extensionFilterProvider) {
             this.serverNoContext = serverNoContext;
-            this.serverWindowSize = serverWindowSize;
             this.clientNoContext = clientNoContext;
             this.clientWindowSize = clientWindowSize;
             this.extensionFilterProvider = extensionFilterProvider;

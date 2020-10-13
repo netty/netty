@@ -50,9 +50,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
      *
-     * @param buffer
-     *            must be not null
-     * @throws IOException
+     * @param buffer must be not null
+     * @throws IOException IOException while setting {@link ByteBuf}
      */
     void setContent(ByteBuf buffer) throws IOException;
 
@@ -63,7 +62,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *            must be not null except if last is set to False
      * @param last
      *            True of the buffer is the last one
-     * @throws IOException
+     * @throws IOException IOException while setting {@link ByteBuf}
      */
     void addContent(ByteBuf buffer, boolean last) throws IOException;
 
@@ -72,7 +71,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *
      * @param file
      *            must be not null
-     * @throws IOException
+     * @throws IOException IOException while setting {@link File}
      */
     void setContent(File file) throws IOException;
 
@@ -81,7 +80,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *
      * @param inputStream
      *            must be not null
-     * @throws IOException
+     * @throws IOException IOException while setting {@link InputStream}
      */
     void setContent(InputStream inputStream) throws IOException;
 
@@ -124,7 +123,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      * Returns the contents of the file item as an array of bytes.
      *
      * @return the contents of the file item as an array of bytes.
-     * @throws IOException
+     * @throws IOException IOException while getting byte array
      */
     byte[] get() throws IOException;
 
@@ -132,7 +131,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      * Returns the content of the file item as a ByteBuf
      *
      * @return the content of the file item as a ByteBuf
-     * @throws IOException
+     * @throws IOException IOException while getting {@link ByteBuf}
      */
     ByteBuf getByteBuf() throws IOException;
 
@@ -153,7 +152,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *
      * @return the contents of the file item as a String, using the default
      *         character encoding.
-     * @throws IOException
+     * @throws IOException IOException while getting {@link String}
      */
     String getString() throws IOException;
 
@@ -165,7 +164,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *            the charset to use
      * @return the contents of the file item as a String, using the specified
      *         charset.
-     * @throws IOException
+     * @throws IOException IOException while getting {@link String}
      */
     String getString(Charset encoding) throws IOException;
 
@@ -193,7 +192,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      * @param dest
      *            destination file - must be not null
      * @return True if the write is successful
-     * @throws IOException
+     * @throws IOException IOException while renaming {@link File}
      */
     boolean renameTo(File dest) throws IOException;
 
