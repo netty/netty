@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
@@ -103,27 +104,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        number. {@code 0} will enable compression for all responses.
      */
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel +
-                    " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException(
-                    "windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
-        if (contentSizeThreshold < 0) {
-            throw new IllegalArgumentException(
-                    "contentSizeThreshold: " + contentSizeThreshold + " (expected: non negative number)");
-        }
-        this.compressionLevel = compressionLevel;
-        this.windowBits = windowBits;
-        this.memLevel = memLevel;
-        this.contentSizeThreshold = contentSizeThreshold;
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
+        this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
     }
 
     @Override
