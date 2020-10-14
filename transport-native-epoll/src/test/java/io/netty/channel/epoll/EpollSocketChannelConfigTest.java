@@ -152,7 +152,12 @@ public class EpollSocketChannelConfigTest {
             ch.config().getSoLinger();
             fail();
         } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
+            if (!(e.getCause() instanceof ClosedChannelException)) {
+                AssertionError error = new AssertionError(
+                        "Expected the suppressed exception to be an instance of ClosedChannelException.");
+                error.addSuppressed(e.getCause());
+                throw error;
+            }
         }
     }
 
