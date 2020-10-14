@@ -44,7 +44,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
-    private final Set<EventExecutor> executorSet = Collections.singleton((EventExecutor) this);
+    private final Set<EventExecutor> executorSet = Collections.singleton(this);
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}
@@ -227,7 +227,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             } else if (!isDone()) {
                 try {
                     // Its a periodic task so we need to ignore the return value
-                    task.call();
+                    future.run();
                 } catch (Throwable cause) {
                     if (!tryFailureInternal(cause)) {
                         logger.warn("Failure during execution of task", cause);
