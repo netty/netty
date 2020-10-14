@@ -44,8 +44,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
-    final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
-    final ScheduledFutureTask<Void> quietPeriodTask = new ScheduledFutureTask<Void>(
+    BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
+    ScheduledFutureTask<Void> quietPeriodTask = new ScheduledFutureTask<Void>(
             this, Executors.<Void>callable(new Runnable() {
         @Override
         public void run() {
@@ -159,7 +159,15 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     @Override
     @Deprecated
     public void shutdown() {
-        throw new UnsupportedOperationException();
+        taskQueue = new LinkedBlockingQueue<Runnable>();
+        quietPeriodTask = new ScheduledFutureTask<Void>(
+           this, Executors.<Void>callable(new Runnable() {
+               @Override
+               public void run() {
+                // NOOP
+               }
+           }, null), ScheduledFutureTask.deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL),
+           -SCHEDULE_QUIET_PERIOD_INTERVAL);
     }
 
     @Override

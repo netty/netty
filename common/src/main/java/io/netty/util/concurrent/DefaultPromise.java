@@ -86,7 +86,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     /**
      * See {@link #executor()} for expectations of the executor.
      */
-    protected DefaultPromise() {
+    public DefaultPromise() {
         // only for subclasses
         executor = null;
     }
