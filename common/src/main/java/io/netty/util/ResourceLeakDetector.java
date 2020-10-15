@@ -588,7 +588,7 @@ public class ResourceLeakDetector<T> {
         } while (!excludedMethods.compareAndSet(oldMethods, newMethods));
     }
 
-    public static final class TraceRecord extends Throwable {
+    private static final class TraceRecord extends Throwable {
         private static final long serialVersionUID = 6065153674892850720L;
 
         private static final TraceRecord BOTTOM = new TraceRecord();
@@ -611,7 +611,7 @@ public class ResourceLeakDetector<T> {
         }
 
         // Used to terminate the stack
-        public TraceRecord() {
+        private TraceRecord() {
             hintString = null;
             next = null;
             pos = -1;

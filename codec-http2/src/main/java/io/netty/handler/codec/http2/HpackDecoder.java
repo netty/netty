@@ -51,7 +51,7 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
-public final class HpackDecoder {
+final class HpackDecoder {
     private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - decompression failure",
                     Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class,
