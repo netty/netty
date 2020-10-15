@@ -21,7 +21,8 @@ final class UserData {
 
     static long encode(int fd, int op, short data) {
         assert op <= Short.MAX_VALUE;
-        return (long) data << 48 | (long) op << 32 | fd;
+        assert op >= Short.MIN_VALUE;
+        return ((long) data << 48) | ((op & 0xFFFFL) << 32) | fd & 0xFFFFFFFFL;
     }
 
     static void decode(int res, int flags, long udata, IOUringCompletionQueueCallback callback) {

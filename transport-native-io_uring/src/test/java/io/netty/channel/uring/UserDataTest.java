@@ -23,7 +23,7 @@ public class UserDataTest {
     @Test
     public void testUserData() {
         // Ensure userdata works with negative and positive values
-        for (int fd : new int[] { 0, 1, 10, Short.MAX_VALUE, Integer.MAX_VALUE }) {
+        for (int fd : new int[] { -10, -1, 0, 1, 10, Short.MAX_VALUE, Integer.MAX_VALUE }) {
             for (int op = 0; op < 20; op++) {
                 for (int data = Short.MIN_VALUE; data <= Short.MAX_VALUE; data++) {
                     final int expectedFd = fd;
