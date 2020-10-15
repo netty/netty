@@ -127,7 +127,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Checks to see if this {@link Cookie} can only be accessed via HTTP.
      * If this returns true, the {@link Cookie} cannot be accessed through
      * client side script - But only if the browser supports it.
-     * For more information, please look <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>
+     * For more information, please look <a href="https://owasp.org/www-community/HttpOnly">here</a>
      *
      * @return True if this {@link Cookie} is HTTP-only or false if it isn't
      */
@@ -138,7 +138,7 @@ public interface Cookie extends Comparable<Cookie> {
      * If set to true, this {@link Cookie} cannot be accessed by a client
      * side script. However, this works only if the browser supports it.
      * For for information, please look
-     * <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     * <a href="https://owasp.org/www-community/HttpOnly">here</a>.
      *
      * @param httpOnly True if the {@link Cookie} is HTTP only, otherwise false.
      */
