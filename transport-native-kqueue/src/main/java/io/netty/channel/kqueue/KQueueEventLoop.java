@@ -297,12 +297,10 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                     //increase the size of the array as we needed the whole space for the events
                     eventList.realloc(false);
                 }
+            } catch (ThreadDeath td) {
+                throw (ThreadDeath) td;
             } catch (Throwable t) {
-                if (t instanceof ThreadDeath) {
-                    throw (ThreadDeath)t;
-                } else {
-                    handleLoopException(t);
-                }
+                handleLoopException(t);
             }
             // Always handle shutdown even if the loop processing threw an exception.
             try {

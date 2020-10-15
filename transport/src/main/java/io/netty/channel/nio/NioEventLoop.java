@@ -515,12 +515,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     logger.debug(CancelledKeyException.class.getSimpleName() + " raised by a Selector {} - JDK bug?",
                             selector, e);
                 }
+            } catch (ThreadDeath td) {
+                throw (ThreadDeath) td;
             } catch (Throwable t) {
-                if (t instanceof ThreadDeath) {
-                    throw (ThreadDeath)t;
-                } else {
-                    handleLoopException(t);
-                }
+                handleLoopException(t);
             }
             // Always handle shutdown even if the loop processing threw an exception.
             try {
