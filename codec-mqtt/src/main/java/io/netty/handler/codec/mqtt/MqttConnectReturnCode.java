@@ -57,7 +57,8 @@ public enum MqttConnectReturnCode {
         VALUES = new MqttConnectReturnCode[160];
         for (MqttConnectReturnCode code : values) {
             final int unsignedByte = code.byteValue & 0xFF;
-            VALUES[unsignedByte] = code;
+            // Suppress a warning about out of bounds access since the enum contains only correct values
+            VALUES[unsignedByte] = code;    // lgtm [java/index-out-of-bounds]
         }
     }
 

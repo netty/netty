@@ -127,10 +127,15 @@ public final class HostsFileParser {
         checkNotNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
             for (Charset charset: charsets) {
-                HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
-                        new FileInputStream(file), charset)));
-                if (entries != HostsFileEntries.EMPTY) {
-                    return entries;
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(file), charset));
+                try {
+                    HostsFileEntries entries = parse(reader);
+                    if (entries != HostsFileEntries.EMPTY) {
+                        return entries;
+                    }
+                } finally {
+                    reader.close();
                 }
             }
         }

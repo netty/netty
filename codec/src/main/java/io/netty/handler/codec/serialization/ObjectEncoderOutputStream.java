@@ -79,7 +79,9 @@ public class ObjectEncoderOutputStream extends OutputStream implements
     public void writeObject(Object obj) throws IOException {
         ByteBuf buf = Unpooled.buffer(estimatedLength);
         try {
-            ObjectOutputStream oout = new CompactObjectOutputStream(new ByteBufOutputStream(buf));
+            // Suppress a warning about resource leak since oout is closed below
+            ObjectOutputStream oout = new CompactObjectOutputStream(
+                    new ByteBufOutputStream(buf));  // lgtm[java/output-resource-leak]
             try {
                 oout.writeObject(obj);
                 oout.flush();

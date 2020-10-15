@@ -126,8 +126,9 @@ public class ObjectDecoderInputStream extends InputStream implements
         in.close();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
-    public void mark(int readlimit) {
+    public void mark(int readlimit) {   // lgtm[java/non-sync-override]
         in.mark(readlimit);
     }
 
@@ -136,8 +137,9 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.markSupported();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
-    public int read() throws IOException {
+    public int read() throws IOException {  // lgtm[java/non-sync-override]
         return in.read();
     }
 

@@ -152,7 +152,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
             v2MaxHeaderSize = V2_MAX_LENGTH;
         } else {
             int calcMax = maxTlvSize + V2_MIN_LENGTH;
-            if (calcMax > V2_MAX_LENGTH) {
+            if (calcMax > V2_MAX_LENGTH) {  // lgtm[java/constant-comparison]
                 v2MaxHeaderSize = V2_MAX_LENGTH;
             } else {
                 v2MaxHeaderSize = calcMax;

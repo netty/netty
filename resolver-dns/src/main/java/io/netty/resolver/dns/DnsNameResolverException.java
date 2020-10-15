@@ -66,8 +66,9 @@ public class DnsNameResolverException extends RuntimeException {
         return question;
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
         setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         return this;
     }

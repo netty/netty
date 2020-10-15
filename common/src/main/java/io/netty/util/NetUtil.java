@@ -318,8 +318,9 @@ public final class NetUtil {
     private static Integer sysctlGetInt(String sysctlKey) throws IOException {
         Process process = new ProcessBuilder("sysctl", sysctlKey).start();
         try {
-            InputStream is = process.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
+            // Suppress warnings about resource leaks since the buffered reader is closed below
+            InputStream is = process.getInputStream();  // lgtm[java/input-resource-leak
+            InputStreamReader isr = new InputStreamReader(is);  // lgtm[java/input-resource-leak
             BufferedReader br = new BufferedReader(isr);
             try {
                 String line = br.readLine();
