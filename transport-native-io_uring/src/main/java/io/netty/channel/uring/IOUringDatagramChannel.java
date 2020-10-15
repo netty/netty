@@ -262,8 +262,10 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
-                    socketAddress.getAddress() instanceof Inet4Address && Socket.isIPv6Preferred()) {
-                localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
+                    socketAddress.getAddress() instanceof Inet4Address) {
+                if (socket.family() == InternetProtocolFamily.IPv6) {
+                    localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
+                }
             }
         }
         super.doBind(localAddress);
