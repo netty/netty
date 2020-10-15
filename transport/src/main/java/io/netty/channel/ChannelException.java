@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -61,10 +62,33 @@ public class ChannelException extends RuntimeException {
         assert shared;
     }
 
-    static ChannelException newStatic(String message, Throwable cause) {
+    static ChannelException newStatic(String message, Class<?> clazz, String method) {
+        ChannelException exception;
         if (PlatformDependent.javaVersion() >= 7) {
-            return new ChannelException(message, cause, true);
+            exception = new StacklessChannelException(message, null, true);
+        } else {
+            exception = new StacklessChannelException(message, null);
         }
-        return new ChannelException(message, cause);
+        return ThrowableUtil.unknownStackTrace(exception, clazz, method);
+    }
+
+    private static final class StacklessChannelException extends ChannelException {
+        private static final long serialVersionUID = -6384642137753538579L;
+
+        StacklessChannelException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        StacklessChannelException(String message, Throwable cause, boolean shared) {
+            super(message, cause, shared);
+        }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
     }
 }
