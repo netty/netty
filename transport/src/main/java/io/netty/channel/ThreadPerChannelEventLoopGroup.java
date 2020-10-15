@@ -29,7 +29,6 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -132,8 +131,8 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         this.maxChannels = maxChannels;
         this.executor = executor;
 
-        tooManyChannels = ThrowableUtil.unknownStackTrace(
-                ChannelException.newStatic("too many channels (max: " + maxChannels + ')', null),
+        tooManyChannels =
+                ChannelException.newStatic("too many channels (max: " + maxChannels + ')',
                 ThreadPerChannelEventLoopGroup.class, "nextChild()");
     }
 

@@ -43,8 +43,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Object SUCCESS = new Object();
     private static final Object UNCANCELLABLE = new Object();
-    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
-            new CancellationException(), DefaultPromise.class, "cancel(...)"));
+    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(
+            StacklessCancellationException.newInstance(DefaultPromise.class, "cancel(...)"));
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
@@ -841,6 +841,24 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             executor.execute(task);
         } catch (Throwable t) {
             rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
+        }
+    }
+
+    private static final class StacklessCancellationException extends CancellationException {
+
+        private static final long serialVersionUID = -2974906711413716191L;
+
+        private StacklessCancellationException() { }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+
+        static StacklessCancellationException newInstance(Class<?> clazz, String method) {
+            return ThrowableUtil.unknownStackTrace(new StacklessCancellationException(), clazz, method);
         }
     }
 }

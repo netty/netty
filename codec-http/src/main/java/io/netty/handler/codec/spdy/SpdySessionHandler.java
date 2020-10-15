@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,10 +33,10 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public class SpdySessionHandler extends ChannelDuplexHandler {
 
-    private static final SpdyProtocolException PROTOCOL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            SpdyProtocolException.newStatic(null), SpdySessionHandler.class, "handleOutboundMessage(...)");
-    private static final SpdyProtocolException STREAM_CLOSED = ThrowableUtil.unknownStackTrace(
-            SpdyProtocolException.newStatic("Stream closed"), SpdySessionHandler.class, "removeStream(...)");
+    private static final SpdyProtocolException PROTOCOL_EXCEPTION =
+            SpdyProtocolException.newStatic(null, SpdySessionHandler.class, "handleOutboundMessage(...)");
+    private static final SpdyProtocolException STREAM_CLOSED =
+            SpdyProtocolException.newStatic("Stream closed", SpdySessionHandler.class, "removeStream(...)");
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
     private int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
