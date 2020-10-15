@@ -61,26 +61,21 @@ import static java.util.Objects.requireNonNull;
 
 abstract class DnsResolveContext<T> {
 
-    private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned"),
-            DnsResolveContext.class,
-            "onResponse(..)");
-    private static final RuntimeException CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            DnsResolveContextException.newStatic("No matching CNAME record found"),
-            DnsResolveContext.class,
-            "onResponseCNAME(..)");
-    private static final RuntimeException NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            DnsResolveContextException.newStatic("No matching record type found"),
-            DnsResolveContext.class,
-            "onResponseAorAAAA(..)");
-    private static final RuntimeException UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new RuntimeException("Response type was unrecognized"),
-            DnsResolveContext.class,
-            "onResponse(..)");
-    private static final RuntimeException NAME_SERVERS_EXHAUSTED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            DnsResolveContextException.newStatic("No name servers returned an answer"),
-            DnsResolveContext.class,
-            "tryToFinishResolve(..)");
+    private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
+            DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned",
+            DnsResolveContext.class, "onResponse(..)");
+    private static final RuntimeException CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION =
+            DnsResolveContextException.newStatic("No matching CNAME record found",
+            DnsResolveContext.class, "onResponseCNAME(..)");
+    private static final RuntimeException NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION =
+            DnsResolveContextException.newStatic("No matching record type found",
+            DnsResolveContext.class, "onResponseAorAAAA(..)");
+    private static final RuntimeException UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION =
+            DnsResolveContextException.newStatic("Response type was unrecognized",
+            DnsResolveContext.class, "onResponse(..)");
+    private static final RuntimeException NAME_SERVERS_EXHAUSTED_EXCEPTION =
+            DnsResolveContextException.newStatic("No name servers returned an answer",
+            DnsResolveContext.class, "tryToFinishResolve(..)");
 
     final DnsNameResolver parent;
     private final Promise<?> originalPromise;
@@ -117,12 +112,21 @@ abstract class DnsResolveContext<T> {
 
     static final class DnsResolveContextException extends RuntimeException {
 
+        private static final long serialVersionUID = 1209303419266433003L;
+
         private DnsResolveContextException(String message) {
             super(message, null, false, true);
         }
 
-        static DnsResolveContextException newStatic(String message) {
-            return new DnsResolveContextException(message);
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+
+        static DnsResolveContextException newStatic(String message, Class<?> clazz, String method) {
+            return ThrowableUtil.unknownStackTrace(new DnsResolveContextException(message), clazz, method);
         }
     }
 

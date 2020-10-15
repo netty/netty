@@ -15,7 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -63,11 +63,10 @@ public class Http2Exception extends Exception {
         this.shutdownHint = requireNonNull(shutdownHint, "shutdownHint");
     }
 
-    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            return new Http2Exception(error, message, shutdownHint, true);
-        }
-        return new Http2Exception(error, message, shutdownHint);
+    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint,
+                                    Class<?> clazz, String method) {
+        return ThrowableUtil.unknownStackTrace(
+                new StacklessHttp2Exception(error, message, shutdownHint), clazz, method);
     }
 
     private Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
@@ -300,6 +299,22 @@ public class Http2Exception extends Exception {
         @Override
         public Iterator<StreamException> iterator() {
             return exceptions.iterator();
+        }
+    }
+
+    private static final class StacklessHttp2Exception extends Http2Exception {
+
+        private static final long serialVersionUID = 1077888485687219443L;
+
+        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
+            super(error, message, shutdownHint, true);
+        }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 }
