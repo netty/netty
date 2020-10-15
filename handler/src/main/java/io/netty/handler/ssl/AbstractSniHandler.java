@@ -128,8 +128,11 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
     @Override
     protected void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception {
-        fireSniCompletionEvent(ctx, hostname, future);
-        onLookupComplete(ctx, hostname, future);
+        try {
+            onLookupComplete(ctx, hostname, future);
+        } finally {
+            fireSniCompletionEvent(ctx, hostname, future);
+        }
     }
 
     /**
@@ -148,7 +151,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
                                              String hostname, Future<T> future) throws Exception;
 
-    private void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<T> future) {
+    private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();
         if (cause == null) {
             ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));
