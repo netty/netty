@@ -77,5 +77,9 @@ public final class StompTestConstants {
             '\n' +
             "body\0";
 
+    public static final String HEARTBEAT_FRAME_CR_LF = "\r\n";
+
+    public static final String HEARTBEAT_FRAME_LF = "\n";
+
     private StompTestConstants() { }
 }

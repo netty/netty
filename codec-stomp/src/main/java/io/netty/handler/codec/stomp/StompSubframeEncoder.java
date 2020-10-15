@@ -17,6 +17,7 @@ package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -28,19 +29,26 @@ import java.util.Map.Entry;
  * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.
  */
 public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe> {
+    private static final ByteBuf HEARTBEAT_FRAME =
+            Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(new byte[] { StompConstants.LF }));
 
     @Override
     protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
         if (msg instanceof StompFrame) {
             StompFrame frame = (StompFrame) msg;
-            ByteBuf frameBuf = encodeFrame(frame, ctx);
-            if (frame.content().isReadable()) {
-                out.add(frameBuf);
-                ByteBuf contentBuf = encodeContent(frame, ctx);
-                out.add(contentBuf);
+            // HEARTBEAT command isn't a real command and should be translated differently
+            if (frame.command() == StompCommand.HEARTBEAT) {
+                out.add(HEARTBEAT_FRAME.duplicate());
             } else {
-                frameBuf.writeByte(StompConstants.NUL);
-                out.add(frameBuf);
+                ByteBuf frameBuf = encodeFrame(frame, ctx);
+                if (frame.content().isReadable()) {
+                    out.add(frameBuf);
+                    ByteBuf contentBuf = encodeContent(frame, ctx);
+                    out.add(contentBuf);
+                } else {
+                    frameBuf.writeByte(StompConstants.NUL);
+                    out.add(frameBuf);
+                }
             }
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe frame = (StompHeadersSubframe) msg;
