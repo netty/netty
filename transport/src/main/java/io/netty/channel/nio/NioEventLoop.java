@@ -516,7 +516,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             selector, e);
                 }
             } catch (Throwable t) {
-                handleLoopException(t);
+                if (t instanceof ThreadDeath) {
+                    throw (ThreadDeath)t;
+                } else {
+                    handleLoopException(t);
+                }
             }
             // Always handle shutdown even if the loop processing threw an exception.
             try {

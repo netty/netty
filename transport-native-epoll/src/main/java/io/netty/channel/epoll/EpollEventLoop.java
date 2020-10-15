@@ -391,7 +391,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     events.increase();
                 }
             } catch (Throwable t) {
-                handleLoopException(t);
+                if (t instanceof ThreadDeath) {
+                    throw (ThreadDeath)t;
+                } else {
+                    handleLoopException(t);
+                }
             }
             // Always handle shutdown even if the loop processing threw an exception.
             try {
