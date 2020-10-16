@@ -396,16 +396,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 handleLoopException(t);
             } finally {
                 // Always handle shutdown even if the loop processing threw an exception.
-               try {
-                   if (isShuttingDown()) {
-                       closeAll();
+                try {
+                    if (isShuttingDown()) {
+                        closeAll();
                         if (confirmShutdown()) {
                             break;
                         }
-                   }
-               } catch (Throwable t) {
-                   handleLoopException(t);
-               }
+                    }
+                } catch (Throwable t) {
+                    handleLoopException(t);
+                }
             }
         }
     }
