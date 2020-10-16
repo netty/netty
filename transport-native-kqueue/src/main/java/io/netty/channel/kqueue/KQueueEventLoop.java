@@ -301,17 +301,18 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 throw (ThreadDeath) td;
             } catch (Throwable t) {
                 handleLoopException(t);
-            }
-            // Always handle shutdown even if the loop processing threw an exception.
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    if (confirmShutdown()) {
-                        break;
+            } finally {
+               // Always handle shutdown even if the loop processing threw an exception.
+               try {
+                    if (isShuttingDown()) {
+                       closeAll();
+                        if (confirmShutdown()) {
+                           break;
+                        }
                     }
+                } catch (Throwable t) {
+                    handleLoopException(t);
                 }
-            } catch (Throwable t) {
-                handleLoopException(t);
             }
         }
     }

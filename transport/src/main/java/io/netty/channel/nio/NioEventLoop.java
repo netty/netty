@@ -519,17 +519,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 throw (ThreadDeath) td;
             } catch (Throwable t) {
                 handleLoopException(t);
-            }
-            // Always handle shutdown even if the loop processing threw an exception.
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    if (confirmShutdown()) {
-                        return;
-                    }
-                }
-            } catch (Throwable t) {
-                handleLoopException(t);
+            } finally {
+                // Always handle shutdown even if the loop processing threw an exception.
+                try {
+                   if (isShuttingDown()) {
+                       closeAll();
+                       if (confirmShutdown()) {
+                           return;
+                       }
+                   }
+               } catch (Throwable t) {
+                   handleLoopException(t);
+               }
             }
         }
     }
