@@ -50,6 +50,24 @@
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
       </properties>
     </profile>
+    <profile>
+      <id>java15</id>
+      <activation>
+        <jdk>15</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java16</id>
+      <activation>
+        <jdk>16</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
