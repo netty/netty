@@ -134,34 +134,22 @@ public class GlobalEventExecutorTest {
         //for https://github.com/netty/netty/issues/1614
         //add scheduled task
         TestRunnable t = new TestRunnable(0);
-        ScheduledFuture<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
-
-        final Runnable doNothing = new Runnable() {
-            @Override
-            public void run() {
-                //NOOP
-            }
-        };
-        final AtomicBoolean stop = new AtomicBoolean(false);
+        final ScheduledFuture<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
 
         //ensure always has at least one task in taskQueue
         //check if scheduled tasks are triggered
-        try {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (!stop.get()) {
-                        e.execute(doNothing);
-                    }
+        e.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (!f.isDone()) {
+                    e.execute(this);
                 }
-            }).start();
+            }
+        });
 
-            f.sync();
+        f.sync();
 
-            assertThat(t.ran.get(), is(true));
-        } finally {
-            stop.set(true);
-        }
+        assertThat(t.ran.get(), is(true));
     }
 
     private static final class TestRunnable implements Runnable {

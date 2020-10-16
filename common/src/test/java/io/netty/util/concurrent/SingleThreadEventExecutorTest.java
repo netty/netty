@@ -374,34 +374,22 @@ public class SingleThreadEventExecutorTest {
 
         //add scheduled task
         TestRunnable t = new TestRunnable();
-        ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
-
-        final Runnable doNothing = new Runnable() {
-            @Override
-            public void run() {
-                //NOOP
-            }
-        };
-        final AtomicBoolean stop = new AtomicBoolean(false);
+        final ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
 
         //ensure always has at least one task in taskQueue
         //check if scheduled tasks are triggered
-        try {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (!stop.get()) {
-                        executor.execute(doNothing);
-                    }
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (!f.isDone()) {
+                    executor.execute(this);
                 }
-            }).start();
+            }
+        });
 
-            f.sync();
+        f.sync();
 
-            assertThat(t.ran.get(), is(true));
-        } finally {
-            stop.set(true);
-        }
+        assertThat(t.ran.get(), is(true));
     }
 
     private static final class TestRunnable implements Runnable {
