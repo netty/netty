@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -103,7 +104,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
             // expected
         }
         ReferenceCounted closeMessage = ch.readOutbound();
-        Assert.assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
+        MatcherAssert.assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
         closeMessage.release();
         Assert.assertFalse(ch.finish());
     }

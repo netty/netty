@@ -111,6 +111,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;

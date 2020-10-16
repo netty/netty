@@ -23,6 +23,7 @@ import io.netty.resolver.AddressResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,7 +49,8 @@ public class DnsAddressResolverGroupTest {
                 @Override
                 public void operationComplete(Future<Object> future) {
                     try {
-                        Assert.assertThat(future.cause(), Matchers.instanceOf(UnsupportedAddressTypeException.class));
+                        MatcherAssert.assertThat(future.cause(),
+                                Matchers.instanceOf(UnsupportedAddressTypeException.class));
                         Assert.assertTrue(loop.inEventLoop());
                         promise.setSuccess(null);
                     } catch (Throwable cause) {

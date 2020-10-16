@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -64,12 +65,12 @@ public class WebSocketCloseStatusTest {
 
     @Test
     public void testNaturalOrder() {
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(NORMAL_CLOSURE));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(valueOf(1001)));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(PROTOCOL_ERROR));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(valueOf(1002)));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(INVALID_MESSAGE_TYPE));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(valueOf(1007)));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(NORMAL_CLOSURE));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(valueOf(1001)));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(PROTOCOL_ERROR));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(valueOf(1002)));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(INVALID_MESSAGE_TYPE));
+        MatcherAssert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(valueOf(1007)));
     }
 
     @Test

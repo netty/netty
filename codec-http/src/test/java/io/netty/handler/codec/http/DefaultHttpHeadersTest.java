@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class DefaultHttpHeadersTest {

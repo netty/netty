@@ -33,7 +33,7 @@ import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class OioEventLoopTest {
     @Test

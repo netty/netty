@@ -48,13 +48,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 
 public class Lz4FrameEncoderTest extends AbstractEncoderTest {

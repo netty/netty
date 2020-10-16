@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class ReentrantChannelTest extends BaseChannelTest {

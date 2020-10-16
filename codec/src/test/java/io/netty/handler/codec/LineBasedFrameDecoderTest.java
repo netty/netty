@@ -22,6 +22,7 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 

@@ -43,10 +43,11 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
+
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
