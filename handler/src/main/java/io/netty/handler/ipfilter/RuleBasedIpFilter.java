@@ -37,8 +37,8 @@ import java.util.List;
  * {@link AbstractRemoteAddressFilter#channelRejected(ChannelHandlerContext, SocketAddress)}.
  * </p>
  *
- * <p> You can also consider using {@link IpSubnetFilter} which uses Binary Search Algorithm
- * for super fast IP Address filtering. </p>
+ * <p> Consider using {@link IpSubnetFilter} for better performance while not as
+ * general purpose as this filter. </p>
  */
 @Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
