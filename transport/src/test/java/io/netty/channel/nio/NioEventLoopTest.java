@@ -32,7 +32,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -51,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
@@ -223,7 +223,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
-            assertThat(error.get(), Matchers.instanceOf(RejectedExecutionException.class));
+            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
             error.set(null);
         }
     }
