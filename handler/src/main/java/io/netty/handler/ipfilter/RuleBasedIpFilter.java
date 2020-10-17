@@ -70,7 +70,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
         ObjectUtil.checkNotNull(rules, "rules");
 
         this.acceptIfNotFound = acceptIfNotFound;
-        this.rules = new ArrayList<IpFilterRule>();
+        this.rules = new ArrayList<IpFilterRule>(rules.length);
 
         for (IpFilterRule rule : rules) {
             if (rule != null) {
