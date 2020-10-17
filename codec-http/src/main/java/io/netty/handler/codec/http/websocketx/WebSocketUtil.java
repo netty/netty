@@ -27,14 +27,14 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 final class WebSocketUtil {
 
-    // Suppress a warning about weak hash algorithm since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
-    @SuppressWarnings("lgtm[java/weak-cryptographic-algorithm]")
     private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
             try {
                 //Try to get a MessageDigest that uses MD5
-                return MessageDigest.getInstance("MD5");
+                //Suppress a warning about weak hash algorithm
+                //since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
+                return MessageDigest.getInstance("MD5"); // lgtm [java/weak-cryptographic-algorithm]
             } catch (NoSuchAlgorithmException e) {
                 //This shouldn't happen! How old is the computer?
                 throw new InternalError("MD5 not supported on this platform - Outdated?");
@@ -42,14 +42,14 @@ final class WebSocketUtil {
         }
     };
 
-    // Suppress a warning about weak hash algorithm since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
-    @SuppressWarnings("lgtm[java/weak-cryptographic-algorithm]")
     private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
             try {
                 //Try to get a MessageDigest that uses SHA1
-                return MessageDigest.getInstance("SHA1");
+                //Suppress a warning about weak hash algorithm
+                //since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
+                return MessageDigest.getInstance("SHA1"); // lgtm [java/weak-cryptographic-algorithm]
             } catch (NoSuchAlgorithmException e) {
                 //This shouldn't happen! How old is the computer?
                 throw new InternalError("SHA-1 not supported on this platform - Outdated?");

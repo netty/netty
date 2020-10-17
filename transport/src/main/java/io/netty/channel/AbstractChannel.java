@@ -1136,8 +1136,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }
@@ -1151,8 +1152,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }
@@ -1166,8 +1168,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }

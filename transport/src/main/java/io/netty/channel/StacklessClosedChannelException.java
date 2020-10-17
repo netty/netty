@@ -30,7 +30,8 @@ final class StacklessClosedChannelException extends ClosedChannelException {
 
     @Override
     public Throwable fillInStackTrace() {
-        return this;
+        // Suppress a warning since this method doesn't need synchronization
+        return this; // lgtm [java/non-sync-override]
     }
 
     /**
