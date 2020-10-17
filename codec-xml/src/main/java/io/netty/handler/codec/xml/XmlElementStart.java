@@ -47,7 +47,7 @@ public class XmlElementStart extends XmlElement {
 
         XmlElementStart that = (XmlElementStart) o;
 
-        if (attributes != null ? !attributes.equals(that.attributes) : that.attributes != null) {
+        if (!attributes.equals(that.attributes)) {
             return false;
         }
 
@@ -57,7 +57,7 @@ public class XmlElementStart extends XmlElement {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (attributes != null ? attributes.hashCode() : 0);
+        result = 31 * result + attributes.hashCode();
         return result;
     }
 

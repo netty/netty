@@ -603,7 +603,7 @@ public final class ChannelOutboundBuffer {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
-                if (oldValue == 0 && newValue != 0) {
+                if (oldValue == 0) {
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;

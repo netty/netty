@@ -101,7 +101,7 @@ public final class DateFormatter {
         } else if (length < 0) {
             throw new IllegalArgumentException("Can't have end < start");
         } else if (length > 64) {
-            throw new IllegalArgumentException("Can't parse more than 64 chars," +
+            throw new IllegalArgumentException("Can't parse more than 64 chars, " +
                     "looks like a user error or a malformed header");
         }
         return formatter().parse0(checkNotNull(txt, "txt"), start, end);

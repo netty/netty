@@ -119,6 +119,18 @@ public class ReadOnlyHttpHeadersTest {
                 ACCEPT, APPLICATION_JSON, AsciiString.cached(" "));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void emptyHeaderName() {
+        new ReadOnlyHttpHeaders(true,
+                                ACCEPT, APPLICATION_JSON, AsciiString.cached(" "), ZERO);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void headerWithoutValue() {
+        new ReadOnlyHttpHeaders(false,
+                                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH);
+    }
+
     private static void assert3ParisEquals(Iterator<Entry<String, String>> itr) {
         assertTrue(itr.hasNext());
         Entry<String, String> next = itr.next();

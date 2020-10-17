@@ -99,7 +99,8 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 
-        DnsServerAddresses defaultNameServerAddresses = etcResolvConfMap.get(etcResolvConf.getName());
+        DnsServerAddresses defaultNameServerAddresses
+                = etcResolvConfMap.get(etcResolvConf.getName());  // lgtm[java/dereferenced-value-may-be-null]
         if (defaultNameServerAddresses == null) {
             Collection<DnsServerAddresses> values = etcResolvConfMap.values();
             if (values.isEmpty()) {

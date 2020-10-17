@@ -24,7 +24,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelGroupFuture implements ChannelGroupFuture {
+// Suppress a warning about returning the same iterator since it always returns an empty iterator
+final class VoidChannelGroupFuture implements ChannelGroupFuture {  // lgtm[java/iterable-wraps-iterator]
 
     private static final Iterator<ChannelFuture> EMPTY = Collections.<ChannelFuture>emptyList().iterator();
     private final ChannelGroup group;

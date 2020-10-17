@@ -390,7 +390,7 @@ public final class SslContextBuilder {
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
             checkNotNull(keyCertChain, "keyCertChain required for servers");
-            if (keyCertChain.length == 0) {
+            if (keyCertChain.length == 0) { // lgtm[java/dereferenced-value-may-be-null]
                 throw new IllegalArgumentException("keyCertChain must be non-empty");
             }
             checkNotNull(key, "key required for servers");

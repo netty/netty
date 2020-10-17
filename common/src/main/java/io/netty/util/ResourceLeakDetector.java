@@ -632,8 +632,10 @@ public class ResourceLeakDetector<T> {
                 // Strip the noisy stack trace elements.
                 String[] exclusions = excludedMethods.get();
                 for (int k = 0; k < exclusions.length; k += 2) {
+                    // Suppress a warning about out of bounds access
+                    // since the length of excludedMethods is always even, see addExclusions()
                     if (exclusions[k].equals(element.getClassName())
-                            && exclusions[k + 1].equals(element.getMethodName())) {
+                            && exclusions[k + 1].equals(element.getMethodName())) { // lgtm[java/index-out-of-bounds]
                         continue out;
                     }
                 }

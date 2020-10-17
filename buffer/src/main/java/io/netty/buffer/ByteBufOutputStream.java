@@ -41,6 +41,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
     private final ByteBuf buffer;
     private final int startIndex;
     private DataOutputStream utf8out; // lazily-instantiated
+    private boolean closed;
 
     /**
      * Creates a new stream which writes data to the specified {@code buffer}.
@@ -133,7 +134,11 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
     public void writeUTF(String s) throws IOException {
         DataOutputStream out = utf8out;
         if (out == null) {
-            utf8out = out = new DataOutputStream(this);
+            if (closed) {
+                throw new IOException("The stream is closed");
+            }
+            // Suppress a warning since the stream is closed in the close() method
+            utf8out = out = new DataOutputStream(this); // lgtm[java/output-resource-leak]
         }
         out.writeUTF(s);
     }
@@ -143,5 +148,21 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
      */
     public ByteBuf buffer() {
         return buffer;
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (closed) {
+            return;
+        }
+        closed = true;
+
+        try {
+            super.close();
+        } finally {
+            if (utf8out != null) {
+                utf8out.close();
+            }
+        }
     }
 }

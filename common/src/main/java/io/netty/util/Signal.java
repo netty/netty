@@ -64,13 +64,15 @@ public final class Signal extends Error implements Constant<Signal> {
         }
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable initCause(Throwable cause) {
+    public Throwable initCause(Throwable cause) {   // lgtm[java/non-sync-override]
         return this;
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
         return this;
     }
 

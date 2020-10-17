@@ -25,8 +25,9 @@ final class ExtendedClosedChannelException extends ClosedChannelException {
         }
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
         return this;
     }
 }
