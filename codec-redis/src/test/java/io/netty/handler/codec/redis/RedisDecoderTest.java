@@ -30,6 +30,7 @@ import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 /**

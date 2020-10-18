@@ -39,8 +39,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
 
 final class HttpProxyServer extends ProxyServer {
 

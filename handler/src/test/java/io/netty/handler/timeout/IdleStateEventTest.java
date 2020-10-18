@@ -18,8 +18,8 @@ package io.netty.handler.timeout;
 import org.junit.Test;
 
 import static io.netty.handler.timeout.IdleStateEvent.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
-import static org.junit.Assert.*;
 
 public class IdleStateEventTest {
     @Test

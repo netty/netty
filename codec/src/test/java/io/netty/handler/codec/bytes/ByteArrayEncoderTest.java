@@ -26,7 +26,7 @@ import java.util.Random;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ByteArrayEncoderTest {
 

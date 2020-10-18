@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class ProtobufVarint32LengthFieldPrependerTest {

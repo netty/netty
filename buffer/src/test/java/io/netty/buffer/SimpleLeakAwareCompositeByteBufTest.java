@@ -25,9 +25,9 @@ import org.junit.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBufTest {

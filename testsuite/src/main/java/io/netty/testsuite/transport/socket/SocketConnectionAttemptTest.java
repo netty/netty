@@ -33,6 +33,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
