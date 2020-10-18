@@ -254,13 +254,13 @@ public class HaProxyMessageEncoderTest {
         assertEquals(alpnTlv.typeByteValue(), tlv.readByte());
         short bufLength = tlv.readShort();
         assertEquals(helloWorld.array().length, bufLength);
-        assertEquals(helloWorld, tlv.readBytes(bufLength));
+        assertEquals(helloWorld, tlv.readSlice(bufLength));
 
         // authority tlv
         assertEquals(authorityTlv.typeByteValue(), tlv.readByte());
         bufLength = tlv.readShort();
         assertEquals(arbitrary.array().length, bufLength);
-        assertEquals(arbitrary, tlv.readBytes(bufLength));
+        assertEquals(arbitrary, tlv.readSlice(bufLength));
 
         byteBuf.release();
         assertFalse(ch.finish());
@@ -309,13 +309,13 @@ public class HaProxyMessageEncoderTest {
         assertEquals(alpnTlv.typeByteValue(), tlv.readByte());
         bufLength = tlv.readShort();
         assertEquals(helloWorld.array().length, bufLength);
-        assertEquals(helloWorld, tlv.readBytes(bufLength));
+        assertEquals(helloWorld, tlv.readSlice(bufLength));
 
         // authority tlv
         assertEquals(authorityTlv.typeByteValue(), tlv.readByte());
         bufLength = tlv.readShort();
         assertEquals(arbitrary.array().length, bufLength);
-        assertEquals(arbitrary, tlv.readBytes(bufLength));
+        assertEquals(arbitrary, tlv.readSlice(bufLength));
 
         byteBuf.release();
         assertFalse(ch.finish());
