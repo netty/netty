@@ -31,6 +31,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 /**

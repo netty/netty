@@ -17,7 +17,7 @@
 package io.netty.util.concurrent;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
 import org.junit.Rule;

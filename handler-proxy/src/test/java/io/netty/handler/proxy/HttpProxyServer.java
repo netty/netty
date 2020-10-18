@@ -38,8 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
 
 final class HttpProxyServer extends ProxyServer {
 

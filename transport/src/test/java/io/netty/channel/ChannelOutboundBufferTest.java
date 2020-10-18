@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 

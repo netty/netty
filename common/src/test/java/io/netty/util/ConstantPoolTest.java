@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ConstantPoolTest {
 

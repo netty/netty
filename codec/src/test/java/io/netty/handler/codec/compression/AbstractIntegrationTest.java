@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Random;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 

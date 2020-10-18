@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialProviderTest {
