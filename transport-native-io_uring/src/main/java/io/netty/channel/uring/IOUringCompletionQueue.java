@@ -36,7 +36,9 @@ final class IOUringCompletionQueue {
     private final long kHeadAddress;
     private final long kTailAddress;
 
-    private final long completionQueueArrayAddress;
+    private final long cqeUserDataAddress;
+    private final long cqeFlagsAddress;
+    private final long cqeResAddress;
 
     final int ringSize;
     final long ringAddress;
@@ -50,7 +52,9 @@ final class IOUringCompletionQueue {
                            int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        this.completionQueueArrayAddress = completionQueueArrayAddress;
+        this.cqeUserDataAddress = completionQueueArrayAddress + CQE_USER_DATA_FIELD;
+        this.cqeFlagsAddress = completionQueueArrayAddress + CQE_FLAGS_FIELD;
+        this.cqeResAddress = completionQueueArrayAddress + CQE_RES_FIELD;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
@@ -72,24 +76,33 @@ final class IOUringCompletionQueue {
      * events.
      */
     int process(IOUringCompletionQueueCallback callback) {
-        int tail = PlatformDependent.getIntVolatile(kTailAddress);
-        int i = 0;
-        while (ringHead != tail) {
-            long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
-
-            long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
-            int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-            int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
-
-            //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-            ringHead++;
-            PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
-
-            i++;
-
+        // This weird C-like style local initialization is to save these fields to
+        // be loaded again and again due to the memory barriers used in the rest of the method
+        final long cqeUserDataAddress = this.cqeUserDataAddress;
+        final long kTailAddress = this.kTailAddress;
+        final long kHeadAddress = this.kHeadAddress;
+        final long cqeResAddress = this.cqeResAddress;
+        final long cqeFlagsAddress = this.cqeFlagsAddress;
+        final long ringMask = this.ringMask;
+        // use a local field here
+        int head = ringHead;
+        final int tail = PlatformDependent.getIntVolatile(kTailAddress);
+        final int available = tail - head;
+        if (available == 0) {
+            return 0;
+        }
+        for (int i = 0; i < available; i++) {
+            long cqeBaseRelativeAddress = (head & ringMask) * CQE_SIZE;
+            long udata = PlatformDependent.getLong(cqeBaseRelativeAddress + cqeUserDataAddress);
+            int res = PlatformDependent.getInt(cqeBaseRelativeAddress + cqeResAddress);
+            int flags = PlatformDependent.getInt(cqeBaseRelativeAddress + cqeFlagsAddress);
+            head++;
             decode(res, flags, udata, callback);
         }
-        return i;
+        // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
+        PlatformDependent.putIntOrdered(kHeadAddress, head);
+        ringHead = head;
+        return available;
     }
 
     /**
