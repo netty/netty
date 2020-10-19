@@ -728,7 +728,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             }
         }
 
-        if (!addTaskWakesUp && wakesUpForTask(task)) {
+        if (addTaskWakesUp && wakesUpForTask(task)) {
             wakeup(inEventLoop);
         }
     }
