@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -94,7 +94,7 @@ final class OpenSslKeyMaterialManager {
                                   X500Principal[] issuer) throws SSLException {
         String alias = chooseClientAlias(engine, keyTypes, issuer);
         // Only try to set the keymaterial if we have a match. This is also consistent with what OpenJDK does:
-        // http://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
+        // https://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
         // src/java.base/share/classes/sun/security/ssl/CertificateRequest.java#l362
         if (alias != null) {
             setKeyMaterial(engine, alias);

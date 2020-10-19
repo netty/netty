@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -534,7 +534,7 @@ static jint netty_unix_socket_disconnect(JNIEnv* env, jclass clazz, jint fd, jbo
     } while (res == -1 && ((err = errno) == EINTR));
 
     // EAFNOSUPPORT is harmless in this case.
-    // See http://www.unix.com/man-page/osx/2/connect/
+    // See https://www.unix.com/man-page/osx/2/connect/
     if (res < 0 && err != EAFNOSUPPORT) {
         return -err;
     }

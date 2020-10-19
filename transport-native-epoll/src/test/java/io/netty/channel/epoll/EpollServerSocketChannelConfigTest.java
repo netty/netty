@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,7 +58,7 @@ public class EpollServerSocketChannelConfigTest {
         assertEquals(0, ch.config().getTcpDeferAccept());
         ch.config().setTcpDeferAccept(10);
         // The returned value may be bigger then what we set.
-        // See http://www.spinics.net/lists/netdev/msg117330.html
+        // See https://www.spinics.net/lists/netdev/msg117330.html
         assertTrue(10 <= ch.config().getTcpDeferAccept());
     }
 

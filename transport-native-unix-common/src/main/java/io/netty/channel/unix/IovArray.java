@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -40,7 +40,7 @@ import static java.lang.Math.min;
  * </pre>
  *
  * See also
- * <a href="http://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
+ * <a href="https://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
  * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
 public final class IovArray implements MessageProcessor {
@@ -122,7 +122,7 @@ public final class IovArray implements MessageProcessor {
             // return 'EINVAL', which will raise an IOException.
             //
             // See also:
-            // - http://linux.die.net/man/2/writev
+            // - https://linux.die.net//man/2/writev
             return false;
         }
         final int baseOffset = idx(count);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -240,7 +240,7 @@ static jint JNI_OnLoad_netty_resolver_dns_native_macos0(JavaVM* vm, void* reserv
 }
 
 // We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
-// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+// https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_resolver_dns_native_macos(JavaVM* vm, void* reserved) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -47,7 +47,7 @@ import static io.netty.util.AsciiString.indexOf;
  * A class that holds a number of network-related constants.
  * <p/>
  * This class borrowed some of its methods from a  modified fork of the
- * <a href="http://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
+ * <a href="https://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
  * src/main/java/org/apache/harmony/luni/util/Inet6Util.java">Inet6Util class</a> which was part of Apache Harmony.
  */
 public final class NetUtil {
@@ -719,7 +719,7 @@ public final class NetUtil {
      * <p>
      * The {@code ipv4Mapped} parameter specifies how IPv4 addresses should be treated.
      * "IPv4 mapped" format as
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
      * @param ip {@link CharSequence} IP address to be converted to a {@link Inet6Address}
      * @param ipv4Mapped
      * <ul>
@@ -745,7 +745,7 @@ public final class NetUtil {
      * <p>
      * The {@code ipv4Mapped} parameter specifies how IPv4 addresses should be treated.
      * "IPv4 mapped" format as
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
      * @param ip {@link CharSequence} IP address to be converted to a {@link Inet6Address}
      * @param ipv4Mapped
      * <ul>
@@ -995,7 +995,7 @@ public final class NetUtil {
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>
      * <li>Inet6Address results adhere to
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * </ul>
      * <p>
      * The output does not include Scope ID.
@@ -1011,11 +1011,11 @@ public final class NetUtil {
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>
      * <li>Inet6Address results adhere to
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a> if
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a> if
      * {@code ipv4Mapped} is false.  If {@code ipv4Mapped} is true then "IPv4 mapped" format
-     * from <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> will be supported.
+     * from <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> will be supported.
      * The compressed result will always obey the compression rules defined in
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * </ul>
      * <p>
      * The output does not include Scope ID.
@@ -1023,9 +1023,9 @@ public final class NetUtil {
      * @param ipv4Mapped
      * <ul>
      * <li>{@code true} to stray from strict rfc 5952 and support the "IPv4 mapped" format
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> while still
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> while still
      * following the updated guidelines in
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * <li>{@code false} to strictly follow rfc 5952</li>
      * </ul>
      * @return {@code String} containing the text-formatted IP address

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -116,7 +116,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
 
     /**
      * Returns the unix credentials (uid, gid, pid) of the peer
-     * <a href=http://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
+     * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
      */
     @UnstableApi
     public PeerCredentials peerCredentials() throws IOException {

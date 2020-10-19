@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,7 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -44,7 +44,7 @@
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
   <inceptionYear>2008</inceptionYear>
@@ -917,6 +917,24 @@
               </sourceDirectories>
             </configuration>
           </execution>
+          <execution>
+            <id>nohttp-checkstyle-validation</id>
+            <phase>validate</phase>
+            <configuration>
+              <!-- skip>false</skip -->
+              <configLocation>nohttp-checkstyle.xml</configLocation>
+              <suppressionsLocation>nohttp-checkstyle-suppressions.xml</suppressionsLocation>
+              <!-- propertyExpansion>main.basedir=${main.basedir}</propertyExpansion -->
+              <encoding>UTF-8</encoding>
+              <sourceDirectories>${basedir}</sourceDirectories>
+              <includes>**/*</includes>
+              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
+            </configuration>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <inherited>false</inherited>
+          </execution>
         </executions>
         <dependencies>
           <dependency>
@@ -928,6 +946,11 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
             <version>${netty.build.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.spring.nohttp</groupId>
+            <artifactId>nohttp-checkstyle</artifactId>
+            <version>0.0.5.RELEASE</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -1050,7 +1073,7 @@
         <version>3.2.0</version>
         <!-- Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
-             More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
+             More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
         <configuration>
           <archive>
             <manifestEntries>
@@ -1340,7 +1363,7 @@
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
-             See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
+             See: https://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
