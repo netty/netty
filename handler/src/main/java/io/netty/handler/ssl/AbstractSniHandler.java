@@ -132,7 +132,10 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         try {
             onLookupComplete(ctx, hostname, future);
         } finally {
-            fireSniCompletionEvent(ctx, hostname, future);
+            fireSniCompletionEvent(
+                    // If this handler was removed as part of onLookupComplete(...) we should fire the
+                    // event from the beginning of the pipeline as otherwise this will fail.
+                    ctx.isRemoved() ? ctx.pipeline().firstContext() : ctx, hostname, future);
         }
     }
 
