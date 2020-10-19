@@ -515,8 +515,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     logger.debug(CancelledKeyException.class.getSimpleName() + " raised by a Selector {} - JDK bug?",
                             selector, e);
                 }
-            } catch (ThreadDeath td) {
-                throw (ThreadDeath) td;
+            } catch (Error e) {
+                throw (Error) e;
             } catch (Throwable t) {
                 handleLoopException(t);
             } finally {
@@ -528,8 +528,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             return;
                         }
                     }
+                } catch (Error e) {
+                    throw (Error) e;
                 } catch (Throwable t) {
-                  handleLoopException(t);
+                    handleLoopException(t);
                 }
             }
         }

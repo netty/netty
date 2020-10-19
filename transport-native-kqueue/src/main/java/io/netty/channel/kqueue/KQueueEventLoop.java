@@ -297,8 +297,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                     //increase the size of the array as we needed the whole space for the events
                     eventList.realloc(false);
                 }
-            } catch (ThreadDeath td) {
-                throw (ThreadDeath) td;
+            } catch (Error e) {
+                throw (Error) e;
             } catch (Throwable t) {
                 handleLoopException(t);
             } finally {
@@ -310,6 +310,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                             break;
                         }
                     }
+                } catch (Error e) {
+                    throw (Error) e;
                 } catch (Throwable t) {
                     handleLoopException(t);
                 }
