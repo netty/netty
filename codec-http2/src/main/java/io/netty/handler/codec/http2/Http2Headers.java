@@ -141,22 +141,22 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
     Http2Headers method(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#SCHEME} header if there is no such header
+     * Sets the {@link PseudoHeaderName#SCHEME} header
      */
     Http2Headers scheme(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#AUTHORITY} header
      */
     Http2Headers authority(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#PATH} header
      */
     Http2Headers path(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#STATUS} header
      */
     Http2Headers status(CharSequence value);
 
