@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.internal.UnstableApi;
 
@@ -55,7 +56,11 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
 
     @Override
     protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
-        out.add(decodeResponse(ctx, packet));
+        try {
+            out.add(decodeResponse(ctx, packet));
+        } catch (IndexOutOfBoundsException e) {
+            throw new CorruptedFrameException("Unable to decode response", e);
+        }
     }
 
     protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {

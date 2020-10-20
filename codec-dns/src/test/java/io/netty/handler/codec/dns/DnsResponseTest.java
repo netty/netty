@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 public class DnsResponseTest {
 
@@ -90,6 +92,7 @@ public class DnsResponseTest {
 
             envelope.release();
         }
+        assertFalse(embedder.finish());
     }
 
     @Rule
@@ -100,6 +103,22 @@ public class DnsResponseTest {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         exception.expect(CorruptedFrameException.class);
-        embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
+        try {
+            embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
+        } finally {
+            assertFalse(embedder.finish());
+        }
+    }
+
+    @Test
+    public void readIncompleteResponseTest() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
+        ByteBuf packet = embedder.alloc().buffer(512);
+        exception.expect(CorruptedFrameException.class);
+        try {
+            embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
+        } finally {
+            assertFalse(embedder.finish());
+        }
     }
 }
