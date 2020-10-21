@@ -20,7 +20,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
@@ -34,7 +34,7 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
-        implements DomainSocketChannelConfig {
+        implements DomainSocketChannelConfig, DuplexChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
     private volatile boolean allowHalfClosure;
 
@@ -170,16 +170,12 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         return mode;
     }
 
-    /**
-     * @see SocketChannelConfig#isAllowHalfClosure()
-     */
+    @Override
     public boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
-    /**
-     * @see SocketChannelConfig#setAllowHalfClosure(boolean)
-     */
+    @Override
     public EpollDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
         return this;
