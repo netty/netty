@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.net.StandardSocketOptions;
@@ -27,7 +28,7 @@ import java.net.StandardSocketOptions;
 /**
  * Special {@link ChannelConfig} for {@link DomainSocketChannel}s.
  */
-public interface DomainSocketChannelConfig extends ChannelConfig {
+public interface DomainSocketChannelConfig extends DuplexChannelConfig {
 
     @Override
     @Deprecated

@@ -78,4 +78,7 @@ public interface DuplexChannel extends Channel {
      * @return will be completed when both shutdown operations complete.
      */
     ChannelFuture shutdown(ChannelPromise promise);
+
+    @Override
+    DuplexChannelConfig config();
 }
