@@ -61,7 +61,7 @@ public class NativeTest {
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, short mask) {
+            public void handle(int fd, int res, int flags, byte op, short mask) {
                 assertEquals(inputString.length(), res);
                 writeEventByteBuf.release();
             }
@@ -75,7 +75,7 @@ public class NativeTest {
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, short mask) {
+            public void handle(int fd, int res, int flags, byte op, short mask) {
                 assertEquals(inputString.length(), res);
                 readEventByteBuf.writerIndex(res);
             }
@@ -107,7 +107,7 @@ public class NativeTest {
                 try {
                     completionQueue.process(new IOUringCompletionQueueCallback() {
                         @Override
-                        public void handle(int fd, int res, int flags, int op, short mask) {
+                        public void handle(int fd, int res, int flags, byte op, short mask) {
                             assertEquals(-62, res);
                         }
                     });
@@ -155,7 +155,7 @@ public class NativeTest {
         completionQueue.ioUringWaitCqe();
         assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
             @Override
-            public void handle(int fd, int res, int flags, int op, short mask) {
+            public void handle(int fd, int res, int flags, byte op, short mask) {
                 assertEquals(1, res);
             }
         }));
@@ -186,7 +186,7 @@ public class NativeTest {
                 completionQueue.ioUringWaitCqe();
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
                     @Override
-                    public void handle(int fd, int res, int flags, int op, short mask) {
+                    public void handle(int fd, int res, int flags, byte op, short mask) {
                         assertEquals(1, res);
                     }
                 }));
@@ -232,7 +232,7 @@ public class NativeTest {
             private final IOUringCompletionQueueCallback verifyCallback =
                     new IOUringCompletionQueueCallback() {
                 @Override
-                public void handle(int fd, int res, int flags, int op, short mask) {
+                public void handle(int fd, int res, int flags, byte op, short mask) {
                     if (op == Native.IORING_OP_POLL_ADD) {
                         assertEquals(Native.ERRNO_ECANCELED_NEGATIVE, res);
                     } else if (op == Native.IORING_OP_POLL_REMOVE) {
@@ -280,7 +280,7 @@ public class NativeTest {
                 final int expectedData = i;
                 assertEquals(1, completionQueue.process(new IOUringCompletionQueueCallback() {
                     @Override
-                    public void handle(int fd, int res, int flags, int op, short data) {
+                    public void handle(int fd, int res, int flags, byte op, short data) {
                         assertEquals(-1, fd);
                         assertTrue(res < 0);
                         assertEquals(Native.IORING_OP_WRITE, op);

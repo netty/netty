@@ -216,7 +216,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
     }
 
     @Override
-    public void handle(int fd, int res, int flags, int op, short data) {
+    public void handle(int fd, int res, int flags, byte op, short data) {
         if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
             pendingWakeup = false;
             addEventFdRead(ringBuffer.ioUringSubmissionQueue());
@@ -293,7 +293,7 @@ final class IOUringEventLoop extends SingleThreadEventLoop implements IOUringCom
             IOUringCompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
             IOUringCompletionQueueCallback callback = new IOUringCompletionQueueCallback() {
                 @Override
-                public void handle(int fd, int res, int flags, int op, short data) {
+                public void handle(int fd, int res, int flags, byte op, short data) {
                     if (op == Native.IORING_OP_READ && eventfd.intValue() == fd) {
                         pendingWakeup = false;
                     }

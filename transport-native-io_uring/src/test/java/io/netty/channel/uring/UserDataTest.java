@@ -32,7 +32,7 @@ public class UserDataTest {
                     long udata = UserData.encode(expectedFd, expectedOp, expectedData);
                     UserData.decode(0, 0, udata, new IOUringCompletionQueueCallback() {
                         @Override
-                        public void handle(int actualFd, int res, int flags, int actualOp, short actualData) {
+                        public void handle(int actualFd, int res, int flags, byte actualOp, short actualData) {
                             assertEquals(expectedFd, actualFd);
                             assertEquals(expectedOp, actualOp);
                             assertEquals(expectedData, actualData);

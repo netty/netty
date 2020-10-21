@@ -19,5 +19,5 @@ interface IOUringCompletionQueueCallback {
     /**
      * Called for a completion event that was put into the {@link IOUringCompletionQueue}.
      */
-    void handle(int fd, int res, int flags, int op, short data);
+    void handle(int fd, int res, int flags, byte op, short data);
 }
