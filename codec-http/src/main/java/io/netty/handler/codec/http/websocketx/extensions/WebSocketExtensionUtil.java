@@ -37,7 +37,10 @@ public final class WebSocketExtensionUtil {
     private static final Pattern PARAMETER = Pattern.compile("^([^=]+)(=[\\\"]?([^\\\"]+)[\\\"]?)?$");
 
     static boolean isWebsocketUpgrade(HttpHeaders headers) {
-        return headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
+        //this contains check does not allocate an iterator, and most requests are not upgrades
+        //so we do the contains check first before checking for specific values
+        return headers.contains(HttpHeaderNames.UPGRADE) &&
+                headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
                 headers.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
     }
 
