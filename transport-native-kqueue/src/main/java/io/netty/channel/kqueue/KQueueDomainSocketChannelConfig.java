@@ -20,7 +20,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.UnstableApi;
@@ -29,15 +28,14 @@ import java.io.IOException;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 @UnstableApi
-public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig implements DomainSocketChannelConfig {
+public final class KQueueDomainSocketChannelConfig extends KQueueDuplexChannelConfig
+        implements DomainSocketChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
-    private volatile boolean allowHalfClosure;
 
     KQueueDomainSocketChannelConfig(AbstractKQueueChannel channel) {
         super(channel);
@@ -45,7 +43,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE, SO_SNDBUF, SO_RCVBUF);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, SO_SNDBUF, SO_RCVBUF);
     }
 
     @SuppressWarnings("unchecked")
@@ -53,9 +51,6 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
     public <T> T getOption(ChannelOption<T> option) {
         if (option == DOMAIN_SOCKET_READ_MODE) {
             return (T) getReadMode();
-        }
-        if (option == ALLOW_HALF_CLOSURE) {
-            return (T) Boolean.valueOf(isAllowHalfClosure());
         }
         if (option == SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
@@ -72,8 +67,6 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
         if (option == DOMAIN_SOCKET_READ_MODE) {
             setReadMode((DomainSocketReadMode) value);
-        } else if (option == ALLOW_HALF_CLOSURE) {
-            setAllowHalfClosure((Boolean) value);
         } else if (option == SO_SNDBUF) {
             setSendBufferSize((Integer) value);
         } else if (option == SO_RCVBUF) {
@@ -210,18 +203,9 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
     }
 
-    /**
-     * @see SocketChannelConfig#isAllowHalfClosure()
-     */
-    public boolean isAllowHalfClosure() {
-        return allowHalfClosure;
-    }
-
-    /**
-     * @see SocketChannelConfig#setAllowHalfClosure(boolean)
-     */
+    @Override
     public KQueueDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
-        this.allowHalfClosure = allowHalfClosure;
+        super.setAllowHalfClosure(allowHalfClosure);
         return this;
     }
 }

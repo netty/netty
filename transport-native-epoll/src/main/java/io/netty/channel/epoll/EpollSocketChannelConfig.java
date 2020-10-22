@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.IP_TOS;
 import static io.netty.channel.ChannelOption.SO_KEEPALIVE;
 import static io.netty.channel.ChannelOption.SO_LINGER;
@@ -37,8 +36,7 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 
-public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
-    private volatile boolean allowHalfClosure;
+public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig implements SocketChannelConfig {
 
     /**
      * Creates a new instance.
@@ -57,7 +55,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
+                EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
                 EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT,
                 EpollChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
@@ -86,9 +84,6 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         }
         if (option == IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
-        }
-        if (option == ALLOW_HALF_CLOSURE) {
-            return (T) Boolean.valueOf(isAllowHalfClosure());
         }
         if (option == EpollChannelOption.TCP_CORK) {
             return (T) Boolean.valueOf(isTcpCork());
@@ -141,8 +136,6 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setSoLinger((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
-        } else if (option == ALLOW_HALF_CLOSURE) {
-            setAllowHalfClosure((Boolean) value);
         } else if (option == EpollChannelOption.TCP_CORK) {
             setTcpCork((Boolean) value);
         } else if (option == EpollChannelOption.TCP_NOTSENT_LOWAT) {
@@ -576,13 +569,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     @Override
-    public boolean isAllowHalfClosure() {
-        return allowHalfClosure;
-    }
-
-    @Override
     public EpollSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
-        this.allowHalfClosure = allowHalfClosure;
+        super.setAllowHalfClosure(allowHalfClosure);
         return this;
     }
 

@@ -98,6 +98,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     @Override
+    public abstract EpollDuplexChannelConfig config();
+
+    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }

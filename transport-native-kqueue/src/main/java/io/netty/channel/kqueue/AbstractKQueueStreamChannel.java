@@ -79,6 +79,9 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     @Override
+    public abstract KQueueDuplexChannelConfig config();
+
+    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
