@@ -350,12 +350,7 @@ public class SimpleChannelPool implements ChannelPool {
             handler.channelReleased(channel);
             promise.setSuccess(null);
         } else {
-            closeAndFail(channel, new IllegalStateException("ChannelPool full") {
-                @Override
-                public Throwable fillInStackTrace() {
-                    return this;
-                }
-            }, promise);
+            closeAndFail(channel, new ChannelPoolFullException(), promise);
         }
     }
 
@@ -417,5 +412,18 @@ public class SimpleChannelPool implements ChannelPool {
                 return null;
             }
         });
+    }
+
+    private static final class ChannelPoolFullException extends IllegalStateException {
+
+        private ChannelPoolFullException() {
+            super("ChannelPool full");
+        }
+
+        // Suppress a warning since the method doesn't need synchronization
+        @Override
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+            return this;
+        }
     }
 }

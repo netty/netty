@@ -194,15 +194,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     @Override
                     public void onTimeout(AcquireTask task) {
                         // Fail the promise as we timed out.
-                        task.promise.setFailure(new TimeoutException(
-                                "Acquire operation took longer then configured maximum time") {
-
-                            // Suppress a warning since the method doesn't need synchronization
-                            @Override
-                            public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
-                                return this;
-                            }
-                        });
+                        task.promise.setFailure(new AcquireTimeoutException());
                     }
                 };
                 break;
@@ -513,5 +505,18 @@ public class FixedChannelPool extends SimpleChannelPool {
         }
 
         return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+    }
+
+    private static final class AcquireTimeoutException extends TimeoutException {
+
+        private AcquireTimeoutException() {
+            super("Acquire operation took longer then configured maximum time");
+        }
+
+        // Suppress a warning since the method doesn't need synchronization
+        @Override
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+            return this;
+        }
     }
 }
