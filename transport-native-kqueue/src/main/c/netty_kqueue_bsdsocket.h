@@ -20,6 +20,6 @@
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
 jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
-void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env);
+void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix);
 
 #endif /* NETTY_KQUEUE_BSDSOCKET_H_ */

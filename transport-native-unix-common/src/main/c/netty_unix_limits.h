@@ -20,6 +20,6 @@
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
 jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
-void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env);
+void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix);
 
 #endif /* NETTY_UNIX_LIMITS_H_ */

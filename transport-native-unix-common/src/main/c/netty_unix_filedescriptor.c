@@ -26,6 +26,8 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 
+#define FILEDESCRIPTOR_CLASSNAME "io/netty/channel/unix/FileDescriptor"
+
 static jmethodID posId = NULL;
 static jmethodID limitId = NULL;
 static jfieldID posFieldId = NULL;
@@ -278,7 +280,7 @@ static const jint method_table_size = sizeof(method_table) / sizeof(method_table
 jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     void* mem = NULL;
-    if (netty_unix_util_register_natives(env, packagePrefix, "io/netty/channel/unix/FileDescriptor", method_table, method_table_size) != 0) {
+    if (netty_unix_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
         goto done;
     }
     if ((mem = malloc(1)) == NULL) {
@@ -313,4 +315,6 @@ done:
     return ret;
 }
 
-void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env) { }
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    netty_unix_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
+}
