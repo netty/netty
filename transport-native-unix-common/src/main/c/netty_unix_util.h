@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -146,7 +146,7 @@ uint64_t netty_unix_util_timespec_elapsed_ns(const struct timespec* begin, const
 jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos);
 
 /**
- * Return type is as defined in http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
+ * Return type is as defined in https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
  */
 jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods);
 

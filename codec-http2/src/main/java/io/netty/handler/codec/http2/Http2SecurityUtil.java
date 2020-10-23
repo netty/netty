@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,13 +29,13 @@ import java.util.List;
 public final class Http2SecurityUtil {
     /**
      * The following list is derived from <a
-     * href="http://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html">SunJSSE Supported
+     * href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html">SunJSSE Supported
      * Ciphers</a> and <a
      * href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla Modern Cipher
      * Suites</a> in accordance with the <a
      * href="https://tools.ietf.org/html/rfc7540#section-9.2.2">HTTP/2 Specification</a>.
      *
-     * According to the <a href="http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html">
+     * According to the <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html">
      * JSSE documentation</a> "the names mentioned in the TLS RFCs prefixed with TLS_ are functionally equivalent
      * to the JSSE cipher suites prefixed with SSL_".
      * Both variants are used to support JVMs supporting the one or the other.

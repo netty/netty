@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -73,7 +73,7 @@ public class EpollHandler implements IoHandler {
     private final AtomicInteger wakenUp = new AtomicInteger(1);
     private boolean pendingWakeup;
 
-    // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
+    // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
     private static AbstractEpollChannel cast(Channel channel) {
