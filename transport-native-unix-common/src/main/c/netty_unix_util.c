@@ -29,6 +29,10 @@ static const uint64_t NETTY_BILLION = 1000000000L;
 #endif /* NETTY_USE_MACH_INSTEAD_OF_CLOCK */
 
 char* netty_unix_util_prepend(const char* prefix, const char* str) {
+    if (str == NULL) {
+        // If str is NULL we should just return NULL as passing NULL to strlen is undefined behavior.
+        return NULL;
+    }
     char* result = NULL;
     if (prefix == NULL) {
         if ((result = (char*) malloc(sizeof(char) * (strlen(str) + 1))) == NULL) {
@@ -46,6 +50,10 @@ char* netty_unix_util_prepend(const char* prefix, const char* str) {
 }
 
 char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2) {
+    if (s1rbegin == NULL || s1rend == NULL || s2 == NULL) {
+        // Return NULL if any of the parameters is NULL to not risk a segfault
+        return NULL;
+    }
     size_t s2len = strlen(s2);
     char *s = s1rbegin - s2len;
 
@@ -58,6 +66,11 @@ char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2
 }
 
 static char* netty_unix_util_strstr_last(const char* haystack, const char* needle) {
+    if (haystack == NULL || needle == NULL) {
+        // calling strstr with NULL is undefined behavior. Better just return NULL and not risk a crash.
+        return NULL;
+    }
+
     char* prevptr = NULL;
     char* ptr = (char*) haystack;
 
