@@ -422,47 +422,47 @@ static jint netty_io_uring_pollrdhup(JNIEnv* env, jclass clazz) {
     return POLLRDHUP;
 }
 
-static jint netty_io_uring_ioringOpWritev(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpWritev(JNIEnv* env, jclass clazz) {
     return IORING_OP_WRITEV;
 }
 
-static jint netty_io_uring_ioringOpPollAdd(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpPollAdd(JNIEnv* env, jclass clazz) {
     return IORING_OP_POLL_ADD;
 }
 
-static jint netty_io_uring_ioringOpPollRemove(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpPollRemove(JNIEnv* env, jclass clazz) {
     return IORING_OP_POLL_REMOVE;
 }
 
-static jint netty_io_uring_ioringOpTimeout(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpTimeout(JNIEnv* env, jclass clazz) {
     return IORING_OP_TIMEOUT;
 }
 
-static jint netty_io_uring_ioringOpAccept(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpAccept(JNIEnv* env, jclass clazz) {
     return IORING_OP_ACCEPT;
 }
 
-static jint netty_io_uring_ioringOpRead(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpRead(JNIEnv* env, jclass clazz) {
     return IORING_OP_READ;
 }
 
-static jint netty_io_uring_ioringOpWrite(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpWrite(JNIEnv* env, jclass clazz) {
     return IORING_OP_WRITE;
 }
 
-static jint netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpConnect(JNIEnv* env, jclass clazz) {
     return IORING_OP_CONNECT;
 }
 
-static jint netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpClose(JNIEnv* env, jclass clazz) {
     return IORING_OP_CLOSE;
 }
 
-static jint netty_io_uring_ioringOpSendmsg(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpSendmsg(JNIEnv* env, jclass clazz) {
     return IORING_OP_SENDMSG;
 }
 
-static jint netty_io_uring_ioringOpRecvmsg(JNIEnv* env, jclass clazz) {
+static jbyte netty_io_uring_ioringOpRecvmsg(JNIEnv* env, jclass clazz) {
     return IORING_OP_RECVMSG;
 }
 
@@ -511,17 +511,17 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "pollin", "()I", (void *) netty_io_uring_pollin },
   { "pollout", "()I", (void *) netty_io_uring_pollout },
   { "pollrdhup", "()I", (void *) netty_io_uring_pollrdhup },
-  { "ioringOpWritev", "()I", (void *) netty_io_uring_ioringOpWritev },
-  { "ioringOpPollAdd", "()I", (void *) netty_io_uring_ioringOpPollAdd },
-  { "ioringOpPollRemove", "()I", (void *) netty_io_uring_ioringOpPollRemove },
-  { "ioringOpTimeout", "()I", (void *) netty_io_uring_ioringOpTimeout },
-  { "ioringOpAccept", "()I", (void *) netty_io_uring_ioringOpAccept },
-  { "ioringOpRead", "()I", (void *) netty_io_uring_ioringOpRead },
-  { "ioringOpWrite", "()I", (void *) netty_io_uring_ioringOpWrite },
-  { "ioringOpConnect", "()I", (void *) netty_io_uring_ioringOpConnect },
-  { "ioringOpClose", "()I", (void *) netty_io_uring_ioringOpClose },
-  { "ioringOpSendmsg", "()I", (void *) netty_io_uring_ioringOpSendmsg },
-  { "ioringOpRecvmsg", "()I", (void *) netty_io_uring_ioringOpRecvmsg },
+  { "ioringOpWritev", "()B", (void *) netty_io_uring_ioringOpWritev },
+  { "ioringOpPollAdd", "()B", (void *) netty_io_uring_ioringOpPollAdd },
+  { "ioringOpPollRemove", "()B", (void *) netty_io_uring_ioringOpPollRemove },
+  { "ioringOpTimeout", "()B", (void *) netty_io_uring_ioringOpTimeout },
+  { "ioringOpAccept", "()B", (void *) netty_io_uring_ioringOpAccept },
+  { "ioringOpRead", "()B", (void *) netty_io_uring_ioringOpRead },
+  { "ioringOpWrite", "()B", (void *) netty_io_uring_ioringOpWrite },
+  { "ioringOpConnect", "()B", (void *) netty_io_uring_ioringOpConnect },
+  { "ioringOpClose", "()B", (void *) netty_io_uring_ioringOpClose },
+  { "ioringOpSendmsg", "()B", (void *) netty_io_uring_ioringOpSendmsg },
+  { "ioringOpRecvmsg", "()B", (void *) netty_io_uring_ioringOpRecvmsg },
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync }
 };

@@ -110,7 +110,7 @@ final class IOUringSubmissionQueue {
         return numHandledFds < iosqeAsyncThreshold ? 0 : Native.IOSQE_ASYNC;
     }
 
-    private boolean enqueueSqe(int op, int flags, int rwFlags, int fd,
+    private boolean enqueueSqe(byte op, int flags, int rwFlags, int fd,
                                long bufferAddress, int length, long offset, short data) {
         int pending = tail - head;
         boolean submit = pending == ringEntries;
@@ -126,11 +126,11 @@ final class IOUringSubmissionQueue {
         return submit;
     }
 
-    private void setData(long sqe, int op, int flags, int rwFlags, int fd, long bufferAddress, int length,
+    private void setData(long sqe, byte op, int flags, int rwFlags, int fd, long bufferAddress, int length,
                          long offset, short data) {
         //set sqe(submission queue) properties
 
-        PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, (byte) op);
+        PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, op);
         PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, (byte) flags);
         // This constant is set up-front
         //PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, (short) 0);

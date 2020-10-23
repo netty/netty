@@ -64,17 +64,17 @@ final class NativeStaticallyReferencedJniMethods {
     static native int pollin();
     static native int pollout();
     static native int pollrdhup();
-    static native int ioringOpWritev();
-    static native int ioringOpPollAdd();
-    static native int ioringOpPollRemove();
-    static native int ioringOpTimeout();
-    static native int ioringOpAccept();
-    static native int ioringOpRead();
-    static native int ioringOpWrite();
-    static native int ioringOpConnect();
-    static native int ioringOpClose();
-    static native int ioringOpSendmsg();
-    static native int ioringOpRecvmsg();
+    static native byte ioringOpWritev();
+    static native byte ioringOpPollAdd();
+    static native byte ioringOpPollRemove();
+    static native byte ioringOpTimeout();
+    static native byte ioringOpAccept();
+    static native byte ioringOpRead();
+    static native byte ioringOpWrite();
+    static native byte ioringOpConnect();
+    static native byte ioringOpClose();
+    static native byte ioringOpSendmsg();
+    static native byte ioringOpRecvmsg();
     static native int ioringEnterGetevents();
     static native int iosqeAsync();
 }

@@ -19,15 +19,13 @@ final class UserData {
     private UserData() {
     }
 
-    static long encode(int fd, int op, short data) {
-        assert op <= Short.MAX_VALUE;
-        assert op >= Short.MIN_VALUE;
-        return ((long) data << 48) | ((op & 0xFFFFL) << 32) | fd & 0xFFFFFFFFL;
+    static long encode(int fd, byte op, short data) {
+        return ((long) data << 48) | ((op & 0xFFL)  << 32) | fd & 0xFFFFFFFFL;
     }
 
     static void decode(int res, int flags, long udata, IOUringCompletionQueueCallback callback) {
         int fd = (int) (udata & 0xFFFFFFFFL);
-        int op = (short) ((udata >>>= 32) & 0xFFFFL);
+        int op = (short) ((udata >>>= 32) & 0xFFL);
         short data = (short) (udata >>> 16);
         callback.handle(fd, res, flags, op, data);
     }
