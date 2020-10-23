@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -216,7 +216,7 @@ public class SslHandlerTest {
         // Set the mode before we try to do the handshake as otherwise it may throw an IllegalStateException.
         // See:
         //  - https://docs.oracle.com/javase/10/docs/api/javax/net/ssl/SSLEngine.html#beginHandshake()
-        //  - http://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
+        //  - https://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
         engine.setUseClientMode(false);
         return engine;
     }
@@ -226,7 +226,7 @@ public class SslHandlerTest {
         // Set the mode before we try to do the handshake as otherwise it may throw an IllegalStateException.
         // See:
         //  - https://docs.oracle.com/javase/10/docs/api/javax/net/ssl/SSLEngine.html#beginHandshake()
-        //  - http://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
+        //  - https://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
         engine.setUseClientMode(true);
         return engine;
     }

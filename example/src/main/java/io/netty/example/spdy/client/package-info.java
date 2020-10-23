@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,7 @@
  * {@code java -Xbootclasspath/p:<path_to_npn_boot_jar> ...}.
  * The "path_to_npn_boot_jar" is the path on the file system for the NPN Boot Jar file which can be downloaded from
  * Maven at coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions.
- * See <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more
+ * See <a href="https://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more
  * information.
  * <p>
  * After that, you can run {@link io.netty.example.spdy.client.SpdyClient}, also settings the JVM parameter

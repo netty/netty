@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -152,7 +152,7 @@ static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, 
             // We need to read before we can write again, let's try to read and then write again and if this
             // fails we will bail out.
             //
-            // See http://man7.org/linux/man-pages/man2/eventfd.2.html.
+            // See https://man7.org/linux/man-pages/man2/eventfd.2.html.
             if (errno == EAGAIN) {
                 if (eventfd_read(fd, &val) == 0 || errno == EAGAIN) {
                     // Try again
@@ -754,7 +754,7 @@ static void JNI_OnUnload_netty_transport_native_epoll0(JavaVM* vm, void* reserve
 }
 
 // We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
-// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+// https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {

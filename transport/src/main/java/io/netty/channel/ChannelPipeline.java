@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ import java.util.NoSuchElementException;
 /**
  * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbound operations of a
  * {@link Channel}.  {@link ChannelPipeline} implements an advanced form of the
- * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
+ * <a href="https://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
  * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
  * interact with each other.
  *

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,7 +35,7 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparat
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
  * so some fields are sent (Version is typically ignored).
  *
  * As Netty's Cookie merges Expires and MaxAge into one single field, only Max-Age field is sent.

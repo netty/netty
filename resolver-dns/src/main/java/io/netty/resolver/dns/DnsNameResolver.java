@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -1076,7 +1076,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static String hostname(String inetHost) {
         String hostname = IDN.toASCII(inetHost);
-        // Check for http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
+        // Check for https://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
         if (StringUtil.endsWith(inetHost, '.') && !StringUtil.endsWith(hostname, '.')) {
             hostname += ".";
         }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,7 @@
  */
 
 /**
- * A serial and parallel port communication transport based on <a href="http://rxtx.qbang.org/">RXTX</a>.
+ * A serial and parallel port communication transport based on <a href="https://rxtx.qbang.org/">RXTX</a>.
  *
  * @deprecated this transport will be removed in the next major version.
  */

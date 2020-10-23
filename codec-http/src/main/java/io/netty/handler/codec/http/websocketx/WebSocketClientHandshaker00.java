@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 /**
  * <p>
  * Performs client side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
+ * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
  * 00</a>
  * </p>
  * <p>
@@ -202,7 +202,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         // Set Content-Length to workaround some known defect.
-        // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
+        // See also: https://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         headers.set(HttpHeaderNames.CONTENT_LENGTH, key3.length);
         return request;
     }

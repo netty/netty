@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,9 +22,9 @@
  *
  * <h3>How to run the tests on Ubuntu.</h3>
  *
- * <p>01. Install <a href="http://python.org/">python</a> (if not already installed).
+ * <p>01. Install <a href="https://python.org/">python</a> (if not already installed).
  *
- * <p>02. Install <a href="http://pypi.python.org/pypi/setuptools">Python Setup Tools</a> if not already
+ * <p>02. Install <a href="https://pypi.python.org/pypi/setuptools">Python Setup Tools</a> if not already
  * installed. <tt>sudo apt-get install python-setuptools</tt>
  *
  * <p>03. Add <tt>ppa:twisted-dev/ppa</tt> to your system's Software Sources

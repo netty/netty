@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -66,7 +66,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     }
 
     /**
-     * Returns the {@code TCP_INFO} for the current socket. See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
+     * Returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
      */
     public EpollTcpInfo tcpInfo() {
         return tcpInfo(new EpollTcpInfo());
@@ -74,7 +75,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     /**
      * Updates and returns the {@code TCP_INFO} for the current socket.
-     * See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
      */
     public EpollTcpInfo tcpInfo(EpollTcpInfo info) {
         try {

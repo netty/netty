@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -122,7 +122,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
                 if (HttpHeaderValues.IDENTITY.contentEquals(targetContentEncoding)) {
                     // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
-                    // as per: http://tools.ietf.org/html/rfc2616#section-14.11
+                    // as per: https://tools.ietf.org/html/rfc2616#section-14.11
                     headers.remove(HttpHeaderNames.CONTENT_ENCODING);
                 } else {
                     headers.set(HttpHeaderNames.CONTENT_ENCODING, targetContentEncoding);
