@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.AsciiString;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -42,8 +41,6 @@ import java.nio.ByteBuffer;
  * </p>
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
-
-    private static final AsciiString WEBSOCKET = AsciiString.cached("WebSocket");
 
     private ByteBuf expectedChallengeResponseBytes;
 
@@ -186,7 +183,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             headers.add(customHeaders);
         }
 
-        headers.set(HttpHeaderNames.UPGRADE, WEBSOCKET)
+        headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
@@ -229,26 +226,25 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        if (!response.status().equals(HttpResponseStatus.SWITCHING_PROTOCOLS)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+        HttpResponseStatus status = response.status();
+        if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response getStatus: " + status, response);
         }
 
         HttpHeaders headers = response.headers();
-
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
-        if (!WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
-            throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
-                    + upgrade);
+        if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
         }
 
         if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-            throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + headers.get(HttpHeaderNames.CONNECTION));
+            throw new WebSocketClientHandshakeException("Invalid handshake response connection: "
+                    + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
         ByteBuf challenge = response.content();
         if (!challenge.equals(expectedChallengeResponseBytes)) {
-            throw new WebSocketHandshakeException("Invalid challenge");
+            throw new WebSocketClientHandshakeException("Invalid challenge", response);
         }
     }
 

@@ -162,7 +162,7 @@ public final class WebSocketClientHandshakerFactory {
                     webSocketURL, V00, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis);
         }
 
-        throw new WebSocketHandshakeException("Protocol version " + version + " not supported.");
+        throw new WebSocketClientHandshakeException("Protocol version " + version + " not supported.");
     }
 
     /**
@@ -220,6 +220,6 @@ public final class WebSocketClientHandshakerFactory {
                 maxFramePayloadLength, forceCloseTimeoutMillis, absoluteUpgradeUrl);
         }
 
-        throw new WebSocketHandshakeException("Protocol version " + version + " not supported.");
+        throw new WebSocketClientHandshakeException("Protocol version " + version + " not supported.");
     }
 }

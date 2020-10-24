@@ -371,6 +371,11 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
+    protected WebSocketClientHandshakeException buildHandshakeException(String message) {
+        return new WebSocketClientHandshakeException(message);
+    }
+
+    @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         ChannelPipeline cp = ctx.pipeline();
         if (cp.get(WebSocketClientProtocolHandshakeHandler.class) == null) {
