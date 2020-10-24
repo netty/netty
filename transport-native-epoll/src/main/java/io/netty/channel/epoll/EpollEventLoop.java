@@ -390,19 +390,24 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     //increase the size of the array as we needed the whole space for the events
                     events.increase();
                 }
+            } catch (Error e) {
+                throw (Error) e;
             } catch (Throwable t) {
                 handleLoopException(t);
-            }
-            // Always handle shutdown even if the loop processing threw an exception.
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    if (confirmShutdown()) {
-                        break;
+            } finally {
+                // Always handle shutdown even if the loop processing threw an exception.
+                try {
+                    if (isShuttingDown()) {
+                        closeAll();
+                        if (confirmShutdown()) {
+                            break;
+                        }
                     }
+                } catch (Error e) {
+                    throw (Error) e;
+                } catch (Throwable t) {
+                    handleLoopException(t);
                 }
-            } catch (Throwable t) {
-                handleLoopException(t);
             }
         }
     }
