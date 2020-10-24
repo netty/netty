@@ -266,27 +266,26 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
-        final HttpHeaders headers = response.headers();
-
-        if (!response.status().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+        HttpResponseStatus status = response.status();
+        if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response getStatus: " + status, response);
         }
 
+        HttpHeaders headers = response.headers();
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
         if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
-            throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
+            throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
         }
 
         if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-            throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + headers.get(HttpHeaderNames.CONNECTION));
+            throw new WebSocketClientHandshakeException("Invalid handshake response connection: "
+                    + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
         CharSequence accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
-            throw new WebSocketHandshakeException(String.format(
-                    "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));
+            throw new WebSocketClientHandshakeException(String.format(
+                    "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString), response);
         }
     }
 

@@ -151,7 +151,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
 
         final Future<?> timeoutFuture = ctx.executor().schedule(() -> {
             if (!localHandshakePromise.isDone() &&
-                    localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
+                    localHandshakePromise.tryFailure(new WebSocketServerHandshakeException("handshake timed out"))) {
                 ctx.flush()
                    .fireUserEventTriggered(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                    .close();

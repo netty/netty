@@ -115,11 +115,19 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
 
         final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(() -> {
             if (!closeSent.isDone()) {
-                closeSent.tryFailure(new WebSocketHandshakeException("send close frame timed out"));
+                closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
         closeSent.addListener(future -> timeoutTask.cancel(false));
+    }
+
+    /**
+     * Returns a {@link WebSocketHandshakeException} that depends on which client or server pipeline
+     * this handler belongs. Should be overridden in implementation otherwise a default exception is used.
+     */
+    protected WebSocketHandshakeException buildHandshakeException(String message) {
+        return new WebSocketHandshakeException(message);
     }
 
     @Override
