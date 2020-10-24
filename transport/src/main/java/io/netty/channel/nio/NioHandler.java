@@ -451,6 +451,8 @@ public final class NioHandler implements IoHandler {
             cancelledKeys = 0;
             needsToSelectAgain = false;
             handled = processSelectedKeys();
+        } catch (Error e) {
+            throw e;
         } catch (Throwable t) {
             handleLoopException(t);
         }

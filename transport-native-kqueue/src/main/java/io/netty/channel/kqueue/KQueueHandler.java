@@ -306,6 +306,8 @@ public final class KQueueHandler implements IoHandler {
                 //increase the size of the array as we needed the whole space for the events
                 eventList.realloc(false);
             }
+        } catch (Error e) {
+            throw e;
         } catch (Throwable t) {
             handleLoopException(t);
         }

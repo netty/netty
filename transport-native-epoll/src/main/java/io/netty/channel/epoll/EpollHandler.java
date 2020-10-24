@@ -298,7 +298,7 @@ public class EpollHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
-                    return 0 ;
+                    return 0;
 
                 case SelectStrategy.BUSY_WAIT:
                     strategy = epollBusyWait();
@@ -345,6 +345,8 @@ public class EpollHandler implements IoHandler {
                 //increase the size of the array as we needed the whole space for the events
                 events.increase();
             }
+        } catch (Error error) {
+            throw error;
         } catch (Throwable t) {
             handleLoopException(t);
         }
