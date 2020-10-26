@@ -760,6 +760,7 @@ static jint JNI_OnLoad_netty_transport_native_epoll0(JavaVM* vm, void* reserved)
     jint ret = netty_epoll_native_JNI_OnLoad(env, packagePrefix);
     if (ret == JNI_ERR) {
         free(packagePrefix);
+        staticPackagePrefix = NULL;
     } else {
         staticPackagePrefix = packagePrefix;
     }

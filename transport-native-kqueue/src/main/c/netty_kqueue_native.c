@@ -406,6 +406,7 @@ static jint JNI_OnLoad_netty_transport_native_kqueue0(JavaVM* vm, void* reserved
     jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
     if (ret == JNI_ERR) {
         free(packagePrefix);
+        staticPackagePrefix = NULL;
     } else {
         staticPackagePrefix = packagePrefix;
     }
