@@ -183,12 +183,14 @@ final class HpackDynamicTable {
 
         // initially length will be 0 so there will be no copy
         int len = length();
-        int cursor = tail;
-        for (int i = 0; i < len; i++) {
-            HpackHeaderField entry = hpackHeaderFields[cursor++];
-            tmp[i] = entry;
-            if (cursor == hpackHeaderFields.length) {
-                cursor = 0;
+        if (hpackHeaderFields != null) {
+            int cursor = tail;
+            for (int i = 0; i < len; i++) {
+                HpackHeaderField entry = hpackHeaderFields[cursor++];
+                tmp[i] = entry;
+                if (cursor == hpackHeaderFields.length) {
+                    cursor = 0;
+                }
             }
         }
 
