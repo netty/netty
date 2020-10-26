@@ -507,10 +507,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
-            if (parentStream == null) {
-                throw connectionError(PROTOCOL_ERROR, "Stream %d does not exist", streamId);
-            }
-
             switch (parentStream.state()) {
               case OPEN:
               case HALF_CLOSED_LOCAL:

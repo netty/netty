@@ -147,8 +147,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         REQUESTED
     }
 
-    private final AbstractHttp2StreamChannel.Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
-    private final AbstractHttp2StreamChannel.Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
+    private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
+    private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
     private final ChannelId channelId;
     private final ChannelPipeline pipeline;
     private final DefaultHttp2FrameStream stream;
@@ -258,7 +258,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
-                if (oldValue == 0 && newValue != 0) {
+                if (oldValue == 0) {
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;
