@@ -21,6 +21,8 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_util.h"
 
+#define LIMITS_CLASSNAME "io/netty/channel/unix/LimitsStaticallyReferencedJniMethods"
+
 // Define IOV_MAX if not found to limit the iov size on writev calls
 // See https://github.com/netty/netty/issues/2647
 #ifndef IOV_MAX
@@ -70,7 +72,7 @@ jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     // We must register the statically referenced methods first!
     if (netty_unix_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/unix/LimitsStaticallyReferencedJniMethods",
+            LIMITS_CLASSNAME,
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
         return JNI_ERR;
@@ -79,4 +81,6 @@ jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     return NETTY_JNI_VERSION;
 }
 
-void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env) { }
+void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    netty_unix_util_unregister_natives(env, packagePrefix, LIMITS_CLASSNAME);
+}

@@ -35,6 +35,8 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
+#define LINUXSOCKET_CLASSNAME "io/netty/channel/epoll/LinuxSocket"
+
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
 #define TCP_FASTOPEN 23
@@ -755,7 +757,7 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     }
     if (netty_unix_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/epoll/LinuxSocket",
+            LINUXSOCKET_CLASSNAME,
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
         goto done;
@@ -788,6 +790,8 @@ done:
     return ret;
 }
 
-void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env) {
+void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_UNLOAD_CLASS(env, peerCredentialsClass);
+
+    netty_unix_util_unregister_natives(env, packagePrefix, LINUXSOCKET_CLASSNAME);
 }
