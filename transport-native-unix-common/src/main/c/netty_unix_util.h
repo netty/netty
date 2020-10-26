@@ -149,6 +149,7 @@ jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nano
  * Return type is as defined in https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
  */
 jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods);
+jint netty_unix_util_unregister_natives(JNIEnv* env, const char* packagePrefix, const char* className);
 
 void netty_unix_util_free_dynamic_methods_table(JNINativeMethod* dynamicMethods, jint fixedMethodTableSize, jint fullMethodTableSize);
 void netty_unix_util_free_dynamic_name(char** dynamicName);

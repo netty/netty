@@ -223,6 +223,22 @@ done:
     return ret;
 }
 
+jint netty_unix_util_unregister_natives(JNIEnv* env, const char* packagePrefix, const char* className) {
+    char* nettyClassName = NULL;
+    int ret = JNI_ERR;
+    NETTY_PREPEND(packagePrefix, className, nettyClassName, done);
+
+    jclass nativeCls = (*env)->FindClass(env, nettyClassName);
+    if (nativeCls == NULL) {
+        goto done;
+    }
+
+    ret = (*env)->UnregisterNatives(env, nativeCls);
+done:
+    free(nettyClassName);
+    return ret;
+}
+
 void netty_unix_util_free_dynamic_methods_table(JNINativeMethod* dynamicMethods, jint fixedMethodTableSize, jint fullMethodTableSize) {
     if (dynamicMethods != NULL) {
         jint i = fixedMethodTableSize;

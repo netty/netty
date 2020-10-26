@@ -21,6 +21,8 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 
+#define ERRORS_CLASSNAME "io/netty/channel/unix/ErrorsStaticallyReferencedJniMethods"
+
 static jclass oomErrorClass = NULL;
 static jclass runtimeExceptionClass = NULL;
 static jclass channelExceptionClass = NULL;
@@ -214,7 +216,7 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     // We must register the statically referenced methods first!
     if (netty_unix_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/unix/ErrorsStaticallyReferencedJniMethods",
+            ERRORS_CLASSNAME,
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
         return JNI_ERR;
@@ -241,7 +243,7 @@ error:
     return JNI_ERR;
 }
 
-void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
+void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     // delete global references so the GC can collect them
     NETTY_UNLOAD_CLASS(env, oomErrorClass);
     NETTY_UNLOAD_CLASS(env, runtimeExceptionClass);
@@ -249,4 +251,6 @@ void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_UNLOAD_CLASS(env, ioExceptionClass);
     NETTY_UNLOAD_CLASS(env, portUnreachableExceptionClass);
     NETTY_UNLOAD_CLASS(env, closedChannelExceptionClass);
+
+    netty_unix_util_unregister_natives(env, packagePrefix, ERRORS_CLASSNAME);
 }
