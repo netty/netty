@@ -25,17 +25,15 @@ import java.net.InetAddress;
  * Internet Protocol (IP) families used byte the {@link DatagramChannel}
  */
 public enum InternetProtocolFamily {
-    IPv4(Inet4Address.class, 1, NetUtil.LOCALHOST4),
-    IPv6(Inet6Address.class, 2, NetUtil.LOCALHOST6);
+    IPv4(Inet4Address.class, 1),
+    IPv6(Inet6Address.class, 2);
 
     private final Class<? extends InetAddress> addressType;
     private final int addressNumber;
-    private final InetAddress localHost;
 
-    InternetProtocolFamily(Class<? extends InetAddress> addressType, int addressNumber, InetAddress localHost) {
+    InternetProtocolFamily(Class<? extends InetAddress> addressType, int addressNumber) {
         this.addressType = addressType;
         this.addressNumber = addressNumber;
-        this.localHost = localHost;
     }
 
     /**
@@ -58,7 +56,14 @@ public enum InternetProtocolFamily {
      * Returns the {@link InetAddress} that represent the {@code LOCALHOST} for the family.
      */
     public InetAddress localhost() {
-        return localHost;
+        switch (this) {
+            case IPv4:
+                return NetUtil.LOCALHOST4;
+            case IPv6:
+                return NetUtil.LOCALHOST6;
+            default:
+                throw new IllegalStateException("Unsupported family " + this);
+        }
     }
 
     /**
