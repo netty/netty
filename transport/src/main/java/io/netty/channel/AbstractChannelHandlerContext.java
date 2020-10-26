@@ -991,11 +991,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             return true;
         } catch (Throwable cause) {
             try {
-                promise.setFailure(cause);
-            } finally {
                 if (msg != null) {
                     ReferenceCountUtil.release(msg);
                 }
+            } finally {
+                promise.setFailure(cause);
             }
             return false;
         }
