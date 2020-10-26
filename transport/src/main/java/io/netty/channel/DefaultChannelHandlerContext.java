@@ -973,11 +973,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return true;
         } catch (Throwable cause) {
             try {
-                promise.setFailure(cause);
-            } finally {
                 if (msg != null) {
                     ReferenceCountUtil.release(msg);
                 }
+            } finally {
+                promise.setFailure(cause);
             }
             return false;
         }
