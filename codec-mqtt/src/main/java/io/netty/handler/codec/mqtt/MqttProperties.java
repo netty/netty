@@ -166,7 +166,7 @@ public final class MqttProperties {
 
         @Override
         public String toString() {
-            return "IntegerProperty(" + propertyId + "," + value + ")";
+            return "IntegerProperty(" + propertyId + ", " + value + ")";
         }
     }
 
@@ -227,7 +227,7 @@ public final class MqttProperties {
             this.value.addAll(values);
         }
 
-        public static UserProperties fromUserPropertyCollection(Collection<UserProperty> properties) {
+        private static UserProperties fromUserPropertyCollection(Collection<UserProperty> properties) {
             UserProperties userProperties = new UserProperties();
             for (UserProperty property: properties) {
                 userProperties.add(new StringPair(property.value.key, property.value.value));
@@ -249,7 +249,7 @@ public final class MqttProperties {
             boolean first = true;
             for (StringPair pair: value) {
                 if (!first) {
-                    builder.append(",");
+                    builder.append(", ");
                 }
                 builder.append(pair.key + "->" + pair.value);
                 first = false;
@@ -266,7 +266,7 @@ public final class MqttProperties {
 
         @Override
         public String toString() {
-            return "UserProperty(" + value.key + "," + value.value + ")";
+            return "UserProperty(" + value.key + ", " + value.value + ")";
         }
     }
 
@@ -339,23 +339,24 @@ public final class MqttProperties {
         IntObjectHashMap<MqttProperty> props = this.props;
         if (props == null && subscriptionIds == null && userProperties == null) {
             return Collections.<MqttProperty>emptyList();
-        } else if (subscriptionIds == null && userProperties == null) {
-            return props.values();
-        } else if (props == null && userProperties == null) {
-            return subscriptionIds;
-        } else {
-            List<MqttProperty> propValues = new ArrayList<MqttProperty>(props != null ? props.size() : 1);
-            if (props != null) {
-                propValues.addAll(props.values());
-            }
-            if (subscriptionIds != null) {
-                propValues.addAll(subscriptionIds);
-            }
-            if (userProperties != null) {
-                propValues.add(UserProperties.fromUserPropertyCollection(userProperties));
-            }
-            return propValues;
         }
+        if (subscriptionIds == null && userProperties == null) {
+            return props.values();
+        }
+        if (props == null && userProperties == null) {
+            return subscriptionIds;
+        }
+        List<MqttProperty> propValues = new ArrayList<MqttProperty>(props != null ? props.size() : 1);
+        if (props != null) {
+            propValues.addAll(props.values());
+        }
+        if (subscriptionIds != null) {
+            propValues.addAll(subscriptionIds);
+        }
+        if (userProperties != null) {
+            propValues.add(UserProperties.fromUserPropertyCollection(userProperties));
+        }
+        return propValues;
     }
 
     public boolean isEmpty() {
@@ -376,20 +377,18 @@ public final class MqttProperties {
             List<UserProperty> userProperties = this.userProperties;
             if (userProperties == null) {
                 return null;
-            } else {
-                return UserProperties.fromUserPropertyCollection(userProperties);
             }
-        } else if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+            return UserProperties.fromUserPropertyCollection(userProperties);
+        }
+        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
             List<IntegerProperty> subscriptionIds = this.subscriptionIds;
             if (subscriptionIds == null || subscriptionIds.isEmpty()) {
                 return null;
-            } else {
-                return subscriptionIds.get(0);
             }
-        } else {
-            IntObjectHashMap<MqttProperty> props = this.props;
-            return props == null ? null : props.get(propertyId);
+            return subscriptionIds.get(0);
         }
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return props == null ? null : props.get(propertyId);
     }
 
     /**
@@ -403,13 +402,13 @@ public final class MqttProperties {
     public List<? extends MqttProperty> getProperties(int propertyId) {
         if (propertyId == MqttPropertyType.USER_PROPERTY.value) {
             return userProperties == null ? Collections.<MqttProperty>emptyList() : userProperties;
-        } else if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
-            return subscriptionIds == null ? Collections.<MqttProperty>emptyList() : subscriptionIds;
-        } else {
-            IntObjectHashMap<MqttProperty> props = this.props;
-            return (props == null || !props.containsKey(propertyId)) ?
-                    Collections.<MqttProperty>emptyList() :
-                    Collections.singletonList(props.get(propertyId));
         }
+        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+            return subscriptionIds == null ? Collections.<MqttProperty>emptyList() : subscriptionIds;
+        }
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return (props == null || !props.containsKey(propertyId)) ?
+                Collections.<MqttProperty>emptyList() :
+                Collections.singletonList(props.get(propertyId));
     }
 }
