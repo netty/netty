@@ -62,23 +62,28 @@ public class FileDescriptor {
         return fd;
     }
 
+    protected boolean markClosed() {
+        for (;;) {
+            int state = this.state;
+            if (isClosed(state)) {
+                return false;
+            }
+            // Once a close operation happens, the channel is considered shutdown.
+            if (casState(state, state | STATE_ALL_MASK)) {
+                return true;
+            }
+        }
+    }
+
     /**
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        for (;;) {
-            int state = this.state;
-            if (isClosed(state)) {
-                return;
+        if (markClosed()) {
+            int res = close(fd);
+            if (res < 0) {
+                throw newIOException("close", res);
             }
-            // Once a close operation happens, the channel is considered shutdown.
-            if (casState(state, state | STATE_ALL_MASK)) {
-                break;
-            }
-        }
-        int res = close(fd);
-        if (res < 0) {
-            throw newIOException("close", res);
         }
     }
 
