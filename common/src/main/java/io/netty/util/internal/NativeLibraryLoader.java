@@ -350,12 +350,26 @@ public final class NativeLibraryLoader {
             }
             NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
             logger.debug("Successfully loaded the library {}", name);
+        } catch (NoSuchMethodError nsme) {
+            if (suppressed != null) {
+                ThrowableUtil.addSuppressed(nsme, suppressed);
+            }
+            rethrowWithMoreDetailsIfPossible(name, nsme);
         } catch (UnsatisfiedLinkError ule) {
             if (suppressed != null) {
                 ThrowableUtil.addSuppressed(ule, suppressed);
             }
             throw ule;
         }
+    }
+
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    private static void rethrowWithMoreDetailsIfPossible(String name, NoSuchMethodError error) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            throw new LinkageError(
+                    "Possible multiple incompatible native libraries on the classpath for '" + name + "'?", error);
+        }
+        throw error;
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
