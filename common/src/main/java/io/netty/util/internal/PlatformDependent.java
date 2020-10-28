@@ -162,11 +162,7 @@ public final class PlatformDependent {
         if (!isAndroid()) {
             // only direct to method if we are not running on android.
             // See https://github.com/netty/netty/issues/2604
-            if (javaVersion() >= 9) {
-                CLEANER = CleanerJava9.isSupported() ? new CleanerJava9() : NOOP;
-            } else {
-                CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
-            }
+            CLEANER = CleanerJava9.isSupported() ? new CleanerJava9() : NOOP;
         } else {
             CLEANER = NOOP;
         }
