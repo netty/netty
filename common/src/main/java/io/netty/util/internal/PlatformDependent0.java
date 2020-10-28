@@ -562,6 +562,14 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(data, INT_ARRAY_BASE_OFFSET + INT_ARRAY_INDEX_SCALE * index);
     }
 
+    static int getIntVolatile(long address) {
+        return UNSAFE.getIntVolatile(null, address);
+    }
+
+    static void putIntOrdered(long adddress, int newValue) {
+        UNSAFE.putOrderedInt(null, adddress, newValue);
+    }
+
     static long getLong(byte[] data, int index) {
         return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
