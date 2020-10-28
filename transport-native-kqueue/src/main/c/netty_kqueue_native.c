@@ -371,14 +371,17 @@ error:
    return JNI_ERR;
 }
 
-static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env, const char* staticPackagePrefix) {
-    netty_unix_limits_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_unix_errors_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_unix_filedescriptor_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_unix_socket_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_unix_buffer_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_kqueue_bsdsocket_JNI_OnUnLoad(env, staticPackagePrefix);
-    netty_kqueue_eventarray_JNI_OnUnLoad(env, staticPackagePrefix);
+static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    netty_unix_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+    netty_unix_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
+
+    netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
+    netty_kqueue_bsdsocket_JNI_OnUnLoad(env, packagePrefix);
+    netty_kqueue_eventarray_JNI_OnUnLoad(env, packagePrefix);
 }
 
 static jint JNI_OnLoad_netty_transport_native_kqueue0(JavaVM* vm, void* reserved) {
