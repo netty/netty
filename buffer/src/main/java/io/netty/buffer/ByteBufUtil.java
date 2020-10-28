@@ -389,16 +389,124 @@ public final class ByteBufUtil {
         return 0;
     }
 
+    private static final class SWARByteSearch {
+
+        private static long compilePattern(byte byteToFind) {
+            return (byteToFind & 0xFFL) * 0x101010101010101L;
+        }
+
+        private static int firstAnyPattern(long word, long pattern, boolean leading) {
+            long input = word ^ pattern;
+            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
+            tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+            final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
+            return binaryPosition >>> 3;
+        }
+    }
+
+    private static int unrolledFirstIndexOf(AbstractByteBuf buffer, int fromIndex, int byteCount, byte value) {
+        assert byteCount > 0 && byteCount < 8;
+        if (buffer._getByte(fromIndex) == value) {
+            return fromIndex;
+        }
+        if (byteCount == 1) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 1) == value) {
+            return fromIndex + 1;
+        }
+        if (byteCount == 2) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 2) == value) {
+            return fromIndex + 2;
+        }
+        if (byteCount == 3) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 3) == value) {
+            return fromIndex + 3;
+        }
+        if (byteCount == 4) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 4) == value) {
+            return fromIndex + 4;
+        }
+        if (byteCount == 5) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 5) == value) {
+            return fromIndex + 5;
+        }
+        if (byteCount == 6) {
+            return -1;
+        }
+        if (buffer._getByte(fromIndex + 6) == value) {
+            return fromIndex + 6;
+        }
+        return -1;
+    }
+
+    /**
+     * This is using a SWAR (SIMD Within A Register) batch read technique to minimize bound-checks and improve memory
+     * usage while searching for {@code value}.
+     */
+    static int firstIndexOf(AbstractByteBuf buffer, int fromIndex, int toIndex, byte value) {
+        fromIndex = Math.max(fromIndex, 0);
+        if (fromIndex >= toIndex || buffer.capacity() == 0) {
+            return -1;
+        }
+        final int length = toIndex - fromIndex;
+        buffer.checkIndex(fromIndex, length);
+        if (!PlatformDependent.isUnaligned()) {
+            return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
+        }
+        assert PlatformDependent.isUnaligned();
+        int offset = fromIndex;
+        final int byteCount = length & 7;
+        if (byteCount > 0) {
+            final int index = unrolledFirstIndexOf(buffer, fromIndex, byteCount, value);
+            if (index != -1) {
+                return index;
+            }
+            offset += byteCount;
+            if (offset == toIndex) {
+                return -1;
+            }
+        }
+        final int longCount = length >>> 3;
+        final ByteOrder nativeOrder = ByteOrder.nativeOrder();
+        final boolean isNative = nativeOrder == buffer.order();
+        final boolean useLE = nativeOrder == ByteOrder.LITTLE_ENDIAN;
+        final long pattern = SWARByteSearch.compilePattern(value);
+        for (int i = 0; i < longCount; i++) {
+            // use the faster available getLong
+            final long word = useLE? buffer._getLongLE(offset) : buffer._getLong(offset);
+            int index = SWARByteSearch.firstAnyPattern(word, pattern, isNative);
+            if (index < Long.BYTES) {
+                return offset + index;
+            }
+            offset += Long.BYTES;
+        }
+        return -1;
+    }
+
+    private static int linearFirstIndexOf(AbstractByteBuf buffer, int fromIndex, int toIndex, byte value) {
+        for (int i = fromIndex; i < toIndex; i++) {
+            if (buffer._getByte(i) == value) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /**
      * The default implementation of {@link ByteBuf#indexOf(int, int, byte)}.
      * This method is useful when implementing a new buffer type.
      */
     public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
-        if (fromIndex <= toIndex) {
-            return firstIndexOf(buffer, fromIndex, toIndex, value);
-        } else {
-            return lastIndexOf(buffer, fromIndex, toIndex, value);
-        }
+        return buffer.indexOf(fromIndex, toIndex, value);
     }
 
     /**
@@ -477,23 +585,21 @@ public final class ByteBufUtil {
         }
     }
 
-    private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
-        fromIndex = Math.max(fromIndex, 0);
-        if (fromIndex >= toIndex || buffer.capacity() == 0) {
-            return -1;
-        }
-
-        return buffer.forEachByte(fromIndex, toIndex - fromIndex, new ByteProcessor.IndexOfProcessor(value));
-    }
-
-    private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
-        int capacity = buffer.capacity();
+    static int lastIndexOf(AbstractByteBuf buffer, int fromIndex, int toIndex, byte value) {
+        assert fromIndex > toIndex;
+        final int capacity = buffer.capacity();
         fromIndex = Math.min(fromIndex, capacity);
         if (fromIndex < 0 || capacity == 0) {
             return -1;
         }
+        buffer.checkIndex(toIndex, fromIndex - toIndex);
+        for (int i = fromIndex - 1; i >= toIndex; i--) {
+            if (buffer._getByte(i) == value) {
+                return i;
+            }
+        }
 
-        return buffer.forEachByteDesc(toIndex, fromIndex - toIndex, new ByteProcessor.IndexOfProcessor(value));
+        return -1;
     }
 
     private static CharSequence checkCharSequenceBounds(CharSequence seq, int start, int end) {
