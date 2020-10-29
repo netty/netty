@@ -159,7 +159,8 @@ public class StompSubframeAggregatorTest {
     }
 
     private static void assertHeartbeatFrame(EmbeddedChannel channel) {
-        StompHeadersSubframe frame = channel.readInbound();
+        StompFrame frame = channel.readInbound();
         assertEquals(StompCommand.HEARTBEAT, frame.command());
+        frame.release();
     }
 }
