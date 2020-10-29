@@ -189,7 +189,7 @@ public class ByteBufUtilTest {
 
         buf = buffer(2).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeShortBE(buf, expected);
-        assertEquals((short) expected, buf.readShortLE());
+        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShortLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShort());
         buf.release();
@@ -209,7 +209,7 @@ public class ByteBufUtilTest {
 
         buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.setShortBE(buf, 0, shortValue);
-        assertEquals((short) shortValue, buf.readShortLE());
+        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShortLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShort());
         buf.release();
@@ -229,7 +229,7 @@ public class ByteBufUtilTest {
 
         buf = buffer(4).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeMediumBE(buf, mediumValue);
-        assertEquals(mediumValue, buf.readMediumLE());
+        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
         buf.release();

@@ -438,7 +438,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf writeShortBE(ByteBuf buf, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) : buf.writeShortLE(shortValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) :
+                buf.writeShort(swapShort((short) shortValue));
     }
 
     /**
@@ -446,7 +447,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf setShortBE(ByteBuf buf, int index, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) : buf.setShortLE(index, shortValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) :
+                buf.setShort(index, swapShort((short) shortValue));
     }
 
     /**
@@ -454,7 +456,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) : buf.writeMediumLE(mediumValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) :
+                buf.writeMedium(swapMedium(mediumValue));
     }
 
     /**
