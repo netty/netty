@@ -144,6 +144,7 @@ static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env, const char
 static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     int providerRegistered = 0;
+    char* nettyClassName = NULL;
 
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
@@ -158,7 +159,7 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* 
     }
     providerRegistered = 1;
 
-    char* nettyClassName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver");
+    nettyClassName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver");
     NETTY_JNI_UTIL_LOAD_CLASS(env, dnsResolverClass, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
@@ -184,7 +185,7 @@ done:
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_resolver_dns_native_macos(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
@@ -194,7 +195,7 @@ JNIEXPORT void JNI_OnUnload_netty_resolver_dns_native_macos(JavaVM* vm, void* re
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
