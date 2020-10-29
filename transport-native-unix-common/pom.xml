@@ -37,6 +37,8 @@
     <exe.archiver>ar</exe.archiver>
     <nativeLibName>libnetty-unix-common</nativeLibName>
     <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
+    <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
     <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
     <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
@@ -46,6 +48,30 @@
 
   <build>
     <plugins>
+      <!-- Download the netty-jni-util source -->
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.11.2</version>
+        <executions>
+          <execution>
+            <id>get-netty-jni-util</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>checkout</goal>
+            </goals>
+            <configuration>
+              <checkoutDirectory>${jniUtilCheckoutDir}</checkoutDirectory>
+              <connectionType>developerConnection</connectionType>
+              <developerConnectionUrl>scm:git:https://github.com/netty/netty-jni-util.git</developerConnectionUrl>
+              <scmVersion>0.0.1</scmVersion>
+              <scmVersionType>tag</scmVersionType>
+              <skipCheckoutIfExists>true</skipCheckoutIfExists>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+
       <!-- Also include c files in source jar -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -102,6 +128,10 @@
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
@@ -175,6 +205,10 @@
                       <zipfileset dir="${nativeIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
                     <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
@@ -238,6 +272,10 @@
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
@@ -305,6 +343,10 @@
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeLibOnlyDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
@@ -378,6 +420,10 @@
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />

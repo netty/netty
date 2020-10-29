@@ -39,16 +39,16 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 // JNI Method Registration Table End
 
 jint netty_kqueue_eventarray_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
             EVENT_ARRAY_CLASSNAME,
             fixed_method_table,
             fixed_method_table_size) != 0) {
         return JNI_ERR;
     }
-    return NETTY_JNI_VERSION;
+    return NETTY_JNI_UTIL_JNI_VERSION;
 }
 
 void netty_kqueue_eventarray_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    netty_unix_util_unregister_natives(env, packagePrefix, EVENT_ARRAY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, packagePrefix, EVENT_ARRAY_CLASSNAME);
 }
