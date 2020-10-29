@@ -50,8 +50,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                            Http2Settings initialSettings, boolean validateHeaders,
                                            boolean decoupleCloseAndGoAway) {
-        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
-        this.validateHeaders = validateHeaders;
+        this(decoder, encoder, initialSettings, validateHeaders, decoupleCloseAndGoAway, null);
     }
 
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
