@@ -172,6 +172,44 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testAddLastVarArgsSkipsNull() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertEquals(1, pipeline.names().size());
+
+        pipeline.addLast((ChannelHandler) null, newHandler(), null);
+        assertEquals(2, pipeline.names().size());
+        assertEquals("DefaultChannelPipelineTest$TestHandler#0", pipeline.names().get(0));
+
+        pipeline.addLast(newHandler(), null, newHandler());
+        assertEquals(4, pipeline.names().size());
+        assertEquals("DefaultChannelPipelineTest$TestHandler#0", pipeline.names().get(0));
+        assertEquals("DefaultChannelPipelineTest$TestHandler#1", pipeline.names().get(1));
+        assertEquals("DefaultChannelPipelineTest$TestHandler#2", pipeline.names().get(2));
+
+        pipeline.addLast((ChannelHandler) null);
+        assertEquals(4, pipeline.names().size());
+    }
+
+    @Test
+    public void testAddFirstVarArgsSkipsNull() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertEquals(1, pipeline.names().size());
+
+        pipeline.addFirst((ChannelHandler) null, newHandler(), null);
+        assertEquals(2, pipeline.names().size());
+        assertEquals("DefaultChannelPipelineTest$TestHandler#0", pipeline.names().get(0));
+
+        pipeline.addFirst(newHandler(), null, newHandler());
+        assertEquals(4, pipeline.names().size());
+        assertEquals("DefaultChannelPipelineTest$TestHandler#2", pipeline.names().get(0));
+        assertEquals("DefaultChannelPipelineTest$TestHandler#1", pipeline.names().get(1));
+        assertEquals("DefaultChannelPipelineTest$TestHandler#0", pipeline.names().get(2));
+
+        pipeline.addFirst((ChannelHandler) null);
+        assertEquals(4, pipeline.names().size());
+    }
+
+    @Test
     public void testRemoveChannelHandler() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
 
