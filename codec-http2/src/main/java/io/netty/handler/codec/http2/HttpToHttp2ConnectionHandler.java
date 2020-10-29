@@ -70,9 +70,6 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
-        if (httpScheme != null && !httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text())) {
-            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), httpScheme.name());
-        }
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
                                   connection().local().incrementAndGetNextStreamId());
     }
@@ -99,6 +96,12 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                 // Provide the user the opportunity to specify the streamId
                 currentStreamId = getStreamId(httpMsg.headers());
+
+                // Add HttpScheme if it's defined in constructor and header does not contain it.
+                if (httpScheme != null &&
+                        !httpMsg.headers().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text())) {
+                    httpMsg.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), httpScheme.name());
+                }
 
                 // Convert and write the headers.
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
