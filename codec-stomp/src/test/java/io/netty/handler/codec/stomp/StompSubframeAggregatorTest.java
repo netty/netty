@@ -155,7 +155,7 @@ public class StompSubframeAggregatorTest {
     @Test(expected = TooLongFrameException.class)
     public void testTooLongFrameException() {
         EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(), new StompSubframeAggregator(10));
-        channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
+        channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.TOO_LONG_FRAME.getBytes()));
     }
 
     private static void assertHeartbeatFrame(EmbeddedChannel channel) {
