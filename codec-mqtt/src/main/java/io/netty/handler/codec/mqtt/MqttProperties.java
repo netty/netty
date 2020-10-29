@@ -393,7 +393,7 @@ public final class MqttProperties {
 
     /**
      * Get properties by ID.
-     * Some properties (Subscription ID and User Properties) may occur few times,
+     * Some properties (Subscription ID and User Properties) may occur multiple times,
      * this method returns all their values in order.
      *
      * @param propertyId ID of the property

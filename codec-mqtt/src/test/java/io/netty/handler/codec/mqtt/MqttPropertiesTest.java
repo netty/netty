@@ -59,7 +59,7 @@ public class MqttPropertiesTest {
         expectedUserProps.add(new MqttProperties.StringPair("tag", "secondTag"));
         List<MqttProperties.StringPair> actualUserProps =
                 ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value;
-        assertEquals("getProperty User Properties", actualUserProps, expectedUserProps);
+        assertEquals("getProperty User Properties", expectedUserProps, actualUserProps);
     }
 
     @Test
@@ -83,7 +83,7 @@ public class MqttPropertiesTest {
         expectedUserProps.add(new MqttProperties.UserProperty("tag", "secondTag"));
         List<MqttProperties.UserProperty> actualUserProps =
                 (List<MqttProperties.UserProperty>) props.getProperties(USER_PROPERTY.value());
-        assertEquals("getProperty User Properties", actualUserProps, expectedUserProps);
+        assertEquals("getProperty User Properties", expectedUserProps, actualUserProps);
     }
 
     @Test
