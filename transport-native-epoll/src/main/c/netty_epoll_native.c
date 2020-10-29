@@ -49,6 +49,11 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
+// Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
+#ifdef NETTY_BUILD_STATIC
+#define NETTY_JNI_UTIL_BUILD_STATIC
+#endif
+
 #define STATICALLY_CLASSNAME "io/netty/channel/epoll/NativeStaticallyReferencedJniMethods"
 #define NATIVE_CLASSNAME "io/netty/channel/epoll/Native"
 
@@ -101,7 +106,6 @@ static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
 static jfieldID packetCountFieldId = NULL;
-static char* staticPackagePrefix = NULL;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -571,23 +575,23 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
     
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
-    NETTY_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendmmsg0";
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
-    netty_unix_util_free_dynamic_name(&dynamicTypeName);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
-    NETTY_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvmmsg0";
     dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmmsg0;
-    netty_unix_util_free_dynamic_name(&dynamicTypeName);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     return dynamicMethods;
 error:
     free(dynamicTypeName);
-    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     return NULL;
 }
 
@@ -608,7 +612,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     JNINativeMethod* dynamicMethods = NULL;
 
     // We must register the statically referenced methods first!
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
             STATICALLY_CLASSNAME,
             statically_referenced_fixed_method_table,
@@ -623,7 +627,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         goto done;
     }
 
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
             NATIVE_CLASSNAME,
             dynamicMethods,
@@ -664,29 +668,29 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     linuxsocketOnLoadCalled = 1;
 
     // Initialize this module
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket", nettyClassName, done);
-    NETTY_FIND_CLASS(env, nativeDatagramPacketCls, nettyClassName, done);
-    netty_unix_util_free_dynamic_name(&nettyClassName);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket", nettyClassName, done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, nativeDatagramPacketCls, nettyClassName, done);
+    netty_jni_util_free_dynamic_name(&nettyClassName);
 
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetAddrFieldId, "addr", "[B", done);
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetAddrLenFieldId, "addrLen", "I", done);
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetScopeIdFieldId, "scopeId", "I", done);
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetPortFieldId, "port", "I", done);
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetMemoryAddressFieldId, "memoryAddress", "J", done);
-    NETTY_GET_FIELD(env, nativeDatagramPacketCls, packetCountFieldId, "count", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrFieldId, "addr", "[B", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrLenFieldId, "addrLen", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetScopeIdFieldId, "scopeId", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetPortFieldId, "port", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetMemoryAddressFieldId, "memoryAddress", "J", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetCountFieldId, "count", "I", done);
 
-    ret = NETTY_JNI_VERSION;
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
 
-    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
     if (ret == JNI_ERR) {
         if (staticallyRegistered == 1) {
-            netty_unix_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+            netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
         }
         if (nativeRegistered == 1) {
-            netty_unix_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
+            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
         }
         if (limitsOnLoadCalled == 1) {
             netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
@@ -716,7 +720,7 @@ done:
     return ret;
 }
 
-static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+static void netty_epoll_native_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
     netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
     netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
     netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
@@ -731,72 +735,31 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env, const char* packagePref
     packetMemoryAddressFieldId = NULL;
     packetCountFieldId = NULL;
 
-    netty_unix_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
-    netty_unix_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
+    netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
 }
 
 // Invoked by the JVM when statically linked
-static jint JNI_OnLoad_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        return JNI_ERR;
-    }
-    char* packagePrefix = NULL;
-#ifndef NETTY_BUILD_STATIC
-    Dl_info dlinfo;
-    jint status = 0;
-    // We need to use an address of a function that is uniquely part of this library, so choose a static
-    // function. See https://github.com/netty/netty/issues/4840.
-    if (!dladdr((void*) netty_epoll_native_JNI_OnUnLoad, &dlinfo)) {
-        fprintf(stderr, "FATAL: transport-native-epoll JNI call to dladdr failed!\n");
-        return JNI_ERR;
-    }
-    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty_transport_native_epoll", &status);
-    if (status == JNI_ERR) {
-        fprintf(stderr, "FATAL: transport-native-epoll JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
-        return JNI_ERR;
-    }
-#endif /* NETTY_BUILD_STATIC */
-    jint ret = netty_epoll_native_JNI_OnLoad(env, packagePrefix);
-    if (ret == JNI_ERR) {
-        free(packagePrefix);
-        staticPackagePrefix = NULL;
-    } else {
-        staticPackagePrefix = packagePrefix;
-    }
-    return ret;
-}
-
-static void JNI_OnUnload_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        // Something is wrong but nothing we can do about this :(
-        return;
-    }
-    netty_epoll_native_JNI_OnUnLoad(env, staticPackagePrefix);
-    free(staticPackagePrefix);
-    staticPackagePrefix = NULL;
-}
 
 // We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
 // https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty_epoll_native_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
 JNIEXPORT void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
-    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_epoll_native_JNI_OnUnload);
 }
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty_epoll_native_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_epoll_native_JNI_OnUnload);
 }
 #endif /* NETTY_BUILD_STATIC */

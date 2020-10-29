@@ -25,6 +25,11 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_errors.h"
 
+// Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
+#ifdef NETTY_BUILD_STATIC
+#define NETTY_JNI_UTIL_BUILD_STATIC
+#endif
+
 static jclass dnsResolverClass = NULL;
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;

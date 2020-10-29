@@ -16,6 +16,7 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 #include "netty_unix_buffer.h"
+#include "netty_jni_util.h"
 
 #define BUFFER_CLASSNAME "io/netty/channel/unix/Buffer"
 
@@ -40,7 +41,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 jint netty_unix_buffer_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     // We must register the statically referenced methods first!
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
             BUFFER_CLASSNAME,
             statically_referenced_fixed_method_table,
@@ -48,9 +49,9 @@ jint netty_unix_buffer_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         return JNI_ERR;
     }
 
-    return NETTY_JNI_VERSION;
+    return NETTY_JNI_UTIL_JNI_VERSION;
 }
 
 void netty_unix_buffer_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-     netty_unix_util_unregister_natives(env, packagePrefix, BUFFER_CLASSNAME);
+     netty_jni_util_unregister_natives(env, packagePrefix, BUFFER_CLASSNAME);
 }
