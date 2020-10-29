@@ -331,15 +331,15 @@ public final class HttpConversionUtil {
      * Translate and add HTTP/2 headers to HTTP/1.x headers.
      *
      * @param streamId The stream associated with {@code sourceHeaders}.
-     * @param sourceHeaders The HTTP/2 headers to convert.
+     * @param inputHeaders The HTTP/2 headers to convert.
      * @param destinationMessage The object which will contain the resulting HTTP/1.x headers.
      * @param addToTrailer {@code true} to add to trailing headers. {@code false} to add to initial headers.
      * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
      * @see #addHttp2ToHttpHeaders(int, Http2Headers, HttpHeaders, HttpVersion, boolean, boolean)
      */
-    public static void addHttp2ToHttpHeaders(int streamId, Http2Headers sourceHeaders,
+    public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders,
                     FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
-        addHttp2ToHttpHeaders(streamId, sourceHeaders,
+        addHttp2ToHttpHeaders(streamId, inputHeaders,
                 addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers(),
                 destinationMessage.protocolVersion(), addToTrailer, destinationMessage instanceof HttpRequest);
     }
