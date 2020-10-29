@@ -94,7 +94,7 @@ public final class Errors {
         }
     }
 
-    static void throwConnectException(String method, int err)
+    public static void throwConnectException(String method, int err)
             throws IOException {
         if (err == ERROR_EALREADY_NEGATIVE) {
             throw new ConnectionPendingException();
