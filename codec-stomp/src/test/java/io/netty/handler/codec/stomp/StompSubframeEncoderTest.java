@@ -97,4 +97,17 @@ public class StompSubframeEncoderTest {
         assertEquals("CONNECTED\nversion:1.2\n\n\0", stompBuffer.toString(CharsetUtil.UTF_8));
         assertTrue(stompBuffer.release());
     }
+
+    @Test
+    public void testEncodeHeartbeatFrame() {
+        StompFrame heartbeatFrame = new DefaultStompFrame(StompCommand.HEARTBEAT);
+
+        assertTrue(channel.writeOutbound(heartbeatFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+        assertNotNull(stompBuffer);
+        assertEquals("\n", stompBuffer.toString(CharsetUtil.UTF_8));
+
+        assertNull(channel.readOutbound());
+    }
 }
