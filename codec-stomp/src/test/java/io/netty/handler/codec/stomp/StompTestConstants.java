@@ -77,5 +77,16 @@ public final class StompTestConstants {
             '\n' +
             "body\0";
 
+    public static final String TOO_LONG_FRAME = "SEND\n" +
+            "destination:/queue/a\n" +
+            "content-type:text/plain\n" +
+            '\n' +
+            "this is too long!" +
+            "\0";
+
+    public static final String HEARTBEAT_FRAME_CR_LF = "\r\n";
+
+    public static final String HEARTBEAT_FRAME_LF = "\n";
+
     private StompTestConstants() { }
 }
