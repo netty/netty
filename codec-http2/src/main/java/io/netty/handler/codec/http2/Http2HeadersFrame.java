@@ -34,7 +34,7 @@ public interface Http2HeadersFrame extends Http2StreamFrame {
     int padding();
 
     /**
-     * Returns {@code true} if the END_STREAM flag ist set.
+     * Returns {@code true} if the END_STREAM flag is set.
      */
     boolean isEndStream();
 }
