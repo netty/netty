@@ -25,5 +25,4 @@ public interface Http2Frame {
      * Returns the name of the HTTP/2 frame e.g. DATA, GOAWAY, etc.
      */
     String name();
-
 }
