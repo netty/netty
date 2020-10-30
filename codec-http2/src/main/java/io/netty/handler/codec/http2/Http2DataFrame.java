@@ -43,7 +43,7 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
     int initialFlowControlledBytes();
 
     /**
-     * Returns {@code true} if the END_STREAM flag ist set.
+     * Returns {@code true} if the END_STREAM flag is set.
      */
     boolean isEndStream();
 
