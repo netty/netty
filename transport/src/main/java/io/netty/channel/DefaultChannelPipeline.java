@@ -295,9 +295,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        for (int i = size - 1; i >= 0; i --) {
+        for (int i = size - 1; i >= 0; i--) {
             ChannelHandler h = handlers[i];
-            addFirst(null, h);
+            if (h != null) {
+                addFirst(executor, null, h);
+            }
         }
 
         return this;
@@ -311,11 +313,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(ChannelHandler... handlers) {
         requireNonNull(handlers, "handlers");
 
-        for (ChannelHandler h: handlers) {
-            if (h == null) {
-                break;
+        for (ChannelHandler h : handlers) {
+            if (h != null) {
+                addLast(executor, null, h);
             }
-            addLast(null, h);
         }
 
         return this;
