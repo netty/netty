@@ -343,12 +343,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
 
-        for (int i = handlers.length - 1; i >= 0; i --) {
+        for (int i = handlers.length - 1; i >= 0; i--) {
             ChannelHandler h = handlers[i];
-            if (h == null) {
-                continue;
+            if (h != null) {
+                addFirst(executor, null, h);
             }
-            addFirst(executor, null, h);
         }
 
         return this;
@@ -367,11 +366,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
 
-        for (ChannelHandler h: handlers) {
-            if (h == null) {
-                continue;
+        for (ChannelHandler h : handlers) {
+            if (h != null) {
+                addLast(executor, null, h);
             }
-            addLast(executor, null, h);
         }
 
         return this;
