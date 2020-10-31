@@ -318,7 +318,7 @@ public final class HttpConversionUtil {
         // HTTP/1.1 status line.
         final HttpResponse msg = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
         try {
-            addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, true);
+            addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, false);
         } catch (final Http2Exception e) {
             throw e;
         } catch (final Throwable t) {
