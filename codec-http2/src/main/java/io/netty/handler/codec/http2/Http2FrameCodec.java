@@ -332,7 +332,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         } else if (msg instanceof Http2SettingsFrame) {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
         } else if (msg instanceof Http2SettingsAckFrame) {
-            // In the event of manual SETTINGS ACK is is assumed the encoder will apply the earliest received but not
+            // In the event of manual SETTINGS ACK, it is assumed the encoder will apply the earliest received but not
             // yet ACKed settings.
             encoder().writeSettingsAck(ctx, promise);
         } else if (msg instanceof Http2GoAwayFrame) {
