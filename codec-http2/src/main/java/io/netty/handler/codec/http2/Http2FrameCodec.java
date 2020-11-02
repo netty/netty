@@ -621,9 +621,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         @Override
-        public void onPushPromiseRead(
-                ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers, int padding)  {
-            // TODO: Maybe handle me
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                                      Http2Headers headers, int padding)  {
+            onHttp2Frame(ctx, new DefaultHttp2PushPromiseRead(promisedStreamId, headers, padding)
+                    .stream(requireStream(streamId)));
         }
 
         private Http2FrameStream requireStream(int streamId) {
