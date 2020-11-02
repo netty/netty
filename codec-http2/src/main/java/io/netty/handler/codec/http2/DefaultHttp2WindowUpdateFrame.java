@@ -49,6 +49,6 @@ public class DefaultHttp2WindowUpdateFrame extends AbstractHttp2StreamFrame impl
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) +
-                "(windowUpdateIncrement=" + windowUpdateIncrement + ", streamId=" + stream().id() + ')';
+                "(streamId=" + stream() + ", windowUpdateIncrement=" + windowUpdateIncrement + ')';
     }
 }
