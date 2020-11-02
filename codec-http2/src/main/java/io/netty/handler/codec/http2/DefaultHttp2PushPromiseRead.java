@@ -70,7 +70,7 @@ public class DefaultHttp2PushPromiseRead implements Http2PushPromiseRead {
                 "(padding=" + padding +
                 ", promisedStreamId=" + promisedStreamId +
                 ", http2Headers=" + http2Headers +
-                ", http2StreamFrame=" + http2StreamFrame +
+                ", stream=" + http2StreamFrame +
                 ')';
     }
 }
