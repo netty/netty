@@ -56,6 +56,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
 
     enum State {
+        SKIP_CONTROL_CHARACTERS,
         READ_HEADERS,
         READ_CONTENT,
         FINALIZE_FRAME_READ,
@@ -69,7 +70,6 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     private int alreadyReadChunkSize;
     private LastStompContentSubframe lastContent;
     private long contentLength = -1;
-    private boolean expectNulCharacter = true;
 
     public StompSubframeDecoder() {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE);
@@ -84,7 +84,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
-        super(State.READ_HEADERS);
+        super(State.SKIP_CONTROL_CHARACTERS);
         checkPositive(maxLineLength, "maxLineLength");
         checkPositive(maxChunkSize, "maxChunkSize");
         this.maxChunkSize = maxChunkSize;
@@ -95,19 +95,17 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         switch (state()) {
+            case SKIP_CONTROL_CHARACTERS:
+                skipControlCharacters(in);
+                checkpoint(State.READ_HEADERS);
+                // Fall through.
             case READ_HEADERS:
                 StompCommand command = StompCommand.UNKNOWN;
                 StompHeadersSubframe frame = null;
                 try {
                     command = readCommand(in);
                     frame = new DefaultStompHeadersSubframe(command);
-                    if (command == StompCommand.HEARTBEAT) {
-                        // heart-beat don't have headers nor nul character, so just skip to end frame
-                        expectNulCharacter = false;
-                        checkpoint(State.FINALIZE_FRAME_READ);
-                    } else {
-                        checkpoint(readHeaders(in, frame.headers()));
-                    }
+                    checkpoint(readHeaders(in, frame.headers()));
                     out.add(frame);
                 } catch (Exception e) {
                     if (frame == null) {
@@ -169,9 +167,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     }
                     // Fall through.
                 case FINALIZE_FRAME_READ:
-                    if (expectNulCharacter) {
-                        skipNullCharacter(in);
-                    }
+                    skipNullCharacter(in);
                     if (lastContent == null) {
                         lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
                     }
@@ -193,7 +189,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
         String commandStr = commandSequence.toString();
         try {
-            return isHeartbeat(commandStr) ? StompCommand.HEARTBEAT : StompCommand.valueOf(commandStr);
+            return StompCommand.valueOf(commandStr);
         } catch (IllegalArgumentException iae) {
             throw new DecoderException("Cannot to parse command " + commandStr);
         }
@@ -222,10 +218,6 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         return contentLength;
     }
 
-    private static boolean isHeartbeat(String command) {
-        return command.isEmpty() || (command.length() == 1 && command.charAt(0) == StompConstants.CR);
-    }
-
     private static void skipNullCharacter(ByteBuf buffer) {
         byte b = buffer.readByte();
         if (b != StompConstants.NUL) {
@@ -233,12 +225,22 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
     }
 
+    private static void skipControlCharacters(ByteBuf buffer) {
+        byte b;
+        for (;;) {
+            b = buffer.readByte();
+            if (b != StompConstants.CR && b != StompConstants.LF) {
+                buffer.readerIndex(buffer.readerIndex() - 1);
+                break;
+            }
+        }
+    }
+
     private void resetDecoder() {
-        checkpoint(State.READ_HEADERS);
+        checkpoint(State.SKIP_CONTROL_CHARACTERS);
         contentLength = -1;
         alreadyReadChunkSize = 0;
         lastContent = null;
-        expectNulCharacter = true;
     }
 
     private static class Utf8LineParser implements ByteProcessor {
