@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -43,5 +44,11 @@ public class DefaultHttp2WindowUpdateFrame extends AbstractHttp2StreamFrame impl
     @Override
     public int windowSizeIncrement() {
         return windowUpdateIncrement;
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) +
+                "(stream=" + stream() + ", windowUpdateIncrement=" + windowUpdateIncrement + ')';
     }
 }
