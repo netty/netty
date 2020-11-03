@@ -660,7 +660,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
-    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) {
+    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
         if (end <= start) {
             return -1;
         }
@@ -686,7 +686,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
-    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) {
+    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) throws Exception {
         if (rEnd > rStart) { // rStart *and* rEnd are inclusive
             return -1;
         }

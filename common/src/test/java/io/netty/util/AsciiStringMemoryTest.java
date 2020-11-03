@@ -78,13 +78,13 @@ public class AsciiStringMemoryTest {
     }
 
     @Test
-    public void forEachTest() {
+    public void forEachTest() throws Exception {
         final AtomicReference<Integer> aCount = new AtomicReference<>(0);
         final AtomicReference<Integer> bCount = new AtomicReference<>(0);
         aAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertEquals("failed at index: " + i, value, bAsciiString.byteAt(i++));
                 aCount.set(aCount.get() + 1);
                 return true;
@@ -93,7 +93,7 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertEquals("failed at index: " + i, value, aAsciiString.byteAt(i++));
                 bCount.set(bCount.get() + 1);
                 return true;
@@ -104,25 +104,25 @@ public class AsciiStringMemoryTest {
     }
 
     @Test
-    public void forEachWithIndexEndTest() {
+    public void forEachWithIndexEndTest() throws Exception {
         assertNotEquals(-1, aAsciiString.forEachByte(aAsciiString.length() - 1,
                 1, new IndexOfProcessor(aAsciiString.byteAt(aAsciiString.length() - 1))));
     }
 
     @Test
-    public void forEachWithIndexBeginTest() {
+    public void forEachWithIndexBeginTest() throws Exception {
         assertNotEquals(-1, aAsciiString.forEachByte(0,
                 1, new IndexOfProcessor(aAsciiString.byteAt(0))));
     }
 
     @Test
-    public void forEachDescTest() {
+    public void forEachDescTest() throws Exception {
         final AtomicReference<Integer> aCount = new AtomicReference<>(0);
         final AtomicReference<Integer> bCount = new AtomicReference<>(0);
         aAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertEquals("failed at index: " + i, value, bAsciiString.byteAt(bAsciiString.length() - (i++)));
                 aCount.set(aCount.get() + 1);
                 return true;
@@ -131,7 +131,7 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertEquals("failed at index: " + i, value, aAsciiString.byteAt(aAsciiString.length() - (i++)));
                 bCount.set(bCount.get() + 1);
                 return true;
@@ -142,13 +142,13 @@ public class AsciiStringMemoryTest {
     }
 
     @Test
-    public void forEachDescWithIndexEndTest() {
+    public void forEachDescWithIndexEndTest() throws Exception {
         assertNotEquals(-1, bAsciiString.forEachByteDesc(bAsciiString.length() - 1,
                 1, new IndexOfProcessor(bAsciiString.byteAt(bAsciiString.length() - 1))));
     }
 
     @Test
-    public void forEachDescWithIndexBeginTest() {
+    public void forEachDescWithIndexBeginTest() throws Exception {
         assertNotEquals(-1, bAsciiString.forEachByteDesc(0,
                 1, new IndexOfProcessor(bAsciiString.byteAt(0))));
     }

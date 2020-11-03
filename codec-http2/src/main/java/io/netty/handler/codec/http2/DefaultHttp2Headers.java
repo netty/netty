@@ -38,7 +38,18 @@ public class DefaultHttp2Headers
                     "empty headers are not allowed [%s]", name));
         }
         if (name instanceof AsciiString) {
-            int index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+            final int index;
+            try {
+                index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+                return;
+            } catch (Throwable t) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
+                        "unexpected error. invalid header name [%s]", name));
+                return;
+            }
+
             if (index != -1) {
                 PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
                         "invalid header name [%s]", name));
@@ -98,7 +109,7 @@ public class DefaultHttp2Headers
 
     @Override
     public Http2Headers clear() {
-        firstNonPseudo = head;
+        this.firstNonPseudo = head;
         return super.clear();
     }
 

@@ -2284,7 +2284,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 4;
 
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i ++;
@@ -2307,7 +2307,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 3;
 
             @Override
-            public boolean process(byte value) {
+            public boolean process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 if (i == stop) {
                     return false;
@@ -4608,7 +4608,7 @@ public abstract class AbstractByteBufTest {
                 private int index = bytes.length - 1;
 
                 @Override
-                public boolean process(byte value) {
+                public boolean process(byte value) throws Exception {
                     bytes[index--] = value;
                     return true;
                 }
@@ -4631,7 +4631,7 @@ public abstract class AbstractByteBufTest {
                 private int index;
 
                 @Override
-                public boolean process(byte value) {
+                public boolean process(byte value) throws Exception {
                     bytes[index++] = value;
                     return true;
                 }
@@ -4804,7 +4804,7 @@ public abstract class AbstractByteBufTest {
 
     private static final class TestByteProcessor implements ByteProcessor {
         @Override
-        public boolean process(byte value) {
+        public boolean process(byte value) throws Exception {
             return true;
         }
     }

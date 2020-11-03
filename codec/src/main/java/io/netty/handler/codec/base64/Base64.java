@@ -331,7 +331,7 @@ public final class Base64 {
         }
 
         @Override
-        public boolean process(byte value) {
+        public boolean process(byte value) throws Exception {
             if (value > 0) {
                 byte sbiDecode = decodabet[value];
                 if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better

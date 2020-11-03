@@ -255,7 +255,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByte(ByteProcessor visitor) {
+    public int forEachByte(ByteProcessor visitor) throws Exception {
         return forEachByte0(0, length(), visitor);
     }
 
@@ -266,7 +266,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByte(int index, int length, ByteProcessor visitor) {
+    public int forEachByte(int index, int length, ByteProcessor visitor) throws Exception {
         if (isOutOfBounds(index, length, length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
                     + ") <= " + "length(" + length() + ')');
@@ -274,7 +274,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return forEachByte0(index, length, visitor);
     }
 
-    private int forEachByte0(int index, int length, ByteProcessor visitor) {
+    private int forEachByte0(int index, int length, ByteProcessor visitor) throws Exception {
         final int len = offset + index + length;
         for (int i = offset + index; i < len; ++i) {
             if (!visitor.process(value[i])) {
@@ -290,7 +290,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the beginning of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByteDesc(ByteProcessor visitor) {
+    public int forEachByteDesc(ByteProcessor visitor) throws Exception {
         return forEachByteDesc0(0, length(), visitor);
     }
 
@@ -301,7 +301,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the beginning of the specified area.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByteDesc(int index, int length, ByteProcessor visitor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor visitor) throws Exception {
         if (isOutOfBounds(index, length, length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
                     + ") <= " + "length(" + length() + ')');
@@ -309,7 +309,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return forEachByteDesc0(index, length, visitor);
     }
 
-    private int forEachByteDesc0(int index, int length, ByteProcessor visitor) {
+    private int forEachByteDesc0(int index, int length, ByteProcessor visitor) throws Exception {
         final int end = offset + index;
         for (int i = offset + index + length - 1; i >= end; --i) {
             if (!visitor.process(value[i])) {

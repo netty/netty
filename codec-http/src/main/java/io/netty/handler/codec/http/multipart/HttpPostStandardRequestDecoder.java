@@ -706,7 +706,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
     private static final class UrlEncodedDetector implements ByteProcessor {
         @Override
-        public boolean process(byte value) {
+        public boolean process(byte value) throws Exception {
             return value != '%' && value != '+';
         }
     }
