@@ -24,7 +24,6 @@ import io.netty.handler.codec.HeadersUtils;
 import io.netty.handler.codec.ValueConverter;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -50,14 +49,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
     };
     static final NameValidator<CharSequence> HttpNameValidator = name -> {
         if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
+            throw new IllegalArgumentException("empty headers are not allowed [" + name + ']');
         }
         if (name instanceof AsciiString) {
-            try {
-                ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
-            }
+            ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
         } else {
             // Go through each character in the name
             for (int index = 0; index < name.length(); ++index) {
@@ -73,7 +68,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     /**
-     * <b>Warning!</b> Setting <code>validate</code> to <code>false</code> will mean that Netty won't
+     * <b>Warning!</b> Setting {@code validate} to {@code false} will mean that Netty won't
      * validate & protect against user-supplied header values that are malicious.
      * This can leave your server implementation vulnerable to
      * <a href="https://cwe.mitre.org/data/definitions/113.html">

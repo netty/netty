@@ -1262,58 +1262,37 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public int forEachByte(ByteProcessor processor) {
         ensureAccessible();
-        try {
-            return forEachByteAsc0(readerIndex, writerIndex, processor);
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
-        }
+        return forEachByteAsc0(readerIndex, writerIndex, processor);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
         checkIndex(index, length);
-        try {
-            return forEachByteAsc0(index, index + length, processor);
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
-        }
+        return forEachByteAsc0(index, index + length, processor);
     }
 
-    int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+    int forEachByteAsc0(int start, int end, ByteProcessor processor) {
         for (; start < end; ++start) {
             if (!processor.process(_getByte(start))) {
                 return start;
             }
         }
-
         return -1;
     }
 
     @Override
     public int forEachByteDesc(ByteProcessor processor) {
         ensureAccessible();
-        try {
-            return forEachByteDesc0(writerIndex - 1, readerIndex, processor);
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
-        }
+        return forEachByteDesc0(writerIndex - 1, readerIndex, processor);
     }
 
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         checkIndex(index, length);
-        try {
-            return forEachByteDesc0(index + length - 1, index, processor);
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
-        }
+        return forEachByteDesc0(index + length - 1, index, processor);
     }
 
-    int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) throws Exception {
+    int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) {
         for (; rStart >= rEnd; --rStart) {
             if (!processor.process(_getByte(rStart))) {
                 return rStart;
