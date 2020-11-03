@@ -70,11 +70,9 @@ final class HpackHuffmanEncoder {
         requireNonNull(out, "out");
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
+            encodeProcessor.out = out;
             try {
-                encodeProcessor.out = out;
                 string.forEachByte(encodeProcessor);
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
             } finally {
                 encodeProcessor.end();
             }
@@ -118,14 +116,9 @@ final class HpackHuffmanEncoder {
     int getEncodedLength(CharSequence data) {
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
-            try {
-                encodedLengthProcessor.reset();
-                string.forEachByte(encodedLengthProcessor);
-                return encodedLengthProcessor.length();
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
-                return -1;
-            }
+            encodedLengthProcessor.reset();
+            string.forEachByte(encodedLengthProcessor);
+            return encodedLengthProcessor.length();
         } else {
             return getEncodedLengthSlowPath(data);
         }

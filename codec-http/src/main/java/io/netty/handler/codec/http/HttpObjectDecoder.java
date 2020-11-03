@@ -936,7 +936,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             char nextByte = (char) (value & 0xFF);
             if (nextByte == HttpConstants.LF) {
                 int len = seq.length();
@@ -983,7 +983,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             if (currentState == State.SKIP_CONTROL_CHARS) {
                 char c = (char) (value & 0xFF);
                 if (Character.isISOControl(c) || Character.isWhitespace(c)) {

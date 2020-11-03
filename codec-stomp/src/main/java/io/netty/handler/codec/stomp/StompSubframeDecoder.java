@@ -274,7 +274,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
 
         @Override
-        public boolean process(byte nextByte) throws Exception {
+        public boolean process(byte nextByte) {
             if (nextByte == StompConstants.CR) {
                 ++lineLength;
                 return true;
@@ -353,7 +353,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
 
         @Override
-        public boolean process(byte nextByte) throws Exception {
+        public boolean process(byte nextByte) {
             if (nextByte == StompConstants.COLON) {
                 if (name == null) {
                     AppendableCharSequence charSeq = charSequence();

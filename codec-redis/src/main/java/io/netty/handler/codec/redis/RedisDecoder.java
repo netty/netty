@@ -311,7 +311,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         private long result;
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             if (value < '0' || value > '9') {
                 throw new RedisCodecException("bad byte in number: " + value);
             }
