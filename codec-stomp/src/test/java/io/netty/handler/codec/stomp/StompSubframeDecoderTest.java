@@ -74,9 +74,6 @@ public class StompSubframeDecoderTest {
         assertEquals("hello, queue a!!!", s);
         content.release();
 
-        // frames ending with \n also trigger a heartbeat frame after normal frame parsing
-        assertHeartbeatFrame(channel);
-
         assertNull(channel.readInbound());
     }
 
@@ -95,9 +92,6 @@ public class StompSubframeDecoderTest {
         String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!", s);
         content.release();
-
-        // frames ending with \n also trigger a heartbeat frame after normal frame parsing
-        assertHeartbeatFrame(channel);
 
         assertNull(channel.readInbound());
     }
@@ -134,9 +128,6 @@ public class StompSubframeDecoderTest {
         assertEquals("!!", s);
         content.release();
 
-        // frames ending with \n also trigger a heartbeat frame after normal frame parsing
-        assertHeartbeatFrame(channel);
-
         assertNull(channel.readInbound());
     }
 
@@ -162,9 +153,6 @@ public class StompSubframeDecoderTest {
         StompContentSubframe content2 = channel.readInbound();
         assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content2);
         content2.release();
-
-        // frames ending with \n also trigger a heartbeat frame after normal frame parsing
-        assertHeartbeatFrame(channel);
 
         assertNull(channel.readInbound());
     }
@@ -232,35 +220,5 @@ public class StompSubframeDecoderTest {
         assertNotNull(contentSubFrame);
         assertEquals("body", contentSubFrame.content().toString(UTF_8));
         assertTrue(contentSubFrame.release());
-    }
-
-    @Test
-    public void testHeartbeatFrame() {
-        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
-
-        ByteBuf incoming = Unpooled.wrappedBuffer(HEARTBEAT_FRAME_CR_LF.getBytes(UTF_8));
-        assertTrue(channel.writeInbound(incoming));
-
-        incoming = Unpooled.wrappedBuffer(HEARTBEAT_FRAME_LF.getBytes(UTF_8));
-        assertTrue(channel.writeInbound(incoming));
-
-        incoming = Unpooled.wrappedBuffer(HEARTBEAT_FRAME_CR_LF.getBytes(UTF_8));
-        assertTrue(channel.writeInbound(incoming));
-
-        // should have three heartbeat frames
-        assertHeartbeatFrame(channel);
-        assertHeartbeatFrame(channel);
-        assertHeartbeatFrame(channel);
-
-        assertNull(channel.readInbound());
-    }
-
-    private static void assertHeartbeatFrame(EmbeddedChannel channel) {
-        StompHeadersSubframe frame = channel.readInbound();
-        assertEquals(StompCommand.HEARTBEAT, frame.command());
-
-        StompContentSubframe content = channel.readInbound();
-        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
-        content.release();
     }
 }
