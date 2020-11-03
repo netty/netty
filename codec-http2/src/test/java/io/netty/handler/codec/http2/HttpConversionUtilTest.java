@@ -189,4 +189,22 @@ public class HttpConversionUtilTest {
         assertFalse(outHeaders.contains(TRANSFER_ENCODING));
         assertFalse(outHeaders.contains(UPGRADE));
     }
+
+    @Test
+    public void http2ToHttpHeaderTest() throws Exception {
+        Http2Headers http2Headers = new DefaultHttp2Headers();
+        http2Headers.status("200");
+        http2Headers.path("/meow"); // HTTP/2 Header response should not contain 'path' in response.
+        http2Headers.set("cat", "meow");
+
+        HttpHeaders httpHeaders = new DefaultHttpHeaders();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertFalse(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
+
+        httpHeaders.clear();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
+    }
 }
