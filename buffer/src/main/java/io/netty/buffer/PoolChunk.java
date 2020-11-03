@@ -250,13 +250,13 @@ final class PoolChunk<T> implements PoolChunkMetric {
         assert pre == null;
     }
 
-    private void removeAvailRun(long handle) {
+    private void removeAvailRun(Long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
         PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
         removeAvailRun(queue, handle);
     }
 
-    private void removeAvailRun(PriorityQueue<Long> queue, long handle) {
+    private void removeAvailRun(PriorityQueue<Long> queue, Long handle) {
         queue.remove(handle);
 
         int runOffset = runOffset(handle);
@@ -335,9 +335,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
             //get run with min offset in this queue
             PriorityQueue<Long> queue = runsAvail[queueIdx];
-            long handle = queue.poll();
+            Long handle = queue.poll();
 
-            assert !isUsed(handle);
+            assert handle != null && !isUsed(handle);
 
             removeAvailRun(queue, handle);
 
