@@ -876,7 +876,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause, ChannelPromise promise) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        int lastKnownStream = connection().remote().lastStreamCreated();
+        int lastKnownStream;
+        if (cause != null && cause.shutdownHint() == Http2Exception.ShutdownHint.HARD_SHUTDOWN) {
+            // The hard shutdown could have been triggered during header processing, before updating
+            // lastStreamCreated(). Specifically, any connection errors encountered by Http2FrameReader or HPACK
+            // decoding will fail to update the last known stream. So we must be pessimistic.
+            // https://github.com/netty/netty/issues/10670
+            lastKnownStream = Integer.MAX_VALUE;
+        } else {
+            lastKnownStream = connection().remote().lastStreamCreated();
+        }
         return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toByteBuf(ctx, cause), promise);
     }
 

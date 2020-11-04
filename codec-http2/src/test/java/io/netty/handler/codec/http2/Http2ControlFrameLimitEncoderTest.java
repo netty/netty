@@ -266,7 +266,7 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, atLeast(invocations)).flush();
         verify(ctx, times(invocations)).close();
         if (failed) {
-            verify(writer, times(1)).writeGoAway(eq(ctx), eq(0), eq(ENHANCE_YOUR_CALM.code()),
+            verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
                     any(ByteBuf.class), any(ChannelPromise.class));
         }
     }
