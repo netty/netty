@@ -284,21 +284,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addFirst(ChannelHandler... handlers) {
         requireNonNull(handlers, "handlers");
-        if (handlers.length == 0 || handlers[0] == null) {
-            return this;
-        }
 
-        int size;
-        for (size = 1; size < handlers.length; size ++) {
-            if (handlers[size] == null) {
-                break;
-            }
-        }
-
-        for (int i = size - 1; i >= 0; i--) {
+        for (int i = handlers.length - 1; i >= 0; i--) {
             ChannelHandler h = handlers[i];
             if (h != null) {
-                addFirst(executor, null, h);
+                addFirst(null, h);
             }
         }
 
@@ -315,7 +305,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         for (ChannelHandler h : handlers) {
             if (h != null) {
-                addLast(executor, null, h);
+                addLast(null, h);
             }
         }
 
