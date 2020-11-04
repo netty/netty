@@ -345,6 +345,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
+    <junit.version>5.7.0</junit.version>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
@@ -583,6 +584,24 @@
 
       <!-- Common test dependencies -->
       <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.vintage</groupId>
+        <artifactId>junit-vintage-engine</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>4.13.1</version>
@@ -598,6 +617,12 @@
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-library</artifactId>
         <version>1.3</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.18.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -686,6 +711,21 @@
   <dependencies>
     <!-- Testing frameworks and related dependencies -->
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -698,6 +738,11 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-library</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
