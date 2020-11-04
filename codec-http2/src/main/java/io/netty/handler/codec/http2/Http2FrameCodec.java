@@ -532,6 +532,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onUnknownFrame(
                 ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+            if (streamId == 0) {
+                // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
+                return;
+            }
             onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload)
                     .stream(requireStream(streamId)).retain());
         }
