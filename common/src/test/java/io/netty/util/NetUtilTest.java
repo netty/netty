@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -383,7 +383,7 @@ public class NetUtilTest {
     private static final Map<byte[], String> ipv6ToAddressStrings = new HashMap<byte[], String>() {
         private static final long serialVersionUID = 2999763170377573184L;
         {
-            // From the RFC 5952 http://tools.ietf.org/html/rfc5952#section-4
+            // From the RFC 5952 https://tools.ietf.org/html/rfc5952#section-4
             put(new byte[] {
                         32, 1, 13, -72,
                         0, 0, 0, 0,

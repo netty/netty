@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -1247,7 +1247,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                     cTOs.flip();
                     sTOc.flip();
 
-                    // See http://tools.ietf.org/html/rfc5246#section-6.3:
+                    // See https://tools.ietf.org/html/rfc5246#section-6.3:
                     // key_block = PRF(SecurityParameters.master_secret, "key expansion",
                     //                 SecurityParameters.server_random + SecurityParameters.client_random);
                     //

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -67,7 +67,7 @@ import java.util.List;
  * <p/>
  * Please note that this decoder is not suitable for
  * xml streaming protocols such as
- * <a href="http://xmpp.org/rfcs/rfc6120.html">XMPP</a>,
+ * <a href="https://xmpp.org/rfcs/rfc6120.html">XMPP</a>,
  * where an initial xml element opens the stream and only
  * gets closed at the end of the session, although this class
  * could probably allow for such type of message flow with
@@ -216,7 +216,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
      * start char for an xml element name.
      * <p/>
      * Please refer to the
-     * <a href="http://www.w3.org/TR/2004/REC-xml11-20040204/#NT-NameStartChar">NameStartChar</a>
+     * <a href="https://www.w3.org/TR/2004/REC-xml11-20040204/#NT-NameStartChar">NameStartChar</a>
      * formal definition in the W3C XML spec for further info.
      *
      * @param b the input char

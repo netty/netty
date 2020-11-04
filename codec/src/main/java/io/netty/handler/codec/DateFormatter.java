@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -101,7 +101,7 @@ public final class DateFormatter {
         } else if (length < 0) {
             throw new IllegalArgumentException("Can't have end < start");
         } else if (length > 64) {
-            throw new IllegalArgumentException("Can't parse more than 64 chars," +
+            throw new IllegalArgumentException("Can't parse more than 64 chars, " +
                     "looks like a user error or a malformed header");
         }
         return formatter().parse0(checkNotNull(txt, "txt"), start, end);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -139,6 +139,23 @@ public final class MqttProperties {
         public int propertyId() {
             return propertyId;
         }
+
+        @Override
+        public int hashCode() {
+            return propertyId + 31 * value.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            MqttProperty that = (MqttProperty) obj;
+            return this.propertyId == that.propertyId && this.value.equals(that.value);
+        }
     }
 
     public static final class IntegerProperty extends MqttProperty<Integer> {
@@ -146,12 +163,22 @@ public final class MqttProperties {
         public IntegerProperty(int propertyId, Integer value) {
             super(propertyId, value);
         }
+
+        @Override
+        public String toString() {
+            return "IntegerProperty(" + propertyId + ", " + value + ")";
+        }
     }
 
     public static final class StringProperty extends MqttProperty<String> {
 
         public StringProperty(int propertyId, String value) {
             super(propertyId, value);
+        }
+
+        @Override
+        public String toString() {
+            return "StringProperty(" + propertyId + ", " + value + ")";
         }
     }
 
@@ -200,6 +227,14 @@ public final class MqttProperties {
             this.value.addAll(values);
         }
 
+        private static UserProperties fromUserPropertyCollection(Collection<UserProperty> properties) {
+            UserProperties userProperties = new UserProperties();
+            for (UserProperty property: properties) {
+                userProperties.add(new StringPair(property.value.key, property.value.value));
+            }
+            return userProperties;
+        }
+
         public void add(StringPair pair) {
             this.value.add(pair);
         }
@@ -207,11 +242,31 @@ public final class MqttProperties {
         public void add(String key, String value) {
             this.value.add(new StringPair(key, value));
         }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder("UserProperties(");
+            boolean first = true;
+            for (StringPair pair: value) {
+                if (!first) {
+                    builder.append(", ");
+                }
+                builder.append(pair.key + "->" + pair.value);
+                first = false;
+            }
+            builder.append(")");
+            return builder.toString();
+        }
     }
 
     public static final class UserProperty extends MqttProperty<StringPair> {
         public UserProperty(String key, String value) {
             super(MqttPropertyType.USER_PROPERTY.value, new StringPair(key, value));
+        }
+
+        @Override
+        public String toString() {
+            return "UserProperty(" + value.key + ", " + value.value + ")";
         }
     }
 
@@ -219,6 +274,11 @@ public final class MqttProperties {
 
         public BinaryProperty(int propertyId, byte[] value) {
             super(propertyId, value);
+        }
+
+        @Override
+        public String toString() {
+            return "BinaryProperty(" + propertyId + ", " + value.length + " bytes)";
         }
     }
 
@@ -231,6 +291,8 @@ public final class MqttProperties {
     }
 
     private IntObjectHashMap<MqttProperty> props;
+    private List<UserProperty> userProperties;
+    private List<IntegerProperty> subscriptionIds;
     private final boolean canModify;
 
     public void add(MqttProperty property) {
@@ -239,21 +301,30 @@ public final class MqttProperties {
         }
         IntObjectHashMap<MqttProperty> props = this.props;
         if (property.propertyId == MqttPropertyType.USER_PROPERTY.value) {
-            UserProperties userProps = (UserProperties) (props != null? props.get(property.propertyId) : null);
-            if (userProps == null) {
-                userProps = new UserProperties();
-                if (props == null) {
-                    props = new IntObjectHashMap<MqttProperty>();
-                    this.props = props;
-                }
-                props.put(property.propertyId, userProps);
+            List<UserProperty> userProperties = this.userProperties;
+            if (userProperties == null) {
+                userProperties = new ArrayList<UserProperty>(1);
+                this.userProperties = userProperties;
             }
             if (property instanceof UserProperty) {
-                userProps.add(((UserProperty) property).value);
-            } else {
+                userProperties.add((UserProperty) property);
+            } else if (property instanceof UserProperties) {
                 for (StringPair pair: ((UserProperties) property).value) {
-                    userProps.add(pair);
+                    userProperties.add(new UserProperty(pair.key, pair.value));
                 }
+            } else {
+                throw new IllegalArgumentException("User property must be of UserProperty or UserProperties type");
+            }
+        } else if (property.propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+            List<IntegerProperty> subscriptionIds = this.subscriptionIds;
+            if (subscriptionIds == null) {
+                subscriptionIds = new ArrayList<IntegerProperty>(1);
+                this.subscriptionIds = subscriptionIds;
+            }
+            if (property instanceof IntegerProperty) {
+                subscriptionIds.add((IntegerProperty) property);
+            } else {
+                throw new IllegalArgumentException("Subscription ID must be an integer property");
             }
         } else {
             if (props == null) {
@@ -266,7 +337,26 @@ public final class MqttProperties {
 
     public Collection<? extends MqttProperty> listAll() {
         IntObjectHashMap<MqttProperty> props = this.props;
-        return props == null? Collections.<MqttProperty>emptyList() : props.values();
+        if (props == null && subscriptionIds == null && userProperties == null) {
+            return Collections.<MqttProperty>emptyList();
+        }
+        if (subscriptionIds == null && userProperties == null) {
+            return props.values();
+        }
+        if (props == null && userProperties == null) {
+            return subscriptionIds;
+        }
+        List<MqttProperty> propValues = new ArrayList<MqttProperty>(props != null ? props.size() : 1);
+        if (props != null) {
+            propValues.addAll(props.values());
+        }
+        if (subscriptionIds != null) {
+            propValues.addAll(subscriptionIds);
+        }
+        if (userProperties != null) {
+            propValues.add(UserProperties.fromUserPropertyCollection(userProperties));
+        }
+        return propValues;
     }
 
     public boolean isEmpty() {
@@ -274,8 +364,51 @@ public final class MqttProperties {
         return props == null || props.isEmpty();
     }
 
+    /**
+     * Get property by ID. If there are multiple properties of this type (can be with Subscription ID)
+     * then return the first one.
+     *
+     * @param propertyId ID of the property
+     * @return a property if it is set, null otherwise
+     */
     public MqttProperty getProperty(int propertyId) {
+        if (propertyId == MqttPropertyType.USER_PROPERTY.value) {
+            //special handling to keep compatibility with earlier versions
+            List<UserProperty> userProperties = this.userProperties;
+            if (userProperties == null) {
+                return null;
+            }
+            return UserProperties.fromUserPropertyCollection(userProperties);
+        }
+        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+            List<IntegerProperty> subscriptionIds = this.subscriptionIds;
+            if (subscriptionIds == null || subscriptionIds.isEmpty()) {
+                return null;
+            }
+            return subscriptionIds.get(0);
+        }
         IntObjectHashMap<MqttProperty> props = this.props;
-        return props == null? null : props.get(propertyId);
+        return props == null ? null : props.get(propertyId);
+    }
+
+    /**
+     * Get properties by ID.
+     * Some properties (Subscription ID and User Properties) may occur multiple times,
+     * this method returns all their values in order.
+     *
+     * @param propertyId ID of the property
+     * @return all properties having specified ID
+     */
+    public List<? extends MqttProperty> getProperties(int propertyId) {
+        if (propertyId == MqttPropertyType.USER_PROPERTY.value) {
+            return userProperties == null ? Collections.<MqttProperty>emptyList() : userProperties;
+        }
+        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+            return subscriptionIds == null ? Collections.<MqttProperty>emptyList() : subscriptionIds;
+        }
+        IntObjectHashMap<MqttProperty> props = this.props;
+        return (props == null || !props.containsKey(propertyId)) ?
+                Collections.<MqttProperty>emptyList() :
+                Collections.singletonList(props.get(propertyId));
     }
 }

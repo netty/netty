@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -823,12 +823,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
             for (; i < current.length; i += 2) {
                 AsciiString roName = current[i];
                 if (roName.hashCode() == nameHash && roName.contentEqualsIgnoreCase(name)) {
-                    next = current[i + 1];
-                    i += 2;
+                    if (i + 1 < current.length) {
+                        next = current[i + 1];
+                        i += 2;
+                    }
                     return;
                 }
             }
-            if (i >= current.length && current == pseudoHeaders) {
+            if (current == pseudoHeaders) {
                 i = 0;
                 current = otherHeaders;
                 calculateNext();

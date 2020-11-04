@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -518,11 +518,18 @@ public class MqttCodecTest {
     public void testPublishMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
         MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
         props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
         props.add(new MqttProperties.UserProperty("isSecret", "true"));
-        props.add(new MqttProperties.UserProperty("isUrgent", "false"));
-        assertEquals("User properties count mismatch",
-                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value.size(), 2);
+        props.add(new MqttProperties.UserProperty("tag", "firstTag"));
+        props.add(new MqttProperties.UserProperty("tag", "secondTag"));
+        assertEquals("Subscription IDs count mismatch", 2,
+                (props.getProperties(SUBSCRIPTION_IDENTIFIER.value())).size());
+        assertEquals("User properties count mismatch", 3,
+                (props.getProperties(USER_PROPERTY.value())).size());
+        assertEquals("UserProperties count mismatch", 3,
+                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value.size());
         final MqttPublishMessage message = createPublishMessage(props);
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 

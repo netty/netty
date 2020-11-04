@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,7 +34,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.ThrowableUtil;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 
@@ -4665,9 +4664,9 @@ final class HpackHuffmanDecoder implements ByteProcessor {
             HUFFMAN_FAIL << 8,
     };
 
-    private static final Http2Exception BAD_ENCODING = ThrowableUtil.unknownStackTrace(
+    private static final Http2Exception BAD_ENCODING =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - Bad Encoding",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackHuffmanDecoder.class, "decode(..)");
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackHuffmanDecoder.class, "decode(..)");
 
     private byte[] dest;
     private int k;

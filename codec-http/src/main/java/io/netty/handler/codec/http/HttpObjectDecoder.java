@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -116,8 +116,8 @@ import java.util.regex.Pattern;
  *
  * Please note that this decoder is designed to be extended to implement
  * a protocol derived from HTTP, such as
- * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
- * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
@@ -499,7 +499,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // Correctly handle return codes of 1xx.
             //
             // See:
-            //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
+            //     - https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 // One exception: Hixie 76 websocket handshake response
@@ -992,7 +992,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         @Override
         public AppendableCharSequence parse(ByteBuf buffer) {
-            reset();
+            // Suppress a warning because HeaderParser.reset() is supposed to be called
+            reset();    // lgtm[java/subtle-inherited-call]
             return super.parse(buffer);
         }
 

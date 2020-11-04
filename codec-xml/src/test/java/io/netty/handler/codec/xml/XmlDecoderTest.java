@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,8 @@ import static org.hamcrest.core.IsNull.nullValue;
 
 /**
  * Verifies the basic functionality of the {@link XmlDecoder}.
- * XML borrowed from <a href="http://www.studytrails.com/java/xml/woodstox/java-xml-woodstox-validation-xml-schema.jsp">
+ * XML borrowed from
+ * <a href="https://www.studytrails.com/java/xml/woodstox/java-xml-woodstox-validation-xml-schema.jsp">
  * Woodstox : Validate against XML Schema</a>
  */
 public class XmlDecoderTest {

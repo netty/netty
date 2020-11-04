@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,12 +58,12 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
@@ -4938,5 +4938,64 @@ public abstract class AbstractByteBufTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test
+    public void testEndiannessIndexOf() {
+        buffer.clear();
+        final int v = 0x02030201;
+        buffer.writeIntLE(v);
+        buffer.writeByte(0x01);
+
+        assertEquals(-1, buffer.indexOf(1, 4, (byte) 1));
+        assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
+        assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
+        assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+    }
+
+    @Test
+    public void explicitLittleEndianReadMethodsMustAlwaysUseLittleEndianByteOrder() {
+        buffer.clear();
+        buffer.writeBytes(new byte[] {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08});
+        assertEquals(0x0201, buffer.readShortLE());
+        buffer.readerIndex(0);
+        assertEquals(0x0201, buffer.readUnsignedShortLE());
+        buffer.readerIndex(0);
+        assertEquals(0x030201, buffer.readMediumLE());
+        buffer.readerIndex(0);
+        assertEquals(0x030201, buffer.readUnsignedMediumLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, buffer.readIntLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, buffer.readUnsignedIntLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, Float.floatToRawIntBits(buffer.readFloatLE()));
+        buffer.readerIndex(0);
+        assertEquals(0x0807060504030201L, buffer.readLongLE());
+        buffer.readerIndex(0);
+        assertEquals(0x0807060504030201L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
+        buffer.readerIndex(0);
+    }
+
+    @Test
+    public void explicitLittleEndianWriteMethodsMustAlwaysUseLittleEndianByteOrder() {
+        buffer.clear();
+        buffer.writeShortLE(0x0102);
+        assertEquals(0x0102, buffer.readShortLE());
+        buffer.clear();
+        buffer.writeMediumLE(0x010203);
+        assertEquals(0x010203, buffer.readMediumLE());
+        buffer.clear();
+        buffer.writeIntLE(0x01020304);
+        assertEquals(0x01020304, buffer.readIntLE());
+        buffer.clear();
+        buffer.writeFloatLE(Float.intBitsToFloat(0x01020304));
+        assertEquals(0x01020304, Float.floatToRawIntBits(buffer.readFloatLE()));
+        buffer.clear();
+        buffer.writeLongLE(0x0102030405060708L);
+        assertEquals(0x0102030405060708L, buffer.readLongLE());
+        buffer.clear();
+        buffer.writeDoubleLE(Double.longBitsToDouble(0x0102030405060708L));
+        assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
     }
 }

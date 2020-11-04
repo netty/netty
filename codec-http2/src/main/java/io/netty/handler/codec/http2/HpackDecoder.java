@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,35 +49,34 @@ import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseu
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 final class HpackDecoder {
-    private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
+    private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - decompression failure",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class,
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class,
             "decodeULE128(..)");
-    private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION = unknownStackTrace(
+    private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - long overflow",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "decodeULE128(..)");
-    private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION = unknownStackTrace(
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decodeULE128(..)");
+    private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - int overflow",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "decodeULE128ToInt(..)");
-    private static final Http2Exception DECODE_ILLEGAL_INDEX_VALUE = unknownStackTrace(
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decodeULE128ToInt(..)");
+    private static final Http2Exception DECODE_ILLEGAL_INDEX_VALUE =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - illegal index value",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "decode(..)");
-    private static final Http2Exception INDEX_HEADER_ILLEGAL_INDEX_VALUE = unknownStackTrace(
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decode(..)");
+    private static final Http2Exception INDEX_HEADER_ILLEGAL_INDEX_VALUE =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - illegal index value",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "indexHeader(..)");
-    private static final Http2Exception READ_NAME_ILLEGAL_INDEX_VALUE = unknownStackTrace(
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "indexHeader(..)");
+    private static final Http2Exception READ_NAME_ILLEGAL_INDEX_VALUE =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - illegal index value",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "readName(..)");
-    private static final Http2Exception INVALID_MAX_DYNAMIC_TABLE_SIZE = unknownStackTrace(
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "readName(..)");
+    private static final Http2Exception INVALID_MAX_DYNAMIC_TABLE_SIZE =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - invalid max dynamic table size",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class,
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class,
             "setDynamicTableSize(..)");
-    private static final Http2Exception MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED = unknownStackTrace(
+    private static final Http2Exception MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED =
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - max dynamic table size change required",
-                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackDecoder.class, "decode(..)");
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decode(..)");
     private static final byte READ_HEADER_REPRESENTATION = 0;
     private static final byte READ_MAX_DYNAMIC_TABLE_SIZE = 1;
     private static final byte READ_INDEXED_HEADER = 2;

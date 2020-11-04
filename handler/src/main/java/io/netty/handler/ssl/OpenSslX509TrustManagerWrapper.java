@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -67,7 +67,7 @@ final class OpenSslX509TrustManagerWrapper {
                 // validations.
                 //
                 // See:
-                // - http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/
+                // - https://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/
                 //          cadea780bc76/src/share/classes/sun/security/ssl/SSLContextImpl.java#l127
                 context.init(null, new TrustManager[] {
                         new X509TrustManager() {

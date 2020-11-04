@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -188,5 +188,23 @@ public class HttpConversionUtilTest {
         assertFalse(outHeaders.contains(proxyConnection));
         assertFalse(outHeaders.contains(TRANSFER_ENCODING));
         assertFalse(outHeaders.contains(UPGRADE));
+    }
+
+    @Test
+    public void http2ToHttpHeaderTest() throws Exception {
+        Http2Headers http2Headers = new DefaultHttp2Headers();
+        http2Headers.status("200");
+        http2Headers.path("/meow"); // HTTP/2 Header response should not contain 'path' in response.
+        http2Headers.set("cat", "meow");
+
+        HttpHeaders httpHeaders = new DefaultHttpHeaders();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertFalse(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
+
+        httpHeaders.clear();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
     }
 }

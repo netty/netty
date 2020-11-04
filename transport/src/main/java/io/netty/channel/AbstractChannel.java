@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -600,7 +600,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void close(final ChannelPromise promise) {
+        public void close(final ChannelPromise promise) {
             assertEventLoop();
 
             ClosedChannelException closedChannelException =
@@ -859,13 +859,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
-                // If the outboundBuffer is null we know the channel was closed and so
-                // need to fail the future right away. If it is not null the handling of the rest
-                // will be done in flush0()
-                // See https://github.com/netty/netty/issues/2362
-                safeSetFailure(promise, newClosedChannelException(initialCloseCause, "write(Object, ChannelPromise)"));
-                // release message now to prevent resource-leak
-                ReferenceCountUtil.release(msg);
+                try {
+                    // release message now to prevent resource-leak
+                    ReferenceCountUtil.release(msg);
+                } finally {
+                    // If the outboundBuffer is null we know the channel was closed and so
+                    // need to fail the future right away. If it is not null the handling of the rest
+                    // will be done in flush0()
+                    // See https://github.com/netty/netty/issues/2362
+                    safeSetFailure(promise,
+                            newClosedChannelException(initialCloseCause, "write(Object, ChannelPromise)"));
+                }
                 return;
             }
 
@@ -877,8 +881,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     size = 0;
                 }
             } catch (Throwable t) {
-                safeSetFailure(promise, t);
-                ReferenceCountUtil.release(msg);
+                try {
+                    ReferenceCountUtil.release(msg);
+                } finally {
+                    safeSetFailure(promise, t);
+                }
                 return;
             }
 
@@ -933,27 +940,31 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
-                if (t instanceof IOException && config().isAutoClose()) {
-                    /**
-                     * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
-                     * failing all flushed messages and also ensure the actual close of the underlying transport
-                     * will happen before the promises are notified.
-                     *
-                     * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
-                     * may still return {@code true} even if the channel should be closed as result of the exception.
-                     */
-                    initialCloseCause = t;
-                    close(voidPromise(), t, newClosedChannelException(t, "flush0()"), false);
-                } else {
-                    try {
-                        shutdownOutput(voidPromise(), t);
-                    } catch (Throwable t2) {
-                        initialCloseCause = t;
-                        close(voidPromise(), t2, newClosedChannelException(t, "flush0()"), false);
-                    }
-                }
+                handleWriteError(t);
             } finally {
                 inFlush0 = false;
+            }
+        }
+
+        protected final void handleWriteError(Throwable t) {
+            if (t instanceof IOException && config().isAutoClose()) {
+                /**
+                 * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
+                 * failing all flushed messages and also ensure the actual close of the underlying transport
+                 * will happen before the promises are notified.
+                 *
+                 * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
+                 * may still return {@code true} even if the channel should be closed as result of the exception.
+                 */
+                initialCloseCause = t;
+                close(voidPromise(), t, newClosedChannelException(t, "flush0()"), false);
+            } else {
+                try {
+                    shutdownOutput(voidPromise(), t);
+                } catch (Throwable t2) {
+                    initialCloseCause = t;
+                    close(voidPromise(), t2, newClosedChannelException(t, "flush0()"), false);
+                }
             }
         }
 
@@ -1173,8 +1184,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }
@@ -1188,8 +1200,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }
@@ -1203,8 +1216,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             initCause(exception);
         }
 
+        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
     }

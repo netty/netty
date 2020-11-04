@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -78,4 +78,24 @@ public abstract class WebSocketServerHandshakerTest {
             }
         }
     }
+
+    @Test
+    public void testWebSocketServerHandshakeException() {
+        WebSocketServerHandshaker serverHandshaker = newHandshaker("ws://example.com/chat",
+                                                                   "chat", WebSocketDecoderConfig.DEFAULT);
+
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                                                             "ws://example.com/chat");
+        request.headers().set("x-client-header", "value");
+        try {
+            serverHandshaker.handshake(null, request, null, null);
+        } catch (WebSocketServerHandshakeException exception) {
+            assertNotNull(exception.getMessage());
+            assertEquals(request.headers(), exception.request().headers());
+            assertEquals(HttpMethod.GET, exception.request().method());
+        } finally {
+            request.release();
+        }
+    }
 }
+

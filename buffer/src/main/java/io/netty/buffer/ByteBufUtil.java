@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -128,7 +128,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
      */
     public static String hexDump(ByteBuf buffer) {
@@ -136,7 +136,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's sub-region.
      */
     public static String hexDump(ByteBuf buffer, int fromIndex, int length) {
@@ -144,7 +144,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified byte array.
      */
     public static String hexDump(byte[] array) {
@@ -152,7 +152,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified byte array's sub-region.
      */
     public static String hexDump(byte[] array, int fromIndex, int length) {
@@ -438,7 +438,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf writeShortBE(ByteBuf buf, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) : buf.writeShortLE(shortValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) :
+                buf.writeShort(swapShort((short) shortValue));
     }
 
     /**
@@ -446,7 +447,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf setShortBE(ByteBuf buf, int index, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) : buf.setShortLE(index, shortValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) :
+                buf.setShort(index, swapShort((short) shortValue));
     }
 
     /**
@@ -454,7 +456,8 @@ public final class ByteBufUtil {
      */
     @SuppressWarnings("deprecation")
     public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) : buf.writeMediumLE(mediumValue);
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) :
+                buf.writeMedium(swapMedium(mediumValue));
     }
 
     /**
@@ -502,11 +505,11 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
+     * Encode a {@link CharSequence} in <a href="https://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
      * it to a {@link ByteBuf} allocated with {@code alloc}.
      * @param alloc The allocator used to allocate a new {@link ByteBuf}.
      * @param seq The characters to write into a buffer.
-     * @return The {@link ByteBuf} which contains the <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> encoded
+     * @return The {@link ByteBuf} which contains the <a href="https://en.wikipedia.org/wiki/UTF-8">UTF-8</a> encoded
      * result.
      */
     public static ByteBuf writeUtf8(ByteBufAllocator alloc, CharSequence seq) {
@@ -517,7 +520,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
+     * Encode a {@link CharSequence} in <a href="https://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
      * it to a {@link ByteBuf}.
      * <p>
      * It behaves like {@link #reserveAndWriteUtf8(ByteBuf, CharSequence, int)} with {@code reserveBytes}
@@ -539,7 +542,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
+     * Encode a {@link CharSequence} in <a href="https://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
      * it into {@code reserveBytes} of a {@link ByteBuf}.
      * <p>
      * The {@code reserveBytes} must be computed (ie eagerly using {@link #utf8MaxBytes(CharSequence)}
@@ -671,7 +674,7 @@ public final class ByteBufUtil {
                     buffer.put(writerIndex++, Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : (byte) c2);
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
-                    // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                    // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
                     buffer.put(writerIndex++, (byte) (0xf0 | (codePoint >> 18)));
                     buffer.put(writerIndex++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
                     buffer.put(writerIndex++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
@@ -718,7 +721,7 @@ public final class ByteBufUtil {
                     buffer._setByte(writerIndex++, Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2);
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
-                    // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                    // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
                     buffer._setByte(writerIndex++, (byte) (0xf0 | (codePoint >> 18)));
                     buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
                     buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
@@ -761,7 +764,7 @@ public final class ByteBufUtil {
                     buffer[writerIndex++] = (byte) (Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2);
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
-                    // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                    // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
                     buffer[writerIndex++] = (byte) (0xf0 | (codePoint >> 18));
                     buffer[writerIndex++] = (byte) (0x80 | ((codePoint >> 12) & 0x3f));
                     buffer[writerIndex++] = (byte) (0x80 | ((codePoint >> 6) & 0x3f));
@@ -808,7 +811,7 @@ public final class ByteBufUtil {
                                               (byte) (Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2));
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
-                    // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                    // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
                     PlatformDependent.putByte(buffer, writerOffset++, (byte) (0xf0 | (codePoint >> 18)));
                     PlatformDependent.putByte(buffer, writerOffset++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
                     PlatformDependent.putByte(buffer, writerOffset++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
@@ -896,7 +899,7 @@ public final class ByteBufUtil {
                     encodedLength += 2;
                     continue;
                 }
-                // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
                 encodedLength += 4;
             } else {
                 encodedLength += 3;
@@ -906,11 +909,11 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/ASCII">ASCII</a> and write
+     * Encode a {@link CharSequence} in <a href="https://en.wikipedia.org/wiki/ASCII">ASCII</a> and write
      * it to a {@link ByteBuf} allocated with {@code alloc}.
      * @param alloc The allocator used to allocate a new {@link ByteBuf}.
      * @param seq The characters to write into a buffer.
-     * @return The {@link ByteBuf} which contains the <a href="http://en.wikipedia.org/wiki/ASCII">ASCII</a> encoded
+     * @return The {@link ByteBuf} which contains the <a href="https://en.wikipedia.org/wiki/ASCII">ASCII</a> encoded
      * result.
      */
     public static ByteBuf writeAscii(ByteBufAllocator alloc, CharSequence seq) {
@@ -921,7 +924,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/ASCII">ASCII</a> and write it
+     * Encode a {@link CharSequence} in <a href="https://en.wikipedia.org/wiki/ASCII">ASCII</a> and write it
      * to a {@link ByteBuf}.
      *
      * This method returns the actual number of bytes written.
@@ -1528,7 +1531,7 @@ public final class ByteBufUtil {
      * @param length The length of the specified buffer.
      *
      * @see
-     * <a href=http://www.ietf.org/rfc/rfc3629.txt>UTF-8 Definition</a>
+     * <a href=https://www.ietf.org/rfc/rfc3629.txt>UTF-8 Definition</a>
      *
      * <pre>
      * 1. Bytes format of UTF-8

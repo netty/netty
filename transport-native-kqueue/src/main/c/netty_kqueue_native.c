@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,6 +35,14 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+
+// Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
+#ifdef NETTY_BUILD_STATIC
+#define NETTY_JNI_UTIL_BUILD_STATIC
+#endif
+
+#define STATICALLY_CLASSNAME "io/netty/channel/kqueue/KQueueStaticallyReferencedJniMethods"
+#define NATIVE_CLASSNAME "io/netty/channel/kqueue/Native"
 
 // Currently only macOS supports EVFILT_SOCK, and it is currently only available in internal APIs.
 // To make compiling easier we redefine the values here if they are not present.
@@ -265,6 +273,8 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 // JNI Method Registration Table End
 
 static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    int staticallyRegistered = 0;
+    int nativeRegistered = 0;
     int limitsOnLoadCalled = 0;
     int errorsOnLoadCalled = 0;
     int filedescriptorOnLoadCalled = 0;
@@ -274,17 +284,20 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
     int eventarrayOnLoadCalled = 0;
 
     // We must register the statically referenced methods first!
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/kqueue/KQueueStaticallyReferencedJniMethods",
+            STATICALLY_CLASSNAME,
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
         goto error;
     }
+    staticallyRegistered = 1;
+
     // Register the methods which are not referenced by static member variables
-    if (netty_unix_util_register_natives(env, packagePrefix, "io/netty/channel/kqueue/Native", fixed_method_table, fixed_method_table_size) != 0) {
+    if (netty_jni_util_register_natives(env, packagePrefix, NATIVE_CLASSNAME, fixed_method_table, fixed_method_table_size) != 0) {
         goto error;
     }
+    nativeRegistered = 1;
     // Load all c modules that we depend upon
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto error;
@@ -325,103 +338,74 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
 
     if (!netty_unix_util_initialize_wait_clock(&waitClockId)) {
         fprintf(stderr, "FATAL: could not find a clock for clock_gettime!\n");
+        fflush(stderr);
         goto error;
     }
 
-    return NETTY_JNI_VERSION;
+    return NETTY_JNI_UTIL_JNI_VERSION;
 error:
+   if (staticallyRegistered == 1) {
+        netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+   }
+   if (nativeRegistered == 1) {
+        netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
+   }
    if (limitsOnLoadCalled == 1) {
-       netty_unix_limits_JNI_OnUnLoad(env);
+       netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
    }
    if (errorsOnLoadCalled == 1) {
-       netty_unix_errors_JNI_OnUnLoad(env);
+       netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
    }
    if (filedescriptorOnLoadCalled == 1) {
-       netty_unix_filedescriptor_JNI_OnUnLoad(env);
+       netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
    }
    if (socketOnLoadCalled == 1) {
-       netty_unix_socket_JNI_OnUnLoad(env);
+       netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
    }
    if (bufferOnLoadCalled == 1) {
-      netty_unix_buffer_JNI_OnUnLoad(env);
+      netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
    }
    if (bsdsocketOnLoadCalled == 1) {
-       netty_kqueue_bsdsocket_JNI_OnUnLoad(env);
+       netty_kqueue_bsdsocket_JNI_OnUnLoad(env, packagePrefix);
    }
    if (eventarrayOnLoadCalled == 1) {
-       netty_kqueue_eventarray_JNI_OnUnLoad(env);
+       netty_kqueue_eventarray_JNI_OnUnLoad(env, packagePrefix);
    }
    return JNI_ERR;
 }
 
-static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env) {
-    netty_unix_limits_JNI_OnUnLoad(env);
-    netty_unix_errors_JNI_OnUnLoad(env);
-    netty_unix_filedescriptor_JNI_OnUnLoad(env);
-    netty_unix_socket_JNI_OnUnLoad(env);
-    netty_unix_buffer_JNI_OnUnLoad(env);
-    netty_kqueue_bsdsocket_JNI_OnUnLoad(env);
-    netty_kqueue_eventarray_JNI_OnUnLoad(env);
-}
+static void netty_kqueue_native_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
+    netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
+    netty_kqueue_bsdsocket_JNI_OnUnLoad(env, packagePrefix);
+    netty_kqueue_eventarray_JNI_OnUnLoad(env, packagePrefix);
 
-static jint JNI_OnLoad_netty_transport_native_kqueue0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    char* packagePrefix = NULL;
-#ifndef NETTY_BUILD_STATIC
-    Dl_info dlinfo;
-    jint status = 0;
-    // We need to use an address of a function that is uniquely part of this library, so choose a static
-    // function. See https://github.com/netty/netty/issues/4840.
-    if (!dladdr((void*) netty_kqueue_native_JNI_OnUnLoad, &dlinfo)) {
-        fprintf(stderr, "FATAL: transport-native-kqueue JNI call to dladdr failed!\n");
-        return JNI_ERR;
-    }
-    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty_transport_native_kqueue", &status);
-    if (status == JNI_ERR) {
-        fprintf(stderr, "FATAL: transport-native-kqueue JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
-        return JNI_ERR;
-    }
-#endif /* NETTY_BUILD_STATIC */
-    jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
-
-    // It's safe to call free(...) with a NULL argument as well.
-    free(packagePrefix);
-
-    return ret;
-}
-
-static void JNI_OnUnload_netty_transport_native_kqueue0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        // Something is wrong but nothing we can do about this :(
-        return;
-    }
-    netty_kqueue_native_JNI_OnUnLoad(env);
+    netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
 }
 
 // We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
-// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+// https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_kqueue0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_kqueue", netty_kqueue_native_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
 JNIEXPORT void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
-    JNI_OnUnload_netty_transport_native_kqueue0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_kqueue_native_JNI_OnUnload);
 }
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_kqueue0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_kqueue", netty_kqueue_native_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    return JNI_OnUnload_netty_transport_native_kqueue0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_kqueue_native_JNI_OnUnload);
 }
 #endif /* NETTY_BUILD_STATIC */

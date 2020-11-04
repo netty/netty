@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -132,7 +132,7 @@ final class PlatformDependent0 {
 
             // ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK
             // https://github.com/netty/netty/issues/1061
-            // http://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
+            // https://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
             if (unsafe != null) {
                 final Unsafe finalUnsafe = unsafe;
                 final Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -470,7 +470,7 @@ final class PlatformDependent0 {
     static ByteBuffer allocateDirectNoCleaner(int capacity) {
         // Calling malloc with capacity of 0 may return a null ptr or a memory address that can be used.
         // Just use 1 to make it safe to use in all cases:
-        // See: http://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
+        // See: https://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
         return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
     }
 
@@ -560,6 +560,14 @@ final class PlatformDependent0 {
 
     static int getInt(int[] data, long index) {
         return UNSAFE.getInt(data, INT_ARRAY_BASE_OFFSET + INT_ARRAY_INDEX_SCALE * index);
+    }
+
+    static int getIntVolatile(long address) {
+        return UNSAFE.getIntVolatile(null, address);
+    }
+
+    static void putIntOrdered(long adddress, int newValue) {
+        UNSAFE.putOrderedInt(null, adddress, newValue);
     }
 
     static long getLong(byte[] data, int index) {

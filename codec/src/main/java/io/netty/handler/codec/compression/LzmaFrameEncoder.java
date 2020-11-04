@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,9 +32,9 @@ import static lzma.sdk.lzma.Encoder.*;
 /**
  * Compresses a {@link ByteBuf} using the LZMA algorithm.
  *
- * See <a href="http://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">LZMA</a>
- * and <a href="http://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
- * or documents in <a href="http://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
+ * See <a href="https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">LZMA</a>
+ * and <a href="https://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
+ * or documents in <a href="https://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
  */
 public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
 

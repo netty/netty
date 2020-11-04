@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
@@ -188,7 +189,7 @@ public class ByteBufUtilTest {
 
         buf = buffer(2).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeShortBE(buf, expected);
-        assertEquals((short) expected, buf.readShortLE());
+        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShortLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShort());
         buf.release();
@@ -208,7 +209,7 @@ public class ByteBufUtilTest {
 
         buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.setShortBE(buf, 0, shortValue);
-        assertEquals((short) shortValue, buf.readShortLE());
+        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShortLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShort());
         buf.release();
@@ -228,7 +229,7 @@ public class ByteBufUtilTest {
 
         buf = buffer(4).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeMediumBE(buf, mediumValue);
-        assertEquals(mediumValue, buf.readMediumLE());
+        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
         buf.release();

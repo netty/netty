@@ -822,7 +822,7 @@ Guard_arlo en un archivo para que pueda enviar el informe manualmente
 Nombre:
 Ruta de sendmail:
 Elija un componente, versión y nivel de severidad.
-Haga cualquier corrección final al informe de errores. Dese cuenta de que será mostrado en http://bugzilla.gnome.org Incluirá su nombre, dirección de correo-e, y quizá alguna información acerca de cómo falló la aplicación. Si el documento en el que estaba trabajando contenía información sensible, quizá no quiera enviar este informe
+Haga cualquier corrección final al informe de errores. Dese cuenta de que será mostrado en https://bugzilla.gnome.org Incluirá su nombre, dirección de correo-e, y quizá alguna información acerca de cómo falló la aplicación. Si el documento en el que estaba trabajando contenía información sensible, quizá no quiera enviar este informe
 Ühtegi rakendust "%s"-i avamiseks ei ole. Sa saad selle asemel selle alla laadida.
 Salvesta _kui...
 "%s" protokoll ei ole toetatud.

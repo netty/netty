@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -210,7 +210,7 @@ public class QueryStringEncoder {
             return;
         }
         int codePoint = Character.toCodePoint(c, c2);
-        // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+        // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
         appendEncoded(0xf0 | (codePoint >> 18));
         appendEncoded(0x80 | ((codePoint >> 12) & 0x3f));
         appendEncoded(0x80 | ((codePoint >> 6) & 0x3f));

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,8 @@ package io.netty.handler.codec.mqtt;
 import io.netty.buffer.ByteBufUtil;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -32,6 +34,8 @@ public final class MqttTestUtils {
     public static void validateProperties(MqttProperties expected, MqttProperties actual) {
         for (MqttProperties.MqttProperty expectedProperty : expected.listAll()) {
             MqttProperties.MqttProperty actualProperty = actual.getProperty(expectedProperty.propertyId);
+            List<? extends MqttProperties.MqttProperty> actualProperties =
+                    actual.getProperties(expectedProperty.propertyId);
             switch (MqttProperties.MqttPropertyType.valueOf(expectedProperty.propertyId)) {
                 // one byte value integer property
                 case PAYLOAD_FORMAT_INDICATOR:
@@ -70,8 +74,7 @@ public final class MqttTestUtils {
                 // four byte value integer property
                 case SUBSCRIPTION_IDENTIFIER: {
                     final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
-                    final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
-                    assertEquals("variable byte integer property doesn't match", expectedValue, actualValue);
+                    assertContainsValue("Subscription ID doesn't match", expectedValue, actualProperties);
                     break;
                 }
                 // UTF-8 string value integer property
@@ -117,6 +120,18 @@ public final class MqttTestUtils {
             MqttProperties.MqttProperty expectedProperty = expected.getProperty(actualProperty.propertyId);
             assertNotNull("Property " + actualProperty.propertyId + " not expected", expectedProperty);
         }
+    }
+
+    private static void assertContainsValue(String message,
+                                            Integer expectedValue,
+                                            List<? extends MqttProperties.MqttProperty> properties) {
+        for (MqttProperties.MqttProperty property: properties) {
+            if (property instanceof MqttProperties.IntegerProperty &&
+                    ((MqttProperties.IntegerProperty) property).value == expectedValue) {
+                return;
+            }
+        }
+        fail(message + " - properties didn't contain expected integer value " + expectedValue + ": " + properties);
     }
 
     public static void validateSubscribePayload(MqttSubscribePayload expected, MqttSubscribePayload actual) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -250,13 +250,13 @@ final class PoolChunk<T> implements PoolChunkMetric {
         assert pre == null;
     }
 
-    private void removeAvailRun(long handle) {
+    private void removeAvailRun(Long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
         PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
         removeAvailRun(queue, handle);
     }
 
-    private void removeAvailRun(PriorityQueue<Long> queue, long handle) {
+    private void removeAvailRun(PriorityQueue<Long> queue, Long handle) {
         queue.remove(handle);
 
         int runOffset = runOffset(handle);
@@ -335,9 +335,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
             //get run with min offset in this queue
             PriorityQueue<Long> queue = runsAvail[queueIdx];
-            long handle = queue.poll();
+            Long handle = queue.poll();
 
-            assert !isUsed(handle);
+            assert handle != null && !isUsed(handle);
 
             removeAvailRun(queue, handle);
 
@@ -435,6 +435,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             }
 
             int runOffset = runOffset(runHandle);
+            assert subpages[runOffset] == null;
             int elemSize = arena.sizeIdx2size(sizeIdx);
 
             PoolSubpage<T> subpage = new PoolSubpage<T>(head, this, pageShifts, runOffset,
@@ -457,7 +458,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int sizeIdx = arena.size2SizeIdx(normCapacity);
             PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
 
-            PoolSubpage<T> subpage = subpages[runOffset(handle)];
+            int sIdx = runOffset(handle);
+            PoolSubpage<T> subpage = subpages[sIdx];
             assert subpage != null && subpage.doNotDestroy;
 
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
@@ -467,6 +469,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
                     //the subpage is still used, do not free it
                     return;
                 }
+                assert !subpage.doNotDestroy;
+                // Null out slot in the array as it was freed and we should not use it anymore.
+                subpages[sIdx] = null;
             }
         }
 

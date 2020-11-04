@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,8 +43,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Object SUCCESS = new Object();
     private static final Object UNCANCELLABLE = new Object();
-    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
-            new CancellationException(), DefaultPromise.class, "cancel(...)"));
+    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(
+            StacklessCancellationException.newInstance(DefaultPromise.class, "cancel(...)"));
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
@@ -140,8 +140,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final class LeanCancellationException extends CancellationException {
         private static final long serialVersionUID = 2794674970981187807L;
 
+        // Suppress a warning since the method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             setStackTrace(CANCELLATION_STACK);
             return this;
         }
@@ -841,6 +842,24 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             executor.execute(task);
         } catch (Throwable t) {
             rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
+        }
+    }
+
+    private static final class StacklessCancellationException extends CancellationException {
+
+        private static final long serialVersionUID = -2974906711413716191L;
+
+        private StacklessCancellationException() { }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+
+        static StacklessCancellationException newInstance(Class<?> clazz, String method) {
+            return ThrowableUtil.unknownStackTrace(new StacklessCancellationException(), clazz, method);
         }
     }
 }

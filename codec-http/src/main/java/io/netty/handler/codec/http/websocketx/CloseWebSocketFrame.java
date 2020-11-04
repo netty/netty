@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,7 +36,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param status
-     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status) {
@@ -47,7 +47,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param status
-     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
@@ -60,7 +60,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param statusCode
-     *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
@@ -89,7 +89,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * @param rsv
      *            reserved bits used for protocol extensions
      * @param statusCode
-     *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
@@ -128,7 +128,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the closing status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
+     * Returns the closing status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
      * a status code is set, -1 is returned.
      */
     public int statusCode() {
@@ -142,7 +142,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the reason text as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a> If a reason
+     * Returns the reason text as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a> If a reason
      * text is not supplied, an empty string is returned.
      */
     public String reasonText() {

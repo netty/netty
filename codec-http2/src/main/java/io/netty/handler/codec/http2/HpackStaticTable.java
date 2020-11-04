@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -42,7 +42,7 @@ import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 final class HpackStaticTable {
 
     // Appendix A: Static Table
-    // http://tools.ietf.org/html/rfc7541#appendix-A
+    // https://tools.ietf.org/html/rfc7541#appendix-A
     private static final List<HpackHeaderField> STATIC_TABLE = Arrays.asList(
     /*  1 */ newEmptyHeaderField(":authority"),
     /*  2 */ newHeaderField(":method", "GET"),

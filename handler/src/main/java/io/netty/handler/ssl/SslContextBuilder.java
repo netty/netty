@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -390,7 +390,7 @@ public final class SslContextBuilder {
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
             checkNotNull(keyCertChain, "keyCertChain required for servers");
-            if (keyCertChain.length == 0) {
+            if (keyCertChain.length == 0) { // lgtm[java/dereferenced-value-may-be-null]
                 throw new IllegalArgumentException("keyCertChain must be non-empty");
             }
             checkNotNull(key, "key required for servers");
