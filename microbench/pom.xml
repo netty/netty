@@ -158,6 +158,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-stomp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-native-epoll</artifactId>
       <version>${project.version}</version>
