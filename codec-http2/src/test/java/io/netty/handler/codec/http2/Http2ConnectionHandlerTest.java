@@ -290,8 +290,8 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(0), eq(PROTOCOL_ERROR.code()),
-                captor.capture(), eq(promise));
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class),
+                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
 
@@ -301,8 +301,8 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(0), eq(PROTOCOL_ERROR.code()),
-            captor.capture(), eq(promise));
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
+                eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
         assertTrue(goAwayDebugCap.contains("/path"));
     }
@@ -318,7 +318,7 @@ public class Http2ConnectionHandlerTest {
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter, atLeastOnce()).writeGoAway(any(ChannelHandlerContext.class),
-                eq(0), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
+                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
 
@@ -365,10 +365,13 @@ public class Http2ConnectionHandlerTest {
     public void connectionErrorShouldStartShutdown() throws Exception {
         handler = newHandler();
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
+        // There's no guarantee that lastStreamCreated in correct, as the error could have occurred during header
+        // processing before it was updated. Thus, it should _not_ be used for the GOAWAY.
+        // https://github.com/netty/netty/issues/10670
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         captor.getValue().release();
     }
