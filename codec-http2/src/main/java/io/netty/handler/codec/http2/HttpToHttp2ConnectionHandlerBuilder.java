@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
@@ -25,6 +26,8 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public final class HttpToHttp2ConnectionHandlerBuilder extends
         AbstractHttp2ConnectionHandlerBuilder<HttpToHttp2ConnectionHandler, HttpToHttp2ConnectionHandlerBuilder> {
+
+    private HttpScheme httpScheme;
 
     @Override
     public HttpToHttp2ConnectionHandlerBuilder validateHeaders(boolean validateHeaders) {
@@ -58,7 +61,7 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
 
     @Override
     public HttpToHttp2ConnectionHandlerBuilder codec(Http2ConnectionDecoder decoder,
-                                                        Http2ConnectionEncoder encoder) {
+                                                     Http2ConnectionEncoder encoder) {
         return super.codec(decoder, encoder);
     }
 
@@ -90,6 +93,17 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
         return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
     }
 
+    /**
+     * Add {@code scheme} in {@link Http2Headers} if not already present.
+     *
+     * @param httpScheme {@link HttpScheme} type
+     * @return {@code this}.
+     */
+    public HttpToHttp2ConnectionHandlerBuilder httpScheme(HttpScheme httpScheme) {
+        this.httpScheme = httpScheme;
+        return self();
+    }
+
     @Override
     public HttpToHttp2ConnectionHandler build() {
         return super.build();
@@ -99,6 +113,6 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     protected HttpToHttp2ConnectionHandler build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) {
         return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings, isValidateHeaders(),
-                decoupleCloseAndGoAway());
+                decoupleCloseAndGoAway(), httpScheme);
     }
 }
