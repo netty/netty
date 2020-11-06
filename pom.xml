@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2020 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>9</version>
+  </parent>
+
+  <groupId>io.netty.incubator</groupId>
+  <artifactId>netty-incubator-codec-quic</artifactId>
+  <version>0.0.1.Final-SNAPSHOT</version>
+  <name>Netty/Incubator/Codec/Quic</name>
+  <packaging>jar</packaging>
+  <url>https://netty.io/</url>
+  <description>
+    Netty is an asynchronous event-driven network application framework for
+    rapid development of maintainable high performance protocol servers and
+    clients.
+  </description>
+
+  <organization>
+    <name>The Netty Project</name>
+    <url>https://netty.io/</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <inceptionYear>2020</inceptionYear>
+
+  <scm>
+    <url>https://github.com/netty/netty-incubator-codec-quic</url>
+    <connection>scm:git:git://github.com/netty/netty-incubator-codec-quic.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/netty/netty-incubator-codec-quic.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>netty.io</id>
+      <name>The Netty Project Contributors</name>
+      <email>netty@googlegroups.com</email>
+      <url>https://netty.io/</url>
+      <organization>The Netty Project</organization>
+      <organizationUrl>https://netty.io/</organizationUrl>
+    </developer>
+  </developers>
+
+  <properties>
+    <javaModuleName>io.netty.incubator.transport.io_uring</javaModuleName>
+    <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <skipTests>false</skipTests>
+    <netty.version>4.1.54.Final-SNAPSHOT</netty.version>
+    <netty.build.version>26</netty.build.version>
+    <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
+    <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
+    <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
+    <quicheBuildDir>${quicheCheckoutDir}/target/debug</quicheBuildDir>
+    <quiche.version>0.6.0</quiche.version>
+    <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
+    <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
+    <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
+  </properties>
+
+  <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.6.2</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <!-- Also include c files in source jar -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${nativeSourceDirectory}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    <plugin>
+      <artifactId>maven-scm-plugin</artifactId>
+      <version>1.11.2</version>
+      <executions>
+        <execution>
+          <id>get-netty-jni-util</id>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>checkout</goal>
+          </goals>
+          <configuration>
+            <checkoutDirectory>${jniUtilCheckoutDir}</checkoutDirectory>
+            <connectionType>developerConnection</connectionType>
+            <developerConnectionUrl>scm:git:https://github.com/netty/netty-jni-util.git</developerConnectionUrl>
+            <scmVersion>0.0.1</scmVersion>
+            <scmVersionType>tag</scmVersionType>
+            <skipCheckoutIfExists>true</skipCheckoutIfExists>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <artifactId>maven-antrun-plugin</artifactId>
+      <version>1.8</version>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>ant</artifactId>
+          <version>1.9.15</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>ant-commons-net</artifactId>
+          <version>1.9.6</version>
+        </dependency>
+        <dependency>
+          <groupId>ant-contrib</groupId>
+          <artifactId>ant-contrib</artifactId>
+          <version>1.0b3</version>
+        </dependency>
+      </dependencies>
+      <executions>
+        <!-- Build the Quiche static lib -->
+        <execution>
+          <id>build-quiche</id>
+          <phase>generate-sources</phase>
+          <goals>
+             <goal>run</goal>
+          </goals>
+          <configuration>
+            <target>
+              <!-- Add the ant tasks from ant-contrib -->
+              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+              <property environment="env" />
+              <if>
+                <available file="${quicheCheckoutDir}" />
+                <then>
+                  <echo message="Quiche was already cloned, skipping the clone step." />
+                </then>
+                <else>
+                  <echo message="Clone Quiche" />
+
+                  <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                    <arg value="clone" />
+                    <arg value="--branch" />
+                    <arg value="${quiche.version}" />
+                    <arg value="--recursive" />
+                    <arg value="https://github.com/cloudflare/quiche" />
+                    <arg value="${quicheCheckoutDir}" />
+                  </exec>
+        
+                  <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                    <arg value="build" />
+                  </exec>
+                </else>
+              </if>
+              <if>
+                <available file="${quicheCheckoutDir}/target" />
+                <then>
+                  <echo message="Quiche was already build, skipping the build step." />
+                </then>
+                <else>
+                  <echo message="Building Quiche" />
+
+                  <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                    <arg value="build" />
+                  </exec>
+                </else>
+              </if>
+            </target>
+          </configuration>
+        </execution>
+        <execution>
+          <id>copy-src</id>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          <configuration>
+            <target>
+              <!-- Copy all of the c code -->
+              <delete dir="${generatedSourcesDir}" quiet="true" />
+              <copy todir="${generatedSourcesDir}/c" verbose="true">
+                <fileset dir="${project.basedir}/src/main/c" />
+              </copy>
+
+              <copy todir="${generatedSourcesDir}/c" verbose="true">
+                <fileset dir="${jniUtilIncludeDir}" />
+              </copy>
+            </target>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>3.8.0</version>
+      <configuration>
+        <compilerVersion>1.8</compilerVersion>
+        <fork>true</fork>
+        <source>1.8</source>
+        <target>1.8</target>
+        <debug>true</debug>
+        <optimize>true</optimize>
+        <showDeprecation>true</showDeprecation>
+        <showWarnings>true</showWarnings>
+        <compilerArgument>-Xlint:-options</compilerArgument>
+        <meminitial>256m</meminitial>
+        <maxmem>1024m</maxmem>
+        <excludes>
+          <exclude>**/package-info.java</exclude>
+        </excludes>
+      </configuration>
+    </plugin>
+    <plugin>
+      <artifactId>maven-checkstyle-plugin</artifactId>
+      <version>3.1.0</version>
+      <executions>
+        <execution>
+          <id>check-style</id>
+          <goals>
+            <goal>check</goal>
+          </goals>
+          <phase>validate</phase>
+          <configuration>
+            <consoleOutput>true</consoleOutput>
+            <logViolationsToConsole>true</logViolationsToConsole>
+            <failsOnError>true</failsOnError>
+            <failOnViolation>true</failOnViolation>
+            <configLocation>io/netty/checkstyle.xml</configLocation>
+            <sourceDirectories>
+              <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+              <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+            </sourceDirectories>
+          </configuration>
+          <inherited>false</inherited>
+        </execution>
+      </executions>
+      <dependencies>
+        <dependency>
+          <groupId>com.puppycrawl.tools</groupId>
+          <artifactId>checkstyle</artifactId>
+          <version>8.29</version>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-build</artifactId>
+          <version>${netty.build.version}</version>
+        </dependency>
+      </dependencies>
+    </plugin>
+    <plugin>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <version>2.22.1</version>
+      <configuration>
+        <includes>
+          <include>**/*Test*.java</include>
+        </includes>
+        <excludes>
+          <exclude>**/Abstract*</exclude>
+        </excludes>
+        <runOrder>random</runOrder>
+        <systemPropertyVariables>
+          <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
+          <logLevel>debug</logLevel>
+        </systemPropertyVariables>
+        <properties>
+          <property>
+            <name>listener</name>
+            <value>io.netty.build.junit.TimedOutTestsListener</value>
+          </property>
+        </properties>
+        <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
+        <trimStackTrace>false</trimStackTrace>
+      </configuration>
+    </plugin>
+    <!-- always produce osgi bundles -->
+    <plugin>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>maven-bundle-plugin</artifactId>
+      <version>2.5.4</version>
+      <executions>
+        <execution>
+          <id>generate-manifest</id>
+          <phase>process-classes</phase>
+          <goals>
+            <goal>manifest</goal>
+          </goals>
+          <configuration>
+            <supportedProjectTypes>
+              <supportedProjectType>jar</supportedProjectType>
+              <supportedProjectType>bundle</supportedProjectType>
+            </supportedProjectTypes>
+            <instructions>
+              <Export-Package>${project.groupId}.*</Export-Package>
+              <!-- enforce JVM vendor package as optional -->
+              <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional</Import-Package>
+              <!-- override "internal" private package convention -->
+              <Private-Package>!*</Private-Package>
+            </instructions>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+
+    <plugin>
+      <artifactId>maven-source-plugin</artifactId>
+      <version>3.2.0</version>
+      <!-- Eclipse-related OSGi manifests
+            See https://github.com/netty/netty/issues/3886
+            More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
+      <configuration>
+        <archive>
+          <manifestEntries>
+            <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+            <Bundle-Name>${project.name}</Bundle-Name>
+            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+            <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+            <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+            <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
+          </manifestEntries>
+        </archive>
+      </configuration>
+
+      <executions>
+        <execution>
+          <id>attach-sources</id>
+          <phase>prepare-package</phase>
+          <goals>
+            <goal>jar-no-fork</goal>
+          </goals>
+        </execution>
+        <execution>
+          <id>attach-test-sources</id>
+          <phase>prepare-package</phase>
+          <goals>
+            <goal>test-jar-no-fork</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <artifactId>maven-javadoc-plugin</artifactId>
+      <version>2.10.4</version>
+      <configuration>
+        <detectOfflineLinks>false</detectOfflineLinks>
+        <breakiterator>true</breakiterator>
+        <version>false</version>
+        <author>false</author>
+        <keywords>true</keywords>
+      </configuration>
+    </plugin>
+    <plugin>
+      <artifactId>maven-deploy-plugin</artifactId>
+      <version>2.8.2</version>
+      <configuration>
+        <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
+      </configuration>
+    </plugin>
+    <plugin>
+      <artifactId>maven-release-plugin</artifactId>
+      <version>2.5.3</version>
+      <configuration>
+        <useReleaseProfile>false</useReleaseProfile>
+        <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+        <autoVersionSubmodules>true</autoVersionSubmodules>
+        <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+        <tagNameFormat>${project.artifactId}-@{project.version}</tagNameFormat>
+      </configuration>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.maven.scm</groupId>
+          <artifactId>maven-scm-api</artifactId>
+          <version>1.9.4</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.maven.scm</groupId>
+          <artifactId>maven-scm-provider-gitexe</artifactId>
+          <version>1.9.4</version>
+        </dependency>
+      </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>maven-hawtjni-plugin</artifactId>
+        <version>1.14</version>
+        <executions>
+          <execution>
+            <id>build-native-lib</id>
+            <configuration>
+              <name>netty_quic_quiche_${os.detected.arch}</name>
+              <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
+              <libDirectory>${project.build.outputDirectory}</libDirectory>
+              <!-- We use Maven's artifact classifier instead.
+                   This hack will make the hawtjni plugin to put the native library
+                   under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
+              <platform>.</platform>
+              <verbose>true</verbose>
+              <configureArgs>
+                <configureArg>CFLAGS=${cflags}</configureArg>
+                <configureArg>LDFLAGS=${ldflags}</configureArg>
+                <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
+              </configureArgs>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+              <goal>build</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <excludes>
+                <exclude>META-INF/native/**</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Generate the JAR that contains the native library in it. -->
+          <execution>
+            <id>native-jar</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+              </archive>
+              <classifier>${jni.classifier}</classifier>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-build</artifactId>
+      <version>${netty.build.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
