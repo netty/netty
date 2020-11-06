@@ -16,17 +16,17 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 
 public final class InsecureQuicTokenHandler implements QuicTokenHandler {
 
     private static final String SERVER_NAME = "netty";
     private static final byte[] SERVER_NAME_BYTES = SERVER_NAME.getBytes(CharsetUtil.US_ASCII);
+    private static final ByteBuf SERVER_NAME_BUFFER = Unpooled.wrappedBuffer(SERVER_NAME_BYTES);
 
     private static final int MAX_TOKEN_LEN = Quiche.QUICHE_MAX_CONN_ID_LEN +
             NetUtil.LOCALHOST6.getAddress().length + SERVER_NAME_BYTES.length;
@@ -52,15 +52,17 @@ public final class InsecureQuicTokenHandler implements QuicTokenHandler {
             return -1;
         }
 
-        // TODO: Optimize me
-        byte[] bytes = ByteBufUtil.getBytes(token, 0, minLength);
-        if (!Arrays.equals(SERVER_NAME_BYTES, Arrays.copyOfRange(bytes, 0, SERVER_NAME_BYTES.length))) {
+        if (!SERVER_NAME_BUFFER.equals(token.slice(0, SERVER_NAME_BYTES.length))) {
             return -1;
         }
         final byte[] addr = address.getAddress().getAddress();
-        if (!Arrays.equals(addr, Arrays.copyOfRange(bytes, SERVER_NAME_BYTES.length,
-                addr.length + SERVER_NAME_BYTES.length))) {
-            return -1;
+        ByteBuf addressBuffer = Unpooled.wrappedBuffer(addr);
+        try {
+            if (!addressBuffer.equals(token.slice(SERVER_NAME_BYTES.length, addr.length))) {
+                return -1;
+            }
+        } finally {
+            addressBuffer.release();
         }
         return minLength;
     }
