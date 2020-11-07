@@ -39,10 +39,11 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final long config;
-
     private final ChannelHandler childHandler;
     private final QuicConnectionIdSigner connectionSigner;
     private final QuicTokenHandler tokenHandler;
+
+    private boolean needsFlush;
 
     private ByteBuf versionBuffer;
     private ByteBuf typeBuffer;
@@ -162,8 +163,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                         return;
                     }
 
-                    // TODO: Should we also just call flush later here and may be able to make use of sendmmsg.
-                    ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), packet.sender()));
+                    ctx.write(new DatagramPacket(out.writerIndex(outWriterIndex + res), packet.sender()));
+                    needsFlush = true;
                     return;
                 }
 
@@ -190,8 +191,9 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                         out.release();
                         Quiche.throwIfError(written);
                     } else {
-                        ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written),
+                        ctx.write(new DatagramPacket(out.writerIndex(outWriterIndex + written),
                                 packet.sender()));
+                        needsFlush = true;
                     }
                     return;
                 }
@@ -228,7 +230,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
-        boolean writeDone = false;
+        boolean writeDone = needsFlush;
+        needsFlush = false;
         Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();
         while (entries.hasNext()) {
             QuicheQuicChannel channel = entries.next().getValue();
