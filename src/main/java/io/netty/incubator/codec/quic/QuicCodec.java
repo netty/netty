@@ -38,6 +38,13 @@ import java.util.Map;
 public final class QuicCodec extends ChannelInboundHandlerAdapter {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
 
+    private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
+    private final long config;
+
+    private final ChannelHandler childHandler;
+    private final QuicConnectionIdSigner connectionSigner;
+    private final QuicTokenHandler tokenHandler;
+
     private ByteBuf versionBuffer;
     private ByteBuf typeBuffer;
     private ByteBuf scidLenBuffer;
@@ -48,13 +55,6 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
     private ByteBuf tokenLenBuffer;
     private ByteBuf mintTokenBuffer;
     private ByteBuf connIdBuffer;
-
-    private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
-    private final long config;
-
-    private final ChannelHandler childHandler;
-    private final QuicConnectionIdSigner connectionSigner;
-    private final QuicTokenHandler tokenHandler;
 
     QuicCodec(long config, QuicTokenHandler tokenHandler,
               QuicConnectionIdSigner connectionSigner, ChannelHandler childHandler) {

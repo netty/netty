@@ -33,6 +33,8 @@ import io.netty.util.collection.LongObjectMap;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 final class QuicheQuicChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -42,7 +44,32 @@ final class QuicheQuicChannel extends AbstractChannel {
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final InetSocketAddress remote;
     private final ChannelConfig config;
+    private final Runnable timeout = new Runnable() {
+        @Override
+        public void run() {
+            if (connAddr != -1) {
+                // Notify quiche there was a timeout.
+                Quiche.quiche_conn_on_timeout(connAddr);
+                if (flushEgress()) {
+                    // We did write something to the underlying channel. Flush now.
+                    // TODO: Maybe optimize this.
+                    ctx.flush();
+                }
+                if (Quiche.quiche_conn_is_closed(connAddr)) {
+                    unsafe().close(voidPromise());
+                    Quiche.quiche_conn_free(connAddr);
+                    connAddr = -1;
+                } else {
+                    // The connection is alive, reschedule.
+                    timeoutFuture = null;
+                    scheduleTimeout();
+                }
+            }
+        }
+    };
+    private Future<?> timeoutFuture;
     private long connAddr;
+    private boolean fireChannelReadCompletePending;
 
     private volatile boolean active = true;
 
@@ -53,6 +80,14 @@ final class QuicheQuicChannel extends AbstractChannel {
         this.ctx = ctx;
         this.remote = remote;
         pipeline().addLast(handler);
+    }
+
+    private void scheduleTimeout() {
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel(false);
+        }
+        timeoutFuture = eventLoop().schedule(timeout,
+                Quiche.quiche_conn_timeout_as_nanos(connAddr), TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -120,7 +155,7 @@ final class QuicheQuicChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return active;
+        return active && connAddr != -1;
     }
 
     @Override
@@ -138,6 +173,9 @@ final class QuicheQuicChannel extends AbstractChannel {
     }
 
     boolean freeIfClosed() {
+        if (connAddr == -1) {
+            return true;
+        }
         if (Quiche.quiche_conn_is_closed(connAddr)) {
             Quiche.quiche_conn_free(connAddr);
             connAddr = -1;
@@ -145,8 +183,6 @@ final class QuicheQuicChannel extends AbstractChannel {
         }
         return false;
     }
-
-    private boolean fireChannelReadCompletePending;
 
     /**
      * Receive some data on a quic connection. The given {@link ByteBuf} may be modified in place so if you depend on
@@ -176,6 +212,9 @@ final class QuicheQuicChannel extends AbstractChannel {
     }
 
     boolean flushEgress() {
+        if (connAddr == -1) {
+            return false;
+        }
         boolean writeDone = false;
         for (;;) {
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -185,18 +224,23 @@ final class QuicheQuicChannel extends AbstractChannel {
             try {
                 if (Quiche.throwIfError(written)) {
                     out.release();
-                    return writeDone;
+                    break;
                 }
             } catch (Exception e) {
                 out.release();
                 ctx.fireExceptionCaught(e);
-                return writeDone;
+                break;
             }
 
             out.writerIndex(writerIndex + written);
             ctx.write(new DatagramPacket(out, remote));
             writeDone = true;
         }
+        if (writeDone) {
+            // Schedule timeout.
+            scheduleTimeout();
+        }
+        return writeDone;
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
@@ -236,6 +280,9 @@ final class QuicheQuicChannel extends AbstractChannel {
                 return fireChannelRead;
             } finally {
                 buffer.skipBytes((int) (memoryAddress - buffer.memoryAddress()));
+
+                // Schedule timeout.
+                scheduleTimeout();
             }
         }
 
