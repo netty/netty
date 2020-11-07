@@ -30,13 +30,14 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-final class QuicheQuicChannel extends AbstractChannel {
+final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final ChannelHandlerContext ctx;
     private final long[] readableStreams = new long[1024];
@@ -102,6 +103,18 @@ final class QuicheQuicChannel extends AbstractChannel {
                 eventLoop().register(channel);
             }
         };
+    }
+
+    @Override
+    public io.netty.util.concurrent.Future<QuicStreamChannel> newStream(boolean bidirectional) {
+        return newStream(bidirectional, eventLoop().newPromise());
+    }
+
+    @Override
+    public io.netty.util.concurrent.Future<QuicStreamChannel> newStream(
+            boolean bidirectional, Promise<QuicStreamChannel> promise) {
+        // TODO: implement me
+        return promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
