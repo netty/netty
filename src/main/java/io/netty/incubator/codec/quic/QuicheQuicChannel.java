@@ -44,6 +44,7 @@ final class QuicheQuicChannel extends AbstractChannel {
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final InetSocketAddress remote;
     private final ChannelConfig config;
+    private final boolean server;
     private final Runnable timeout = new Runnable() {
         @Override
         public void run() {
@@ -73,9 +74,11 @@ final class QuicheQuicChannel extends AbstractChannel {
 
     private volatile boolean active = true;
 
-    QuicheQuicChannel(long connAddr, ChannelHandlerContext ctx, InetSocketAddress remote, ChannelHandler handler) {
+    QuicheQuicChannel(long connAddr, boolean server, ChannelHandlerContext ctx,
+                      InetSocketAddress remote, ChannelHandler handler) {
         super(ctx.channel());
         config = new DefaultChannelConfig(this);
+        this.server = server;
         this.connAddr = connAddr;
         this.ctx = ctx;
         this.remote = remote;
@@ -294,7 +297,7 @@ final class QuicheQuicChannel extends AbstractChannel {
                     long streamId = readableStreams[i];
                     QuicheQuicStreamChannel streamChannel = streams.get(streamId);
                     if (streamChannel == null) {
-                        streamChannel = new QuicheQuicStreamChannel(QuicheQuicChannel.this, streamId);
+                        streamChannel = new QuicheQuicStreamChannel(QuicheQuicChannel.this, streamId, server);
                         streams.put(streamId, streamChannel);
                         fireChannelRead = true;
                         pipeline().fireChannelRead(streamChannel);

@@ -28,18 +28,18 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.socket.DuplexChannel;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 
-final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexChannel {
+final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int FIN_LEN = 1;
 
     private final ChannelConfig config;
     private final long streamId;
+    private final boolean server;
     private boolean readPending;
     private boolean flushPending;
 
@@ -47,10 +47,26 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
+    QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId, boolean server) {
         super(parent);
         config = new DefaultChannelConfig(this);
         this.streamId = streamId;
+        this.server = server;
+    }
+
+    @Override
+    public boolean isLocalCreated() {
+        return (streamId & 0x1) == (server ? 1 : 0);
+    }
+
+    @Override
+    public boolean isBidirectional() {
+        return (streamId & 0x2) == 0;
+    }
+
+    @Override
+    public long streamId() {
+        return streamId;
     }
 
     @Override

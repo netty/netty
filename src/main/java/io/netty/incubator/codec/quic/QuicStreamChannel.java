@@ -15,19 +15,26 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.net.SocketAddress;
+import io.netty.channel.socket.DuplexChannel;
 
-public final class QuicStreamAddress extends SocketAddress {
+/**
+ * A QUIC stream.
+ */
+public interface QuicStreamChannel extends DuplexChannel {
 
-    public long streamId() {
-        return 0;
-    }
+    /**
+     * Returns {@code true} if the stream was created locally.
+     */
+    boolean isLocalCreated();
 
-    public boolean isBidirectional() {
-        return false;
-    }
+    /**
+     * Returns {@code true} if this stream is bidirectional or unidirectional. If unidirectional only the creator
+     * of the stream is allowed to send data on it.
+     */
+    boolean isBidirectional();
 
-    public boolean isClientInitiated() {
-        return false;
-    }
+    /**
+     * The id of the stream.
+     */
+    long streamId();
 }

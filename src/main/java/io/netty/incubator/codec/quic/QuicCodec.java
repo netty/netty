@@ -217,7 +217,7 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                     LOGGER.debug("quiche_accept failed");
                     return;
                 }
-                channel = new QuicheQuicChannel(conn, ctx, packet.sender(), childHandler);
+                channel = new QuicheQuicChannel(conn, true, ctx, packet.sender(), childHandler);
                 connections.put(connId, channel);
                 ctx.channel().eventLoop().register(channel);
             }
