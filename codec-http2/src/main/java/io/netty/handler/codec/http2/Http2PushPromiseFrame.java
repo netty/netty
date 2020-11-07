@@ -16,14 +16,20 @@
 package io.netty.handler.codec.http2;
 
 /**
- * HTTP/2 Push Promise Read Frame
+ * HTTP/2 Push Promise Frame
  */
-public interface Http2PushPromiseRead extends Http2StreamFrame {
+public interface Http2PushPromiseFrame extends Http2StreamFrame {
 
     /**
-     * Promised Stream-ID sent in Push Promise
+     * Set the Promise {@link Http2FrameStream} object for this frame.
      */
-    int promisedStreamId();
+    Http2StreamFrame pushStream(Http2FrameStream stream);
+
+    /**
+     * Returns the Promise {@link Http2FrameStream} object for this frame, or {@code null} if the
+     * frame has yet to be associated with a stream.
+     */
+    Http2FrameStream pushStream();
 
     /**
      * {@link Http2Headers} sent in Push Promise
