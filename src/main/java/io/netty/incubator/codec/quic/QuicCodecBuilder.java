@@ -33,7 +33,6 @@ public final class QuicCodecBuilder {
     private Long initialMaxData;
     private Long initialMaxStreamDataBidiLocal;
     private Long initialMaxStreamDataBidiRemote;
-    private Long initialMaxStreamDataBidiUni;
     private Long initialMaxStreamDataUni;
     private Long initialMaxStreamsBidi;
     private Long initialMaxStreamsUni;
@@ -41,7 +40,7 @@ public final class QuicCodecBuilder {
     private Long maxAckDelay;
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
-    private QuicConnectionIdSigner quicConnectionIdSigner = new DefaultQuicConnectionSigner();
+    private QuicConnectionIdSigner quicConnectionIdSigner;
 
     public QuicCodecBuilder certificateChain(String path) {
         certPath = path;
@@ -68,7 +67,7 @@ public final class QuicCodecBuilder {
         return this;
     }
 
-    public QuicCodecBuilder applicationProtos(byte[] protos) {
+    public QuicCodecBuilder applicationProtocols(byte[] protos) {
         this.protos = protos.clone();
         return this;
     }
@@ -88,32 +87,27 @@ public final class QuicCodecBuilder {
         return this;
     }
 
-    public QuicCodecBuilder initialMaxStreamDataBidiLocal(long value) {
+    public QuicCodecBuilder initialMaxStreamDataBidirectionalLocal(long value) {
         this.initialMaxStreamDataBidiLocal = value;
         return this;
     }
 
-    public QuicCodecBuilder initialMaxStreamDataBidiRemote(long value) {
+    public QuicCodecBuilder initialMaxStreamDataBidirectionalRemote(long value) {
         this.initialMaxStreamDataBidiRemote = value;
         return this;
     }
 
-    public QuicCodecBuilder initialMaxStreamDataBidiUni(long value) {
-        this.initialMaxStreamDataBidiUni = value;
-        return this;
-    }
-
-    public QuicCodecBuilder initialMaxStreamDataUni(long value) {
+    public QuicCodecBuilder initialMaxStreamDataUnidirectional(long value) {
         this.initialMaxStreamDataUni = value;
         return this;
     }
 
-    public QuicCodecBuilder initialMaxStreamsBidi(long value) {
+    public QuicCodecBuilder initialMaxStreamsBidirectional(long value) {
         this.initialMaxStreamsBidi = value;
         return this;
     }
 
-    public QuicCodecBuilder initialMaxStreamsUni(long value) {
+    public QuicCodecBuilder initialMaxStreamsUnidirectional(long value) {
         this.initialMaxStreamsUni = value;
         return this;
     }
@@ -181,11 +175,8 @@ public final class QuicCodecBuilder {
             if (initialMaxStreamDataBidiRemote != null) {
                 Quiche.quiche_config_set_initial_max_stream_data_bidi_remote(config, initialMaxStreamDataBidiRemote);
             }
-            if (initialMaxStreamDataBidiUni != null) {
-                Quiche.quiche_config_set_initial_max_stream_data_uni(config, initialMaxStreamDataBidiUni);
-            }
             if (initialMaxStreamDataUni != null) {
-                Quiche.quiche_config_set_initial_max_streams_uni(config, initialMaxStreamDataUni);
+                Quiche.quiche_config_set_initial_max_stream_data_uni(config, initialMaxStreamDataUni);
             }
             if (initialMaxStreamsBidi != null) {
                 Quiche.quiche_config_set_initial_max_streams_bidi(config, initialMaxStreamsBidi);
@@ -206,7 +197,12 @@ public final class QuicCodecBuilder {
                 Quiche.quiche_config_enable_hystart(config, enableHystart);
             }
 
-            return new QuicCodec(config, tokenHandler, quicConnectionIdSigner, childHandler);
+            QuicConnectionIdSigner signer = quicConnectionIdSigner;
+            if (signer == null) {
+                signer = new DefaultQuicConnectionSigner();
+            }
+
+            return new QuicCodec(config, tokenHandler, signer, childHandler);
         } catch (Throwable cause) {
             Quiche.quiche_config_free(config);
             throw cause;
