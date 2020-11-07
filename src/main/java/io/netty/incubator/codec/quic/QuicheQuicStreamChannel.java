@@ -53,14 +53,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
         this.streamId = streamId;
     }
 
-    private static void handleRes(int res, ChannelPromise promise) {
-        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-            promise.setFailure(Quiche.newException(res));
-        } else {
-            promise.setSuccess();
-        }
-    }
-
     @Override
     public boolean isInputShutdown() {
         return inputShutdown;
@@ -88,7 +80,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
 
     public void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
-        handleRes(Quiche.quiche_conn_stream_shutdown(
+        Quiche.notifyPromise(Quiche.quiche_conn_stream_shutdown(
                 connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_READ, 0), channelPromise);
     }
 
@@ -119,7 +111,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
 
     public void shutdownOutput0(ChannelPromise channelPromise) {
         outputShutdown = true;
-        handleRes(Quiche.quiche_conn_stream_shutdown(
+        Quiche.notifyPromise(Quiche.quiche_conn_stream_shutdown(
                 connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0), channelPromise);
     }
 
@@ -156,7 +148,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
                 connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
         int resWrite = Quiche.quiche_conn_stream_shutdown(
                 connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
-        handleRes(resRead | resWrite, channelPromise);
+        Quiche.notifyPromise(resRead | resWrite, channelPromise);
     }
 
     @Override
@@ -193,11 +185,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
     protected void doClose() throws Exception {
         active = false;
         // Just write an empty buffer and set fin to true.
-        int res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
-                Unpooled.EMPTY_BUFFER.memoryAddress(), 0, true);
-        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-            throw Quiche.newException(res);
-        }
+        Quiche.throwIfError(Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
+                Unpooled.EMPTY_BUFFER.memoryAddress(), 0, true));
     }
 
     @Override
@@ -212,9 +201,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (!(msg instanceof ByteBuf) ||
-                // TODO: Copy to direct memory.
-                !((ByteBuf) msg).hasMemoryAddress()) {
+        if (!(msg instanceof ByteBuf)) {
             throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
         }
         return msg;
@@ -228,23 +215,28 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
                 break;
             }
             int readable = buffer.readableBytes();
-            int res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
-                    buffer.memoryAddress() + buffer.readerIndex(), readable, false);
+            int res;
 
-            if (res == readable) {
-                channelOutboundBuffer.remove();
-            } else if (res < 0) {
-                if (res == Quiche.QUICHE_ERR_DONE) {
-                    // stream has no capacity left stop trying to send.
-                    flushPending = true;
-                    break;
+            if (!buffer.hasMemoryAddress()) {
+                ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                try {
+                    tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
+                            tmpBuffer.memoryAddress() + tmpBuffer.readerIndex(), readable, false);
+                } finally {
+                    tmpBuffer.release();
                 }
-                throw Quiche.newException(res);
             } else {
-                // partial write
-                channelOutboundBuffer.removeBytes(res);
+                res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
+                        buffer.memoryAddress() + buffer.readerIndex(), readable, false);
+            }
+
+            if (Quiche.throwIfError(res)) {
+                // stream has no capacity left stop trying to send.
+                flushPending = true;
                 break;
             }
+            channelOutboundBuffer.removeBytes(res);
         }
     }
 
@@ -339,20 +331,15 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
                     int recvLen = Quiche.quiche_conn_stream_recv(connectionAddr(), streamId,
                             memoryAddress + FIN_LEN + writerIndex, byteBuf.writableBytes() - FIN_LEN, memoryAddress);
 
-                    // We
                     close = byteBuf.getBoolean(writerIndex);
 
                     allocHandle.lastBytesRead(recvLen);
-                    if (recvLen == 0 || recvLen == Quiche.QUICHE_ERR_DONE) {
+                    if (recvLen == 0 || Quiche.throwIfError(recvLen)) {
                         byteBuf.release();
                         byteBuf = null;
                         break;
                     }
                     readPending = false;
-
-                    if (recvLen < 0) {
-                        throw Quiche.newException(recvLen);
-                    }
 
                     allocHandle.incMessagesRead(1);
                     // Skip the FIN
@@ -366,8 +353,9 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements DuplexCha
                 if (close) {
                     closeOnRead(pipeline);
                 }
-            } catch (Throwable var11) {
-                this.handleReadException(pipeline, byteBuf, var11, close, allocHandle);
+            } catch (Throwable cause) {
+                readPending = false;
+                this.handleReadException(pipeline, byteBuf, cause, close, allocHandle);
             }
         }
     }

@@ -153,12 +153,11 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                             out.memoryAddress() + outWriterIndex, out.writableBytes());
                     if (res < 0) {
                         out.release();
-                        if (res != Quiche.QUICHE_ERR_DONE) {
-                            throw Quiche.newException(res);
-                        }
+                        Quiche.throwIfError(res);
                         return;
                     }
 
+                    // TODO: Should we also just call flush later here and may be able to make use of sendmmsg.
                     ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), packet.sender()));
                     return;
                 }

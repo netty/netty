@@ -99,10 +99,8 @@ final class QuicheQuicChannel extends AbstractChannel {
     @Override
     protected void doClose() throws Exception {
         active = false;
-        int res = Quiche.quiche_conn_close(connAddr, false, 0, Unpooled.EMPTY_BUFFER.memoryAddress(), 0);
-        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-            throw Quiche.newException(res);
-        }
+        Quiche.throwIfError(Quiche.quiche_conn_close(connAddr, false, 0,
+                Unpooled.EMPTY_BUFFER.memoryAddress(), 0));
     }
 
     @Override
@@ -184,16 +182,17 @@ final class QuicheQuicChannel extends AbstractChannel {
             int writerIndex = out.writerIndex();
             int written = Quiche.quiche_conn_send(connAddr, out.memoryAddress() + writerIndex, out.writableBytes());
 
-            if (written == Quiche.QUICHE_ERR_DONE) {
+            try {
+                if (Quiche.throwIfError(written)) {
+                    out.release();
+                    return writeDone;
+                }
+            } catch (Exception e) {
                 out.release();
+                ctx.fireExceptionCaught(e);
                 return writeDone;
             }
 
-            if (written < 0) {
-                out.release();
-                ctx.fireExceptionCaught(Quiche.newException(written));
-                return writeDone;
-            }
             out.writerIndex(writerIndex + written);
             ctx.write(new DatagramPacket(out, remote));
             writeDone = true;
@@ -218,16 +217,20 @@ final class QuicheQuicChannel extends AbstractChannel {
                 do  {
                     // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
                     int res = Quiche.quiche_conn_recv(connAddr, memoryAddress, bufferReadable);
-                    if (res < 0) {
-                        if (res != Quiche.QUICHE_ERR_DONE) {
-                            pipeline().fireExceptionCaught(Quiche.newException(res));
-                        }
-                        fireChannelRead |= handleReadableStreams();
+                    boolean done;
+                    try {
+                        done = Quiche.throwIfError(res);
+                    } catch (Exception e) {
+                        pipeline().fireExceptionCaught(e);
+                        done = true;
+                    }
+
+                    fireChannelRead |= handleReadableStreams();
+                    if (done) {
                         break;
                     } else {
                         memoryAddress += res;
                         bufferReadable -= res;
-                        fireChannelRead |= handleReadableStreams();
                     }
                 } while (bufferReadable > 0);
                 return fireChannelRead;

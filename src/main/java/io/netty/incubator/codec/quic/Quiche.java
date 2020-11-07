@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.ChannelPromise;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.NativeLibraryLoader;
@@ -370,6 +371,24 @@ final class Quiche {
             return new SSLException(errStr);
         }
         return new IOException(errStr);
+    }
+
+    static boolean throwIfError(int res) throws Exception {
+        if (res < 0) {
+             if (res == Quiche.QUICHE_ERR_DONE) {
+                 return true;
+             }
+            throw Quiche.newException(res);
+        }
+        return false;
+    }
+
+    static void notifyPromise(int res, ChannelPromise promise) {
+        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+            promise.setFailure(Quiche.newException(res));
+        } else {
+            promise.setSuccess();
+        }
     }
 
     private Quiche() { }
