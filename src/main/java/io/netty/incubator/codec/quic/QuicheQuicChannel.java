@@ -238,6 +238,7 @@ final class QuicheQuicChannel extends AbstractChannel {
         }
         if (writeDone) {
             // Schedule timeout.
+            // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
             scheduleTimeout();
         }
         return writeDone;
@@ -280,9 +281,6 @@ final class QuicheQuicChannel extends AbstractChannel {
                 return fireChannelRead;
             } finally {
                 buffer.skipBytes((int) (memoryAddress - buffer.memoryAddress()));
-
-                // Schedule timeout.
-                scheduleTimeout();
             }
         }
 
