@@ -46,6 +46,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
     private ByteBuf dcidBuffer;
     private ByteBuf tokenBuffer;
     private ByteBuf tokenLenBuffer;
+    private ByteBuf mintTokenBuffer;
+    private ByteBuf connIdBuffer;
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final long config;
@@ -72,6 +74,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
         dcidLenBuffer = allocateNativeOrder(Integer.BYTES);
         tokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
         tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
+        mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
+        connIdBuffer = allocateNativeOrder(Quiche.QUICHE_MAX_CONN_ID_LEN);
     }
 
     @SuppressWarnings("deprecation")
@@ -95,6 +99,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
         dcidBuffer.release();
         dcidLenBuffer.release();
         tokenLenBuffer.release();
+        mintTokenBuffer.release();
+        connIdBuffer.release();
     }
 
     @Override
@@ -163,12 +169,13 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                 }
 
                 if (!token.isReadable()) {
-                    // The remote peer did not send a token.
-                    ByteBuf mintTokenBuffer = ctx.alloc().directBuffer(tokenHandler.maxTokenLength());
+                    // Clear buffers so we can reuse these.
+                    mintTokenBuffer.clear();
+                    connIdBuffer.clear();
 
+                    // The remote peer did not send a token.
                     tokenHandler.writeToken(mintTokenBuffer, dcid, packet.sender());
 
-                    ByteBuf connIdBuffer = ctx.alloc().directBuffer(connId.limit());
                     connIdBuffer.writeBytes(connId);
 
                     ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -179,8 +186,6 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                             mintTokenBuffer.memoryAddress() + mintTokenBuffer.readerIndex(),
                             mintTokenBuffer.readableBytes(),
                             version, out.memoryAddress() + outWriterIndex, out.writableBytes());
-
-                    //mintTokenBuffer.release();
 
                     if (written < 0) {
                         out.release();
