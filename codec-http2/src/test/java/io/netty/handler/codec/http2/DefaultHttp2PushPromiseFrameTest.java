@@ -27,6 +27,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,6 +90,11 @@ public class DefaultHttp2PushPromiseFrameTest {
     public void send() throws InterruptedException {
         Thread.sleep(100);
         clientHandler.write();
+    }
+
+    @After
+    public void shutdown() {
+        eventLoopGroup.shutdownGracefully();
     }
 
     private final class ServerHandler extends Http2ChannelDuplexHandler {
