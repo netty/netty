@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 // TODO: - Handle connect
-//       - Handle timeout
 //       - Handle flush correctly
 public final class QuicCodec extends ChannelInboundHandlerAdapter {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
@@ -189,6 +188,7 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
 
                     if (written < 0) {
                         out.release();
+                        Quiche.throwIfError(written);
                     } else {
                         ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written),
                                 packet.sender()));
