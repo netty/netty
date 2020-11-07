@@ -214,6 +214,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     assertEquals("Meow, I am Pushed via HTTP/2", dataFrame.content().toString(CharsetUtil.UTF_8));
                     dataFrame.content().release();
                 } else {
+                    dataFrame.content().release();
                     ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.REFUSED_STREAM));
                 }
             }
