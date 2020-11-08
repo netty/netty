@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -35,9 +36,30 @@ public class DefaultHttp2TranslatedLastHttpContent extends DefaultHttp2Translate
     private final HttpHeaders trailingHeaders;
     private final boolean validateHeaders;
 
+    /**
+     * Creates a new instance with the specified chunk content,
+     * {@link Unpooled#EMPTY_BUFFER} and Header validation disabled.
+     *
+     * @param streamId Stream ID of HTTP/2 Data Frame
+     */
+    public DefaultHttp2TranslatedLastHttpContent(int streamId) {
+        this(Unpooled.EMPTY_BUFFER, streamId, true);
+    }
+
+    /**
+     * Creates a new instance with the specified chunk content and Header validation disabled.
+     *
+     * @param content  {@link ByteBuf} Content
+     * @param streamId Stream ID of HTTP/2 Data Frame
+     */
+    public DefaultHttp2TranslatedLastHttpContent(ByteBuf content, int streamId) {
+        this(content, streamId, true);
+    }
+
     /***
      * Creates a new instance with the specified chunk content.
      * @param streamId Stream ID of HTTP/2 Data Frame
+     * @param validateHeaders Set to {@code true} to validate headers else set to {@code false}
      */
     public DefaultHttp2TranslatedLastHttpContent(ByteBuf content, int streamId, boolean validateHeaders) {
         super(content, streamId);
