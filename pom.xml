@@ -71,7 +71,7 @@
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>false</skipTests>
     <netty.version>4.1.54.Final-SNAPSHOT</netty.version>
-    <netty.build.version>26</netty.build.version>
+    <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
@@ -277,7 +277,7 @@
         </dependency>
         <dependency>
           <groupId>io.netty</groupId>
-          <artifactId>netty-build</artifactId>
+          <artifactId>netty-build-common</artifactId>
           <version>${netty.build.version}</version>
         </dependency>
       </dependencies>
@@ -508,7 +508,7 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-build</artifactId>
+      <artifactId>netty-build-common</artifactId>
       <version>${netty.build.version}</version>
       <scope>test</scope>
     </dependency>
