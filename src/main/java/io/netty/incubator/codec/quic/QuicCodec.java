@@ -238,7 +238,8 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
             // TODO: Be a bit smarter about this.
             channel.fireChannelReadCompleteIfNeeded();
 
-            writeDone |= channel.flushEgress();
+            writeDone |= channel.flushEgressIfNeeded();
+
             if (channel.freeIfClosed()) {
                 entries.remove();
             }

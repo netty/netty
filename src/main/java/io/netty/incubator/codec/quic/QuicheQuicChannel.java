@@ -72,6 +72,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private Future<?> timeoutFuture;
     private long connAddr;
     private boolean fireChannelReadCompletePending;
+    private boolean flushEgressNeeded;
 
     private volatile boolean active = true;
 
@@ -200,6 +201,35 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return false;
     }
 
+    void shutdownRead(long streamId, ChannelPromise promise) {
+        int res = Quiche.quiche_conn_stream_shutdown(
+                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
+        flushEgressNeeded = true;
+        Quiche.notifyPromise(res, promise);
+    }
+
+    void shutdownWrite(long streamId, ChannelPromise promise) {
+        int res = Quiche.quiche_conn_stream_shutdown(
+                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
+        flushEgressNeeded = true;
+        Quiche.notifyPromise(res, promise);
+    }
+
+    void shutdownReadAndWrite(long streamId, ChannelPromise promise) {
+        int res = Quiche.quiche_conn_stream_shutdown(
+                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0) | Quiche.quiche_conn_stream_shutdown(
+                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
+        flushEgressNeeded = true;
+        Quiche.notifyPromise(res, promise);
+    }
+
+    int streamSend(long streamId, ByteBuf buffer, boolean fin) {
+        int res = Quiche.quiche_conn_stream_send(connAddr, streamId,
+                buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
+        flushEgressNeeded = true;
+        return res;
+    }
+
     /**
      * Receive some data on a quic connection. The given {@link ByteBuf} may be modified in place so if you depend on
      * the fact that the contents are not modified you will need to make a copy before.
@@ -227,10 +257,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
+    // TODO: Handle this when outside of read loop.
+    boolean flushEgressIfNeeded() {
+        if (flushEgressNeeded) {
+            return flushEgress();
+        }
+        return false;
+    }
+
     boolean flushEgress() {
         if (connAddr == -1) {
             return false;
         }
+        flushEgressNeeded = false;
         boolean writeDone = false;
         for (;;) {
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -273,7 +312,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             int bufferReaderIndex = buffer.readerIndex();
             long memoryAddress = buffer.memoryAddress() + bufferReaderIndex;
             boolean fireChannelRead = false;
-
+            flushEgressNeeded = true;
             try {
                 do  {
                     // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.

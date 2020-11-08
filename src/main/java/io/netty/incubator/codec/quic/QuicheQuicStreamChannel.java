@@ -94,10 +94,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         return channelPromise;
     }
 
+    QuicheQuicChannel parentQuicChannel() {
+        return (QuicheQuicChannel) parent();
+    }
     public void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
-        Quiche.notifyPromise(Quiche.quiche_conn_stream_shutdown(
-                connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_READ, 0), channelPromise);
+        parentQuicChannel().shutdownRead(streamId, channelPromise);
     }
 
     @Override
@@ -127,8 +129,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     public void shutdownOutput0(ChannelPromise channelPromise) {
         outputShutdown = true;
-        Quiche.notifyPromise(Quiche.quiche_conn_stream_shutdown(
-                connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0), channelPromise);
+        parentQuicChannel().shutdownWrite(streamId, channelPromise);
     }
 
     @Override
@@ -159,12 +160,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     public void shutdown0(ChannelPromise channelPromise) {
         inputShutdown = true;
         outputShutdown = true;
-
-        int resRead = Quiche.quiche_conn_stream_shutdown(
-                connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
-        int resWrite = Quiche.quiche_conn_stream_shutdown(
-                connectionAddr(), streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
-        Quiche.notifyPromise(resRead | resWrite, channelPromise);
+        parentQuicChannel().shutdownReadAndWrite(streamId, channelPromise);
     }
 
     @Override
@@ -201,8 +197,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doClose() throws Exception {
         active = false;
         // Just write an empty buffer and set fin to true.
-        Quiche.throwIfError(Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
-                Unpooled.EMPTY_BUFFER.memoryAddress(), 0, true));
+        Quiche.throwIfError(parentQuicChannel().streamSend(streamId,
+                Unpooled.EMPTY_BUFFER, true));
     }
 
     @Override
@@ -230,21 +226,17 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             if (buffer == null) {
                 break;
             }
-            int readable = buffer.readableBytes();
-            int res;
-
+            final int res;
             if (!buffer.hasMemoryAddress()) {
                 ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
                 try {
                     tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
-                            tmpBuffer.memoryAddress() + tmpBuffer.readerIndex(), readable, false);
+                    res = parentQuicChannel().streamSend(streamId, tmpBuffer, false);
                 } finally {
                     tmpBuffer.release();
                 }
             } else {
-                res = Quiche.quiche_conn_stream_send(connectionAddr(), streamId,
-                        buffer.memoryAddress() + buffer.readerIndex(), readable, false);
+                res = parentQuicChannel().streamSend(streamId, buffer, false);
             }
 
             if (Quiche.throwIfError(res)) {
