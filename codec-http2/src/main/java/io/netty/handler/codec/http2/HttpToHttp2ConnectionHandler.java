@@ -122,6 +122,10 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     http2Trailers = HttpConversionUtil.toHttp2Headers(trailers, validateHeaders);
                 }
 
+                if (msg instanceof Http2TranslatedHttpContent) {
+                    currentStreamId = ((Http2TranslatedHttpContent) msg).streamId();
+                }
+
                 // Write the data
                 final ByteBuf content = ((HttpContent) msg).content();
                 endStream = isLastContent && trailers.isEmpty();

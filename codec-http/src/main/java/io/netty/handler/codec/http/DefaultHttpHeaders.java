@@ -51,7 +51,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             return true;
         }
     };
-    static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
+    public static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
             if (name == null || name.length() == 0) {
