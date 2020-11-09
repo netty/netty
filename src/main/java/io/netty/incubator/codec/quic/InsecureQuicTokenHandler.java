@@ -22,6 +22,12 @@ import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
 
+/**
+ * Insecure {@link QuicTokenHandler} which only does basic token generation / validation without any
+ * crypto.
+ *
+ * <strong>This shouldn't be used in production.</strong>
+ */
 public final class InsecureQuicTokenHandler implements QuicTokenHandler {
 
     private static final String SERVER_NAME = "netty";
