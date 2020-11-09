@@ -53,15 +53,16 @@ public final class InsecureQuicTokenHandler implements QuicTokenHandler {
 
     @Override
     public int validateToken(ByteBuf token, InetSocketAddress address) {
+        final byte[] addr = address.getAddress().getAddress();
+
         int minLength = SERVER_NAME_BYTES.length + address.getAddress().getAddress().length;
-        if (token.readableBytes() <= SERVER_NAME_BYTES.length + address.getAddress().getAddress().length) {
+        if (token.readableBytes() <= SERVER_NAME_BYTES.length + addr.length) {
             return -1;
         }
 
         if (!SERVER_NAME_BUFFER.equals(token.slice(0, SERVER_NAME_BYTES.length))) {
             return -1;
         }
-        final byte[] addr = address.getAddress().getAddress();
         ByteBuf addressBuffer = Unpooled.wrappedBuffer(addr);
         try {
             if (!addressBuffer.equals(token.slice(SERVER_NAME_BYTES.length, addr.length))) {
