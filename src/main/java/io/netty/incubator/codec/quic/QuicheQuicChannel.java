@@ -70,11 +70,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 writeAndFlushEgress();
 
-                if (Quiche.quiche_conn_is_closed(connAddr)) {
-                    unsafe().close(voidPromise());
-                    Quiche.quiche_conn_free(connAddr);
-                    connAddr = -1;
-                } else {
+                if (!closeAllIfConnectionClosed()) {
                     // The connection is alive, reschedule.
                     timeoutFuture = null;
                     scheduleTimeout();
@@ -98,6 +94,17 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.connAddr = connAddr;
         this.remote = remote;
         pipeline().addLast(handler);
+    }
+
+    private boolean closeAllIfConnectionClosed() {
+        if (Quiche.quiche_conn_is_closed(connAddr)) {
+            unsafe().close(voidPromise());
+            Quiche.quiche_conn_free(connAddr);
+            connAddr = -1;
+            closeStreams();
+            return true;
+        }
+        return false;
     }
 
     private void scheduleTimeout() {
@@ -205,12 +212,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (isConnDestroyed()) {
             return true;
         }
-        if (Quiche.quiche_conn_is_closed(connAddr)) {
-            Quiche.quiche_conn_free(connAddr);
-            connAddr = -1;
-            return true;
+        return closeAllIfConnectionClosed();
+    }
+
+    private void closeStreams() {
+        for (QuicheQuicStreamChannel stream: streams.values()) {
+            stream.unsafe().close(voidPromise());
         }
-        return false;
+        streams.clear();
     }
 
     void shutdownRead(long streamId, ChannelPromise promise) {
