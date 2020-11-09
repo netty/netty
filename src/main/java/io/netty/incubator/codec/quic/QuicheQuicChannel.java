@@ -407,8 +407,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             } catch (Exception e) {
                 out.release();
-                // TODO: is this correct ?
-                parent().pipeline().fireExceptionCaught(e);
+                pipeline().fireExceptionCaught(e);
                 break;
             }
 
