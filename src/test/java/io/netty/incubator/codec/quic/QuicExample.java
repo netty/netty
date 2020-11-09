@@ -59,7 +59,8 @@ public final class QuicExample {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                 QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
-                                System.out.println(channel.isLocalCreated() + " => " + channel.isBidirectional());
+                                System.out.println(channel.isLocalCreated() + " => " +
+                                        channel.isBidirectional() + " == " + channel.streamId());
                             }
 
                             @Override

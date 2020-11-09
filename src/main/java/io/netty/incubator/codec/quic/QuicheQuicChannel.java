@@ -216,34 +216,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void shutdownRead(long streamId, ChannelPromise promise) {
-        final long connectionAddress;
-        try {
-            connectionAddress = connectionAddressChecked();
-        } catch (ClosedChannelException e) {
-            promise.setFailure(e);
-            return;
-        }
-        int res = Quiche.quiche_conn_stream_shutdown(
-                connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
-        handleWriteEgress();
-        Quiche.notifyPromise(res, promise);
+        shutdown0(streamId, true, false, 0, promise);
     }
 
     void shutdownWrite(long streamId, ChannelPromise promise) {
-        final long connectionAddress;
-        try {
-            connectionAddress = connectionAddressChecked();
-        } catch (ClosedChannelException e) {
-            promise.setFailure(e);
-            return;
-        }
-        int res = Quiche.quiche_conn_stream_shutdown(
-                connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
-        handleWriteEgress();
-        Quiche.notifyPromise(res, promise);
+        shutdown0(streamId, false, true, 0, promise);
     }
 
     void shutdownReadAndWrite(long streamId, ChannelPromise promise) {
+        shutdown0(streamId, true, true, 0, promise);
+    }
+
+    private void shutdown0(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
         final long connectionAddress;
         try {
             connectionAddress = connectionAddressChecked();
@@ -251,8 +235,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             promise.setFailure(e);
             return;
         }
-        int res = Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0) |
-                Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
+        int res = 0;
+        if (read) {
+            res |= Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_READ, err);
+        }
+        if (write) {
+            res |= Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, err);
+        }
         handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
@@ -336,8 +325,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     /**
-     * Receive some data on a quic connection. The given {@link ByteBuf} may be modified in place so if you depend on
-     * the fact that the contents are not modified you will need to make a copy before.
+     * Receive some data on a QUIC connection.
      */
     void recv(ByteBuf buffer) {
         fireChannelReadCompletePending |= ((QuicChannelUnsafe) unsafe()).recvForConnection(buffer);
@@ -358,7 +346,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             for (int i = 0; i < writable; i++) {
                 long stream = writableStreams[writable];
-                streams.get(stream).forceFlush();
+                QuicheQuicStreamChannel streamChannel = streams.get(stream);
+                if (streamChannel != null) {
+                    streamChannel.forceFlush();
+                }
             }
             return writable > 0;
         }
@@ -458,8 +449,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         boolean recvForConnection(ByteBuf buffer) {
             if (isConnDestroyed()) {
-                buffer.release();
-                return true;
+                return false;
+            }
+
+            ByteBuf tmpBuffer = null;
+            // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
+            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
+            if (buffer.isReadOnly() || !buffer.hasMemoryAddress()) {
+                buffer = tmpBuffer = alloc().directBuffer(buffer.readableBytes()).writeBytes(buffer);
             }
             int bufferReadable = buffer.readableBytes();
             int bufferReaderIndex = buffer.readerIndex();
@@ -489,6 +486,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 return fireChannelRead;
             } finally {
                 buffer.skipBytes((int) (memoryAddress - buffer.memoryAddress()));
+                if (tmpBuffer != null) {
+                    tmpBuffer.release();
+                }
             }
         }
 
