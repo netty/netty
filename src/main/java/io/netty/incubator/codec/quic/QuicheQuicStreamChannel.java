@@ -216,7 +216,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
         // reset first as streamSendMultiple may notify futures.
         flushPending = false;
-        if (!parentQuicChannel().streamSendMultiple(streamId, channelOutboundBuffer)) {
+        if (!parentQuicChannel().streamSendMultiple(streamId, alloc(), channelOutboundBuffer)) {
             flushPending = true;
         }
     }

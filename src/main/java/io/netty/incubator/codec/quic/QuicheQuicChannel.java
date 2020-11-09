@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -256,7 +257,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         Quiche.notifyPromise(res, promise);
     }
 
-    boolean streamSendMultiple(long streamId, ChannelOutboundBuffer streamOutboundBuffer) throws Exception {
+    boolean streamSendMultiple(long streamId, ByteBufAllocator allocator, ChannelOutboundBuffer streamOutboundBuffer)
+            throws Exception {
         boolean sendSomething = false;
         try {
             for (;;) {
@@ -266,7 +268,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
                 final int res;
                 if (!buffer.hasMemoryAddress()) {
-                    ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                    ByteBuf tmpBuffer = allocator.directBuffer(buffer.readableBytes());
                     try {
                         tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
                         res = streamSend(streamId, tmpBuffer, false);
@@ -394,7 +396,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         writeEgressNeeded = false;
         ChannelFuture lastFuture = null;
         for (;;) {
-            ByteBuf out = parent().alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+            ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
             int writerIndex = out.writerIndex();
             int written = Quiche.quiche_conn_send(connAddr, out.memoryAddress() + writerIndex, out.writableBytes());
 
