@@ -852,7 +852,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     if (exception == null) {
                         exception = sslClosePromise.cause();
                         if (exception == null) {
-                            exception = new SSLException("SSLEngine closed already");
+                            exception = new SslClosedEngineException("SSLEngine closed already");
                         }
                     }
                     promise.tryFailure(exception);
