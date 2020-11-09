@@ -211,14 +211,6 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new buffer which wraps the specified memory address. If {@code doFree} is true the
-     * memoryAddress will automatically be freed once the reference count of the {@link ByteBuf} reaches {@code 0}.
-     */
-    public static ByteBuf wrappedBuffer(long memoryAddress, int size, boolean doFree) {
-        return new WrappedUnpooledUnsafeDirectByteBuf(ALLOC, memoryAddress, size, doFree);
-    }
-
-    /**
      * Creates a new buffer which wraps the specified buffer's readable bytes.
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
