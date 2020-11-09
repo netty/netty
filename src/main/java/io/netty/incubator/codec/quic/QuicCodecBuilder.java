@@ -137,8 +137,8 @@ public final class QuicCodecBuilder {
         return this;
     }
 
-    public QuicCodec build(QuicTokenHandler tokenHandler, ChannelHandler childHandler) {
-        Objects.requireNonNull(childHandler, "childHandler");
+    public QuicCodec build(QuicTokenHandler tokenHandler, ChannelHandler quicChannelHandler) {
+        Objects.requireNonNull(quicChannelHandler, "quicChannelHandler");
 
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
@@ -202,7 +202,7 @@ public final class QuicCodecBuilder {
                 signer = new DefaultQuicConnectionSigner();
             }
 
-            return new QuicCodec(config, tokenHandler, signer, childHandler);
+            return new QuicCodec(config, tokenHandler, signer, quicChannelHandler);
         } catch (Throwable cause) {
             Quiche.quiche_config_free(config);
             throw cause;

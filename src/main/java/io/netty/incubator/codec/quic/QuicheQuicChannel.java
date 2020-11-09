@@ -24,12 +24,10 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.collection.LongObjectHashMap;
@@ -123,17 +121,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         timeoutFuture = eventLoop().schedule(timeout,
                 Quiche.quiche_conn_timeout_as_nanos(connAddr), TimeUnit.NANOSECONDS);
-    }
-
-    @Override
-    protected DefaultChannelPipeline newChannelPipeline() {
-        return new DefaultChannelPipeline(this) {
-            @Override
-            protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
-                QuicheQuicStreamChannel channel = (QuicheQuicStreamChannel) msg;
-                eventLoop().register(channel);
-            }
-        };
     }
 
     @Override

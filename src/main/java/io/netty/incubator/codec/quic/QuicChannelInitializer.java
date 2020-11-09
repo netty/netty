@@ -36,11 +36,9 @@ public class QuicChannelInitializer extends ChannelInitializer<Channel> {
         channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                Channel channel = (Channel) msg;
-                channel.pipeline().addLast(streamHandler);
-
-                // TODO: This should be changed.
-                ctx.fireChannelRead(msg);
+                Channel streamChannel = (Channel) msg;
+                streamChannel.pipeline().addLast(streamHandler);
+                channel.eventLoop().register(streamChannel);
             }
         });
     }

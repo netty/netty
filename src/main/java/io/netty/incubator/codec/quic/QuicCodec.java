@@ -38,7 +38,7 @@ public final class QuicCodec extends ChannelDuplexHandler {
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final long config;
-    private final ChannelHandler childHandler;
+    private final ChannelHandler quicChannelHandler;
     private final QuicConnectionIdSigner connectionSigner;
     private final QuicTokenHandler tokenHandler;
 
@@ -59,11 +59,11 @@ public final class QuicCodec extends ChannelDuplexHandler {
     boolean inChannelRead;
 
     QuicCodec(long config, QuicTokenHandler tokenHandler,
-              QuicConnectionIdSigner connectionSigner, ChannelHandler childHandler) {
+              QuicConnectionIdSigner connectionSigner, ChannelHandler quicChannelHandler) {
         this.config = config;
         this.tokenHandler = tokenHandler;
         this.connectionSigner = connectionSigner;
-        this.childHandler = childHandler;
+        this.quicChannelHandler = quicChannelHandler;
     }
 
     @Override
@@ -221,7 +221,7 @@ public final class QuicCodec extends ChannelDuplexHandler {
                     LOGGER.debug("quiche_accept failed");
                     return;
                 }
-                channel = new QuicheQuicChannel(this, ctx.channel(), conn, true, packet.sender(), childHandler);
+                channel = new QuicheQuicChannel(this, ctx.channel(), conn, true, packet.sender(), quicChannelHandler);
                 connections.put(connId, channel);
                 ctx.channel().eventLoop().register(channel);
             }
