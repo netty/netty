@@ -17,9 +17,9 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -33,9 +33,9 @@ import java.util.Iterator;
 import java.util.Map;
 
 // TODO: - Handle connect
-//       - Handle flush correctly
-public final class QuicCodec extends ChannelInboundHandlerAdapter {
+public final class QuicCodec extends ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
+    private static final int FIN_LEN = 1;
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final long config;
@@ -55,6 +55,10 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
     private ByteBuf tokenLenBuffer;
     private ByteBuf mintTokenBuffer;
     private ByteBuf connIdBuffer;
+
+    // Need to be accessed by the QuicheQuicChannel for now.
+    boolean inChannelRead;
+    ByteBuf finBuffer;
 
     QuicCodec(long config, QuicTokenHandler tokenHandler,
               QuicConnectionIdSigner connectionSigner, ChannelHandler childHandler) {
@@ -76,6 +80,7 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
         tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
         mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
         connIdBuffer = allocateNativeOrder(Quiche.QUICHE_MAX_CONN_ID_LEN);
+        finBuffer = allocateNativeOrder(FIN_LEN);
     }
 
     @SuppressWarnings("deprecation")
@@ -101,6 +106,7 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
         tokenLenBuffer.release();
         mintTokenBuffer.release();
         connIdBuffer.release();
+        finBuffer.release();
     }
 
     @Override
@@ -219,7 +225,7 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
                     LOGGER.debug("quiche_accept failed");
                     return;
                 }
-                channel = new QuicheQuicChannel(conn, true, ctx, packet.sender(), childHandler);
+                channel = new QuicheQuicChannel(this, conn, true, ctx.channel(), packet.sender(), childHandler);
                 connections.put(connId, channel);
                 ctx.channel().eventLoop().register(channel);
             }
@@ -232,13 +238,12 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
     public void channelReadComplete(ChannelHandlerContext ctx) {
         boolean writeDone = needsFlush;
         needsFlush = false;
+        inChannelRead = false;
         Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();
         while (entries.hasNext()) {
             QuicheQuicChannel channel = entries.next().getValue();
             // TODO: Be a bit smarter about this.
-            channel.fireChannelReadCompleteIfNeeded();
-
-            writeDone |= channel.flushEgressIfNeeded();
+            writeDone |= channel.handleChannelReadComplete();
 
             if (channel.freeIfClosed()) {
                 entries.remove();
@@ -246,6 +251,13 @@ public final class QuicCodec extends ChannelInboundHandlerAdapter {
         }
         if (writeDone) {
             ctx.flush();
+        }
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx) {
+        if (inChannelRead) {
+            needsFlush = true;
         }
     }
 }

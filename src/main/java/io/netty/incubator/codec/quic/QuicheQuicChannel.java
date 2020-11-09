@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,24 +40,21 @@ import java.util.concurrent.TimeUnit;
 
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    private final ChannelHandlerContext ctx;
     private final long[] readableStreams = new long[1024];
     private final long[] writableStreams = new long[1024];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final InetSocketAddress remote;
     private final ChannelConfig config;
     private final boolean server;
+    private final QuicCodec codec;
     private final Runnable timeout = new Runnable() {
         @Override
         public void run() {
             if (connAddr != -1) {
                 // Notify quiche there was a timeout.
                 Quiche.quiche_conn_on_timeout(connAddr);
-                if (flushEgress()) {
-                    // We did write something to the underlying channel. Flush now.
-                    // TODO: Maybe optimize this.
-                    ctx.flush();
-                }
+                writeAndFlushEgress();
+
                 if (Quiche.quiche_conn_is_closed(connAddr)) {
                     unsafe().close(voidPromise());
                     Quiche.quiche_conn_free(connAddr);
@@ -72,17 +70,17 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private Future<?> timeoutFuture;
     private long connAddr;
     private boolean fireChannelReadCompletePending;
-    private boolean flushEgressNeeded;
+    private boolean writeEgressNeeded;
 
     private volatile boolean active = true;
 
-    QuicheQuicChannel(long connAddr, boolean server, ChannelHandlerContext ctx,
+    QuicheQuicChannel(QuicCodec codec, long connAddr, boolean server, Channel parent,
                       InetSocketAddress remote, ChannelHandler handler) {
-        super(ctx.channel());
+        super(parent);
+        this.codec = codec;
         config = new DefaultChannelConfig(this);
         this.server = server;
         this.connAddr = connAddr;
-        this.ctx = ctx;
         this.remote = remote;
         pipeline().addLast(handler);
     }
@@ -204,14 +202,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     void shutdownRead(long streamId, ChannelPromise promise) {
         int res = Quiche.quiche_conn_stream_shutdown(
                 connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
-        flushEgressNeeded = true;
+        handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
 
     void shutdownWrite(long streamId, ChannelPromise promise) {
         int res = Quiche.quiche_conn_stream_shutdown(
                 connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
-        flushEgressNeeded = true;
+        handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
 
@@ -219,15 +217,78 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         int res = Quiche.quiche_conn_stream_shutdown(
                 connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0) | Quiche.quiche_conn_stream_shutdown(
                 connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
-        flushEgressNeeded = true;
+        handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
 
-    int streamSend(long streamId, ByteBuf buffer, boolean fin) {
-        int res = Quiche.quiche_conn_stream_send(connAddr, streamId,
+    boolean streamSendMultiple(long streamId, ChannelOutboundBuffer streamOutboundBuffer) throws Exception {
+        boolean sendSomething = false;
+        try {
+            for (;;) {
+                ByteBuf buffer = (ByteBuf) streamOutboundBuffer.current();
+                if (buffer == null) {
+                    break;
+                }
+                final int res;
+                if (!buffer.hasMemoryAddress()) {
+                    ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                    try {
+                        tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                        res = streamSend(streamId, tmpBuffer, false);
+                    } finally {
+                        tmpBuffer.release();
+                    }
+                } else {
+                    res = streamSend(streamId, buffer, false);
+                }
+
+                if (Quiche.throwIfError(res)) {
+                    // stream has no capacity left stop trying to send.
+                    return false;
+                }
+                streamOutboundBuffer.removeBytes(res);
+                sendSomething = true;
+            }
+            return true;
+        } finally {
+            if (sendSomething) {
+                handleWriteEgress();
+            }
+        }
+    }
+
+    void streamClose(long streamId) throws Exception {
+        try {
+            // Just write an empty buffer and set fin to true.
+            Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, true));
+        } finally {
+            handleWriteEgress();
+        }
+    }
+
+    private int streamSend(long streamId, ByteBuf buffer, boolean fin) {
+        return Quiche.quiche_conn_stream_send(connAddr, streamId,
                 buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
-        flushEgressNeeded = true;
-        return res;
+    }
+
+    boolean streamRecv(long streamId, ByteBuf buffer) throws Exception {
+        int writerIndex = buffer.writerIndex();
+        long memoryAddress = buffer.memoryAddress();
+        int recvLen = Quiche.quiche_conn_stream_recv(connAddr, streamId,
+                memoryAddress + writerIndex, buffer.writableBytes(), codec.finBuffer.memoryAddress());
+        Quiche.throwIfError(recvLen);
+        boolean fin = codec.finBuffer.getBoolean(writerIndex);
+        // Skip the FIN
+        buffer.setIndex(0, writerIndex + recvLen);
+        return fin;
+    }
+
+    private void handleWriteEgress() {
+        if (codec.inChannelRead) {
+            writeEgressNeeded = true;
+        } else {
+            writeAndFlushEgress();
+        }
     }
 
     /**
@@ -236,13 +297,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      */
     void recv(ByteBuf buffer) {
         fireChannelReadCompletePending |= ((QuicChannelUnsafe) unsafe()).recvForConnection(buffer);
-    }
-
-    void fireChannelReadCompleteIfNeeded() {
-        if (fireChannelReadCompletePending) {
-            fireChannelReadCompletePending = false;
-            pipeline().fireChannelReadComplete();
-        }
     }
 
     void flushStreams() {
@@ -257,22 +311,30 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    // TODO: Handle this when outside of read loop.
-    boolean flushEgressIfNeeded() {
-        if (flushEgressNeeded) {
-            return flushEgress();
+    boolean handleChannelReadComplete() {
+        if (fireChannelReadCompletePending) {
+            fireChannelReadCompletePending = false;
         }
-        return false;
+        return writeEgress();
     }
 
-    boolean flushEgress() {
+    private void writeAndFlushEgress() {
+        if (writeEgress()) {
+            parent().flush();
+        }
+    }
+
+    boolean writeEgress() {
         if (connAddr == -1) {
             return false;
         }
-        flushEgressNeeded = false;
+        if (!writeEgressNeeded) {
+            return false;
+        }
+        writeEgressNeeded = false;
         boolean writeDone = false;
         for (;;) {
-            ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+            ByteBuf out = parent().alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
             int writerIndex = out.writerIndex();
             int written = Quiche.quiche_conn_send(connAddr, out.memoryAddress() + writerIndex, out.writableBytes());
 
@@ -283,12 +345,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             } catch (Exception e) {
                 out.release();
-                ctx.fireExceptionCaught(e);
+                // TODO: is this correct ?
+                parent().pipeline().fireExceptionCaught(e);
                 break;
             }
 
             out.writerIndex(writerIndex + written);
-            ctx.write(new DatagramPacket(out, remote));
+            parent().write(new DatagramPacket(out, remote));
             writeDone = true;
         }
         if (writeDone) {
@@ -312,7 +375,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             int bufferReaderIndex = buffer.readerIndex();
             long memoryAddress = buffer.memoryAddress() + bufferReaderIndex;
             boolean fireChannelRead = false;
-            flushEgressNeeded = true;
+            writeEgressNeeded = true;
             try {
                 do  {
                     // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.

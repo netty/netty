@@ -17,7 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -35,7 +34,6 @@ import java.net.SocketAddress;
 
 final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    private static final int FIN_LEN = 1;
 
     private final ChannelConfig config;
     private final long streamId;
@@ -184,7 +182,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     }
 
     @Override
-    protected void doBind(SocketAddress socketAddress) throws Exception {
+    protected void doBind(SocketAddress socketAddress) {
         throw new UnsupportedOperationException();
     }
 
@@ -196,9 +194,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doClose() throws Exception {
         active = false;
-        // Just write an empty buffer and set fin to true.
-        Quiche.throwIfError(parentQuicChannel().streamSend(streamId,
-                Unpooled.EMPTY_BUFFER, true));
+        parentQuicChannel().streamClose(streamId);
     }
 
     @Override
@@ -221,30 +217,10 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
-        for (;;) {
-            ByteBuf buffer = (ByteBuf) channelOutboundBuffer.current();
-            if (buffer == null) {
-                break;
-            }
-            final int res;
-            if (!buffer.hasMemoryAddress()) {
-                ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
-                try {
-                    tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    res = parentQuicChannel().streamSend(streamId, tmpBuffer, false);
-                } finally {
-                    tmpBuffer.release();
-                }
-            } else {
-                res = parentQuicChannel().streamSend(streamId, buffer, false);
-            }
-
-            if (Quiche.throwIfError(res)) {
-                // stream has no capacity left stop trying to send.
-                flushPending = true;
-                break;
-            }
-            channelOutboundBuffer.removeBytes(res);
+        // reset first as streamSendMultiple may notify futures.
+        flushPending = false;
+        if (!parentQuicChannel().streamSendMultiple(streamId, channelOutboundBuffer)) {
+            flushPending = true;
         }
     }
 
@@ -330,28 +306,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             allocHandle.reset(config);
             ByteBuf byteBuf = null;
             boolean close = false;
-
+            QuicheQuicChannel parent = parentQuicChannel();
             try {
                 do {
                     byteBuf = allocHandle.allocate(allocator);
-                    int writerIndex = byteBuf.writerIndex();
-                    long memoryAddress = byteBuf.memoryAddress();
-                    int recvLen = Quiche.quiche_conn_stream_recv(connectionAddr(), streamId,
-                            memoryAddress + FIN_LEN + writerIndex, byteBuf.writableBytes() - FIN_LEN, memoryAddress);
-
-                    close = byteBuf.getBoolean(writerIndex);
-
-                    allocHandle.lastBytesRead(recvLen);
-                    if (recvLen == 0 || Quiche.throwIfError(recvLen)) {
+                    close = parent.streamRecv(streamId, byteBuf);
+                    allocHandle.lastBytesRead(byteBuf.readableBytes());
+                    if (allocHandle.lastBytesRead() <= 0) {
                         byteBuf.release();
                         byteBuf = null;
                         break;
                     }
                     readPending = false;
-
-                    allocHandle.incMessagesRead(1);
-                    // Skip the FIN
-                    byteBuf.setIndex(FIN_LEN, writerIndex + recvLen + FIN_LEN);
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading() && !close);
