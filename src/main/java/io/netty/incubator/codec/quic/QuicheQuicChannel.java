@@ -386,8 +386,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         writeEgressNeeded = false;
         ChannelFuture lastFuture = null;
+
+        // Use the datagram size that was advertised by the remote peer, or if none was fallback to some safe default.
+        int len = Quiche.quiche_conn_dgram_max_writable_len(connAddr);
+        if (len <= 0) {
+            len = Quic.MAX_DATAGRAM_SIZE;
+        }
+
         for (;;) {
-            ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+            ByteBuf out = alloc().directBuffer(len);
             int writerIndex = out.writerIndex();
             int written = Quiche.quiche_conn_send(connAddr, out.memoryAddress() + writerIndex, out.writableBytes());
 

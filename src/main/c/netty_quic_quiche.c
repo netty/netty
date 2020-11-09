@@ -232,12 +232,16 @@ static int transfer_to_array_and_free(JNIEnv* env, quiche_stream_iter* iter, jlo
     return i;
 }
 
-static int netty_quic_quiche_conn_readable(JNIEnv* env, jclass clazz, jlong conn, jlongArray readableStreams) {
+static jint netty_quic_quiche_conn_readable(JNIEnv* env, jclass clazz, jlong conn, jlongArray readableStreams) {
     return transfer_to_array_and_free(env, quiche_conn_readable((quiche_conn *) conn), readableStreams);
 }
 
-static int netty_quic_quiche_conn_writable(JNIEnv* env, jclass clazz, jlong conn, jlongArray writableStreams) {
+static jint netty_quic_quiche_conn_writable(JNIEnv* env, jclass clazz, jlong conn, jlongArray writableStreams) {
     return transfer_to_array_and_free(env, quiche_conn_writable((quiche_conn *) conn), writableStreams);
+}
+
+static jint netty_quic_quiche_conn_dgram_max_writable_len(JNIEnv* env, jclass clazz, jlong conn) {
+    return (jint) quiche_conn_dgram_max_writable_len((quiche_conn *) conn);
 }
 
 static jlong netty_quic_quiche_config_new(JNIEnv* env, jclass clazz, jint version) {
@@ -394,6 +398,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quic_quiche_conn_on_timeout },
   { "quiche_conn_readable", "(J[J)I", (void *) netty_quic_quiche_conn_readable },
   { "quiche_conn_writable", "(J[J)I", (void *) netty_quic_quiche_conn_writable },
+  { "quiche_conn_dgram_max_writable_len", "(J)I", (void* ) netty_quic_quiche_conn_dgram_max_writable_len },
   { "quiche_config_new", "(I)J", (void *) netty_quic_quiche_config_new },
   { "quiche_config_load_cert_chain_from_pem_file", "(JLjava/lang/String;)I", (void *) netty_quic_quiche_config_load_cert_chain_from_pem_file },
   { "quiche_config_load_priv_key_from_pem_file", "(JLjava/lang/String;)I", (void *) netty_quic_quiche_config_load_priv_key_from_pem_file },

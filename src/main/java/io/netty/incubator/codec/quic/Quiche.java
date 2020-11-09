@@ -316,6 +316,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L358">
+     *     quiche_conn_dgram_max_writable_len</a>.
+     */
+    static native int quiche_conn_dgram_max_writable_len(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L115">quiche_config_new</a>.
      */
     static native long quiche_config_new(int version);
