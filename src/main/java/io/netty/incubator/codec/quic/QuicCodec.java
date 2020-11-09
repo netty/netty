@@ -245,9 +245,7 @@ public final class QuicCodec extends ChannelDuplexHandler {
             // TODO: Be a bit smarter about this.
             writeDone |= channel.handleChannelReadComplete();
 
-            if (channel.freeIfClosed()) {
-                entries.remove();
-            }
+            removeIfClosed(entries, channel);
         }
         if (writeDone) {
             ctx.flush();
@@ -261,6 +259,30 @@ public final class QuicCodec extends ChannelDuplexHandler {
         } else {
             // We can't really easily aggregate flushes, so just do it now.
             ctx.flush();
+        }
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isWritable()) {
+            boolean writeDone = false;
+            Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();
+            while (entries.hasNext()) {
+                QuicheQuicChannel channel = entries.next().getValue();
+                // TODO: Be a bit smarter about this.
+                writeDone |= channel.flushStreams();
+                removeIfClosed(entries, channel);
+            }
+            if (writeDone) {
+                ctx.flush();
+            }
+        }
+        ctx.fireChannelWritabilityChanged();
+    }
+
+    private static void removeIfClosed(Iterator<?> iterator, QuicheQuicChannel current) {
+        if (current.freeIfClosed()) {
+            iterator.remove();
         }
     }
 }

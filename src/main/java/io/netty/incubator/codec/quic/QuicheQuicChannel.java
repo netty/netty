@@ -20,6 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
@@ -48,12 +50,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelConfig config;
     private final boolean server;
     private final QuicCodec codec;
+    private final ChannelFutureListener flushListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture channelFuture) {
+            // Try to flush more streams that have outstanding writes.
+            if (flushStreams()) {
+                // TODO: Maybe optimize this
+                parent().flush();
+            }
+        }
+    };
+
     private final Runnable timeout = new Runnable() {
         @Override
         public void run() {
             if (connAddr != -1) {
                 // Notify quiche there was a timeout.
                 Quiche.quiche_conn_on_timeout(connAddr);
+
                 writeAndFlushEgress();
 
                 if (Quiche.quiche_conn_is_closed(connAddr)) {
@@ -90,7 +104,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
         }
-        if (connAddr == -1) {
+        if (isConnDestroyed()) {
             return;
         }
         timeoutFuture = eventLoop().schedule(timeout,
@@ -188,7 +202,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     boolean freeIfClosed() {
-        if (connAddr == -1) {
+        if (isConnDestroyed()) {
             return true;
         }
         if (Quiche.quiche_conn_is_closed(connAddr)) {
@@ -287,7 +301,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private long connectionAddressChecked() throws ClosedChannelException {
-        if (connAddr == -1) {
+        if (isConnDestroyed()) {
             throw new ClosedChannelException();
         }
         return connAddr;
@@ -326,25 +340,44 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         fireChannelReadCompletePending |= ((QuicChannelUnsafe) unsafe()).recvForConnection(buffer);
     }
 
-    void flushStreams() {
-        if (connAddr == -1) {
-            return;
+    boolean flushStreams() {
+        return flushStreams0() && writeEgress();
+    }
+
+    private boolean flushStreams0() {
+        if (isConnDestroyed()) {
+            return false;
         }
-        if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
+
+        if (Quiche.quiche_conn_is_established(connAddr) ||
+                Quiche.quiche_conn_is_in_early_data(connAddr)) {
             int writable = Quiche.quiche_conn_writable(connAddr, writableStreams);
 
             for (int i = 0; i < writable; i++) {
                 long stream = writableStreams[writable];
                 streams.get(stream).forceFlush();
             }
+            return writable > 0;
         }
+        return false;
     }
 
     boolean handleChannelReadComplete() {
+        if (isConnDestroyed()) {
+            return false;
+        }
         if (fireChannelReadCompletePending) {
             fireChannelReadCompletePending = false;
         }
+
+        // Try flush more streams that had some flushes pending.
+        flushStreams0();
+
         return writeEgress();
+    }
+
+    private boolean isConnDestroyed() {
+        return connAddr == -1;
     }
 
     private void writeAndFlushEgress() {
@@ -354,11 +387,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     boolean writeEgress() {
-        if (connAddr == -1 || !writeEgressNeeded) {
+        if (isConnDestroyed() || !writeEgressNeeded) {
             return false;
         }
         writeEgressNeeded = false;
-        boolean writeDone = false;
+        ChannelFuture lastFuture = null;
         for (;;) {
             ByteBuf out = parent().alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
             int writerIndex = out.writerIndex();
@@ -377,15 +410,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
 
             out.writerIndex(writerIndex + written);
-            parent().write(new DatagramPacket(out, remote));
-            writeDone = true;
+            lastFuture = parent().write(new DatagramPacket(out, remote));
         }
-        if (writeDone) {
+        if (lastFuture != null) {
+            lastFuture.addListener(flushListener);
             // Schedule timeout.
             // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
             scheduleTimeout();
+            return true;
         }
-        return writeDone;
+        return false;
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
@@ -397,7 +431,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
 
         boolean recvForConnection(ByteBuf buffer) {
-            if (connAddr == -1) {
+            if (isConnDestroyed()) {
                 buffer.release();
                 return true;
             }
@@ -435,7 +469,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // TODO: Improve the way how we handle channelReadComplete() for the streams to batch as many
         //       fireChannelRead(...) as possible per stream
         private boolean handleReadableStreams() {
-            if (connAddr == -1) {
+            if (isConnDestroyed()) {
                 return false;
             }
             boolean fireChannelRead = false;
