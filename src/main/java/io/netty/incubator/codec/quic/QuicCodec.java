@@ -35,7 +35,6 @@ import java.util.Map;
 // TODO: - Handle connect
 public final class QuicCodec extends ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
-    private static final int FIN_LEN = 1;
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final long config;
@@ -58,7 +57,6 @@ public final class QuicCodec extends ChannelDuplexHandler {
 
     // Need to be accessed by the QuicheQuicChannel for now.
     boolean inChannelRead;
-    ByteBuf finBuffer;
 
     QuicCodec(long config, QuicTokenHandler tokenHandler,
               QuicConnectionIdSigner connectionSigner, ChannelHandler childHandler) {
@@ -80,7 +78,6 @@ public final class QuicCodec extends ChannelDuplexHandler {
         tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
         mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
         connIdBuffer = allocateNativeOrder(Quiche.QUICHE_MAX_CONN_ID_LEN);
-        finBuffer = allocateNativeOrder(FIN_LEN);
     }
 
     @SuppressWarnings("deprecation")
@@ -106,7 +103,6 @@ public final class QuicCodec extends ChannelDuplexHandler {
         tokenLenBuffer.release();
         mintTokenBuffer.release();
         connIdBuffer.release();
-        finBuffer.release();
     }
 
     @Override

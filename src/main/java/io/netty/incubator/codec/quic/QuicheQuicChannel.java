@@ -83,6 +83,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private long connAddr;
     private boolean fireChannelReadCompletePending;
     private boolean writeEgressNeeded;
+    private ByteBuf finBuffer;
 
     private volatile boolean active = true;
 
@@ -102,7 +103,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             unsafe().close(voidPromise());
             Quiche.quiche_conn_free(connAddr);
             connAddr = -1;
+
             closeStreams();
+            if (finBuffer != null) {
+                finBuffer.release();
+                finBuffer = null;
+            }
             return true;
         }
         return false;
@@ -305,12 +311,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     boolean streamRecv(long streamId, ByteBuf buffer) throws Exception {
+        if (finBuffer == null) {
+            finBuffer = alloc().directBuffer(1);
+        }
         int writerIndex = buffer.writerIndex();
         long memoryAddress = buffer.memoryAddress();
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
-                memoryAddress + writerIndex, buffer.writableBytes(), codec.finBuffer.memoryAddress());
+                memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
         Quiche.throwIfError(recvLen);
-        boolean fin = codec.finBuffer.getBoolean(writerIndex);
+        boolean fin = finBuffer.getBoolean(writerIndex);
         // Skip the FIN
         buffer.setIndex(0, writerIndex + recvLen);
         return fin;
