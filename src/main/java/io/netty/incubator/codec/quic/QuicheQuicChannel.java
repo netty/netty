@@ -45,6 +45,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[1024];
     private final long[] writableStreams = new long[1024];
+    // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final InetSocketAddress remote;
     private final ChannelConfig config;
