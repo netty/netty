@@ -35,6 +35,7 @@ import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -74,7 +75,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private volatile boolean active = true;
 
-    QuicheQuicChannel(QuicCodec codec, long connAddr, boolean server, Channel parent,
+    QuicheQuicChannel(QuicCodec codec, Channel parent, long connAddr, boolean server,
                       InetSocketAddress remote, ChannelHandler handler) {
         super(parent);
         this.codec = codec;
@@ -88,6 +89,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private void scheduleTimeout() {
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
+        }
+        if (connAddr == -1) {
+            return;
         }
         timeoutFuture = eventLoop().schedule(timeout,
                 Quiche.quiche_conn_timeout_as_nanos(connAddr), TimeUnit.NANOSECONDS);
@@ -149,7 +153,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     protected void doClose() throws Exception {
         active = false;
-        Quiche.throwIfError(Quiche.quiche_conn_close(connAddr, false, 0,
+        Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), false, 0,
                 Unpooled.EMPTY_BUFFER.memoryAddress(), 0));
     }
 
@@ -183,10 +187,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return METADATA;
     }
 
-    long connAddr() {
-        return connAddr;
-    }
-
     boolean freeIfClosed() {
         if (connAddr == -1) {
             return true;
@@ -200,23 +200,43 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void shutdownRead(long streamId, ChannelPromise promise) {
+        final long connectionAddress;
+        try {
+            connectionAddress = connectionAddressChecked();
+        } catch (ClosedChannelException e) {
+            promise.setFailure(e);
+            return;
+        }
         int res = Quiche.quiche_conn_stream_shutdown(
-                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
+                connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0);
         handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
 
     void shutdownWrite(long streamId, ChannelPromise promise) {
+        final long connectionAddress;
+        try {
+            connectionAddress = connectionAddressChecked();
+        } catch (ClosedChannelException e) {
+            promise.setFailure(e);
+            return;
+        }
         int res = Quiche.quiche_conn_stream_shutdown(
-                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
+                connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
         handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
 
     void shutdownReadAndWrite(long streamId, ChannelPromise promise) {
-        int res = Quiche.quiche_conn_stream_shutdown(
-                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0) | Quiche.quiche_conn_stream_shutdown(
-                connAddr, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
+        final long connectionAddress;
+        try {
+            connectionAddress = connectionAddressChecked();
+        } catch (ClosedChannelException e) {
+            promise.setFailure(e);
+            return;
+        }
+        int res = Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_READ, 0) |
+                Quiche.quiche_conn_stream_shutdown(connectionAddress, streamId, Quiche.QUICHE_SHUTDOWN_WRITE, 0);
         handleWriteEgress();
         Quiche.notifyPromise(res, promise);
     }
@@ -266,15 +286,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private int streamSend(long streamId, ByteBuf buffer, boolean fin) {
-        return Quiche.quiche_conn_stream_send(connAddr, streamId,
+    private long connectionAddressChecked() throws ClosedChannelException {
+        if (connAddr == -1) {
+            throw new ClosedChannelException();
+        }
+        return connAddr;
+    }
+
+    private int streamSend(long streamId, ByteBuf buffer, boolean fin) throws Exception {
+        return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
                 buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
     }
 
     boolean streamRecv(long streamId, ByteBuf buffer) throws Exception {
         int writerIndex = buffer.writerIndex();
         long memoryAddress = buffer.memoryAddress();
-        int recvLen = Quiche.quiche_conn_stream_recv(connAddr, streamId,
+        int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), codec.finBuffer.memoryAddress());
         Quiche.throwIfError(recvLen);
         boolean fin = codec.finBuffer.getBoolean(writerIndex);
@@ -300,9 +327,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void flushStreams() {
+        if (connAddr == -1) {
+            return;
+        }
         if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
             int writable = Quiche.quiche_conn_writable(connAddr, writableStreams);
-            System.err.println("writable streams " + writable);
 
             for (int i = 0; i < writable; i++) {
                 long stream = writableStreams[writable];
@@ -325,10 +354,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     boolean writeEgress() {
-        if (connAddr == -1) {
-            return false;
-        }
-        if (!writeEgressNeeded) {
+        if (connAddr == -1 || !writeEgressNeeded) {
             return false;
         }
         writeEgressNeeded = false;
@@ -371,6 +397,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
 
         boolean recvForConnection(ByteBuf buffer) {
+            if (connAddr == -1) {
+                buffer.release();
+                return true;
+            }
             int bufferReadable = buffer.readableBytes();
             int bufferReaderIndex = buffer.readerIndex();
             long memoryAddress = buffer.memoryAddress() + bufferReaderIndex;
@@ -405,6 +435,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // TODO: Improve the way how we handle channelReadComplete() for the streams to batch as many
         //       fireChannelRead(...) as possible per stream
         private boolean handleReadableStreams() {
+            if (connAddr == -1) {
+                return false;
+            }
             boolean fireChannelRead = false;
             if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
                 int readable = Quiche.quiche_conn_readable(connAddr, readableStreams);

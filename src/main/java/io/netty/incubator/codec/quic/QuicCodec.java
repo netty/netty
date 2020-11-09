@@ -225,7 +225,7 @@ public final class QuicCodec extends ChannelDuplexHandler {
                     LOGGER.debug("quiche_accept failed");
                     return;
                 }
-                channel = new QuicheQuicChannel(this, conn, true, ctx.channel(), packet.sender(), childHandler);
+                channel = new QuicheQuicChannel(this, ctx.channel(), conn, true, packet.sender(), childHandler);
                 connections.put(connId, channel);
                 ctx.channel().eventLoop().register(channel);
             }
@@ -258,6 +258,9 @@ public final class QuicCodec extends ChannelDuplexHandler {
     public void flush(ChannelHandlerContext ctx) {
         if (inChannelRead) {
             needsFlush = true;
+        } else {
+            // We can't really easily aggregate flushes, so just do it now.
+            ctx.flush();
         }
     }
 }

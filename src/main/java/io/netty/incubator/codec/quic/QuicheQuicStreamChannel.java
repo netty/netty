@@ -203,10 +203,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         ((QuicStreamChannelUnsafe) unsafe()).recv();
     }
 
-    private long connectionAddr() {
-        return ((QuicheQuicChannel) parent()).connAddr();
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (!(msg instanceof ByteBuf)) {
