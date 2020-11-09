@@ -37,7 +37,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     private final ChannelConfig config;
     private final long streamId;
-    private final boolean server;
     private boolean readPending;
     private boolean flushPending;
 
@@ -45,16 +44,15 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId, boolean server) {
+    QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         super(parent);
         config = new DefaultChannelConfig(this);
         this.streamId = streamId;
-        this.server = server;
     }
 
     @Override
     public boolean isLocalCreated() {
-        return (streamId & 0x1) == (server ? 1 : 0);
+        return (streamId & 0x1) == (parentQuicChannel().isServer() ? 1 : 0);
     }
 
     @Override
@@ -95,6 +93,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     QuicheQuicChannel parentQuicChannel() {
         return (QuicheQuicChannel) parent();
     }
+
     public void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
         parentQuicChannel().shutdownRead(streamId, channelPromise);
@@ -173,11 +172,13 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     protected SocketAddress localAddress0() {
+        // TODO: Fix me
         return null;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
+        // TODO: Fix me
         return null;
     }
 
@@ -255,6 +256,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private final class QuicStreamChannelUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress1, ChannelPromise channelPromise) {
+            // TODO: Should we delegate this to the parent and so allow easier creation of streams from within
+            //       streams ?
             channelPromise.setFailure(new UnsupportedOperationException("Not supported by streams"));
         }
 

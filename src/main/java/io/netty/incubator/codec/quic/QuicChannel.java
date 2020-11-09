@@ -16,14 +16,8 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.Channel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
 /**
  * A QUIC channel
  */
-public interface QuicChannel extends Channel {
-
-    Future<QuicStreamChannel> newStream(boolean bidirectional);
-    Future<QuicStreamChannel> newStream(boolean bidirectional, Promise<QuicStreamChannel> promise);
-}
+public interface QuicChannel extends Channel { }
