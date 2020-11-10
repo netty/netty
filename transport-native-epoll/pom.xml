@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.55.Final-SNAPSHOT</version>
+    <version>4.1.54.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-epoll</artifactId>
 
