@@ -282,7 +282,7 @@
             <dependencies>
               <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>netty-build</artifactId>
+                <artifactId>netty-build-common</artifactId>
                 <version>${netty.build.version}</version>
               </dependency>
             </dependencies>
