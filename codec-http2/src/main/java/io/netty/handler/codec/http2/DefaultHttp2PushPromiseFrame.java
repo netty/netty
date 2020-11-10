@@ -73,7 +73,7 @@ public class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame {
     }
 
     public int getPromisedStreamId() {
-        if (pushStreamFrame == null) {
+        if (pushStreamFrame != null) {
             return pushStreamFrame.id();
         } else {
             return promisedStreamId;
