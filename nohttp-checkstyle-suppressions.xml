@@ -51,6 +51,11 @@
   <suppress message="http://www.tavendo.de/autobahn/testsuite.html" checks="NoHttp"/>
   <suppress message="http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ThreadLocalRandom.java" checks="NoHttp"/>
 
+  <!-- Need to use http as the maven release plugin will fail otherwise
+       See https://issues.apache.org/jira/browse/HBASE-24014 -->
+  <suppress message="http://www.w3.org/2001/XMLSchema-instance" checks="NoHttp"/>
+  <suppress message="http://maven.apache.org/POM/4.0.0" checks="NoHttp"/>
+
   <!-- These files are generated during the build and not under git -->
   <suppress files="testsuite-shading/dependency-reduced-pom.xml" checks="NoHttp"/>
   <suppress files="common/dependency-reduced-pom.xml" checks="NoHttp"/>
