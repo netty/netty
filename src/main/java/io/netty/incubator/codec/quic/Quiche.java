@@ -335,25 +335,144 @@ final class Quiche {
      */
     static native long quiche_config_new(int version);
 
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L118">
+     *     quiche_config_load_cert_chain_from_pem_file</a>.
+     */
     static native int quiche_config_load_cert_chain_from_pem_file(long configAddr, String path);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#122">
+     *     quiche_config_load_priv_key_from_pem_file</a>.
+     */
     static native int quiche_config_load_priv_key_from_pem_file(long configAddr, String path);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#126">
+     *     quiche_config_verify_peer</a>.
+     */
     static native void quiche_config_verify_peer(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#129">
+     *     quiche_config_grease</a>.
+     */
     static native void quiche_config_grease(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#135">
+     *     quiche_config_enable_early_data</a>.
+     */
     static native void quiche_config_enable_early_data(long configAddr);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#138">
+     *     quiche_config_set_application_protos</a>.
+     */
     static native int quiche_config_set_application_protos(long configAddr, byte[] protos);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#143">
+     *     quiche_config_set_max_idle_timeout</a>.
+     */
     static native void quiche_config_set_max_idle_timeout(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#146">
+     *     quiche_config_set_max_udp_payload_size</a>.
+     */
     static native void quiche_config_set_max_udp_payload_size(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#149">
+     *     quiche_config_set_initial_max_data</a>.
+     */
     static native void quiche_config_set_initial_max_data(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#152">
+     *     quiche_config_set_initial_max_stream_data_bidi_local</a>.
+     */
     static native void quiche_config_set_initial_max_stream_data_bidi_local(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#155">
+     *     quiche_config_set_initial_max_stream_data_bidi_remote</a>.
+     */
     static native void quiche_config_set_initial_max_stream_data_bidi_remote(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#158">
+     *     quiche_config_set_initial_max_stream_data_uni</a>.
+     */
     static native void quiche_config_set_initial_max_stream_data_uni(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#161">
+     *     quiche_config_set_initial_max_streams_bidi</a>.
+     */
     static native void quiche_config_set_initial_max_streams_bidi(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#164">
+     *     quiche_config_set_initial_max_streams_uni</a>.
+     */
     static native void quiche_config_set_initial_max_streams_uni(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#167">
+     *     quiche_config_set_ack_delay_exponent</a>.
+     */
     static native void quiche_config_set_ack_delay_exponent(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#170">
+     *     quiche_config_set_max_ack_delay</a>.
+     */
     static native void quiche_config_set_max_ack_delay(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#173">
+     *     quiche_config_set_disable_active_migration</a>.
+     */
     static native void quiche_config_set_disable_active_migration(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#181">
+     *     quiche_config_set_cc_algorithm</a>.
+     */
     static native void quiche_config_set_cc_algorithm(long configAddr, int algo);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#184">
+     *     quiche_config_enable_hystart</a>.
+     */
     static native void quiche_config_enable_hystart(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#192">
+     *     quiche_config_free</a>.
+     */
     static native void quiche_config_free(long configAddr);
 
     /**
