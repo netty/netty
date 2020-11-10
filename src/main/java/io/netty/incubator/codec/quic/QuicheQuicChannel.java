@@ -261,7 +261,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     res = streamSend(streamId, buffer, false);
                 }
 
-                if (Quiche.throwIfError(res)) {
+                if (Quiche.throwIfError(res) || res == 0) {
                     // stream has no capacity left stop trying to send.
                     return false;
                 }
@@ -305,11 +305,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         long memoryAddress = buffer.memoryAddress();
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
-        Quiche.throwIfError(recvLen);
-        boolean fin = finBuffer.getBoolean(writerIndex);
-        // Skip the FIN
-        buffer.setIndex(0, writerIndex + recvLen);
-        return fin;
+        if (!Quiche.throwIfError(recvLen)) {
+            buffer.setIndex(0, writerIndex + recvLen);
+        }
+        return finBuffer.getBoolean(0);
     }
 
     private void handleWriteEgress() {

@@ -305,6 +305,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             allocHandle.reset(config);
             ByteBuf byteBuf = null;
             boolean close = false;
+            boolean readCompleteNeeded = false;
             QuicheQuicChannel parent = parentQuicChannel();
             try {
                 do {
@@ -317,12 +318,15 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                         break;
                     }
                     readPending = false;
+                    readCompleteNeeded = true;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading() && !close);
 
                 allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                if (readCompleteNeeded) {
+                    pipeline.fireChannelReadComplete();
+                }
                 if (close) {
                     closeOnRead(pipeline);
                 }
