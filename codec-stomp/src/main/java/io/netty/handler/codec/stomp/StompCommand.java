@@ -28,6 +28,8 @@ public enum StompCommand {
     ACK,
     NACK,
     BEGIN,
+    ABORT,
+    COMMIT,
     DISCONNECT,
     MESSAGE,
     RECEIPT,
