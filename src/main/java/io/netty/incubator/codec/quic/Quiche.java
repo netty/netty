@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -31,6 +33,7 @@ import java.io.IOException;
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
     private static final IntObjectMap<String> ERROR_MAP = new IntObjectHashMap<>();
+    private static final boolean DEBUG_LOGGING_ENABLED = logger.isDebugEnabled();
 
     static {
         try {
@@ -40,6 +43,11 @@ final class Quiche {
         } catch (UnsatisfiedLinkError ignore) {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
+        }
+
+        // Let's enable debug logging for quiche if its enabled in our logger.
+        if (DEBUG_LOGGING_ENABLED) {
+            quiche_enable_debug_logging(new QuicheLogger(logger));
         }
     }
 
@@ -348,6 +356,12 @@ final class Quiche {
     static native void quiche_config_enable_hystart(long configAddr, boolean value);
     static native void quiche_config_free(long configAddr);
 
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L108">quiche_config_new</a>.
+     */
+    private static native void quiche_enable_debug_logging(QuicheLogger logger);
+
     static {
         ERROR_MAP.put(QUICHE_ERR_DONE, "QUICHE_ERR_DONE");
         ERROR_MAP.put(QUICHE_ERR_BUFFER_TOO_SHORT, "QUICHE_ERR_BUFFER_TOO_SHORT");
@@ -396,6 +410,12 @@ final class Quiche {
         } else {
             promise.setSuccess();
         }
+    }
+
+    static String traceId(long connAddr, ByteBuf buffer) {
+        // We just do the same as quiche does for the traceid but we should use Connection:trace_id() once it is exposed
+        // in the c API.
+        return ByteBufUtil.hexDump(buffer);
     }
 
     private Quiche() { }

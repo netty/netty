@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
@@ -221,7 +222,11 @@ public final class QuicCodec extends ChannelDuplexHandler {
                     LOGGER.debug("quiche_accept failed");
                     return;
                 }
-                channel = new QuicheQuicChannel(this, ctx.channel(), conn, true, packet.sender(), quicChannelHandler);
+
+                String traceId = Quiche.traceId(conn, dcid);
+                channel = new QuicheQuicChannel(this, ctx.channel(), conn, traceId,
+                        true, packet.sender(), quicChannelHandler);
+
                 connections.put(connId, channel);
                 ctx.channel().eventLoop().register(channel);
             }

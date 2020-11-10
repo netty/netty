@@ -49,6 +49,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelConfig config;
     private final boolean server;
     private final QuicCodec codec;
+
     private final ChannelFutureListener flushListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture channelFuture) {
@@ -85,9 +86,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private volatile boolean active = true;
 
-    QuicheQuicChannel(QuicCodec codec, Channel parent, long connAddr, boolean server,
+    QuicheQuicChannel(QuicCodec codec, Channel parent, long connAddr, String traceId, boolean server,
                       InetSocketAddress remote, ChannelHandler handler) {
-        super(parent);
+        super(parent, new QuicheQuicChannelId(traceId));
         this.codec = codec;
         config = new DefaultChannelConfig(this);
         this.server = server;

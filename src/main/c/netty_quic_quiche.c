@@ -29,6 +29,12 @@
 #define STATICALLY_CLASSNAME "io/netty/incubator/codec/quic/NativeStaticallyReferencedJniMethods"
 #define QUICHE_CLASSNAME "io/netty/incubator/codec/quic/Quiche"
 
+
+static jclass    quiche_logger_class;
+static jmethodID quiche_logger_class_log;
+static jobject   quiche_logger;
+static JavaVM     *global_vm = NULL;
+
 static jint netty_quic_quiche_max_conn_id_len(JNIEnv* env, jclass clazz) {
     return QUICHE_MAX_CONN_ID_LEN;
 }
@@ -346,6 +352,34 @@ static void netty_quic_quiche_config_free(JNIEnv* env, jclass clazz, jlong confi
     quiche_config_free((quiche_config*) config);
 }
 
+static void log_to_java(const char *line, void *argp) {
+    JNIEnv* env = NULL;
+    if (global_vm == NULL || line == NULL) {
+        return;
+    }
+    if ((*global_vm)->GetEnv(global_vm, (void **) &env, NETTY_JNI_UTIL_JNI_VERSION) != JNI_OK) {
+        return;
+    }
+
+    jstring message =  (*env)->NewStringUTF(env, line);
+    if (message == NULL) {
+        // out of memory.
+        return;
+    }
+    (*env)->CallVoidMethod(env, quiche_logger, quiche_logger_class_log, message);
+}
+
+static void netty_quic_quiche_enable_debug_logging(JNIEnv* env, jclass clazz, jobject logger) {
+    if (quiche_logger != NULL) {
+        return;
+    }
+    if ((quiche_logger = (*env)->NewGlobalRef(env, logger)) == NULL) {
+        return;
+    }
+
+    quiche_enable_debug_logging(log_to_java, NULL);
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -424,12 +458,40 @@ static const JNINativeMethod fixed_method_table[] = {
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
+static jint dynamicMethodsTableSize() {
+    return fixed_method_table_size + 1;
+}
+
+static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
+    char* dynamicTypeName = NULL;
+    int len = sizeof(JNINativeMethod) * dynamicMethodsTableSize();
+    JNINativeMethod* dynamicMethods = malloc(len);
+    if (dynamicMethods == NULL) {
+        goto error;
+    }
+    memset(dynamicMethods, 0, len);
+    memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
+
+    JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/QuicheLogger;)V", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(L", dynamicTypeName,  dynamicMethod->signature, error);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
+    dynamicMethod->name = "quiche_enable_debug_logging";
+    dynamicMethod->fnPtr = (void *) netty_quic_quiche_enable_debug_logging;
+    return dynamicMethods;
+error:
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    free(dynamicTypeName);
+    return NULL;
+}
+
 // JNI Method Registration Table End
 
 static jint netty_quic_quiche_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
+    char* name = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -441,20 +503,26 @@ static jint netty_quic_quiche_JNI_OnLoad(JNIEnv* env, const char* packagePrefix)
     }
     staticallyRegistered = 1;
 
+    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        goto done;
+    }
     if (netty_jni_util_register_natives(env,
             packagePrefix,
             QUICHE_CLASSNAME,
-            fixed_method_table,
-            fixed_method_table_size) != 0) {
+            dynamicMethods,
+            dynamicMethodsTableSize()) != 0) {
         goto done;
     }
     nativeRegistered = 1;
 
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/QuicheLogger", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, quiche_logger_class, name, done);
+    NETTY_JNI_UTIL_GET_METHOD(env, quiche_logger_class, quiche_logger_class_log, "log", "(Ljava/lang/String;)V", done);
     // Initialize this module
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
-
     if (ret == JNI_ERR) {
         if (staticallyRegistered == 1) {
             netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
@@ -462,13 +530,23 @@ done:
         if (nativeRegistered == 1) {
             netty_jni_util_unregister_natives(env, packagePrefix, QUICHE_CLASSNAME);
         }
+
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+        netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     }
     return ret;
 }
 
 static void netty_quic_quiche_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+
     netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, packagePrefix, QUICHE_CLASSNAME);
+
+    if (quiche_logger != NULL) {
+        (*env)->DeleteGlobalRef(env, quiche_logger);
+        quiche_logger = NULL;
+    }
 }
 
 // Invoked by the JVM when statically linked
@@ -478,20 +556,24 @@ static void netty_quic_quiche_JNI_OnUnload(JNIEnv* env, const char* packagePrefi
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_quic_quiche(JavaVM* vm, void* reserved) {
+    global_vm = vm;
     return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_quic_quiche", netty_quic_quiche_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
 JNIEXPORT void JNI_OnUnload_netty_quic_quiche_JNI_OnLoad(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_quic_quiche_JNI_OnUnload);
+    global_vm = NULL;
 }
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    global_vm = vm;
     return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_quic_quiche", netty_quic_quiche_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_quic_quiche_JNI_OnUnload);
+    global_vm = NULL;
 }
 #endif /* NETTY_BUILD_STATIC */
