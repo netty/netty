@@ -434,7 +434,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), streamId,
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
 
-            if (!promise.isDone()) {
+            if (promise.isDone()) {
+                handleHeaderFuture(promise, streamId);
+            } else {
                 numBufferedStreams++;
                 // Clean up the stream being initialized if writing the headers fails and also
                 // decrement the number of buffered streams.
@@ -446,8 +448,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         handleHeaderFuture(channelFuture, streamId);
                     }
                 });
-            } else {
-                handleHeaderFuture(promise, streamId);
             }
         }
     }
