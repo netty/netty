@@ -399,7 +399,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else {
-            final int streamId = initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise);
+            initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise);
+            final int streamId = headersFrame.stream().id();
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
@@ -428,10 +429,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), pushPromiseFrame.pushStream().id(),
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
         } else {
-            final int streamId = initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(),
-                    promise);
+            initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise);
+            final int streamId = pushPromiseFrame.stream().id();
 
-            encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), streamId,
+            encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
 
             if (promise.isDone()) {
@@ -452,7 +453,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    public int initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
+    public void initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
                                     ChannelPromise promise) {
         final Http2Connection connection = connection();
         final int streamId = connection.local().incrementAndGetNextStreamId();
@@ -464,8 +465,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
                     Integer.MAX_VALUE - 1, NO_ERROR.code(),
                     writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
-
-            return -1;
         }
         http2FrameStream.id = streamId;
 
@@ -478,8 +477,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         // We should not re-use ids.
         assert old == null;
-
-        return streamId;
     }
 
     private void handleHeaderFuture(ChannelFuture channelFuture, int streamId) {
