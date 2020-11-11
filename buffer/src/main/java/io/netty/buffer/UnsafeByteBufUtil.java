@@ -533,6 +533,9 @@ final class UnsafeByteBufUtil {
     static void setBytes(AbstractByteBuf buf, long addr, int index, byte[] src, int srcIndex, int length) {
         buf.checkIndex(index, length);
         if (length != 0) {
+            // we need to check not null for src as it may cause the JVM crash
+            // See https://github.com/netty/netty/issues/10791
+            checkNotNull(src, "src");
             PlatformDependent.copyMemory(src, srcIndex, addr, length);
         }
     }
