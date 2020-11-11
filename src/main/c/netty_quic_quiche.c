@@ -166,12 +166,18 @@ static void netty_quic_quiche_conn_free(JNIEnv* env, jclass clazz, jlong conn) {
 }
 
 static jlong netty_quic_quiche_connect(JNIEnv* env, jclass clazz, jstring server_name, jlong scid, jint scid_len, jlong config) {
-    const char *name = (*env)->GetStringUTFChars(env, server_name, 0);
-    if (name == NULL) {
-        return -1;
+    const char *name = NULL;
+    if (server_name != NULL) {
+        name = (*env)->GetStringUTFChars(env, server_name, 0);
+        if (name == NULL) {
+            return -1;
+        }
     }
+
     quiche_conn *conn = quiche_connect(name, (const uint8_t *) scid, (size_t) scid_len, (quiche_config *) config);
-    (*env)->ReleaseStringUTFChars(env, server_name, name);
+    if (server_name != NULL) {
+        (*env)->ReleaseStringUTFChars(env, server_name, name);
+    }
     if (conn == NULL) {
         return -1;
     }

@@ -15,43 +15,25 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.ChannelId;
+import java.net.SocketAddress;
+import java.security.SecureRandom;
 
-final class QuicheQuicChannelId implements ChannelId {
+public final class QuicConnectionIdAddress extends SocketAddress {
+    private static final SecureRandom random = new SecureRandom();
 
-    private final String id;
+    final byte[] connId;
 
-    QuicheQuicChannelId(String id) {
-        this.id = id;
+    private QuicConnectionIdAddress(byte[] connId) {
+        this.connId = connId.clone();
     }
 
-    @Override
-    public String asShortText() {
-        return id;
+    public static QuicConnectionIdAddress random() {
+        byte[] bytes = new byte[Quiche.QUICHE_MAX_CONN_ID_LEN];
+        random.nextBytes(bytes);
+        return new QuicConnectionIdAddress(bytes);
     }
 
-    @Override
-    public String asLongText() {
-        return id;
-    }
-
-    @Override
-    public int compareTo(ChannelId o) {
-        return id.compareTo(o.asLongText());
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return id.equals(obj);
-    }
-
-    @Override
-    public String toString() {
-        return id;
+    public static QuicConnectionIdAddress fromBytes(byte[] bytes) {
+        return new QuicConnectionIdAddress(bytes.clone());
     }
 }

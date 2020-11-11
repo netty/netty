@@ -14,12 +14,13 @@
  * under the License.
  */
 package io.netty.incubator.codec.quic;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 
 import java.util.Objects;
 
 /**
- * Build a {@link QuicCodec} that can be used in a {@link io.netty.channel.ChannelPipeline}.
+ * Build a {@link QuicServerCodec} that can be used in a {@link io.netty.channel.ChannelPipeline}.
  */
 public final class QuicCodecBuilder {
     private String certPath;
@@ -137,9 +138,7 @@ public final class QuicCodecBuilder {
         return this;
     }
 
-    public QuicCodec build(QuicTokenHandler tokenHandler, ChannelHandler quicChannelHandler) {
-        Objects.requireNonNull(quicChannelHandler, "quicChannelHandler");
-
+    private long createConfig() {
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
             if (certPath != null && Quiche.quiche_config_load_cert_chain_from_pem_file(config, certPath) != 0) {
@@ -196,16 +195,29 @@ public final class QuicCodecBuilder {
             if (enableHystart != null) {
                 Quiche.quiche_config_enable_hystart(config, enableHystart);
             }
-
-            QuicConnectionIdSigner signer = quicConnectionIdSigner;
-            if (signer == null) {
-                signer = new DefaultQuicConnectionSigner();
-            }
-
-            return new QuicCodec(config, tokenHandler, signer, quicChannelHandler);
+            return config;
         } catch (Throwable cause) {
             Quiche.quiche_config_free(config);
             throw cause;
         }
+    }
+
+    public QuicServerCodec buildServerCodec(QuicTokenHandler tokenHandler, ChannelHandler quicChannelHandler) {
+        Objects.requireNonNull(tokenHandler, "tokenHandler");
+        Objects.requireNonNull(quicChannelHandler, "quicChannelHandler");
+        QuicConnectionIdSigner signer = quicConnectionIdSigner;
+        if (signer == null) {
+            signer = new DefaultQuicConnectionSigner();
+        }
+
+        return new QuicServerCodec(createConfig(), tokenHandler, signer, quicChannelHandler);
+    }
+
+    public QuicClientCodec buildClientCodec() {
+        return new QuicClientCodec(createConfig(), 25);
+    }
+
+    public ChannelFactory<QuicChannel> buildClientChannelFactory(QuicClientCodec codec) {
+        return codec.newChannelFactory();
     }
 }

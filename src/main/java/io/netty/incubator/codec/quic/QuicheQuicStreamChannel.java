@@ -94,7 +94,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         return (QuicheQuicChannel) parent();
     }
 
-    public void shutdownInput0(ChannelPromise channelPromise) {
+    @Override
+    public QuicChannel parent() {
+        return (QuicChannel) super.parent();
+    }
+
+    private void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
         parentQuicChannel().shutdownRead(streamId, channelPromise);
     }
@@ -256,9 +261,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private final class QuicStreamChannelUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress1, ChannelPromise channelPromise) {
-            // TODO: Should we delegate this to the parent and so allow easier creation of streams from within
-            //       streams ?
-            channelPromise.setFailure(new UnsupportedOperationException("Not supported by streams"));
+            channelPromise.setFailure(new UnsupportedOperationException());
         }
 
         @Override

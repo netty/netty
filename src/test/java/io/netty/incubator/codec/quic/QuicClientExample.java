@@ -18,18 +18,18 @@ package io.netty.incubator.codec.quic;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
 
-public final class QuicExample {
+public final class QuicClientExample {
 
-    private QuicExample() { }
+    private QuicClientExample() { }
 
     public static void main(String[] args) throws Exception {
         byte[] proto = new byte[] {
@@ -40,7 +40,7 @@ public final class QuicExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        QuicServerCodec codec = new QuicCodecBuilder()
+        QuicClientCodec codec = new QuicCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
@@ -52,44 +52,45 @@ public final class QuicExample {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
-                .enableEarlyData()
-                .buildServerCodec(InsecureQuicTokenHandler.INSTANCE, new QuicChannelInitializer(
-                        new ChannelInboundHandlerAdapter() {
-
-                            @Override
-                            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
-                                System.out.println(channel.isLocalCreated() + " => " +
-                                        channel.isBidirectional() + " == " + channel.streamId());
-                            }
-
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                ByteBuf byteBuf = (ByteBuf) msg;
-                                if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
-                                    ByteBuf buffer = ctx.alloc().directBuffer();
-                                    buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
-                                    ctx.write(buffer).addListener(ChannelFutureListener.CLOSE);
-                                }
-                                byteBuf.release();
-                            }
-
-                            @Override
-                            public void channelReadComplete(ChannelHandlerContext ctx) {
-                                ctx.flush();
-                            }
-
-                            @Override
-                            public boolean isSharable() {
-                                return true;
-                            }
-                }));
+                .enableEarlyData().buildClientCodec();
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(9999)).sync().channel();
+                    .connect(new InetSocketAddress(NetUtil.LOCALHOST4, 9999)).sync().channel();
+
+            Bootstrap quicBootstrap = new Bootstrap();
+            QuicChannel quicChannel = (QuicChannel)
+                    quicBootstrap.group(channel.eventLoop())
+                            .channelFactory(codec.newChannelFactory())
+                            .handler(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelActive(ChannelHandlerContext ctx) {
+                                    // We don't want to handle streams created by the server side, just close the
+                                    // stream and so send a fin.
+                                    ctx.close();
+                                }
+                            })).connect(QuicConnectionIdAddress.random()).sync().channel();
+
+            QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamAddress.bidirectional(),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            ByteBuf buffer = ctx.alloc().directBuffer();
+                            buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
+                            ctx.writeAndFlush(buffer);
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ByteBuf byteBuf = (ByteBuf) msg;
+                            System.err.println(byteBuf.toString(CharsetUtil.US_ASCII));
+                            byteBuf.release();
+                            ctx.close();
+                        }
+            }).sync().getNow();
+            streamChannel.closeFuture().sync();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

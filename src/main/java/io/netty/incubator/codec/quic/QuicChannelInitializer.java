@@ -23,21 +23,24 @@ import io.netty.channel.ChannelInitializer;
 
 import java.util.Objects;
 
-public class QuicChannelInitializer extends ChannelInitializer<Channel> {
+/**
+ * {@link ChannelInitializer} for {@link QuicChannel}s.
+ */
+public class QuicChannelInitializer extends ChannelInitializer<QuicChannel> {
 
-    private final ChannelHandler streamHandler;
+    private final ChannelHandler streamChannelHandler;
 
-    public QuicChannelInitializer(ChannelHandler streamHandler) {
-        this.streamHandler = Objects.requireNonNull(streamHandler, "streamHandler");
+    public QuicChannelInitializer(ChannelHandler streamChannelHandler) {
+        this.streamChannelHandler = Objects.requireNonNull(streamChannelHandler, "streamChannelHandler");
     }
 
     @Override
-    protected final void initChannel(Channel channel) {
+    protected final void initChannel(QuicChannel channel) {
         channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 Channel streamChannel = (Channel) msg;
-                streamChannel.pipeline().addLast(streamHandler);
+                streamChannel.pipeline().addLast(streamChannelHandler);
                 channel.eventLoop().register(streamChannel);
             }
         });

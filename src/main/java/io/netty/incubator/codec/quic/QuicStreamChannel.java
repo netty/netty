@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.Channel;
 import io.netty.channel.socket.DuplexChannel;
 
 /**
@@ -37,4 +38,7 @@ public interface QuicStreamChannel extends DuplexChannel {
      * The id of the stream.
      */
     long streamId();
+
+    @Override
+    QuicChannel parent();
 }

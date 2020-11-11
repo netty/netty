@@ -17,7 +17,14 @@ package io.netty.incubator.codec.quic;
 
 import java.net.SocketAddress;
 
-// TODO: Implement me
-public final class QuicAddress extends SocketAddress {
+/**
+ * Just a container to pass the {@link QuicheQuicChannel} to {@link QuicServerCodec}.
+ */
+final class QuicheQuicChannelAddress extends SocketAddress {
 
+    final QuicheQuicChannel channel;
+
+    QuicheQuicChannelAddress(QuicheQuicChannel channel) {
+        this.channel = channel;
+    }
 }
