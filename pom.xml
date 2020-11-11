@@ -70,7 +70,7 @@
     <javaModuleName>io.netty.incubator.transport.io_uring</javaModuleName>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>false</skipTests>
-    <netty.version>4.1.54.Final-SNAPSHOT</netty.version>
+    <netty.version>4.1.54.Final</netty.version>
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
