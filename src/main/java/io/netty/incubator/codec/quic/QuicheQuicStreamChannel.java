@@ -97,7 +97,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     private void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
-        parent().shutdownRead(streamId, channelPromise);
+        parent().streamShutdownRead(streamId, channelPromise);
     }
 
     @Override
@@ -127,7 +127,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     public void shutdownOutput0(ChannelPromise channelPromise) {
         outputShutdown = true;
-        parent().shutdownWrite(streamId, channelPromise);
+        parent().streamShutdownWrite(streamId, channelPromise);
     }
 
     @Override
@@ -158,7 +158,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     public void shutdown0(ChannelPromise channelPromise) {
         inputShutdown = true;
         outputShutdown = true;
-        parent().shutdownReadAndWrite(streamId, channelPromise);
+        parent().streamShutdownReadAndWrite(streamId, channelPromise);
     }
 
     @Override

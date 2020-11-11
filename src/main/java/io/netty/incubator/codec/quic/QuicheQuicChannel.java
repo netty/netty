@@ -318,19 +318,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return Quiche.quiche_conn_stream_finished(connAddr, streamId);
     }
 
-    void shutdownRead(long streamId, ChannelPromise promise) {
-        shutdown0(streamId, true, false, 0, promise);
+    void streamShutdownRead(long streamId, ChannelPromise promise) {
+        streamShutdown0(streamId, true, false, 0, promise);
     }
 
-    void shutdownWrite(long streamId, ChannelPromise promise) {
-        shutdown0(streamId, false, true, 0, promise);
+    void streamShutdownWrite(long streamId, ChannelPromise promise) {
+        streamShutdown0(streamId, false, true, 0, promise);
     }
 
-    void shutdownReadAndWrite(long streamId, ChannelPromise promise) {
-        shutdown0(streamId, true, true, 0, promise);
+    void streamShutdownReadAndWrite(long streamId, ChannelPromise promise) {
+        streamShutdown0(streamId, true, true, 0, promise);
     }
 
-    private void shutdown0(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
+    private void streamShutdown0(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
         final long connectionAddress;
         try {
             connectionAddress = connectionAddressChecked();
