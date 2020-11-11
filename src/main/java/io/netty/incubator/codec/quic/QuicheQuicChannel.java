@@ -169,8 +169,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (isConnDestroyed()) {
             return;
         }
+        long nanos = Quiche.quiche_conn_timeout_as_nanos(connAddr);
         timeoutFuture = eventLoop().schedule(timeout,
-                Quiche.quiche_conn_timeout_as_nanos(connAddr), TimeUnit.NANOSECONDS);
+                nanos, TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -393,9 +394,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private void handleWriteEgress() {
-        if (fireChannelReadCompletePending) {
-            writeEgressNeeded = true;
-        } else {
+        writeEgressNeeded = true;
+        if (!fireChannelReadCompletePending) {
             writeAndFlushEgress();
         }
     }

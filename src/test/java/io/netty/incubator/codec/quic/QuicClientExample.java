@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -76,13 +77,6 @@ public final class QuicClientExample {
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamAddress.bidirectional(),
                     new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) {
-                            ByteBuf buffer = ctx.alloc().directBuffer();
-                            buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
-                            ctx.writeAndFlush(buffer);
-                        }
-
-                        @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ByteBuf byteBuf = (ByteBuf) msg;
                             System.err.println(byteBuf.toString(CharsetUtil.US_ASCII));
@@ -90,6 +84,10 @@ public final class QuicClientExample {
                             ctx.close();
                         }
             }).sync().getNow();
+            ByteBuf buffer = Unpooled.directBuffer();
+            buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
+            streamChannel.writeAndFlush(buffer);
+
             streamChannel.closeFuture().sync();
             channel.closeFuture().sync();
         } finally {
