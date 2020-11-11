@@ -196,6 +196,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
+    public byte[] applicationProtocol() {
+        if (isConnDestroyed()) {
+            return null;
+        }
+        return Quiche.quiche_conn_application_proto(connAddr);
+    }
+
+    @Override
     public String toString() {
         String traceId = this.traceId;
         if (traceId == null) {

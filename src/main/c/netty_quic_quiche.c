@@ -208,6 +208,23 @@ static jint netty_quic_quiche_conn_close(JNIEnv* env, jclass clazz, jlong conn, 
     return quiche_conn_close((quiche_conn *) conn, app == JNI_TRUE ? true : false, err, (const uint8_t *) reason, (size_t) reason_len);
 }
 
+static jbyteArray netty_quic_quiche_conn_application_proto(JNIEnv* env, jclass clazz, jlong conn) {
+    const uint8_t *app_proto = NULL;
+    size_t app_proto_len;
+
+    quiche_conn_application_proto((quiche_conn *) conn, &app_proto, &app_proto_len);
+    if (app_proto == NULL || app_proto_len == 0) {
+        return NULL;
+    }
+     jbyteArray array = (*env)->NewByteArray(env, app_proto_len);
+     if (array == NULL) {
+        return NULL;
+     }
+     (*env)->SetByteArrayRegion(env,array,0,app_proto_len, (jbyte*) app_proto);
+     return array;
+}
+
+
 static jboolean netty_quic_quiche_conn_is_established(JNIEnv* env, jclass clazz, jlong conn) {
     return quiche_conn_is_established((quiche_conn *) conn) == true ? JNI_TRUE : JNI_FALSE;
 }
@@ -429,6 +446,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_stream_shutdown", "(JJIJ)I", (void *) netty_quic_quiche_conn_stream_shutdown },
   { "quiche_conn_stream_capacity", "(JJ)I", (void *) netty_quic_quiche_conn_stream_capacity },
   { "quiche_conn_stream_finished", "(JJ)Z", (void *) netty_quic_quiche_conn_stream_finished },
+  { "quiche_conn_application_proto", "(J)[B", (void *) netty_quic_quiche_conn_application_proto },
   { "quiche_conn_close", "(JZJJI)I", (void *) netty_quic_quiche_conn_close },
   { "quiche_conn_is_established", "(J)Z", (void *) netty_quic_quiche_conn_is_established },
   { "quiche_conn_is_in_early_data", "(J)Z", (void *) netty_quic_quiche_conn_is_in_early_data },

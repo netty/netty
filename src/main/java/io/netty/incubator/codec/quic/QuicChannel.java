@@ -39,4 +39,9 @@ public interface QuicChannel extends Channel {
      */
     Future<QuicStreamChannel> createStream(QuicStreamAddress address, ChannelHandler handler,
                                            Promise<QuicStreamChannel> promise);
+
+    /**
+     * Returns the negotiated ALPN protocol or {@code null} if non has been negotiated.
+     */
+    byte[] applicationProtocol();
 }

@@ -268,6 +268,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L301">
+     *     quiche_conn_application_proto</a>.
+     */
+    static native byte[] quiche_conn_application_proto(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L305">quiche_conn_is_established</a>.
      */
     static native boolean quiche_conn_is_established(long connAddr);
