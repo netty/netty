@@ -53,30 +53,44 @@ public final class QuicExample {
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
                 .enableEarlyData()
-                .buildServerCodec(InsecureQuicTokenHandler.INSTANCE, new QuicChannelInitializer(
-                        new ChannelInboundHandlerAdapter() {
-
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                ByteBuf byteBuf = (ByteBuf) msg;
-                                try {
-                                    if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
-                                        ByteBuf buffer = ctx.alloc().directBuffer();
-                                        buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
-
-                                        // Write the buffer and close the stream once the write completes.
-                                        ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
+                .buildServerCodec(InsecureQuicTokenHandler.INSTANCE,
+                        new QuicChannelInitializer(
+                                // ChannelHandler that is added into QuicChannel pipeline.
+                                new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                        QuicChannel channel = (QuicChannel) ctx.channel();
+                                        // Create streams etc..
                                     }
-                                } finally {
-                                    byteBuf.release();
-                                }
-                            }
 
-                            @Override
-                            public boolean isSharable() {
-                                return true;
-                            }
-                        }));
+                                    @Override
+                                    public boolean isSharable() {
+                                        return true;
+                                    }
+                                },
+                                // ChannelHandler that is added into QuicStreamChannel pipeline.
+                                new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                        ByteBuf byteBuf = (ByteBuf) msg;
+                                        try {
+                                            if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
+                                                ByteBuf buffer = ctx.alloc().directBuffer();
+                                                buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
+
+                                                // Write the buffer and close the stream once the write completes.
+                                                ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
+                                            }
+                                        } finally {
+                                            byteBuf.release();
+                                        }
+                                    }
+
+                                    @Override
+                                    public boolean isSharable() {
+                                        return true;
+                                    }
+                                }));
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)

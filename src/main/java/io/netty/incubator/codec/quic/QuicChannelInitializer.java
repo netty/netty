@@ -24,18 +24,42 @@ import io.netty.channel.ChannelInitializer;
 import java.util.Objects;
 
 /**
- * {@link ChannelInitializer} for {@link QuicChannel}s.
+ * {@link ChannelInitializer} for {@link QuicChannel}s and it's accepted {@link QuicStreamChannel}s.
  */
-public class QuicChannelInitializer extends ChannelInitializer<QuicChannel> {
+public final class QuicChannelInitializer extends ChannelInitializer<QuicChannel> {
 
+    private final ChannelHandler quicChannelHandler;
     private final ChannelHandler streamChannelHandler;
 
+    /**
+     * Create a new instance.
+     *
+     * @param streamChannelHandler The {@link ChannelHandler} that is added to the
+     *                             {@link io.netty.channel.ChannelPipeline} of the accepted {@link QuicStreamChannel}.
+     */
     public QuicChannelInitializer(ChannelHandler streamChannelHandler) {
+        this(null, streamChannelHandler);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param quicChannelHandler   The {@link ChannelHandler} that is added to the
+     *                             {@link io.netty.channel.ChannelPipeline} of the {@link QuicChannel} or {@code null}
+     *                             if none should be added.
+     * @param streamChannelHandler The {@link ChannelHandler} that is added to the
+     *                             {@link io.netty.channel.ChannelPipeline} of the accepted {@link QuicStreamChannel}.
+     */
+    public QuicChannelInitializer(ChannelHandler quicChannelHandler, ChannelHandler streamChannelHandler) {
+        this.quicChannelHandler = quicChannelHandler;
         this.streamChannelHandler = Objects.requireNonNull(streamChannelHandler, "streamChannelHandler");
     }
 
     @Override
-    protected final void initChannel(QuicChannel channel) {
+    protected void initChannel(QuicChannel channel) {
+        if (quicChannelHandler != null) {
+            channel.pipeline().addLast(quicChannelHandler);
+        }
         channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
