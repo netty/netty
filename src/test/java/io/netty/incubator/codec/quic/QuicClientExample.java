@@ -81,9 +81,14 @@ public final class QuicClientExample {
                             ByteBuf byteBuf = (ByteBuf) msg;
                             System.err.println(byteBuf.toString(CharsetUtil.US_ASCII));
                             byteBuf.release();
-                            ctx.close();
                         }
-            }).sync().getNow();
+
+                        @Override
+                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                            // Close the connection once the remote peer did close this stream.
+                            ctx.channel().parent().close();
+                        }
+                    }).sync().getNow();
             ByteBuf buffer = Unpooled.directBuffer();
             buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
             streamChannel.writeAndFlush(buffer);

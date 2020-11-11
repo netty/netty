@@ -237,7 +237,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected void doClose() throws Exception {
-        state = OPEN;
+        state = CLOSED;
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), false, 0,
                 Unpooled.EMPTY_BUFFER.memoryAddress(), 0));
     }
@@ -272,15 +272,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return METADATA;
     }
 
-    boolean isServer() {
-        return server;
-    }
-
     boolean freeIfClosed() {
         if (isConnDestroyed()) {
             return true;
         }
-        return closeAllIfConnectionClosed();
+        if (closeAllIfConnectionClosed()) {
+            return true;
+        } else {
+            // Check for all streams if there is one we need to remove from the internal map.
+            // TODO: This may not be the most efficient way of handling this.
+            int num = Quiche.quiche_conn_readable(connAddr, readableStreams);
+            for (int i = 0; i < num; i++) {
+                long stream = readableStreams[i];
+                if (Quiche.quiche_conn_stream_finished(connAddr, stream)) {
+                    streamClosed(stream);
+                }
+            }
+        }
+        return false;
     }
 
     private void closeStreams() {
@@ -288,6 +297,25 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             stream.unsafe().close(voidPromise());
         }
         streams.clear();
+    }
+
+    void streamClosed(long streamId) {
+        //streams.remove(streamId);
+    }
+
+    boolean isStreamLocalCreated(long streamId) {
+        return (streamId & 0x1) == (server ? 1 : 0);
+    }
+
+    boolean isStreamBidirectional(long streamId) {
+        return (streamId & 0x2) == 0;
+    }
+
+    boolean isStreamFinished(long streamId) {
+        if (isConnDestroyed()) {
+            return true;
+        }
+        return Quiche.quiche_conn_stream_finished(connAddr, streamId);
     }
 
     void shutdownRead(long streamId, ChannelPromise promise) {

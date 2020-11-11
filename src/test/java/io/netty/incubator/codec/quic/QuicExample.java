@@ -57,33 +57,26 @@ public final class QuicExample {
                         new ChannelInboundHandlerAdapter() {
 
                             @Override
-                            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
-                                System.out.println(channel.isLocalCreated() + " => " +
-                                        channel.isBidirectional() + " == " + channel.streamId());
-                            }
-
-                            @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 ByteBuf byteBuf = (ByteBuf) msg;
-                                if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
-                                    ByteBuf buffer = ctx.alloc().directBuffer();
-                                    buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
-                                    ctx.write(buffer).addListener(ChannelFutureListener.CLOSE);
-                                }
-                                byteBuf.release();
-                            }
+                                try {
+                                    if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
+                                        ByteBuf buffer = ctx.alloc().directBuffer();
+                                        buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
 
-                            @Override
-                            public void channelReadComplete(ChannelHandlerContext ctx) {
-                                ctx.flush();
+                                        // Write the buffer and close the stream once the write completes.
+                                        ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
+                                    }
+                                } finally {
+                                    byteBuf.release();
+                                }
                             }
 
                             @Override
                             public boolean isSharable() {
                                 return true;
                             }
-                }));
+                        }));
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)

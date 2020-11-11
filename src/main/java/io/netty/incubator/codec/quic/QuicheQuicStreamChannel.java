@@ -52,12 +52,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public boolean isLocalCreated() {
-        return (streamId & 0x1) == (parentQuicChannel().isServer() ? 1 : 0);
+        return parent().isStreamLocalCreated(streamId);
     }
 
     @Override
     public boolean isBidirectional() {
-        return (streamId & 0x2) == 0;
+        return parent().isStreamBidirectional(streamId);
     }
 
     @Override
@@ -67,7 +67,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public boolean isInputShutdown() {
-        return inputShutdown;
+        return inputShutdown || !isActive();
     }
 
     @Override
@@ -90,23 +90,19 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         return channelPromise;
     }
 
-    QuicheQuicChannel parentQuicChannel() {
-        return (QuicheQuicChannel) parent();
-    }
-
     @Override
-    public QuicChannel parent() {
-        return (QuicChannel) super.parent();
+    public QuicheQuicChannel parent() {
+        return (QuicheQuicChannel) super.parent();
     }
 
     private void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
-        parentQuicChannel().shutdownRead(streamId, channelPromise);
+        parent().shutdownRead(streamId, channelPromise);
     }
 
     @Override
     public boolean isOutputShutdown() {
-        return outputShutdown;
+        return outputShutdown || !isActive();
     }
 
     @Override
@@ -131,7 +127,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     public void shutdownOutput0(ChannelPromise channelPromise) {
         outputShutdown = true;
-        parentQuicChannel().shutdownWrite(streamId, channelPromise);
+        parent().shutdownWrite(streamId, channelPromise);
     }
 
     @Override
@@ -162,7 +158,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     public void shutdown0(ChannelPromise channelPromise) {
         inputShutdown = true;
         outputShutdown = true;
-        parentQuicChannel().shutdownReadAndWrite(streamId, channelPromise);
+        parent().shutdownReadAndWrite(streamId, channelPromise);
     }
 
     @Override
@@ -200,7 +196,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doClose() throws Exception {
         active = false;
-        parentQuicChannel().streamClose(streamId);
+        parent().streamClose(streamId);
     }
 
     @Override
@@ -221,7 +217,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
         // reset first as streamSendMultiple may notify futures.
         flushPending = false;
-        if (!parentQuicChannel().streamSendMultiple(streamId, alloc(), channelOutboundBuffer)) {
+        if (!parent().streamSendMultiple(streamId, alloc(), channelOutboundBuffer)) {
             flushPending = true;
         }
     }
@@ -301,18 +297,27 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         void recv() {
-            ChannelConfig config = config();
             ChannelPipeline pipeline = pipeline();
+            if (parent().isStreamFinished(streamId)) {
+                if (isActive()) {
+                    closeOnRead(pipeline);
+                    readPending = false;
+                }
+                return;
+            }
+
+            ChannelConfig config = config();
             ByteBufAllocator allocator = config.getAllocator();
             RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
             allocHandle.reset(config);
             ByteBuf byteBuf = null;
             boolean close = false;
             boolean readCompleteNeeded = false;
-            QuicheQuicChannel parent = parentQuicChannel();
+            QuicheQuicChannel parent = parent();
             try {
                 do {
                     byteBuf = allocHandle.allocate(allocator);
+
                     close = parent.streamRecv(streamId, byteBuf);
                     allocHandle.lastBytesRead(byteBuf.readableBytes());
                     if (allocHandle.lastBytesRead() <= 0) {
