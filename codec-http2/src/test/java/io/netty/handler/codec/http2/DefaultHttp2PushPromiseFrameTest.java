@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -62,7 +63,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        serverBootstrap.bind("127.0.0.1", 5555);
+        ChannelFuture channelFuture = serverBootstrap.bind(0).sync();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
@@ -83,7 +84,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        bootstrap.connect("127.0.0.1", 5555).sync();
+        bootstrap.connect(channelFuture.channel().localAddress()).sync();
     }
 
     @Test
