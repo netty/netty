@@ -540,16 +540,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
-        private long nextStreamId = server ? 1 : 0;
-
         // See https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-2.1
+        private long nextBidirectionalStreamId = server ? 1 : 0;
+        private long nextUnidirectionalStreamId = server ? 3 : 2;
+
         private long nextStreamId(boolean bidirectional) {
-            long stream = nextStreamId;
-            nextStreamId += 2;
-            if (server) {
-                return stream | (bidirectional ? 0x1 : 0x3);
+            if (bidirectional) {
+                long stream = nextBidirectionalStreamId;
+                nextBidirectionalStreamId += 4;
+                return stream;
+            } else {
+                long stream = nextUnidirectionalStreamId;
+                nextUnidirectionalStreamId += 4;
+                return stream;
             }
-            return stream | (bidirectional ? 0x0 : 0x2);
         }
 
         void connectStream(QuicStreamType type, ChannelHandler handler,
