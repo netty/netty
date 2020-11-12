@@ -104,7 +104,7 @@
         </os>
       </activation>
       <properties>
-        <extraLdflags>-Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <extraLdflags>-Wl,--exclude-libs,ALL</extraLdflags>
       </properties>
     </profile>
   </profiles>

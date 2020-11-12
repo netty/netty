@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty-codec-quic-centos:centos-6-1.8
+    build:
+      args:
+        centos_version : "6"
+        java_version : "adopt@1.8.0-272"
+
+  build:
+    image: netty-codec-quic-centos:centos-6-1.8
+
+  shell:
+    image: netty-codec-quic-centos:centos-6-1.8
