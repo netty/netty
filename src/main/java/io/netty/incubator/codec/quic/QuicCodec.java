@@ -30,8 +30,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * Abstract base class for QUIC codecs.
+ */
 public abstract class QuicCodec extends ChannelDuplexHandler {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicServerCodec.class);
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final int maxTokenLength;
@@ -86,6 +89,11 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
+        for (QuicheQuicChannel ch: connections.values()) {
+            ch.forceClose();
+        }
+        connections.clear();
+
         Quiche.quiche_config_free(config);
 
         versionBuffer.release();
@@ -132,11 +140,25 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Handle a QUIC packet and return {@code true} if we need to call {@link ChannelHandlerContext#flush()}.
+     *
+     * @param ctx the {@link ChannelHandlerContext}.
+     * @param packet the {@link DatagramPacket} tat contains the QUIC packet.
+     * @param type the type of the packet.
+     * @param version the QUIC version
+     * @param scid the source connection id.
+     * @param dcid the destination connection id
+     * @param token the token
+     * @return {@code true} if we need to call {@link ChannelHandlerContext#flush()} before there is no new events
+     *                      for this handler in the current eventloop run.
+     * @throws Exception  thrown if there is an error during processing.
+     */
     protected abstract boolean quicPacketRead(ChannelHandlerContext ctx, DatagramPacket packet, byte type, int version,
                                                     ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
+    public final void channelReadComplete(ChannelHandlerContext ctx) {
         boolean writeDone = needsFlush;
         needsFlush = false;
         inChannelRead = false;
@@ -154,7 +176,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) {
+    public final void flush(ChannelHandlerContext ctx) {
         if (inChannelRead) {
             needsFlush = true;
         } else {
@@ -164,7 +186,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public final void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isWritable()) {
             boolean writeDone = false;
             Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();

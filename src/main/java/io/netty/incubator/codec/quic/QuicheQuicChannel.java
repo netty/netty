@@ -147,19 +147,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private boolean closeAllIfConnectionClosed() {
         if (Quiche.quiche_conn_is_closed(connAddr)) {
-            unsafe().close(voidPromise());
-            Quiche.quiche_conn_free(connAddr);
-            connAddr = -1;
-
-            closeStreams();
-            if (finBuffer != null) {
-                finBuffer.release();
-                finBuffer = null;
-            }
+            forceClose();
             state = CLOSED;
             return true;
         }
         return false;
+    }
+
+    void forceClose() {
+        unsafe().close(voidPromise());
+        Quiche.quiche_conn_free(connAddr);
+        connAddr = -1;
+
+        closeStreams();
+        if (finBuffer != null) {
+            finBuffer.release();
+            finBuffer = null;
+        }
+        state = CLOSED;
     }
 
     private void scheduleTimeout() {
