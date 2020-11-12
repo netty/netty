@@ -90,4 +90,121 @@ public class UnsafeByteBufUtilTest {
         }
     }
 
+    @Test
+    public void testSetBytesWithByteArray() {
+        final byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final int length = testData.length;
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, length, length);
+
+        try {
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), 0, testData, 0, length);
+
+            final byte[] check = new byte[length];
+            targetBuffer.getBytes(0, check, 0, length);
+
+            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test
+    public void testSetBytesWithZeroLength() {
+        final byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final int length = testData.length;
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, length, length);
+
+        try {
+            final byte[] beforeSet = new byte[length];
+            targetBuffer.getBytes(0, beforeSet, 0, length);
+
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), 0, testData, 0, 0);
+
+            final byte[] check = new byte[length];
+            targetBuffer.getBytes(0, check, 0, length);
+
+            assertArrayEquals(beforeSet, check);
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetBytesWithNullByteArray() {
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, 8, 8);
+
+        try {
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), 0, (byte[]) null, 0, 8);
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds() {
+        // negative index
+        testSetBytesOutOfBounds0(4, 4, -1, 0, 4);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds2() {
+        // negative length
+        testSetBytesOutOfBounds0(4, 4, 0, 0, -1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds3() {
+        // buffer length oversize
+        testSetBytesOutOfBounds0(4, 8, 0, 0, 5);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds4() {
+        // buffer length oversize
+        testSetBytesOutOfBounds0(4, 4, 3, 0, 3);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds5() {
+        // negative srcIndex
+        testSetBytesOutOfBounds0(4, 4, 0, -1, 4);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds6() {
+        // src length oversize
+        testSetBytesOutOfBounds0(8, 4, 0, 0, 5);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetBytesOutOfBounds7() {
+        // src length oversize
+        testSetBytesOutOfBounds0(4, 4, 0, 1, 4);
+    }
+
+    private static void testSetBytesOutOfBounds0(int lengthOfBuffer,
+                                                 int lengthOfBytes,
+                                                 int index,
+                                                 int srcIndex,
+                                                 int length) {
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, lengthOfBuffer, lengthOfBuffer);
+
+        try {
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), index, new byte[lengthOfBytes], srcIndex, length);
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
 }
