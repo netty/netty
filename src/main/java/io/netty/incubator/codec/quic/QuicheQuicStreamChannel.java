@@ -36,7 +36,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final ChannelConfig config;
-    private final long streamId;
+    private final QuicStreamAddress address;
     private boolean readPending;
     private boolean flushPending;
 
@@ -47,22 +47,32 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         super(parent);
         config = new DefaultChannelConfig(this);
-        this.streamId = streamId;
+        this.address = new QuicStreamAddress(streamId);
+    }
+
+    @Override
+    public QuicStreamAddress localAddress() {
+        return (QuicStreamAddress) super.localAddress();
+    }
+
+    @Override
+    public QuicStreamAddress remoteAddress() {
+        return (QuicStreamAddress) super.remoteAddress();
     }
 
     @Override
     public boolean isLocalCreated() {
-        return parent().isStreamLocalCreated(streamId);
+        return parent().isStreamLocalCreated(streamId());
     }
 
     @Override
-    public boolean isBidirectional() {
-        return parent().isStreamBidirectional(streamId);
+    public QuicStreamType type() {
+        return parent().streamType(streamId());
     }
 
     @Override
     public long streamId() {
-        return streamId;
+        return address.streamId();
     }
 
     @Override
@@ -97,7 +107,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     private void shutdownInput0(ChannelPromise channelPromise) {
         inputShutdown = true;
-        parent().streamShutdownRead(streamId, channelPromise);
+        parent().streamShutdownRead(streamId(), channelPromise);
     }
 
     @Override
@@ -127,7 +137,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     public void shutdownOutput0(ChannelPromise channelPromise) {
         outputShutdown = true;
-        parent().streamShutdownWrite(streamId, channelPromise);
+        parent().streamShutdownWrite(streamId(), channelPromise);
     }
 
     @Override
@@ -158,7 +168,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     public void shutdown0(ChannelPromise channelPromise) {
         inputShutdown = true;
         outputShutdown = true;
-        parent().streamShutdownReadAndWrite(streamId, channelPromise);
+        parent().streamShutdownReadAndWrite(streamId(), channelPromise);
     }
 
     @Override
@@ -173,14 +183,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     protected SocketAddress localAddress0() {
-        // TODO: Fix me
-        return null;
+        return address;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        // TODO: Fix me
-        return null;
+        return address;
     }
 
     @Override
@@ -196,7 +204,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doClose() throws Exception {
         active = false;
-        parent().streamClose(streamId);
+        parent().streamClose(streamId());
     }
 
     @Override
@@ -217,7 +225,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
         // reset first as streamSendMultiple may notify futures.
         flushPending = false;
-        if (!parent().streamSendMultiple(streamId, alloc(), channelOutboundBuffer)) {
+        if (!parent().streamSendMultiple(streamId(), alloc(), channelOutboundBuffer)) {
             flushPending = true;
         }
     }
@@ -298,7 +306,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         void recv() {
             ChannelPipeline pipeline = pipeline();
-            if (parent().isStreamFinished(streamId)) {
+            if (parent().isStreamFinished(streamId())) {
                 if (isActive()) {
                     closeOnRead(pipeline);
                     readPending = false;
@@ -318,7 +326,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 do {
                     byteBuf = allocHandle.allocate(allocator);
 
-                    close = parent.streamRecv(streamId, byteBuf);
+                    close = parent.streamRecv(streamId(), byteBuf);
                     allocHandle.lastBytesRead(byteBuf.readableBytes());
                     if (allocHandle.lastBytesRead() <= 0) {
                         byteBuf.release();

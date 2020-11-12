@@ -15,23 +15,17 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.net.SocketAddress;
-
 /**
- * A {@link SocketAddress} for QUIC stream.
+ * The type of a {@link QuicStreamChannel}.
  */
-public final class QuicStreamAddress extends SocketAddress {
-
-    private final long streamId;
-
-    QuicStreamAddress(long streamId) {
-        this.streamId = streamId;
-    }
+public enum QuicStreamType {
 
     /**
-     * Return the id of the stream.
+     * An unidirectional stream.
      */
-    public long streamId() {
-        return streamId;
-    }
+    UNIDIRECTIONAL,
+    /**
+     * A bidirectional stream.
+     */
+    BIDIRECTIONAL
 }

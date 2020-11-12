@@ -21,7 +21,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 /**
- * A QUIC channel
+ * A QUIC {@link Channel}.
  */
 public interface QuicChannel extends Channel {
 
@@ -30,14 +30,14 @@ public interface QuicChannel extends Channel {
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
      */
-    Future<QuicStreamChannel> createStream(QuicStreamAddress address, ChannelHandler handler);
+    Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler);
 
     /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Promise} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
      */
-    Future<QuicStreamChannel> createStream(QuicStreamAddress address, ChannelHandler handler,
+    Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                            Promise<QuicStreamChannel> promise);
 
     /**

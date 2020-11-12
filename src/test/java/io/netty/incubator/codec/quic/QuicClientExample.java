@@ -74,7 +74,7 @@ public final class QuicClientExample {
                                 }
                             })).connect(QuicConnectionIdAddress.random()).sync().channel();
 
-            QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamAddress.bidirectional(),
+            QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {

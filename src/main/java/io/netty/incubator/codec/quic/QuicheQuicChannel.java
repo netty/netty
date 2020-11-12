@@ -175,20 +175,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamAddress address, ChannelHandler handler) {
-        return createStream(address, handler, eventLoop().newPromise());
+    public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler) {
+        return createStream(type, handler, eventLoop().newPromise());
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamAddress address, ChannelHandler handler,
+    public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
         if (eventLoop().inEventLoop()) {
-            ((QuicChannelUnsafe) unsafe()).connectStream(address, handler, promise);
+            ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    ((QuicChannelUnsafe) unsafe()).connectStream(address, handler, promise);
+                    ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
                 }
             });
         }
@@ -315,8 +315,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return (streamId & 0x1) == (server ? 1 : 0);
     }
 
-    boolean isStreamBidirectional(long streamId) {
-        return (streamId & 0x2) == 0;
+    QuicStreamType streamType(long streamId) {
+        return (streamId & 0x2) == 0 ? QuicStreamType.BIDIRECTIONAL : QuicStreamType.UNIDIRECTIONAL;
     }
 
     boolean isStreamFinished(long streamId) {
@@ -547,9 +547,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return stream | (bidirectional ? 0x0 : 0x2);
         }
 
-        void connectStream(QuicStreamAddress streamAddress, ChannelHandler handler,
+        void connectStream(QuicStreamType type, ChannelHandler handler,
                            Promise<QuicStreamChannel> promise) {
-            long streamId = nextStreamId(streamAddress.isBidirectional());
+            long streamId = nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {
                 // TODO: We could make this a bit more efficient by waiting until we have some data to send.
                 streamSend(streamId, Unpooled.EMPTY_BUFFER, false);
