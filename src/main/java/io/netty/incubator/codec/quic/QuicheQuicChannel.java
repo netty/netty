@@ -72,12 +72,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // Notify quiche there was a timeout.
                 Quiche.quiche_conn_on_timeout(connAddr);
 
-                writeAndFlushEgress();
-
-                if (!closeAllIfConnectionClosed()) {
-                    // The connection is alive, reschedule.
+                if (Quiche.quiche_conn_is_closed(connAddr)) {
                     timeoutFuture = null;
-                    scheduleTimeout();
+                    forceClose();
+                } else {
+                    // We need to set writeEgressNeeded to true as we always need to call this method when
+                    // a timeout was triggered.
+                    // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send.
+                    writeEgressNeeded = true;
+                    writeAndFlushEgress();
+
+                    if (!closeAllIfConnectionClosed()) {
+                        // The connection is alive, reschedule.
+                        timeoutFuture = null;
+                        scheduleTimeout();
+                    }
                 }
             }
         }
@@ -148,7 +157,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean closeAllIfConnectionClosed() {
         if (Quiche.quiche_conn_is_closed(connAddr)) {
             forceClose();
-            state = CLOSED;
             return true;
         }
         return false;
@@ -158,6 +166,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         unsafe().close(voidPromise());
         Quiche.quiche_conn_free(connAddr);
         connAddr = -1;
+        state = CLOSED;
 
         closeStreams();
         if (finBuffer != null) {
@@ -479,6 +488,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         if (fireChannelReadCompletePending) {
             fireChannelReadCompletePending = false;
+            // If we had called recv we need to ensure we call send as well.
+            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
+            writeEgressNeeded = true;
         }
 
         // Try flush more streams that had some flushes pending.
