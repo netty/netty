@@ -15,10 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.Channel;
 import io.netty.channel.socket.DuplexChannel;
-
-import java.net.SocketAddress;
 
 /**
  * A QUIC stream.

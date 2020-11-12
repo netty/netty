@@ -45,96 +45,177 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return (B) this;
     }
 
+    /**
+     * Set the path to the certificate chain to use.
+     */
     public final B certificateChain(String path) {
         certPath = path;
         return self();
     }
 
+    /**
+     * Set the path to the private key to use.
+     */
     public final B privateKey(String path) {
         keyPath = path;
         return self();
     }
 
+    /**
+     * Set if the remote peer should be verified or not.
+     */
     public final B verifyPeer(boolean verify) {
         verifyPeer = verify;
         return self();
     }
 
+    /**
+     * Set if <a href="https://tools.ietf.org/html/draft-thomson-quic-bit-grease-00">greasing</a> should be enabled
+     * or not.
+     */
     public final B grease(boolean enable) {
         grease = enable;
         return self();
     }
 
+    /**
+     * Enable the support of early data.
+     */
     public final B enableEarlyData() {
         earlyData = true;
         return self();
     }
 
+    /**
+     * Set the application protocols to use. These are in wire.format and so prefixed with the length each.
+     *
+     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_application_protos">
+     *     set_application_protos</a>
+     */
     public final B applicationProtocols(byte[] protos) {
         this.protos = protos.clone();
         return self();
     }
 
+    /**
+     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_idle_timeout">
+     *     set_max_idle_timeout</a>.
+     */
     public final B maxIdleTimeout(long nanos) {
         this.maxIdleTimeout = nanos;
         return self();
     }
-
+    /**
+     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_udp_payload_size">
+     *     set_max_udp_payload_size</a>.
+     */
     public final B maxUdpPayloadSize(long size) {
         this.maxUdpPayloadSize = size;
         return self();
     }
 
+    /**
+     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_data">
+     *     set_initial_max_data</a>.
+     */
     public final B initialMaxData(long value) {
         this.initialMaxData = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_stream_data_bidi_local">
+     *     set_initial_max_stream_data_bidi_local</a>.
+     */
     public final B initialMaxStreamDataBidirectionalLocal(long value) {
         this.initialMaxStreamDataBidiLocal = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_stream_data_bidi_remote">
+     *     set_initial_max_stream_data_bidi_remote</a>.
+     */
     public final B initialMaxStreamDataBidirectionalRemote(long value) {
         this.initialMaxStreamDataBidiRemote = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_uni">
+     *     set_initial_max_streams_uni</a>.
+     */
     public final B initialMaxStreamDataUnidirectional(long value) {
         this.initialMaxStreamDataUni = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_bidi">
+     *     set_initial_max_streams_bidi</a>.
+     */
     public final B initialMaxStreamsBidirectional(long value) {
         this.initialMaxStreamsBidi = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_uni">
+     *     set_initial_max_streams_uni</a>.
+     */
     public final B initialMaxStreamsUnidirectional(long value) {
         this.initialMaxStreamsUni = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_ack_delay_exponent">
+     *     set_ack_delay_exponent</a>.
+     */
     public final B ackDelayExponent(long value) {
         this.ackDelayExponent = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_ack_delay">
+     *     set_max_ack_delay</a>.
+     */
     public final B maxAckDelay(long value) {
         this.maxAckDelay = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_disable_active_migration">
+     *     set_disable_active_migration</a>.
+     */
     public final B disableActiveMigration(boolean value) {
         this.disableActiveMigration = value;
         return self();
     }
 
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.enable_hystart">
+     *     enable_hystart</a>.
+     */
     public final B enableHystart(boolean value) {
         this.enableHystart = value;
         return self();
     }
 
+    /**
+     * Creates the native config object and return it.
+     */
     protected final long createConfig() {
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
