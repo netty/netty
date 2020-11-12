@@ -40,7 +40,7 @@ public final class QuicExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        QuicServerCodec codec = new QuicCodecBuilder()
+        QuicServerCodec codec = new QuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)

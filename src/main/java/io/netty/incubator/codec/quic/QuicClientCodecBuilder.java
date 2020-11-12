@@ -15,11 +15,25 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFactory;
 
-public interface QuicConnectionIdSigner {
+/**
+ * {@link QuicCodecBuilder} which allows to build {@link QuicClientCodec}s.
+ */
+public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
+
     /**
-     * Sign the given destination connection id and return the new id.
+     * Build a new {@link QuicClientCodec}.
      */
-    byte[] sign(ByteBuf dcid);
+    public QuicClientCodec buildClientCodec() {
+        // TODO: Think about the correct token length.
+        return new QuicClientCodec(createConfig(), 25);
+    }
+
+    /**
+     * Returns {@link ChannelFactory} that can be used to bootstrap {@link QuicChannel}s.
+     */
+    public static ChannelFactory<QuicChannel> newChannelFactory(QuicClientCodec codec) {
+        return codec.newChannelFactory();
+    }
 }

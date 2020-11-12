@@ -41,7 +41,7 @@ public final class QuicClientExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        QuicClientCodec codec = new QuicCodecBuilder()
+        QuicClientCodec codec = new QuicClientCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
@@ -64,7 +64,7 @@ public final class QuicClientExample {
             Bootstrap quicBootstrap = new Bootstrap();
             QuicChannel quicChannel = (QuicChannel)
                     quicBootstrap.group(channel.eventLoop())
-                            .channelFactory(codec.newChannelFactory())
+                            .channelFactory(QuicClientCodecBuilder.newChannelFactory(codec))
                             .handler(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelActive(ChannelHandlerContext ctx) {

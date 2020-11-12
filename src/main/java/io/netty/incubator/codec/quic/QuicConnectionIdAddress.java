@@ -15,25 +15,71 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.buffer.ByteBuf;
+
 import java.net.SocketAddress;
 import java.security.SecureRandom;
 
+/**
+ * A {@link QuicConnectionIdAddress}.
+ */
 public final class QuicConnectionIdAddress extends SocketAddress {
-    private static final SecureRandom random = new SecureRandom();
 
+    // Accessed by the codec itself.
     final byte[] connId;
 
-    private QuicConnectionIdAddress(byte[] connId) {
+    public QuicConnectionIdAddress(byte[] connId) {
+        if (connId.length > Quiche.QUICHE_MAX_CONN_ID_LEN) {
+            throw new IllegalArgumentException("Connection ID can only be of max length "
+                    + Quiche.QUICHE_MAX_CONN_ID_LEN);
+        }
         this.connId = connId.clone();
     }
 
+    /**
+     * Return a random generated {@link QuicConnectionIdAddress}.
+     */
     public static QuicConnectionIdAddress random() {
-        byte[] bytes = new byte[Quiche.QUICHE_MAX_CONN_ID_LEN];
-        random.nextBytes(bytes);
-        return new QuicConnectionIdAddress(bytes);
+        return randomGenerator().newAddress();
     }
 
-    public static QuicConnectionIdAddress fromBytes(byte[] bytes) {
-        return new QuicConnectionIdAddress(bytes.clone());
+    /**
+     * Return a {@link QuicConnectionIdAddressGenerator} which randomly generates new {@link QuicConnectionIdAddress}es.
+     */
+    public static QuicConnectionIdAddressGenerator randomGenerator() {
+        return SecureRandomQuicConnectionIdGenerator.INSTANCE;
+    }
+
+    private static final class SecureRandomQuicConnectionIdGenerator implements QuicConnectionIdAddressGenerator {
+        private static final SecureRandom RANDOM = new SecureRandom();
+
+        public static final QuicConnectionIdAddressGenerator INSTANCE = new SecureRandomQuicConnectionIdGenerator();
+
+        private SecureRandomQuicConnectionIdGenerator() { }
+
+        @Override
+        public QuicConnectionIdAddress newAddress() {
+            return newAddress(maxConnectionIdLength());
+        }
+
+        @Override
+        public QuicConnectionIdAddress newAddress(int length) {
+            if (length > maxConnectionIdLength()) {
+                throw new IllegalArgumentException();
+            }
+            byte[] bytes = new byte[length];
+            RANDOM.nextBytes(bytes);
+            return new QuicConnectionIdAddress(bytes);
+        }
+
+        @Override
+        public QuicConnectionIdAddress newAddress(ByteBuf buffer, int length) {
+            return newAddress(length);
+        }
+
+        @Override
+        public int maxConnectionIdLength() {
+            return Quiche.QUICHE_MAX_CONN_ID_LEN;
+        }
     }
 }

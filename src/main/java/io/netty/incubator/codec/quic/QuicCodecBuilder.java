@@ -14,15 +14,11 @@
  * under the License.
  */
 package io.netty.incubator.codec.quic;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelHandler;
-
-import java.util.Objects;
 
 /**
  * Build a {@link QuicServerCodec} that can be used in a {@link io.netty.channel.ChannelPipeline}.
  */
-public final class QuicCodecBuilder {
+public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private String certPath;
     private String keyPath;
     private Boolean verifyPeer;
@@ -41,104 +37,105 @@ public final class QuicCodecBuilder {
     private Long maxAckDelay;
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
-    private QuicConnectionIdSigner quicConnectionIdSigner;
 
-    public QuicCodecBuilder certificateChain(String path) {
+    QuicCodecBuilder() { }
+
+    @SuppressWarnings("unchecked")
+    protected final B self() {
+        return (B) this;
+    }
+
+    public final B certificateChain(String path) {
         certPath = path;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder privateKey(String path) {
+    public final B privateKey(String path) {
         keyPath = path;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder verifyPeer(boolean verify) {
+    public final B verifyPeer(boolean verify) {
         verifyPeer = verify;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder grease(boolean enable) {
+    public final B grease(boolean enable) {
         grease = enable;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder enableEarlyData() {
+    public final B enableEarlyData() {
         earlyData = true;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder applicationProtocols(byte[] protos) {
+    public final B applicationProtocols(byte[] protos) {
         this.protos = protos.clone();
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder maxIdleTimeout(long nanos) {
+    public final B maxIdleTimeout(long nanos) {
         this.maxIdleTimeout = nanos;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder maxUdpPayloadSize(long size) {
+    public final B maxUdpPayloadSize(long size) {
         this.maxUdpPayloadSize = size;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxData(long value) {
+    public final B initialMaxData(long value) {
         this.initialMaxData = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxStreamDataBidirectionalLocal(long value) {
+    public final B initialMaxStreamDataBidirectionalLocal(long value) {
         this.initialMaxStreamDataBidiLocal = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxStreamDataBidirectionalRemote(long value) {
+    public final B initialMaxStreamDataBidirectionalRemote(long value) {
         this.initialMaxStreamDataBidiRemote = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxStreamDataUnidirectional(long value) {
+    public final B initialMaxStreamDataUnidirectional(long value) {
         this.initialMaxStreamDataUni = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxStreamsBidirectional(long value) {
+    public final B initialMaxStreamsBidirectional(long value) {
         this.initialMaxStreamsBidi = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder initialMaxStreamsUnidirectional(long value) {
+    public final B initialMaxStreamsUnidirectional(long value) {
         this.initialMaxStreamsUni = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder ackDelayExponent(long value) {
+    public final B ackDelayExponent(long value) {
         this.ackDelayExponent = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder maxAckDelay(long value) {
+    public final B maxAckDelay(long value) {
         this.maxAckDelay = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder disableActiveMigration(boolean value) {
+    public final B disableActiveMigration(boolean value) {
         this.disableActiveMigration = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder enableHystart(boolean value) {
+    public final B enableHystart(boolean value) {
         this.enableHystart = value;
-        return this;
+        return self();
     }
 
-    public QuicCodecBuilder connectionIdSigner(QuicConnectionIdSigner quicConnectionIdSigner) {
-        this.quicConnectionIdSigner = quicConnectionIdSigner;
-        return this;
-    }
-
-    private long createConfig() {
+    protected final long createConfig() {
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
             if (certPath != null && Quiche.quiche_config_load_cert_chain_from_pem_file(config, certPath) != 0) {
@@ -200,24 +197,5 @@ public final class QuicCodecBuilder {
             Quiche.quiche_config_free(config);
             throw cause;
         }
-    }
-
-    public QuicServerCodec buildServerCodec(QuicTokenHandler tokenHandler, ChannelHandler quicChannelHandler) {
-        Objects.requireNonNull(tokenHandler, "tokenHandler");
-        Objects.requireNonNull(quicChannelHandler, "quicChannelHandler");
-        QuicConnectionIdSigner signer = quicConnectionIdSigner;
-        if (signer == null) {
-            signer = new DefaultQuicConnectionSigner();
-        }
-
-        return new QuicServerCodec(createConfig(), tokenHandler, signer, quicChannelHandler);
-    }
-
-    public QuicClientCodec buildClientCodec() {
-        return new QuicClientCodec(createConfig(), 25);
-    }
-
-    public ChannelFactory<QuicChannel> buildClientChannelFactory(QuicClientCodec codec) {
-        return codec.newChannelFactory();
     }
 }
