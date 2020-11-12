@@ -142,7 +142,7 @@ public final class QuicServerCodec extends QuicCodec {
         channel.pipeline().addLast(quicChannelHandler);
 
         // Now create the key to store the channel in the map.
-        byte[] key = new byte[Quiche.QUICHE_MAX_CONN_ID_LEN];
+        byte[] key = new byte[MAX_LOCAL_CONN_ID];
         dcid.getBytes(dcid.readerIndex(), key);
         putChannel(ByteBuffer.wrap(key), channel);
 
