@@ -81,8 +81,33 @@
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
     <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
+    <extraLdflags></extraLdflags>
   </properties>
 
+  <profiles>
+    <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <extraLdflags>-Wl,-exported_symbol,_JNI_*</extraLdflags>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <extraLdflags>-Wl,--exclude-libs,ALL -lrt</extraLdflags>
+      </properties>
+    </profile>
+  </profiles>
   <build>
     <extensions>
       <extension>
@@ -185,6 +210,12 @@
                   <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                     <arg value="build" />
                   </exec>
+                  <!-- delete the shared library as otherwise we may link against it and not against the static
+                       library.
+                  -->
+                  <delete>
+                    <fileset dir="${quicheBuildDir}" includes="*.so" />
+                  </delete>
                 </else>
               </if>
               <if>
@@ -431,7 +462,7 @@
               <verbose>true</verbose>
               <configureArgs>
                 <configureArg>CFLAGS=${cflags}</configureArg>
-                <configureArg>LDFLAGS=${ldflags}</configureArg>
+                <configureArg>LDFLAGS=${ldflags} ${extraLdflags}</configureArg>
                 <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
               </configureArgs>
             </configuration>
