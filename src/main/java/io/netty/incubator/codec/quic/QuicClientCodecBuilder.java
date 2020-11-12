@@ -26,8 +26,7 @@ public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCod
      * Build a new {@link QuicClientCodec}.
      */
     public QuicClientCodec buildClientCodec() {
-        // TODO: Think about the correct token length.
-        return new QuicClientCodec(createConfig(), 25);
+        return new QuicClientCodec(createConfig());
     }
 
     /**

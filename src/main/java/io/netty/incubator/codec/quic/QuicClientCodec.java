@@ -31,8 +31,10 @@ import java.nio.ByteBuffer;
 public final class QuicClientCodec extends QuicCodec {
     private volatile Channel channel;
 
-    QuicClientCodec(long config, int maxTokenLength) {
-        super(config, maxTokenLength);
+    QuicClientCodec(long config) {
+        // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
+        // safe enough and as we not have too many codecs at the same time this should be ok.
+        super(config, Quic.MAX_DATAGRAM_SIZE);
     }
 
     @Override
