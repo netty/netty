@@ -166,7 +166,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
         while (entries.hasNext()) {
             QuicheQuicChannel channel = entries.next().getValue();
             // TODO: Be a bit smarter about this.
-            writeDone |= channel.handleChannelReadComplete();
+            writeDone |= channel.channelReadComplete();
 
             removeIfClosed(entries, channel);
         }
@@ -193,7 +193,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
             while (entries.hasNext()) {
                 QuicheQuicChannel channel = entries.next().getValue();
                 // TODO: Be a bit smarter about this.
-                writeDone |= channel.flushStreams();
+                writeDone |= channel.writable();
                 removeIfClosed(entries, channel);
             }
             if (writeDone) {

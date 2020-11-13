@@ -69,7 +69,7 @@ public final class QuicClientCodec extends QuicCodec {
                 return;
             }
             putChannel(key, channel);
-            if (channel.writeEgress()) {
+            if (channel.writable()) {
                 ctx.flush();
             }
             promise.setSuccess();

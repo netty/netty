@@ -253,11 +253,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         return METADATA;
     }
 
-    void forceFlush() {
-        ((QuicStreamChannelUnsafe) unsafe()).forceFlush();
+    /**
+     * Stream is writable.
+     */
+    void writable() {
+        ((QuicStreamChannelUnsafe) unsafe()).flushIfPending();
     }
 
+    /**
+     * Stream is readable.
+     */
     void readable() {
+        // Mark as readable and if a read is pending execute it.
         readable = true;
         if (readPending) {
             ((QuicStreamChannelUnsafe) unsafe()).recv();
@@ -273,14 +280,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         @Override
         protected void flush0() {
             if (flushPending) {
+                // We already have a flush pending that needs to be done once the stream becomes writable again.
                 return;
             }
             super.flush0();
         }
 
-        void forceFlush() {
-            flushPending = false;
-            super.flush0();
+        void flushIfPending() {
+            if (flushPending) {
+                // We had a flush pending, reset it and try to flush again.
+                flushPending = false;
+                super.flush();
+            }
         }
 
         private void closeOnRead(ChannelPipeline pipeline) {
@@ -348,7 +359,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 }
             } catch (Throwable cause) {
                 readPending = false;
-                this.handleReadException(pipeline, byteBuf, cause, close, allocHandle);
+                handleReadException(pipeline, byteBuf, cause, close, allocHandle);
             }
         }
     }
