@@ -346,7 +346,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void streamClosed(long streamId) {
-        //streams.remove(streamId);
+        streams.remove(streamId);
     }
 
     boolean isStreamLocalCreated(long streamId) {

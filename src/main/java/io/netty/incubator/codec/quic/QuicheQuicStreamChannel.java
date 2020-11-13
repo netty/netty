@@ -206,6 +206,11 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doClose() throws Exception {
         active = false;
         parent().streamClose(streamId());
+        if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
+            // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
+            // never receive data from the other side.
+            parent().streamClosed(streamId());
+        }
     }
 
     @Override
@@ -296,7 +301,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         private void closeOnRead(ChannelPipeline pipeline) {
             // TODO: Improve
-            this.close(this.voidPromise());
+            try {
+                this.close(this.voidPromise());
+            } finally {
+                // Now mark it as closed on the parent.
+                parent().streamClosed(streamId());
+            }
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
@@ -335,6 +345,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                     if (res == -1) {
                         // Nothing left to read;
                         readable = false;
+                        close = parent.isStreamFinished(streamId());
                     } else if (res == 1) {
                         close = true;
                     }
