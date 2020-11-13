@@ -138,7 +138,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote);
     }
 
-    void connect(long configAddr) throws Exception {
+    private void connect(long configAddr) throws Exception {
         assert this.connAddr == -1;
         assert this.traceId == null;
         assert this.key == null;
@@ -168,6 +168,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     ByteBuffer key() {
         return key;
     }
+
     private boolean closeAllIfConnectionClosed() {
         if (Quiche.quiche_conn_is_closed(connAddr)) {
             forceClose();
@@ -771,6 +772,41 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             QuicheQuicStreamChannel old = streams.put(streamId, streamChannel);
             assert old == null;
             return streamChannel;
+        }
+    }
+
+    /**
+     * Finish the connect of a client channel.
+     */
+    void finishConnect() {
+        assert !server;
+        ChannelFuture future = connectionSend();
+        if (future != null) {
+            future.addListener(timeoutScheduleListener);
+            flushParent();
+        }
+    }
+
+    // TODO: Come up with something better.
+    static QuicheQuicChannel handleConnect(SocketAddress address, long config) throws Exception {
+        if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
+            QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
+            QuicheQuicChannel channel = addr.channel;
+            channel.connect(config);
+            return channel;
+        }
+        return null;
+    }
+
+    /**
+     * Just a container to pass the {@link QuicheQuicChannel} to {@link QuicClientCodec}.
+     */
+    private static final class QuicheQuicChannelAddress extends SocketAddress {
+
+        final QuicheQuicChannel channel;
+
+        QuicheQuicChannelAddress(QuicheQuicChannel channel) {
+            this.channel = channel;
         }
     }
 }

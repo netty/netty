@@ -55,19 +55,16 @@ public final class QuicClientCodec extends QuicCodec {
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                         SocketAddress localAddress, ChannelPromise promise) {
-        if (remoteAddress instanceof QuicheQuicChannelAddress) {
-            QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
-            QuicheQuicChannel channel = addr.channel;
-            try {
-                channel.connect(config);
-            } catch (Exception e) {
-                promise.setFailure(e);
-                return;
-            }
+        final QuicheQuicChannel channel;
+        try {
+            channel = QuicheQuicChannel.handleConnect(remoteAddress, config);
+        } catch (Exception e) {
+            promise.setFailure(e);
+            return;
+        }
+        if (channel != null) {
             putChannel(channel);
-            if (channel.writable()) {
-                ctx.flush();
-            }
+            channel.finishConnect();
             promise.setSuccess();
             return;
         }
