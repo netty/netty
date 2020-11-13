@@ -46,6 +46,21 @@ import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.TimeUnit;
 
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
+    enum StreamRecvResult {
+        /**
+         * Nothing more to read from the stream.
+         */
+        DONE,
+        /**
+         * FIN flag received.
+         */
+        FIN,
+        /**
+         * Normal read without FIN flag.
+         */
+        OK
+    }
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[1024];
     private final long[] writableStreams = new long[1024];
@@ -466,7 +481,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
     }
 
-    int streamRecv(long streamId, ByteBuf buffer) throws Exception {
+    StreamRecvResult streamRecv(long streamId, ByteBuf buffer) throws Exception {
         if (finBuffer == null) {
             finBuffer = alloc().directBuffer(1);
         }
@@ -475,11 +490,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
         if (Quiche.throwIfError(recvLen)) {
-            return -1;
+            return StreamRecvResult.DONE;
         } else {
             buffer.writerIndex(writerIndex + recvLen);
         }
-        return finBuffer.getBoolean(0) ? 1 : 0;
+        return finBuffer.getBoolean(0) ? StreamRecvResult.FIN : StreamRecvResult.OK;
     }
 
     private void tryConnectionSend() {

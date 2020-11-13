@@ -340,15 +340,21 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             try {
                 do {
                     byteBuf = allocHandle.allocate(allocator);
-
-                    int res = parent.streamRecv(streamId(), byteBuf);
-                    if (res == -1) {
-                        // Nothing left to read;
-                        readable = false;
-                        close = parent.isStreamFinished(streamId());
-                    } else if (res == 1) {
-                        close = true;
+                    switch (parent.streamRecv(streamId(), byteBuf)) {
+                        case DONE:
+                            // Nothing left to read;
+                            readable = false;
+                            close = parent.isStreamFinished(streamId());
+                            break;
+                        case FIN:
+                            close = true;
+                            break;
+                        case OK:
+                            break;
+                        default:
+                            throw new Error();
                     }
+
                     allocHandle.lastBytesRead(byteBuf.readableBytes());
                     if (allocHandle.lastBytesRead() <= 0) {
                         byteBuf.release();
