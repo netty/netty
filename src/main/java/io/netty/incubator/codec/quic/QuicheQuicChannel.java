@@ -429,7 +429,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
     }
 
-    boolean streamRecv(long streamId, ByteBuf buffer) throws Exception {
+    int streamRecv(long streamId, ByteBuf buffer) throws Exception {
         if (finBuffer == null) {
             finBuffer = alloc().directBuffer(1);
         }
@@ -437,10 +437,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         long memoryAddress = buffer.memoryAddress();
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
-        if (!Quiche.throwIfError(recvLen)) {
-            buffer.setIndex(0, writerIndex + recvLen);
+        if (Quiche.throwIfError(recvLen)) {
+            return -1;
+        } else {
+            buffer.writerIndex(writerIndex + recvLen);
         }
-        return finBuffer.getBoolean(0);
+        return finBuffer.getBoolean(0) ? 1 : 0;
     }
 
     private void handleWriteEgress() {
@@ -705,9 +707,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     if (streamChannel == null) {
                         fireChannelRead = true;
                         streamChannel = addNewStreamChannel(streamId);
+                        streamChannel.readable();
                         pipeline().fireChannelRead(streamChannel);
                     } else {
-                        streamChannel.recvIfPending();
+                        streamChannel.readable();
                     }
                 }
             }

@@ -37,6 +37,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     private final ChannelConfig config;
     private final QuicStreamAddress address;
+    private boolean readable;
     private boolean readPending;
     private boolean flushPending;
 
@@ -210,7 +211,9 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doBeginRead() {
         readPending = true;
-        ((QuicStreamChannelUnsafe) unsafe()).recv();
+        if (readable) {
+            ((QuicStreamChannelUnsafe) unsafe()).recv();
+        }
     }
 
     @Override
@@ -254,11 +257,10 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         ((QuicStreamChannelUnsafe) unsafe()).forceFlush();
     }
 
-    void recvIfPending() {
+    void readable() {
+        readable = true;
         if (readPending) {
             ((QuicStreamChannelUnsafe) unsafe()).recv();
-        } else {
-            readPending = true;
         }
     }
 
@@ -306,14 +308,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         void recv() {
             ChannelPipeline pipeline = pipeline();
-            if (parent().isStreamFinished(streamId())) {
-                if (isActive()) {
-                    closeOnRead(pipeline);
-                    readPending = false;
-                }
-                return;
-            }
-
             ChannelConfig config = config();
             ByteBufAllocator allocator = config.getAllocator();
             RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
@@ -326,7 +320,13 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 do {
                     byteBuf = allocHandle.allocate(allocator);
 
-                    close = parent.streamRecv(streamId(), byteBuf);
+                    int res = parent.streamRecv(streamId(), byteBuf);
+                    if (res == -1) {
+                        // Nothing left to read;
+                        readable = false;
+                    } else if (res == 1) {
+                        close = true;
+                    }
                     allocHandle.lastBytesRead(byteBuf.readableBytes());
                     if (allocHandle.lastBytesRead() <= 0) {
                         byteBuf.release();
