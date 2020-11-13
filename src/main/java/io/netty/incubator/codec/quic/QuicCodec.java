@@ -24,11 +24,14 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Abstract base class for QUIC codecs.
@@ -37,6 +40,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
+    private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
     private final int maxTokenLength;
     private boolean needsFlush;
     private boolean inChannelRead;
@@ -61,8 +65,8 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
         return connections.get(key);
     }
 
-    protected void putChannel(ByteBuffer key, QuicheQuicChannel channel) {
-        connections.put(key, channel);
+    protected void putChannel(QuicheQuicChannel channel) {
+        connections.put(channel.key(), channel);
     }
 
     @Override
@@ -93,6 +97,8 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
             ch.forceClose();
         }
         connections.clear();
+
+        needsFireChannelReadComplete.clear();
 
         Quiche.quiche_config_free(config);
 
@@ -130,8 +136,15 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
                 int dcidLen = dcidLenBuffer.getInt(0);
                 int tokenLen = tokenLenBuffer.getInt(0);
 
-                needsFlush |= quicPacketRead(ctx, packet, type, version, scidBuffer.setIndex(0, scidLen),
+                QuicheQuicChannel channel = quicPacketRead(ctx, packet.sender(), packet.recipient(),
+                        type, version, scidBuffer.setIndex(0, scidLen),
                         dcidBuffer.setIndex(0, dcidLen), tokenBuffer.setIndex(0, tokenLen));
+                if (channel != null) {
+                    channel.recv(packet.content());
+                    if (channel.markInFireChannelReadCompleteQueue()) {
+                        needsFireChannelReadComplete.add(channel);
+                    }
+                }
             } else {
                 LOGGER.debug("Unable to parse QUIC header via quiche_header_info: {}", Quiche.errorAsString(res));
             }
@@ -144,7 +157,8 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
      * Handle a QUIC packet and return {@code true} if we need to call {@link ChannelHandlerContext#flush()}.
      *
      * @param ctx the {@link ChannelHandlerContext}.
-     * @param packet the {@link DatagramPacket} tat contains the QUIC packet.
+     * @param sender the {@link InetSocketAddress} of the sender of the QUIC packet
+     * @param recipient the {@link InetSocketAddress} of the recipient of the QUIC packet
      * @param type the type of the packet.
      * @param version the QUIC version
      * @param scid the source connection id.
@@ -154,22 +168,26 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
      *                      for this handler in the current eventloop run.
      * @throws Exception  thrown if there is an error during processing.
      */
-    protected abstract boolean quicPacketRead(ChannelHandlerContext ctx, DatagramPacket packet, byte type, int version,
-                                                    ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
+    protected abstract QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
+                                                        InetSocketAddress recipient, byte type, int version,
+                                                        ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
 
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) {
         boolean writeDone = needsFlush;
         needsFlush = false;
         inChannelRead = false;
-        Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();
-        while (entries.hasNext()) {
-            QuicheQuicChannel channel = entries.next().getValue();
-            // TODO: Be a bit smarter about this.
+        for (;;) {
+            QuicheQuicChannel channel = needsFireChannelReadComplete.poll();
+            if (channel == null) {
+                break;
+            }
             writeDone |= channel.channelReadComplete();
-
-            removeIfClosed(entries, channel);
+            if (channel.freeIfClosed()) {
+                connections.remove(channel.key());
+            }
         }
+
         if (writeDone) {
             ctx.flush();
         }

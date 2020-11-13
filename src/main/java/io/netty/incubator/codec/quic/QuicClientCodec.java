@@ -20,8 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.DatagramPacket;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
@@ -44,15 +44,12 @@ public final class QuicClientCodec extends QuicCodec {
     }
 
     @Override
-    protected boolean quicPacketRead(
-            ChannelHandlerContext ctx, DatagramPacket packet, byte type, int version, ByteBuf scid, ByteBuf dcid,
+    protected QuicheQuicChannel quicPacketRead(
+            ChannelHandlerContext ctx, InetSocketAddress sender, InetSocketAddress recipient,
+            byte type, int version, ByteBuf scid, ByteBuf dcid,
             ByteBuf token) {
-        ByteBuffer dcidByteBuffer = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
-        QuicheQuicChannel channel = getChannel(dcidByteBuffer);
-        if (channel != null) {
-            channel.recv(packet.content());
-        }
-        return false;
+        ByteBuffer key = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
+        return getChannel(key);
     }
 
     @Override
@@ -61,14 +58,13 @@ public final class QuicClientCodec extends QuicCodec {
         if (remoteAddress instanceof QuicheQuicChannelAddress) {
             QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
             QuicheQuicChannel channel = addr.channel;
-            final ByteBuffer key;
             try {
-                key = channel.connect(config);
+                channel.connect(config);
             } catch (Exception e) {
                 promise.setFailure(e);
                 return;
             }
-            putChannel(key, channel);
+            putChannel(channel);
             if (channel.writable()) {
                 ctx.flush();
             }

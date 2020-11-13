@@ -16,7 +16,6 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
@@ -25,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 /**
@@ -57,19 +57,19 @@ public final class QuicServerCodec extends QuicCodec {
     }
 
     @Override
-    protected boolean quicPacketRead(ChannelHandlerContext ctx, DatagramPacket packet, byte type, int version,
-                                     ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
+    protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
+                                               InetSocketAddress recipient, byte type, int version,
+                                               ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
         ByteBuffer dcidByteBuffer = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
         QuicheQuicChannel channel = getChannel(dcidByteBuffer);
         if (channel == null) {
-            return handleServer(ctx, packet, type, version, scid, dcid, token);
+            return handleServer(ctx, sender, type, version, scid, dcid, token);
         }
 
-        channel.recv(packet.content());
-        return false;
+        return channel;
     }
 
-    private boolean handleServer(ChannelHandlerContext ctx, DatagramPacket packet,
+    private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
                                  @SuppressWarnings("unused") byte type, int version,
                                  ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
         if (!Quiche.quiche_version_is_supported(version)) {
@@ -84,11 +84,10 @@ public final class QuicServerCodec extends QuicCodec {
             if (res < 0) {
                 out.release();
                 Quiche.throwIfError(res);
-                return false;
+                return null;
             }
 
-            ctx.write(new DatagramPacket(out.writerIndex(outWriterIndex + res), packet.sender()));
-            return true;
+            ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
         }
 
         if (!token.isReadable()) {
@@ -97,7 +96,7 @@ public final class QuicServerCodec extends QuicCodec {
             connIdBuffer.clear();
 
             // The remote peer did not send a token.
-            tokenHandler.writeToken(mintTokenBuffer, dcid, packet.sender());
+            tokenHandler.writeToken(mintTokenBuffer, dcid, sender);
 
             QuicConnectionIdAddress connId = connectionIdAddressGenerator.newAddress(dcid,
                     MAX_LOCAL_CONN_ID);
@@ -116,38 +115,36 @@ public final class QuicServerCodec extends QuicCodec {
                 out.release();
                 Quiche.throwIfError(written);
             } else {
-                ctx.write(new DatagramPacket(out.writerIndex(outWriterIndex + written),
-                        packet.sender()));
-                return true;
+                ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written), sender));
             }
-            return false;
+            return null;
         }
-        int offset = tokenHandler.validateToken(token, packet.sender());
+        int offset = tokenHandler.validateToken(token, sender);
         if (offset == -1) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));
             }
-            return false;
+            return null;
         }
 
         long conn = Quiche.quiche_accept(dcid.memoryAddress() + dcid.readerIndex(), MAX_LOCAL_CONN_ID,
                 token.memoryAddress() + offset, token.readableBytes() - offset, config);
         if (conn < 0) {
             LOGGER.debug("quiche_accept failed");
-            return false;
+            return null;
         }
-
-        QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), conn, Quiche.traceId(conn, dcid), packet.sender());
-        channel.pipeline().addLast(quicChannelHandler);
 
         // Now create the key to store the channel in the map.
         byte[] key = new byte[MAX_LOCAL_CONN_ID];
         dcid.getBytes(dcid.readerIndex(), key);
-        putChannel(ByteBuffer.wrap(key), channel);
+
+        QuicheQuicChannel channel = QuicheQuicChannel.forServer(
+                ctx.channel(), ByteBuffer.wrap(key), conn, Quiche.traceId(conn, dcid), sender);
+        channel.pipeline().addLast(quicChannelHandler);
+
+        putChannel(channel);
 
         ctx.channel().eventLoop().register(channel);
-        channel.recv(packet.content());
-        return false;
+        return channel;
     }
 }

@@ -98,11 +98,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     };
     private Future<?> timeoutFuture;
     private long connAddr;
+    private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private boolean connectionSendNeeded;
     private ByteBuf finBuffer;
     private ChannelPromise connectPromise;
     private byte[] connectId;
+    private ByteBuffer key;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -110,11 +112,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
 
-    private QuicheQuicChannel(Channel parent, boolean server, long connAddr, String traceId,
+    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
                       InetSocketAddress remote) {
         super(parent);
         config = new DefaultChannelConfig(this);
         this.server = server;
+        this.key = key;
         if (server) {
             state = ACTIVE;
         } else {
@@ -126,17 +129,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     static QuicheQuicChannel forClient(Channel parent) {
-        return new QuicheQuicChannel(parent, false, -1, null, (InetSocketAddress) parent.remoteAddress());
+        return new QuicheQuicChannel(parent, false, null,
+                -1, null, (InetSocketAddress) parent.remoteAddress());
     }
 
-    static QuicheQuicChannel forServer(Channel parent, long connAddr, String traceId, InetSocketAddress remote) {
-        return new QuicheQuicChannel(parent, true, connAddr, traceId, remote);
+    static QuicheQuicChannel forServer(Channel parent, ByteBuffer key,
+                                       long connAddr, String traceId, InetSocketAddress remote) {
+        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote);
     }
 
-    ByteBuffer connect(long configAddr) throws Exception {
+    void connect(long configAddr) throws Exception {
         assert this.connAddr == -1;
         assert this.traceId == null;
-
+        assert this.key == null;
         ByteBuf idBuffer = alloc().directBuffer(connectId.length).writeBytes(connectId);
         try {
             long connection = Quiche.quiche_connect(null, idBuffer.memoryAddress() + idBuffer.readerIndex(),
@@ -154,18 +159,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             this.connAddr = connection;
 
             connectionSendNeeded = true;
-            return ByteBuffer.wrap(connectId);
+            key = ByteBuffer.wrap(connectId);
         } finally {
             idBuffer.release();
         }
     }
 
+    ByteBuffer key() {
+        return key;
+    }
     private boolean closeAllIfConnectionClosed() {
         if (Quiche.quiche_conn_is_closed(connAddr)) {
             forceClose();
             return true;
         }
         return false;
+    }
+
+    boolean markInFireChannelReadCompleteQueue() {
+        if (inFireChannelReadCompleteQueue) {
+            return false;
+        }
+        inFireChannelReadCompleteQueue = true;
+        return true;
     }
 
     void forceClose() {
@@ -522,6 +538,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * {@link Channel}.
      */
     boolean channelReadComplete() {
+        inFireChannelReadCompleteQueue = false;
         if (isConnDestroyed()) {
             return false;
         }
