@@ -32,6 +32,9 @@ import io.netty.util.internal.StringUtil;
 import java.io.IOException;
 import java.net.SocketAddress;
 
+/**
+ * {@link QuicStreamChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
+ */
 final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 

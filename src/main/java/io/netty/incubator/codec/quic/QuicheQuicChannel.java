@@ -44,7 +44,9 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.TimeUnit;
-
+/**
+ * {@link QuicChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
+ */
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     enum StreamRecvResult {
         /**
@@ -85,7 +87,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Runnable timeout = new Runnable() {
         @Override
         public void run() {
-            if (connAddr != -1) {
+            if (!isConnDestroyed()) {
                 // Notify quiche there was a timeout.
                 Quiche.quiche_conn_on_timeout(connAddr);
 
@@ -682,7 +684,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 return;
             }
             if (remote instanceof QuicConnectionIdAddress) {
-                if (connAddr != -1) {
+                if (key != null) {
+                    // If a key is assigned we know this channel was already connected.
                     channelPromise.setFailure(new AlreadyConnectedException());
                     return;
                 }
