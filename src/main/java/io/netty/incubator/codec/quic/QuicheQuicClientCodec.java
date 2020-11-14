@@ -16,7 +16,6 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
@@ -25,21 +24,14 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 /**
- * {@link QuicCodec} for QUIC clients.
+ * {@link QuicheQuicCodec} for QUIC clients.
  */
-public final class QuicClientCodec extends QuicCodec {
-    private volatile ChannelFactory<QuicheQuicChannel> channelFactory;
+final class QuicheQuicClientCodec extends QuicheQuicCodec {
 
-    QuicClientCodec(long config) {
+    QuicheQuicClientCodec(long config) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
         super(config, Quic.MAX_DATAGRAM_SIZE);
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
-        super.handlerAdded(ctx);
-        channelFactory = new QuicheQuicChannelFactory(ctx.channel());
     }
 
     @Override

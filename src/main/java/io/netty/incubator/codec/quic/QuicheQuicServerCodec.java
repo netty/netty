@@ -28,10 +28,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 /**
- * {@link QuicCodec} for QUIC servers.
+ * {@link QuicheQuicCodec} for QUIC servers.
  */
-public final class QuicServerCodec extends QuicCodec {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicServerCodec.class);
+final class QuicheQuicServerCodec extends QuicheQuicCodec {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicServerCodec.class);
 
     private final ChannelHandler quicChannelHandler;
     private final QuicConnectionIdAddressGenerator connectionIdAddressGenerator;
@@ -41,8 +41,9 @@ public final class QuicServerCodec extends QuicCodec {
     private ByteBuf mintTokenBuffer;
     private ByteBuf connIdBuffer;
 
-    QuicServerCodec(long config, QuicTokenHandler tokenHandler,
-                    QuicConnectionIdAddressGenerator connectionIdAddressGenerator, ChannelHandler quicChannelHandler) {
+    QuicheQuicServerCodec(long config, QuicTokenHandler tokenHandler,
+                          QuicConnectionIdAddressGenerator connectionIdAddressGenerator,
+                          ChannelHandler quicChannelHandler) {
         super(config, tokenHandler.maxTokenLength());
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;

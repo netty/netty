@@ -805,7 +805,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     /**
-     * Just a container to pass the {@link QuicheQuicChannel} to {@link QuicClientCodec}.
+     * Just a container to pass the {@link QuicheQuicChannel} to {@link QuicheQuicClientCodec}.
      */
     private static final class QuicheQuicChannelAddress extends SocketAddress {
 

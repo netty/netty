@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.ChannelHandler;
+
 import java.util.Objects;
 
 /**
@@ -35,15 +37,15 @@ public final class QuicServerBuilder extends QuicBuilder<QuicServerBuilder> {
     }
 
     /**
-     * Build a new {@link QuicServerCodec}.
+     * Build a new {@link QuicheQuicServerCodec}.
      *
      * @param tokenHandler the {@link QuicTokenHandler} that is used to generate and validate tokens.
      * @param quicChannelInitializer the {@link QuicChannelInitializer} that is used to initalize accepted
      *                               {@link QuicChannel}s and remote-initiated {@link QuicStreamChannel}s.
      * @return a new codec.
      */
-    public QuicServerCodec buildCodec(QuicTokenHandler tokenHandler,
-                                      QuicChannelInitializer quicChannelInitializer) {
+    public ChannelHandler buildCodec(QuicTokenHandler tokenHandler,
+                                     QuicChannelInitializer quicChannelInitializer) {
         Objects.requireNonNull(tokenHandler, "tokenHandler");
         Objects.requireNonNull(quicChannelInitializer, "quicChannelHandler");
         QuicConnectionIdAddressGenerator generator = connectionIdAddressGenerator;
@@ -51,6 +53,6 @@ public final class QuicServerBuilder extends QuicBuilder<QuicServerBuilder> {
             generator = QuicConnectionIdAddress.randomGenerator();
         }
 
-        return new QuicServerCodec(createConfig(), tokenHandler, generator, quicChannelInitializer);
+        return new QuicheQuicServerCodec(createConfig(), tokenHandler, generator, quicChannelInitializer);
     }
 }

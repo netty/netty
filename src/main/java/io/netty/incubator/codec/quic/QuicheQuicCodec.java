@@ -36,8 +36,8 @@ import java.util.Queue;
 /**
  * Abstract base class for QUIC codecs.
  */
-public abstract class QuicCodec extends ChannelDuplexHandler {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicCodec.class);
+abstract class QuicheQuicCodec extends ChannelDuplexHandler {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
 
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
@@ -56,7 +56,7 @@ public abstract class QuicCodec extends ChannelDuplexHandler {
 
     protected final long config;
 
-    QuicCodec(long config, int maxTokenLength) {
+    QuicheQuicCodec(long config, int maxTokenLength) {
         this.config = config;
         this.maxTokenLength = maxTokenLength;
     }
