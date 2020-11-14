@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -41,30 +42,29 @@ public final class QuicClientExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        QuicClientCodec codec = new QuicClientCodecBuilder()
-                .certificateChain("./src/test/resources/cert.crt")
-                .privateKey("./src/test/resources/cert.key")
-                .applicationProtocols(proto)
-                .maxIdleTimeout(5000)
-                .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
-                .initialMaxData(10000000)
-                .initialMaxStreamDataBidirectionalLocal(1000000)
-                .initialMaxStreamDataBidirectionalRemote(1000000)
-                .initialMaxStreamsBidirectional(100)
-                .initialMaxStreamsUnidirectional(100)
-                .disableActiveMigration(true)
-                .enableEarlyData().buildClientCodec();
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
-                    .handler(codec)
+                    // We don't want any special handling of the channel so just use a dummy handler.
+                    .handler(new ChannelHandlerAdapter() { })
                     .connect(new InetSocketAddress(NetUtil.LOCALHOST4, 9999)).sync().channel();
 
-            Bootstrap quicBootstrap = new Bootstrap();
-            QuicChannel quicChannel = (QuicChannel)
-                    quicBootstrap.group(channel.eventLoop())
-                            .channelFactory(QuicClientCodecBuilder.newChannelFactory(codec))
+            Bootstrap quicClientBootstrap = new QuicClientBuilder()
+                    .certificateChain("./src/test/resources/cert.crt")
+                    .privateKey("./src/test/resources/cert.key")
+                    .applicationProtocols(proto)
+                    .maxIdleTimeout(5000)
+                    .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
+                    .initialMaxData(10000000)
+                    .initialMaxStreamDataBidirectionalLocal(1000000)
+                    .initialMaxStreamDataBidirectionalRemote(1000000)
+                    .initialMaxStreamsBidirectional(100)
+                    .initialMaxStreamsUnidirectional(100)
+                    .disableActiveMigration(true)
+                    .enableEarlyData().buildBootstrap(channel);
+
+            QuicChannel quicChannel = (QuicChannel) quicClientBootstrap
                             .handler(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelActive(ChannelHandlerContext ctx) {

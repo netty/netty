@@ -18,17 +18,17 @@ package io.netty.incubator.codec.quic;
 import java.util.Objects;
 
 /**
- * {@link QuicCodecBuilder} which allows to build {@link QuicServerCodec}s.
+ * {@link QuicBuilder} for the server side.
  */
-public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCodecBuilder> {
-    public QuicServerCodecBuilder() { }
+public final class QuicServerBuilder extends QuicBuilder<QuicServerBuilder> {
+    public QuicServerBuilder() { }
 
     private QuicConnectionIdAddressGenerator connectionIdAddressGenerator;
 
     /**
      * Sets the QuicConnectionIdAddressGenerator to use.
      */
-    public QuicServerCodecBuilder connectionIdAddressGenerator(
+    public QuicServerBuilder connectionIdAddressGenerator(
             QuicConnectionIdAddressGenerator connectionIdAddressGenerator) {
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         return this;
@@ -42,8 +42,8 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      *                               {@link QuicChannel}s and remote-initiated {@link QuicStreamChannel}s.
      * @return a new codec.
      */
-    public QuicServerCodec buildServerCodec(QuicTokenHandler tokenHandler,
-                                            QuicChannelInitializer quicChannelInitializer) {
+    public QuicServerCodec buildCodec(QuicTokenHandler tokenHandler,
+                                      QuicChannelInitializer quicChannelInitializer) {
         Objects.requireNonNull(tokenHandler, "tokenHandler");
         Objects.requireNonNull(quicChannelInitializer, "quicChannelHandler");
         QuicConnectionIdAddressGenerator generator = connectionIdAddressGenerator;

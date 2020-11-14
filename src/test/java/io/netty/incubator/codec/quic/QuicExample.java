@@ -40,7 +40,7 @@ public final class QuicExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        QuicServerCodec codec = new QuicServerCodecBuilder()
+        QuicServerCodec codec = new QuicServerBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
@@ -53,7 +53,7 @@ public final class QuicExample {
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
                 .enableEarlyData()
-                .buildServerCodec(InsecureQuicTokenHandler.INSTANCE,
+                .buildCodec(InsecureQuicTokenHandler.INSTANCE,
                         new QuicChannelInitializer(
                                 // ChannelHandler that is added into QuicChannel pipeline.
                                 new ChannelInboundHandlerAdapter() {

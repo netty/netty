@@ -16,9 +16,9 @@
 package io.netty.incubator.codec.quic;
 
 /**
- * Build a {@link QuicServerCodec} that can be used in a {@link io.netty.channel.ChannelPipeline}.
+ * Builder for QUIC.
  */
-public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
+public abstract class QuicBuilder<B extends QuicBuilder<B>> {
     private String certPath;
     private String keyPath;
     private Boolean verifyPeer;
@@ -38,7 +38,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
 
-    QuicCodecBuilder() { }
+    QuicBuilder() { }
 
     @SuppressWarnings("unchecked")
     protected final B self() {

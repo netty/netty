@@ -15,24 +15,31 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.ChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 
 /**
- * {@link QuicCodecBuilder} which allows to build {@link QuicClientCodec}s.
+ * {@link QuicBuilder} for the client side.
  */
-public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
+public final class QuicClientBuilder extends QuicBuilder<QuicClientBuilder> {
 
     /**
      * Build a new {@link QuicClientCodec}.
      */
-    public QuicClientCodec buildClientCodec() {
+    public QuicClientCodec buildCodec() {
         return new QuicClientCodec(createConfig());
     }
 
     /**
-     * Returns {@link ChannelFactory} that can be used to bootstrap {@link QuicChannel}s.
+     * Build a new {@link Bootstrap} which can be used for {@link QuicChannel}s and is using the given
+     * {@link Channel} as underlying transport.
+     *
+     * <strong>Each {@link Channel} can only be used to build one QUIC bootstrap.</strong>
      */
-    public static ChannelFactory<QuicChannel> newChannelFactory(QuicClientCodec codec) {
-        return codec.newChannelFactory();
+    public Bootstrap buildBootstrap(Channel channel) {
+        QuicClientCodec codec = buildCodec();
+        channel.pipeline().addLast(codec);
+        return new Bootstrap().group(channel.eventLoop())
+                .channelFactory(new QuicheQuicChannelFactory(channel));
     }
 }

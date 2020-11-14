@@ -68,10 +68,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final long[] writableStreams = new long[1024];
     // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
-    private final InetSocketAddress remote;
     private final ChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
+    private final InetSocketAddress remote;
 
     private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
         @Override
@@ -670,6 +670,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 channelPromise.setFailure(new ConnectionPendingException());
                 return;
             }
+
             if (remote instanceof QuicConnectionIdAddress) {
                 if (key != null) {
                     // If a key is assigned we know this channel was already connected.
