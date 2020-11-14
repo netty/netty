@@ -15,26 +15,26 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
 
 /**
- * Creates a new {@link QuicConnectionIdAddress} instaces.
+ * Creates new connection id instances.
  */
-public interface QuicConnectionIdAddressGenerator {
+public interface QuicConnectionIdGenerator {
     /**
-     * Creates a new {@link QuicConnectionIdAddress} with the maximum length.
+     * Creates a new {@link QuicConnectionAddress} with the maximum length.
      */
-    QuicConnectionIdAddress newAddress();
+    ByteBuffer newId();
     /**
-     * Creates a new {@link QuicConnectionIdAddress} with the given length.
+     * Creates a new {@link QuicConnectionAddress} with the given length.
      */
-    QuicConnectionIdAddress newAddress(int length);
+    ByteBuffer newId(int length);
 
     /**
-     * Creates a new {@link QuicConnectionIdAddress} with the given length. The given input may be used to sign or
-     * seed the the id, or may be ignored (depending on the implementation).
+     * Creates a new connection id with the given length. The given input may be used to sign or
+     * seed the id, or may be ignored (depending on the implementation).
      */
-    QuicConnectionIdAddress newAddress(ByteBuf input, int length);
+    ByteBuffer newId(ByteBuffer input, int length);
 
     /**
      * Returns the maximum length of a connection id.

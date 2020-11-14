@@ -34,7 +34,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicServerCodec.class);
 
     private final ChannelHandler quicChannelHandler;
-    private final QuicConnectionIdAddressGenerator connectionIdAddressGenerator;
+    private final QuicConnectionIdGenerator connectionIdAddressGenerator;
     private final QuicTokenHandler tokenHandler;
     // TODO: Make this configurable ?
     private static final int MAX_LOCAL_CONN_ID = Quiche.QUICHE_MAX_CONN_ID_LEN;
@@ -42,7 +42,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private ByteBuf connIdBuffer;
 
     QuicheQuicServerCodec(long config, QuicTokenHandler tokenHandler,
-                          QuicConnectionIdAddressGenerator connectionIdAddressGenerator,
+                          QuicConnectionIdGenerator connectionIdAddressGenerator,
                           ChannelHandler quicChannelHandler) {
         super(config, tokenHandler.maxTokenLength());
         this.tokenHandler = tokenHandler;
@@ -106,9 +106,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             // The remote peer did not send a token.
             tokenHandler.writeToken(mintTokenBuffer, dcid, sender);
 
-            QuicConnectionIdAddress connId = connectionIdAddressGenerator.newAddress(dcid,
-                    MAX_LOCAL_CONN_ID);
-            connIdBuffer.writeBytes(connId.connId);
+            ByteBuffer connId = connectionIdAddressGenerator.newId(
+                    dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), MAX_LOCAL_CONN_ID);
+            connIdBuffer.writeBytes(connId);
 
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
             int outWriterIndex = out.writerIndex();

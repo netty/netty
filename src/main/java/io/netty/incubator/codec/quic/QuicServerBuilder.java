@@ -25,13 +25,13 @@ import java.util.Objects;
 public final class QuicServerBuilder extends QuicBuilder<QuicServerBuilder> {
     public QuicServerBuilder() { }
 
-    private QuicConnectionIdAddressGenerator connectionIdAddressGenerator;
+    private QuicConnectionIdGenerator connectionIdAddressGenerator;
 
     /**
      * Sets the QuicConnectionIdAddressGenerator to use.
      */
     public QuicServerBuilder connectionIdAddressGenerator(
-            QuicConnectionIdAddressGenerator connectionIdAddressGenerator) {
+            QuicConnectionIdGenerator connectionIdAddressGenerator) {
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         return this;
     }
@@ -48,9 +48,9 @@ public final class QuicServerBuilder extends QuicBuilder<QuicServerBuilder> {
                                      QuicChannelInitializer quicChannelInitializer) {
         Objects.requireNonNull(tokenHandler, "tokenHandler");
         Objects.requireNonNull(quicChannelInitializer, "quicChannelHandler");
-        QuicConnectionIdAddressGenerator generator = connectionIdAddressGenerator;
+        QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
         if (generator == null) {
-            generator = QuicConnectionIdAddress.randomGenerator();
+            generator = randomGenerator();
         }
 
         return new QuicheQuicServerCodec(createConfig(), tokenHandler, generator, quicChannelInitializer);

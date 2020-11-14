@@ -15,6 +15,9 @@
  */
 package io.netty.incubator.codec.quic;
 
+import java.nio.ByteBuffer;
+import java.security.SecureRandom;
+
 /**
  * Builder for QUIC.
  */
@@ -277,6 +280,46 @@ public abstract class QuicBuilder<B extends QuicBuilder<B>> {
         } catch (Throwable cause) {
             Quiche.quiche_config_free(config);
             throw cause;
+        }
+    }
+
+    /**
+     * Return a {@link QuicConnectionIdGenerator} which randomly generates new connection ids.
+     */
+    public static QuicConnectionIdGenerator randomGenerator() {
+        return SecureRandomQuicConnectionIdGenerator.INSTANCE;
+    }
+
+    private static final class SecureRandomQuicConnectionIdGenerator implements QuicConnectionIdGenerator {
+        private static final SecureRandom RANDOM = new SecureRandom();
+
+        public static final QuicConnectionIdGenerator INSTANCE = new SecureRandomQuicConnectionIdGenerator();
+
+        private SecureRandomQuicConnectionIdGenerator() { }
+
+        @Override
+        public ByteBuffer newId() {
+            return newId(maxConnectionIdLength());
+        }
+
+        @Override
+        public ByteBuffer newId(int length) {
+            if (length > maxConnectionIdLength()) {
+                throw new IllegalArgumentException();
+            }
+            byte[] bytes = new byte[length];
+            RANDOM.nextBytes(bytes);
+            return ByteBuffer.wrap(bytes);
+        }
+
+        @Override
+        public ByteBuffer newId(ByteBuffer buffer, int length) {
+            return newId(length);
+        }
+
+        @Override
+        public int maxConnectionIdLength() {
+            return Quiche.QUICHE_MAX_CONN_ID_LEN;
         }
     }
 }

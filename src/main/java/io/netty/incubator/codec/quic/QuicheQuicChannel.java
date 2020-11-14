@@ -71,7 +71,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
-    private final InetSocketAddress remote;
 
     private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
         @Override
@@ -121,7 +120,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean connectionSendNeeded;
     private ByteBuf finBuffer;
     private ChannelPromise connectPromise;
-    private byte[] connectId;
+    private ByteBuffer connectId;
     private ByteBuffer key;
 
     private static final int CLOSED = 0;
@@ -129,6 +128,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final int ACTIVE = 2;
     private volatile int state;
     private volatile String traceId;
+    private volatile InetSocketAddress remote;
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
                       InetSocketAddress remote) {
@@ -161,7 +161,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         assert this.connAddr == -1;
         assert this.traceId == null;
         assert this.key == null;
-        ByteBuf idBuffer = alloc().directBuffer(connectId.length).writeBytes(connectId);
+        ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
         try {
             long connection = Quiche.quiche_connect(null, idBuffer.memoryAddress() + idBuffer.readerIndex(),
                     idBuffer.readableBytes(), configAddr);
@@ -178,7 +178,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             this.connAddr = connection;
 
             connectionSendNeeded = true;
-            key = ByteBuffer.wrap(connectId);
+            key = connectId;
         } finally {
             idBuffer.release();
         }
@@ -671,16 +671,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 return;
             }
 
-            if (remote instanceof QuicConnectionIdAddress) {
+            if (remote instanceof QuicConnectionAddress) {
                 if (key != null) {
                     // If a key is assigned we know this channel was already connected.
                     channelPromise.setFailure(new AlreadyConnectedException());
                     return;
                 }
 
+                QuicConnectionAddress address = (QuicConnectionAddress) remote;
                 connectPromise = channelPromise;
-                connectId = ((QuicConnectionIdAddress) remote).connId;
-
+                connectId = address.connId.duplicate();
+                if (address.remote != null) {
+                    QuicheQuicChannel.this.remote = address.remote;
+                }
                 parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this));
                 return;
             }

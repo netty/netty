@@ -48,7 +48,7 @@ public final class QuicClientExample {
                     .channel(NioDatagramChannel.class)
                     // We don't want any special handling of the channel so just use a dummy handler.
                     .handler(new ChannelHandlerAdapter() { })
-                    .connect(new InetSocketAddress(NetUtil.LOCALHOST4, 9999)).sync().channel();
+                    .bind(0).sync().channel();
 
             Bootstrap quicClientBootstrap = new QuicClientBuilder()
                     .certificateChain("./src/test/resources/cert.crt")
@@ -72,7 +72,8 @@ public final class QuicClientExample {
                                     // stream and so send a fin.
                                     ctx.close();
                                 }
-                            })).connect(QuicConnectionIdAddress.random()).sync().channel();
+                            })).connect(QuicConnectionAddress.random(
+                                    new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {
