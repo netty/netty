@@ -87,7 +87,9 @@ public final class QuicClientExample {
                         @Override
                         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                             // Close the connection once the remote peer did close this stream.
-                            ctx.channel().parent().close();
+                            ((QuicChannel) ctx.channel().parent()).close(true, 0,
+                                    ctx.alloc().directBuffer(16)
+                                            .writeBytes(new byte[] {'k', 't', 'h', 'x', 'b', 'y', 'e'}));
                         }
                     }).sync().getNow();
             ByteBuf buffer = Unpooled.directBuffer();

@@ -63,6 +63,23 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         OK
     }
 
+    private static final class CloseData implements ChannelFutureListener {
+        final boolean applicationClose;
+        final int err;
+        final ByteBuf reason;
+
+        CloseData(boolean applicationClose, int err, ByteBuf reason) {
+            this.applicationClose = applicationClose;
+            this.err = err;
+            this.reason = reason;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) {
+            reason.release();
+        }
+    }
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[1024];
     private final long[] writableStreams = new long[1024];
@@ -122,6 +139,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ChannelPromise connectPromise;
     private ByteBuffer connectId;
     private ByteBuffer key;
+    private CloseData closeData;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -129,7 +147,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
     private volatile InetSocketAddress remote;
-
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
                       InetSocketAddress remote) {
         super(parent);
@@ -260,6 +277,43 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
+    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason) {
+        return close(applicationClose, error, reason, newPromise());
+    }
+
+    @Override
+    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+        if (eventLoop().inEventLoop()) {
+            close0(applicationClose, error, reason, promise);
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    close0(applicationClose, error, reason, promise);
+                }
+            });
+        }
+        return promise;
+    }
+
+    private void close0(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+        if (closeData == null) {
+            if (!reason.hasMemoryAddress()) {
+                // Copy to direct buffer as that's what we need.
+                ByteBuf copy = alloc().directBuffer(reason.readableBytes()).writeBytes(reason);
+                reason.release();
+                reason = copy;
+            }
+            closeData = new CloseData(applicationClose, error, reason);
+            promise.addListener(closeData);
+        } else {
+            // We already have a close scheduled that uses a close data. Lets release the buffer early.
+            reason.release();
+        }
+        close(promise);
+    }
+
+    @Override
     public String toString() {
         String traceId = this.traceId;
         if (traceId == null) {
@@ -302,8 +356,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     protected void doClose() throws Exception {
         state = CLOSED;
-        Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), false, 0,
-                Unpooled.EMPTY_BUFFER.memoryAddress(), 0));
+
+        final boolean app;
+        final int err;
+        final ByteBuf reason;
+        if (closeData == null) {
+            app = false;
+            err = 0;
+            reason = Unpooled.EMPTY_BUFFER;
+        } else {
+            app = closeData.applicationClose;
+            err = closeData.err;
+            reason = closeData.reason;
+            closeData = null;
+        }
+        Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
+                reason.memoryAddress() + reason.readerIndex(), reason.readableBytes()));
     }
 
     @Override
