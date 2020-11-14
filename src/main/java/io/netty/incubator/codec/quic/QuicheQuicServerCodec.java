@@ -58,6 +58,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) {
+        super.handlerRemoved(ctx);
+        connIdBuffer.release();
+        mintTokenBuffer.release();
+    }
+
+    @Override
     protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
                                                InetSocketAddress recipient, byte type, int version,
                                                ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
