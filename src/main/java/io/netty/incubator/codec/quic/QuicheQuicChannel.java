@@ -71,6 +71,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final InetSocketAddress remote;
     private final ChannelConfig config;
     private final boolean server;
+    private final QuicStreamIdGenerator idGenerator;
 
     private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
         @Override
@@ -134,6 +135,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         super(parent);
         config = new DefaultChannelConfig(this);
         this.server = server;
+        this.idGenerator = new QuicStreamIdGenerator(server);
         this.key = key;
         if (server) {
             state = ACTIVE;
@@ -628,25 +630,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
-        // See https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-2.1
-        private long nextBidirectionalStreamId = server ? 1 : 0;
-        private long nextUnidirectionalStreamId = server ? 3 : 2;
-
-        private long nextStreamId(boolean bidirectional) {
-            if (bidirectional) {
-                long stream = nextBidirectionalStreamId;
-                nextBidirectionalStreamId += 4;
-                return stream;
-            } else {
-                long stream = nextUnidirectionalStreamId;
-                nextUnidirectionalStreamId += 4;
-                return stream;
-            }
-        }
 
         void connectStream(QuicStreamType type, ChannelHandler handler,
                            Promise<QuicStreamChannel> promise) {
-            long streamId = nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
+            long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {
                 // TODO: We could make this a bit more efficient by waiting until we have some data to send.
                 streamSend(streamId, Unpooled.EMPTY_BUFFER, false);
