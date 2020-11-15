@@ -15,6 +15,7 @@
  */
 
 /**
- * A client that uses netty-dns and gets compiled to a native image.
+ * A client that triggers runtime initialization of NetUtil when
+ * built to a native image.
  */
 package io.netty.testsuite.svm.client;
