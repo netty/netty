@@ -96,8 +96,11 @@ public final class QuicClientExample {
             buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
             streamChannel.writeAndFlush(buffer);
 
+            // Wait for the stream channel and quic channel to be closed. After this is done we will
+            // close the underlying datagram channel.
             streamChannel.closeFuture().sync();
-            channel.closeFuture().sync();
+            quicChannel.closeFuture().sync();
+            channel.close().sync();
         } finally {
             group.shutdownGracefully();
         }
