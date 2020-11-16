@@ -534,7 +534,7 @@ final class UnsafeByteBufUtil {
         buf.checkIndex(index, length);
         // we need to check not null for src as it may cause the JVM crash
         // See https://github.com/netty/netty/issues/10791
-        checkNotNull(src, "src");
+        requireNonNull(src, "src");
         if (isOutOfBounds(srcIndex, length, src.length)) {
             throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
         }
