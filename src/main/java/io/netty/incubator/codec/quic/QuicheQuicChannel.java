@@ -227,6 +227,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void forceClose() {
+        if (isConnDestroyed()) {
+            // Just return if we already destroyed the underlying connection.
+            return;
+        }
         unsafe().close(voidPromise());
         // making sure that connection statistics is avaliable
         // even after channel is closed

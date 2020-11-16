@@ -71,7 +71,7 @@ final class QuicTestUtils {
                 .enableEarlyData().buildBootstrap(channel);
     }
 
-    static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
+    static Bootstrap newServerBootstrap(QuicChannelInitializer channelInitializer) throws Exception {
         ChannelHandler codec = new QuicServerBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
@@ -90,7 +90,11 @@ final class QuicTestUtils {
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(codec)
-                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
+                .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+    }
+
+    static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
+        return newServerBootstrap(channelInitializer).bind().sync().channel();
     }
 
     static void closeParent(ChannelFuture future) throws Exception {
