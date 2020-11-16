@@ -18,10 +18,14 @@ package io.netty.incubator.codec.quic;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.util.NetUtil;
+
+import java.net.InetSocketAddress;
 
 final class QuicTestUtils {
 
@@ -50,7 +54,7 @@ final class QuicTestUtils {
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(new ChannelHandlerAdapter() { })
-                .bind(0).sync().channel();
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
 
         return new QuicClientBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
@@ -65,6 +69,28 @@ final class QuicTestUtils {
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
                 .enableEarlyData().buildBootstrap(channel);
+    }
+
+    static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
+        ChannelHandler codec = new QuicServerBuilder()
+                .certificateChain("./src/test/resources/cert.crt")
+                .privateKey("./src/test/resources/cert.key")
+                .applicationProtocols(PROTOS)
+                .maxIdleTimeout(5000)
+                .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
+                .initialMaxData(10000000)
+                .initialMaxStreamDataBidirectionalLocal(1000000)
+                .initialMaxStreamDataBidirectionalRemote(1000000)
+                .initialMaxStreamsBidirectional(100)
+                .initialMaxStreamsUnidirectional(100)
+                .disableActiveMigration(true)
+                .enableEarlyData().buildCodec(InsecureQuicTokenHandler.INSTANCE, channelInitializer);
+        Bootstrap bs = new Bootstrap();
+        return bs.group(GROUP)
+                .channel(NioDatagramChannel.class)
+                // We don't want any special handling of the channel so just use a dummy handler.
+                .handler(codec)
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
     }
 
     static void closeParent(ChannelFuture future) throws Exception {

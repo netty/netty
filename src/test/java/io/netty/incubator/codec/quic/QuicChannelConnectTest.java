@@ -27,9 +27,14 @@ import org.junit.Test;
 
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ConnectionPendingException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -89,15 +94,52 @@ public class QuicChannelConnectTest {
         }
     }
 
+    @Test
+    public void testConnectAlreadyConnected() throws Throwable {
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+        ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
+
+        Channel server = QuicTestUtils.newServer(
+                new QuicChannelInitializer(serverQuicChannelHandler, serverQuicStreamHandler));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        ChannelFuture future = null;
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
+            future = bootstrap
+                    .handler(clientQuicChannelHandler)
+                    .connect(QuicConnectionAddress.random(address));
+            assertTrue(future.await().isSuccess());
+
+            // Try to connect again
+            ChannelFuture connectFuture = future.channel().connect(QuicConnectionAddress.random(address));
+            Throwable cause = connectFuture.await().cause();
+            assertThat(cause, CoreMatchers.instanceOf(AlreadyConnectedException.class));
+            assertTrue(future.channel().close().await().isSuccess());
+            ChannelFuture closeFuture = future.channel().closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            serverQuicChannelHandler.assertState();
+            serverQuicStreamHandler.assertState();
+
+            server.close().syncUninterruptibly();
+            // Close the parent Datagram channel as well.
+            QuicTestUtils.closeParent(future);
+        }
+    }
+
     private static final class ChannelStateVerifyHandler extends ChannelInboundHandlerAdapter {
         private volatile Throwable cause;
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
+            ctx.fireChannelActive();
             fail();
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
+            ctx.fireChannelInactive();
             fail();
         }
 
@@ -110,6 +152,41 @@ public class QuicChannelConnectTest {
             if (cause != null) {
                 throw cause;
             }
+        }
+    }
+
+    private static final class ChannelActiveVerifyHandler extends ChannelInboundHandlerAdapter {
+        private final BlockingQueue<Integer> states = new LinkedBlockingQueue<>();
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) {
+            ctx.fireChannelRegistered();
+            states.add(0);
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) {
+            ctx.fireChannelUnregistered();
+            states.add(3);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            ctx.fireChannelActive();
+            states.add(1);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            ctx.fireChannelInactive();
+            states.add(2);
+        }
+
+        void assertState() throws Throwable {
+            // Check that we receive the different events in the correct order.
+            for (long i = 0; i < 4; i++) {
+                assertEquals(i, (int) states.take());
+            }
+            assertNull(states.poll());
         }
     }
 }
