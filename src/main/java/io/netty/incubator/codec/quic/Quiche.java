@@ -293,6 +293,15 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L361">quiche_conn_stats</a>.
+     * The implementation relies on all fields of
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L340">quiche_stats</a> being numerical.
+     * The assumption made allows passing primitive array rather than dealing with objects.
+     */
+    static native long[] quiche_conn_stats(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L288">quiche_conn_timeout_as_nanos</a>.
      */
     static native long quiche_conn_timeout_as_nanos(long connAddr);

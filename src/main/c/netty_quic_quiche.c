@@ -237,6 +237,27 @@ static jboolean netty_quic_quiche_conn_is_closed(JNIEnv* env, jclass clazz, jlon
     return quiche_conn_is_closed((quiche_conn *) conn) == true ? JNI_TRUE : JNI_FALSE;
 }
 
+static jlongArray netty_quic_quiche_conn_stats(JNIEnv* env, jclass clazz, jlong conn) {
+    quiche_stats stats = {0,0,0,0,0,0};
+    quiche_conn_stats((quiche_conn *) conn, &stats);
+
+    jlongArray statsArray = (*env)->NewLongArray(env, 6);
+    if (statsArray == NULL) {
+        // This will put an OOME on the stack
+        return NULL;
+    }
+    jlong statsArrayElements[] = {
+        (jlong)stats.recv,
+        (jlong)stats.sent,
+        (jlong)stats.lost,
+        (jlong)stats.rtt,
+        (jlong)stats.cwnd,
+        (jlong)stats.delivery_rate,
+    };
+    (*env)->SetLongArrayRegion(env, statsArray, 0, 6, statsArrayElements);
+    return statsArray;
+}
+
 static jlong netty_quic_quiche_conn_timeout_as_nanos(JNIEnv* env, jclass clazz, jlong conn) {
     return quiche_conn_timeout_as_nanos((quiche_conn *) conn);
 }
@@ -451,6 +472,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_is_established", "(J)Z", (void *) netty_quic_quiche_conn_is_established },
   { "quiche_conn_is_in_early_data", "(J)Z", (void *) netty_quic_quiche_conn_is_in_early_data },
   { "quiche_conn_is_closed", "(J)Z", (void *) netty_quic_quiche_conn_is_closed },
+  { "quiche_conn_stats", "(J)[J", (void *) netty_quic_quiche_conn_stats },
   { "quiche_conn_timeout_as_nanos", "(J)J", (void *) netty_quic_quiche_conn_timeout_as_nanos },
   { "quiche_conn_timeout_as_millis", "(J)J", (void *) netty_quic_quiche_conn_timeout_as_millis },
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quic_quiche_conn_on_timeout },

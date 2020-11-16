@@ -25,10 +25,14 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
 public final class QuicExample {
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicExample.class);
 
     private QuicExample() { }
 
@@ -62,6 +66,11 @@ public final class QuicExample {
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                         QuicChannel channel = (QuicChannel) ctx.channel();
                                         // Create streams etc..
+                                    }
+
+                                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                        LOGGER.info("Connection closed: {}",
+                                            ((QuicheQuicChannel) ctx.channel()).collectStats().getNow());
                                     }
 
                                     @Override

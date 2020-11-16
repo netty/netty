@@ -140,6 +140,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ByteBuffer connectId;
     private ByteBuffer key;
     private CloseData closeData;
+    private QuicConnectionStats statsAtClose;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -147,6 +148,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
     private volatile InetSocketAddress remote;
+
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
                       InetSocketAddress remote) {
         super(parent);
@@ -223,6 +225,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     void forceClose() {
         unsafe().close(voidPromise());
+        // making sure that connection statistics is avaliable
+        // even after channel is closed
+        statsAtClose = collectStats0(eventLoop().newPromise());
         Quiche.quiche_conn_free(connAddr);
         connAddr = -1;
         state = CLOSED;
@@ -885,5 +890,43 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         QuicheQuicChannelAddress(QuicheQuicChannel channel) {
             this.channel = channel;
         }
+    }
+
+    @Override
+    public Future<QuicConnectionStats> collectStats() {
+        return collectStats(eventLoop().newPromise());
+    }
+
+    @Override
+    public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
+        if (eventLoop().inEventLoop()) {
+            collectStats0(promise);
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    collectStats0(promise);
+                }
+            });
+        }
+        return promise;
+    }
+
+    private QuicConnectionStats collectStats0(Promise<QuicConnectionStats> promise) {
+        if (isConnDestroyed()) {
+            promise.setSuccess(statsAtClose);
+            return statsAtClose;
+        }
+
+        final long[] stats = Quiche.quiche_conn_stats(connAddr);
+        if (stats == null) {
+            promise.setFailure(new IllegalStateException("native quiche_conn_stats(...) failed"));
+            return null;
+        }
+
+        final QuicheQuicConnectionStats connStats =
+            new QuicheQuicConnectionStats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
+        promise.setSuccess(connStats);
+        return connStats;
     }
 }
