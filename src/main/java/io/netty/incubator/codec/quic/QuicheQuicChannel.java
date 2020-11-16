@@ -267,16 +267,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
-        if (eventLoop().inEventLoop()) {
-            ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
-        } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
-                }
-            });
-        }
+        eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
+            }
+        });
         return promise;
     }
 
@@ -619,7 +615,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             int writable = Quiche.quiche_conn_writable(connAddr, writableStreams);
 
             for (int i = 0; i < writable; i++) {
-                long stream = writableStreams[writable];
+                long stream = writableStreams[i];
                 QuicheQuicStreamChannel streamChannel = streams.get(stream);
                 if (streamChannel != null) {
                     streamChannel.writable();

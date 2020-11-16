@@ -270,24 +270,29 @@ static void netty_quic_quiche_conn_on_timeout(JNIEnv* env, jclass clazz, jlong c
     quiche_conn_on_timeout((quiche_conn *) conn);
 }
 
-static int transfer_to_array_and_free(JNIEnv* env, quiche_stream_iter* iter, jlongArray streams) {
-    int len = (*env)->GetArrayLength(env, streams);
+inline static int transfer_to_array_and_free(JNIEnv* env, quiche_stream_iter* iter, jlong* elements, int len) {
     int i = 0;
-    uint64_t stream_id = 0;
-
-    while (quiche_stream_iter_next(iter, &stream_id) && i < len) {
-        (*env)->SetLongArrayRegion(env, streams, i++, 1, (jlong*) &stream_id);
+    while (quiche_stream_iter_next(iter, (uint64_t*) elements + i) && i < len) {
+        i++;
     }
     quiche_stream_iter_free(iter);
     return i;
 }
 
 static jint netty_quic_quiche_conn_readable(JNIEnv* env, jclass clazz, jlong conn, jlongArray readableStreams) {
-    return transfer_to_array_and_free(env, quiche_conn_readable((quiche_conn *) conn), readableStreams);
+    int len = (*env)->GetArrayLength(env, readableStreams);
+    jlong* elements = (*env)->GetLongArrayElements(env, readableStreams, NULL);
+    int ret = transfer_to_array_and_free(env, quiche_conn_readable((quiche_conn *) conn), elements, len);
+    (*env)->ReleaseLongArrayElements(env, readableStreams, elements, 0);
+    return ret;
 }
 
 static jint netty_quic_quiche_conn_writable(JNIEnv* env, jclass clazz, jlong conn, jlongArray writableStreams) {
-    return transfer_to_array_and_free(env, quiche_conn_writable((quiche_conn *) conn), writableStreams);
+    int len = (*env)->GetArrayLength(env, writableStreams);
+    jlong* elements = (*env)->GetLongArrayElements(env, writableStreams, NULL);
+    int ret = transfer_to_array_and_free(env, quiche_conn_writable((quiche_conn *) conn), elements, len);
+    (*env)->ReleaseLongArrayElements(env, writableStreams, elements, 0);
+    return ret;
 }
 
 static jint netty_quic_quiche_conn_dgram_max_writable_len(JNIEnv* env, jclass clazz, jlong conn) {

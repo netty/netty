@@ -23,6 +23,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -42,6 +44,96 @@ public class QuicChannelEchoTest {
 
     static {
         random.nextBytes(data);
+    }
+
+    @Test
+    public void testEchoStartedFromServerWithAutoRead() throws Throwable {
+        testEchoStartedFromServer(true);
+    }
+
+    @Test
+    public void testEchoStartedFromServerWithoutAutoRead() throws Throwable {
+        testEchoStartedFromServer(false);
+    }
+
+    private void testEchoStartedFromServer(boolean autoRead) throws Throwable {
+        final EchoHandler sh = new EchoHandler(autoRead);
+        final EchoHandler ch = new EchoHandler(autoRead);
+        ChannelFuture future = null;
+        AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
+        Channel server = QuicTestUtils.newServer(
+                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) {
+                        ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
+                                .addListener(new FutureListener<QuicStreamChannel>() {
+                            @Override
+                            public void operationComplete(Future<QuicStreamChannel> future) {
+                                QuicStreamChannel stream = future.getNow();
+                                List<ChannelFuture> futures = new ArrayList<>();
+                                for (int i = 0; i < data.length;) {
+                                    int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+                                    ByteBuf buf = Unpooled.directBuffer().writeBytes(data, i, length);
+                                    futures.add(stream.writeAndFlush(buf));
+                                    i += length;
+                                }
+                                writeFutures.set(futures);
+                            }
+                        });
+                    }
+                }, sh));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        try {
+            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
+            future = bootstrap
+                    .handler(new QuicChannelInitializer(ch))
+                    .connect(QuicConnectionAddress.random(address));
+            assertTrue(future.await().isSuccess());
+
+            waitForData(ch, sh);
+
+            for (;;) {
+                List<ChannelFuture> futures = writeFutures.get();
+                if (futures != null) {
+                    for (ChannelFuture f: futures) {
+                        f.sync();
+                    }
+                    break;
+                }
+
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // Ignore.
+                }
+            }
+            waitForData(sh, ch);
+
+            // Close underlying streams.
+            sh.channel.close().sync();
+            ch.channel.close().sync();
+
+            // Close underlying quic channels
+            sh.channel.parent().close().sync();
+            ch.channel.parent().close().sync();
+
+            if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
+                throw sh.exception.get();
+            }
+            if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
+                throw ch.exception.get();
+            }
+            if (sh.exception.get() != null) {
+                throw sh.exception.get();
+            }
+            if (ch.exception.get() != null) {
+                throw ch.exception.get();
+            }
+        } finally {
+            server.close().syncUninterruptibly();
+            // Close the parent Datagram channel as well.
+            QuicTestUtils.closeParent(future);
+        }
     }
 
     @Test
@@ -82,36 +174,8 @@ public class QuicChannelEchoTest {
             for (ChannelFuture f: futures) {
                 f.sync();
             }
-
-            while (ch.counter < data.length) {
-                if (sh.exception.get() != null) {
-                    break;
-                }
-                if (ch.exception.get() != null) {
-                    break;
-                }
-
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
-
-            while (sh.counter < data.length) {
-                if (sh.exception.get() != null) {
-                    break;
-                }
-                if (ch.exception.get() != null) {
-                    break;
-                }
-
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
+            waitForData(ch, sh);
+            waitForData(sh, ch);
 
             // Close underlying streams.
             sh.channel.close().sync();
@@ -140,6 +204,22 @@ public class QuicChannelEchoTest {
         }
     }
 
+    private static void waitForData(EchoHandler h1, EchoHandler h2) {
+        while (h1.counter < data.length) {
+            if (h2.exception.get() != null) {
+                break;
+            }
+            if (h1.exception.get() != null) {
+                break;
+            }
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
+        }
+    }
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
         volatile Channel channel;
