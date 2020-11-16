@@ -28,6 +28,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
@@ -43,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 /**
  * {@link QuicChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
@@ -137,6 +139,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean connectionSendNeeded;
     private ByteBuf finBuffer;
     private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
     private ByteBuffer connectId;
     private ByteBuffer key;
     private CloseData closeData;
@@ -757,6 +760,36 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (address.remote != null) {
                     QuicheQuicChannel.this.remote = address.remote;
                 }
+
+                // Schedule connect timeout.
+                int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                if (connectTimeoutMillis > 0) {
+                    connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
+                            if (connectPromise != null && !connectPromise.isDone()
+                                    && connectPromise.tryFailure(new ConnectTimeoutException(
+                                    "connection timed out: " + remote))) {
+                                close(voidPromise());
+                            }
+                        }
+                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                }
+
+                connectPromise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) {
+                        if (future.isCancelled()) {
+                            if (connectTimeoutFuture != null) {
+                                connectTimeoutFuture.cancel(false);
+                            }
+                            connectPromise = null;
+                            close(voidPromise());
+                        }
+                    }
+                });
+
                 parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this));
                 return;
             }
