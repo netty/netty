@@ -234,7 +234,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (decompressor != null) {
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
-            // header frames...just remove the content-length header
+            // header frames just remove the content-length header.
             headers.remove(CONTENT_LENGTH);
 
             // The first time that we initialize a decompressor, decorate the local flow controller to
