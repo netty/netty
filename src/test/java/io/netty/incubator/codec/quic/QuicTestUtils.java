@@ -67,6 +67,7 @@ final class QuicTestUtils {
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
+                .initialMaxStreamDataUnidirectional(1000000)
                 .disableActiveMigration(true)
                 .enableEarlyData().buildBootstrap(channel);
     }
@@ -81,6 +82,7 @@ final class QuicTestUtils {
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
                 .initialMaxStreamDataBidirectionalRemote(1000000)
+                .initialMaxStreamDataUnidirectional(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)

@@ -236,6 +236,22 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
         // reset first as streamSendMultiple may notify futures.
         flushPending = false;
+        if (type() == QuicStreamType.UNIDIRECTIONAL && !isLocalCreated()) {
+            if (channelOutboundBuffer.isEmpty()) {
+                // nothing to do.
+                return;
+            }
+
+            UnsupportedOperationException exception = new UnsupportedOperationException(
+                    "Writes on non-local created streams that are unidirectional are not supported");
+            for (;;) {
+                if (!channelOutboundBuffer.remove(exception)) {
+                    // failed all writes.
+                    return;
+                }
+            }
+        }
+
         if (!parent().streamSendMultiple(streamId(), alloc(), channelOutboundBuffer)) {
             flushPending = true;
         }
