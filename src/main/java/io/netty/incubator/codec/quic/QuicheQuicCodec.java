@@ -189,7 +189,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         }
 
         if (writeDone) {
-            ctx.flush();
+            flushNow(ctx);
         }
     }
 
@@ -199,7 +199,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             needsFlush = true;
         } else {
             // We can't really easily aggregate flushes, so just do it now.
-            ctx.flush();
+            flushNow(ctx);
         }
     }
 
@@ -215,13 +215,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 removeIfClosed(entries, channel);
             }
             if (writeDone) {
-                ctx.flush();
+                flushNow(ctx);
             }
         } else {
             // As we batch flushes we need to ensure we at least try to flush a batch once the channel becomes
             // unwritable. Otherwise we may end up with buffering too much writes and so waste memory.
-            needsFlush = false;
-            ctx.flush();
+            flushNow(ctx);
         }
         ctx.fireChannelWritabilityChanged();
     }
@@ -230,5 +229,11 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         if (current.freeIfClosed()) {
             iterator.remove();
         }
+    }
+
+    // Reset the flush state and flush the context.
+    private void flushNow(ChannelHandlerContext ctx) {
+        needsFlush = false;
+        ctx.flush();
     }
 }
