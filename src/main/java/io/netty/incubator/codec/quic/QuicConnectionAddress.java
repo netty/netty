@@ -41,6 +41,7 @@ public final class QuicConnectionAddress extends SocketAddress {
     }
 
     public QuicConnectionAddress(ByteBuffer connId, InetSocketAddress remote) {
+        Quic.ensureAvailability();
         if (connId.remaining() > Quiche.QUICHE_MAX_CONN_ID_LEN) {
             throw new IllegalArgumentException("Connection ID can only be of max length "
                     + Quiche.QUICHE_MAX_CONN_ID_LEN);
