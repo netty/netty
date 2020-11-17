@@ -57,8 +57,8 @@ public class QuicChannelEchoTest {
     }
 
     private void testEchoStartedFromServer(boolean autoRead) throws Throwable {
-        final EchoHandler sh = new EchoHandler(autoRead);
-        final EchoHandler ch = new EchoHandler(autoRead);
+        final EchoHandler sh = new EchoHandler(true, autoRead);
+        final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
         Channel server = QuicTestUtils.newServer(
@@ -117,18 +117,7 @@ public class QuicChannelEchoTest {
             sh.channel.parent().close().sync();
             ch.channel.parent().close().sync();
 
-            if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-                throw sh.exception.get();
-            }
-            if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
-                throw ch.exception.get();
-            }
-            if (sh.exception.get() != null) {
-                throw sh.exception.get();
-            }
-            if (ch.exception.get() != null) {
-                throw ch.exception.get();
-            }
+            checkForException(ch, sh);
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.
@@ -147,8 +136,8 @@ public class QuicChannelEchoTest {
     }
 
     private static void testEchoStartedFromClient(boolean autoRead) throws Throwable {
-        final EchoHandler sh = new EchoHandler(autoRead);
-        final EchoHandler ch = new EchoHandler(autoRead);
+        final EchoHandler sh = new EchoHandler(true, autoRead);
+        final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
         Channel server = QuicTestUtils.newServer(
                 new QuicChannelInitializer(sh));
@@ -163,6 +152,9 @@ public class QuicChannelEchoTest {
             QuicChannel channel = (QuicChannel) future.channel();
             QuicStreamChannel stream = channel.createStream(QuicStreamType.BIDIRECTIONAL, ch).sync().getNow();
 
+            assertEquals(QuicStreamType.BIDIRECTIONAL, stream.type());
+            assertEquals(0, stream.streamId());
+            assertTrue(stream.isLocalCreated());
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
             for (int i = 0; i < data.length;) {
                 int length = Math.min(random.nextInt(1024 * 64), data.length - i);
@@ -184,19 +176,7 @@ public class QuicChannelEchoTest {
             // Close underlying quic channels
             sh.channel.parent().close().sync();
             ch.channel.parent().close().sync();
-
-            if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-                throw sh.exception.get();
-            }
-            if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
-                throw ch.exception.get();
-            }
-            if (sh.exception.get() != null) {
-                throw sh.exception.get();
-            }
-            if (ch.exception.get() != null) {
-                throw ch.exception.get();
-            }
+            checkForException(ch, sh);
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.
@@ -220,13 +200,31 @@ public class QuicChannelEchoTest {
             }
         }
     }
+
+    private static void checkForException(EchoHandler h1, EchoHandler h2) throws Throwable {
+        if (h1.exception.get() != null && !(h1.exception.get() instanceof IOException)) {
+            throw h1.exception.get();
+        }
+        if (h2.exception.get() != null && !(h2.exception.get() instanceof IOException)) {
+            throw h2.exception.get();
+        }
+        if (h1.exception.get() != null) {
+            throw h1.exception.get();
+        }
+        if (h2.exception.get() != null) {
+            throw h2.exception.get();
+        }
+    }
+
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final boolean server;
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int counter;
 
-        EchoHandler(boolean autoRead) {
+        EchoHandler(boolean server, boolean autoRead) {
+            this.server = server;
             this.autoRead = autoRead;
         }
 
@@ -239,6 +237,15 @@ public class QuicChannelEchoTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
+            QuicStreamChannel channel = (QuicStreamChannel)  ctx.channel();
+            assertEquals(QuicStreamType.BIDIRECTIONAL, channel.type());
+            if (channel.isLocalCreated()) {
+                // Server starts with 1, client with 0
+                assertEquals(server ? 1 : 0, channel.streamId());
+            } else {
+                // Server starts with 1, client with 0
+                assertEquals(server ? 0 : 1, channel.streamId());
+            }
             if (!autoRead) {
                 ctx.read();
             }
