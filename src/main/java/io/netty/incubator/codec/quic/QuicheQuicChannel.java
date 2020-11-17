@@ -159,11 +159,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
         this.key = key;
-        if (server) {
-            state = ACTIVE;
-        } else {
-            state = OPEN;
-        }
+        state = OPEN;
+
         this.remote = remote;
         this.connAddr = connAddr;
         this.traceId = traceId;
@@ -267,12 +264,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
-        eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
-            }
-        });
+        if (eventLoop().inEventLoop()) {
+            ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
+                }
+            });
+        }
         return promise;
     }
 
@@ -827,8 +828,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         done = true;
                     }
 
-                    // Notify if we are a client and the connection was not established before.
-                    if (notifyConnectPromiseIfNeeded()) {
+                    // Handle pending channelActive if needed.
+                    if (handlePendingChannelActive()) {
                         // Connection was closed right away.
                         return;
                     }
@@ -866,8 +867,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
-        private boolean notifyConnectPromiseIfNeeded() {
-            if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
+        private boolean handlePendingChannelActive() {
+            if (server) {
+                if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
+                    // We didnt notify before about channelActive... Update state and fire the event.
+                    state = ACTIVE;
+                    pipeline().fireChannelActive();
+                }
+            } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
                 ChannelPromise promise = connectPromise;
                 connectPromise = null;
                 state = ACTIVE;
