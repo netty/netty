@@ -217,6 +217,11 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             if (writeDone) {
                 ctx.flush();
             }
+        } else {
+            // As we batch flushes we need to ensure we at least try to flush a batch once the channel becomes
+            // unwritable. Otherwise we may end up with buffering too much writes and so waste memory.
+            needsFlush = false;
+            ctx.flush();
         }
         ctx.fireChannelWritabilityChanged();
     }
