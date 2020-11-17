@@ -34,7 +34,8 @@ public final class InsecureQuicTokenHandler implements QuicTokenHandler {
     private static final byte[] SERVER_NAME_BYTES = SERVER_NAME.getBytes(CharsetUtil.US_ASCII);
     private static final ByteBuf SERVER_NAME_BUFFER = Unpooled.wrappedBuffer(SERVER_NAME_BYTES);
 
-    private static final int MAX_TOKEN_LEN = Quiche.QUICHE_MAX_CONN_ID_LEN +
+    // Just package-private for unit tests
+    static final int MAX_TOKEN_LEN = Quiche.QUICHE_MAX_CONN_ID_LEN +
             NetUtil.LOCALHOST6.getAddress().length + SERVER_NAME_BYTES.length;
 
     private InsecureQuicTokenHandler() {
