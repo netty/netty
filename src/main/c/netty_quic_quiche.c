@@ -153,6 +153,13 @@ static jlong netty_quic_quiche_accept(JNIEnv* env, jclass clazz, jlong scid, jin
                                  (quiche_config *) config);
 }
 
+static jlong netty_quic_quiche_accept_no_token(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong config) {
+    return (jlong) quiche_accept((const uint8_t *) scid, (size_t) scid_len,
+                                 // No token validation was done before
+                                 NULL, 0,
+                                 (quiche_config *) config);
+}
+
 static jint netty_quic_quiche_conn_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
     return (jint) quiche_conn_recv((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
 }
@@ -463,6 +470,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_negotiate_version", "(JIJIJI)I", (void *) netty_quic_quiche_negotiate_version },
   { "quiche_retry", "(JIJIJIJIIJI)I", (void *) netty_quic_quiche_retry },
   { "quiche_accept", "(JIJIJ)J", (void *) netty_quic_quiche_accept },
+  { "quiche_accept_no_token", "(JIJ)J", (void *) netty_quic_quiche_accept_no_token },
   { "quiche_conn_recv", "(JJI)I", (void *) netty_quic_quiche_conn_recv },
   { "quiche_conn_send", "(JJI)I", (void *) netty_quic_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quic_quiche_conn_free },

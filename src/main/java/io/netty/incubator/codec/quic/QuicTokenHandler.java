@@ -26,8 +26,10 @@ public interface QuicTokenHandler {
 
     /**
      * Generate a new token for the given destination connection id and address. This token is written to {@code out}.
+     * If no token should be generated and so no token validation should take place at all this method should return
+     * {@link false}.
      */
-    void writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address);
+    boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address);
 
     /**
      * Return the given toke and return the offset, {@code -1} is returned if the token is not valid.

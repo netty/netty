@@ -98,45 +98,54 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
         }
 
+        int offset = 0;
+        boolean noToken = false;
         if (!token.isReadable()) {
             // Clear buffers so we can reuse these.
             mintTokenBuffer.clear();
             connIdBuffer.clear();
 
             // The remote peer did not send a token.
-            tokenHandler.writeToken(mintTokenBuffer, dcid, sender);
+            if (tokenHandler.writeToken(mintTokenBuffer, dcid, sender)) {
+                ByteBuffer connId = connectionIdAddressGenerator.newId(
+                        dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), MAX_LOCAL_CONN_ID);
+                connIdBuffer.writeBytes(connId);
 
-            ByteBuffer connId = connectionIdAddressGenerator.newId(
-                    dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), MAX_LOCAL_CONN_ID);
-            connIdBuffer.writeBytes(connId);
+                ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+                int outWriterIndex = out.writerIndex();
+                int written = Quiche.quiche_retry(scid.memoryAddress() + scid.readerIndex(), scid.readableBytes(),
+                        dcid.memoryAddress() + dcid.readerIndex(), dcid.readableBytes(),
+                        connIdBuffer.memoryAddress() + connIdBuffer.readerIndex(), connIdBuffer.readableBytes(),
+                        mintTokenBuffer.memoryAddress() + mintTokenBuffer.readerIndex(),
+                        mintTokenBuffer.readableBytes(),
+                        version, out.memoryAddress() + outWriterIndex, out.writableBytes());
 
-            ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
-            int outWriterIndex = out.writerIndex();
-            int written = Quiche.quiche_retry(scid.memoryAddress() + scid.readerIndex(), scid.readableBytes(),
-                    dcid.memoryAddress() + dcid.readerIndex(), dcid.readableBytes(),
-                    connIdBuffer.memoryAddress() + connIdBuffer.readerIndex(), connIdBuffer.readableBytes(),
-                    mintTokenBuffer.memoryAddress() + mintTokenBuffer.readerIndex(),
-                    mintTokenBuffer.readableBytes(),
-                    version, out.memoryAddress() + outWriterIndex, out.writableBytes());
-
-            if (written < 0) {
-                out.release();
-                Quiche.throwIfError(written);
-            } else {
-                ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written), sender));
+                if (written < 0) {
+                    out.release();
+                    Quiche.throwIfError(written);
+                } else {
+                    ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written), sender));
+                }
+                return null;
             }
-            return null;
-        }
-        int offset = tokenHandler.validateToken(token, sender);
-        if (offset == -1) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));
+            noToken = true;
+        } else {
+            offset = tokenHandler.validateToken(token, sender);
+            if (offset == -1) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));
+                }
+                return null;
             }
-            return null;
         }
 
-        long conn = Quiche.quiche_accept(dcid.memoryAddress() + dcid.readerIndex(), MAX_LOCAL_CONN_ID,
-                token.memoryAddress() + offset, token.readableBytes() - offset, config);
+        final long conn;
+        if (noToken) {
+            conn = Quiche.quiche_accept_no_token(dcid.memoryAddress() + dcid.readerIndex(), MAX_LOCAL_CONN_ID, config);
+        } else {
+            conn = Quiche.quiche_accept(dcid.memoryAddress() + dcid.readerIndex(), MAX_LOCAL_CONN_ID,
+                    token.memoryAddress() + offset, token.readableBytes() - offset, config);
+        }
         if (conn < 0) {
             LOGGER.debug("quiche_accept failed");
             return null;

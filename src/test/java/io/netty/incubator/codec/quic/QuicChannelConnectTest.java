@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -115,6 +116,52 @@ public class QuicChannelConnectTest {
             ChannelFuture connectFuture = future.channel().connect(QuicConnectionAddress.random(address));
             Throwable cause = connectFuture.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(AlreadyConnectedException.class));
+            assertTrue(future.channel().close().await().isSuccess());
+            ChannelFuture closeFuture = future.channel().closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            serverQuicChannelHandler.assertState();
+            serverQuicStreamHandler.assertState();
+
+            server.close().syncUninterruptibly();
+            // Close the parent Datagram channel as well.
+            QuicTestUtils.closeParent(future);
+        }
+    }
+
+    @Test
+    public void testConnectWithoutTokenValidation() throws Throwable {
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+        ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
+
+        Channel server = QuicTestUtils.newServer(new QuicTokenHandler() {
+            // Disable token validation
+            @Override
+            public boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
+                return false;
+            }
+
+            @Override
+            public int validateToken(ByteBuf token, InetSocketAddress address) {
+                return 0;
+            }
+
+            @Override
+            public int maxTokenLength() {
+                return 0;
+            }
+        }, new QuicChannelInitializer(serverQuicChannelHandler, serverQuicStreamHandler));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        ChannelFuture future = null;
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
+            future = bootstrap
+                    .handler(clientQuicChannelHandler)
+                    .connect(QuicConnectionAddress.random(address));
+            assertTrue(future.await().isSuccess());
+
             assertTrue(future.channel().close().await().isSuccess());
             ChannelFuture closeFuture = future.channel().closeFuture().await();
             assertTrue(closeFuture.isSuccess());

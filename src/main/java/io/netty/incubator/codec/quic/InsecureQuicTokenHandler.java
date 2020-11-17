@@ -45,11 +45,12 @@ public final class InsecureQuicTokenHandler implements QuicTokenHandler {
     public static final InsecureQuicTokenHandler INSTANCE = new InsecureQuicTokenHandler();
 
     @Override
-    public void writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
+    public boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
         byte[] addr = address.getAddress().getAddress();
         out.writeBytes(SERVER_NAME_BYTES)
                 .writeBytes(addr)
                 .writeBytes(dcid, dcid.readerIndex(), dcid.readableBytes());
+        return true;
     }
 
     @Override

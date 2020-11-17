@@ -72,7 +72,8 @@ final class QuicTestUtils {
                 .enableEarlyData().buildBootstrap(channel);
     }
 
-    static Bootstrap newServerBootstrap(QuicChannelInitializer channelInitializer) throws Exception {
+    private static Bootstrap newServerBootstrap(
+            QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer) {
         ChannelHandler codec = new QuicServerBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
@@ -86,7 +87,7 @@ final class QuicTestUtils {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
-                .enableEarlyData().buildCodec(InsecureQuicTokenHandler.INSTANCE, channelInitializer);
+                .enableEarlyData().buildCodec(tokenHandler, channelInitializer);
         Bootstrap bs = new Bootstrap();
         return bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
@@ -95,8 +96,13 @@ final class QuicTestUtils {
                 .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
     }
 
+    static Channel newServer(QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer)
+            throws Exception {
+        return newServerBootstrap(tokenHandler, channelInitializer).bind().sync().channel();
+    }
+
     static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
-        return newServerBootstrap(channelInitializer).bind().sync().channel();
+        return newServer(InsecureQuicTokenHandler.INSTANCE, channelInitializer);
     }
 
     static void closeParent(ChannelFuture future) throws Exception {

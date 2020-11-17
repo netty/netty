@@ -214,6 +214,12 @@ final class Quiche {
     static native long quiche_accept(long scidAddr, int scidLen, long odcidAddr, int odcidLen, long configAddr);
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L206">quiche_accept</a> but
+     * used for accepting QUIC connections without token validation.
+     */
+    static native long quiche_accept_no_token(long scidAddr, int scidLen, long configAddr);
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L249">quiche_conn_recv</a>.
      */
     static native int quiche_conn_recv(long connAddr, long bufAddr, int bufLen);
