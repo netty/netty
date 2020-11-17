@@ -366,6 +366,9 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                             close = parent.isStreamFinished(streamId());
                             break;
                         case FIN:
+                            // If we received a FIN we also should mark the channel as non readable as there is nothing
+                            // left to read really.
+                            readable = false;
                             close = true;
                             break;
                         case OK:
