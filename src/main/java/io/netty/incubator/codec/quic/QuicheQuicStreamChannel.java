@@ -338,8 +338,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 }
             }
 
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
+            readComplete(allocHandle, pipeline);
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
                 this.closeOnRead(pipeline);
@@ -376,30 +375,36 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                         default:
                             throw new Error();
                     }
-
                     allocHandle.lastBytesRead(byteBuf.readableBytes());
                     if (allocHandle.lastBytesRead() <= 0) {
                         byteBuf.release();
                         byteBuf = null;
                         break;
                     }
-                    readPending = false;
+                    // We did read one message.
+                    allocHandle.incMessagesRead(1);
                     readCompleteNeeded = true;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading() && !close);
 
-                allocHandle.readComplete();
                 if (readCompleteNeeded) {
-                    pipeline.fireChannelReadComplete();
+                    readComplete(allocHandle, pipeline);
                 }
                 if (close) {
                     closeOnRead(pipeline);
                 }
             } catch (Throwable cause) {
-                readPending = false;
                 handleReadException(pipeline, byteBuf, cause, close, allocHandle);
             }
+        }
+
+        // Read was complete and something was read, so we we need to reset the readPending flags, the allocHandle
+        // and call fireChannelReadComplete(). The user may schedule another read now.
+        private void readComplete(RecvByteBufAllocator.Handle allocHandle, ChannelPipeline pipeline) {
+            readPending = false;
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
         }
     }
 }
