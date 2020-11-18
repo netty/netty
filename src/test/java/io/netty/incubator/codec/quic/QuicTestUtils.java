@@ -49,13 +49,20 @@ final class QuicTestUtils {
     };
 
     static Bootstrap newClientBootstrap() throws Exception {
+        return newClientBootstrap(newQuicClientBuilder());
+    }
+
+    static Bootstrap newClientBootstrap(QuicClientBuilder builder) throws Exception {
         Bootstrap bs = new Bootstrap();
         Channel channel = bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(new ChannelHandlerAdapter() { })
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
+        return builder.buildBootstrap(channel);
+    }
 
+    static QuicClientBuilder newQuicClientBuilder() {
         return new QuicClientBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
@@ -69,7 +76,7 @@ final class QuicTestUtils {
                 .initialMaxStreamsUnidirectional(100)
                 .initialMaxStreamDataUnidirectional(1000000)
                 .disableActiveMigration(true)
-                .enableEarlyData().buildBootstrap(channel);
+                .enableEarlyData();
     }
 
     static QuicServerBuilder newQuicServerBuilder() {

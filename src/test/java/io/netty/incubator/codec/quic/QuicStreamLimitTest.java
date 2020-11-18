@@ -18,7 +18,12 @@ package io.netty.incubator.codec.quic;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
@@ -31,16 +36,16 @@ import static org.junit.Assert.assertTrue;
 public class QuicStreamLimitTest {
 
     @Test
-    public void testStreamLimitEnforcedBidirectional() throws Throwable {
-        testStreamLimitEnforced(QuicStreamType.BIDIRECTIONAL);
+    public void testStreamLimitEnforcedWhenCreatingViaClientBidirectional() throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType.BIDIRECTIONAL);
     }
 
     @Test
-    public void testStreamLimitEnforcedUnidirectional() throws Throwable {
-        testStreamLimitEnforced(QuicStreamType.UNIDIRECTIONAL);
+    public void testStreamLimitEnforcedWhenCreatingViaClientUnidirectional() throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType.UNIDIRECTIONAL);
     }
 
-    private static void testStreamLimitEnforced(QuicStreamType type) throws Throwable {
+    private static void testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType type) throws Throwable {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
@@ -68,6 +73,81 @@ public class QuicStreamLimitTest {
                     type, new ChannelInboundHandlerAdapter()).await().cause();
             assertThat(cause, CoreMatchers.instanceOf(IOException.class));
             stream.close().sync();
+            channel.close().sync();
+        } finally {
+            server.close().syncUninterruptibly();
+            // Close the parent Datagram channel as well.
+            QuicTestUtils.closeParent(future);
+        }
+    }
+
+    @Test
+    public void testStreamLimitEnforcedWhenCreatingViaServerBidirectional() throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType.BIDIRECTIONAL);
+    }
+
+    @Test
+    public void testStreamLimitEnforcedWhenCreatingViaServerUnidirectional() throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType.UNIDIRECTIONAL);
+    }
+
+    private static void testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType type) throws Throwable {
+        Promise<Void> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Throwable> stream2Promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(),
+                InsecureQuicTokenHandler.INSTANCE,
+                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        QuicChannel channel = (QuicChannel) ctx.channel();
+                        channel.createStream(type, new ChannelInboundHandlerAdapter()).addListener(
+                                new FutureListener<QuicStreamChannel>() {
+                            @Override
+                            public void operationComplete(Future<QuicStreamChannel> future) {
+                                if (future.isSuccess()) {
+                                    QuicStreamChannel stream = future.getNow();
+                                    streamPromise.setSuccess(null);
+                                    channel.createStream(type, new ChannelInboundHandlerAdapter()).addListener(
+                                            new FutureListener<QuicStreamChannel>() {
+                                        @Override
+                                        public void operationComplete(Future<QuicStreamChannel> future) {
+                                            stream.close();
+                                            stream2Promise.setSuccess(future.cause());
+                                        }
+                                    });
+                                } else {
+                                    streamPromise.setFailure(future.cause());
+                                }
+                            }
+                        });
+                    }
+
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                }, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                }));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        ChannelFuture future = null;
+        try {
+            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap(QuicTestUtils.newQuicClientBuilder()
+                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1));
+            future = bootstrap
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .connect(QuicConnectionAddress.random(address));
+            assertTrue(future.await().isSuccess());
+            QuicChannel channel = (QuicChannel) future.channel();
+
+            streamPromise.sync();
+            // Second stream creation should fail.
+            assertThat(stream2Promise.get(), CoreMatchers.instanceOf(IOException.class));
             channel.close().sync();
         } finally {
             server.close().syncUninterruptibly();
