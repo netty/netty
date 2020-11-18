@@ -83,8 +83,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    private final long[] readableStreams = new long[1024];
-    private final long[] writableStreams = new long[1024];
+    private final long[] readableStreams = new long[128];
+    private final long[] writableStreams = new long[128];
     // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final ChannelConfig config;
@@ -613,13 +613,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         if (Quiche.quiche_conn_is_established(connAddr) ||
                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
-            int writable = Quiche.quiche_conn_writable(connAddr, writableStreams);
-
-            for (int i = 0; i < writable; i++) {
-                long stream = writableStreams[i];
-                QuicheQuicStreamChannel streamChannel = streams.get(stream);
-                if (streamChannel != null) {
-                    streamChannel.writable();
+            long writableIterator = Quiche.quiche_conn_writable(connAddr);
+            if (writableIterator != -1) {
+                try {
+                    for (;;) {
+                        int writable = Quiche.quiche_stream_iter_next(writableIterator, writableStreams);
+                        for (int i = 0; i < writable; i++) {
+                            long stream = writableStreams[i];
+                            QuicheQuicStreamChannel streamChannel = streams.get(stream);
+                            if (streamChannel != null) {
+                                streamChannel.writable();
+                            }
+                        }
+                        if (writable < writableStreams.length) {
+                            break;
+                        }
+                    }
+                } finally {
+                    Quiche.quiche_stream_iter_free(writableIterator);
                 }
             }
         }
@@ -835,19 +846,31 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
 
                     if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                        int readable = Quiche.quiche_conn_readable(connAddr, readableStreams);
-                        for (int i = 0; i < readable; i++) {
-                            long streamId = readableStreams[i];
-                            QuicheQuicStreamChannel streamChannel = streams.get(streamId);
-                            if (streamChannel == null) {
-                                // We create a new channel and fire it through the pipeline which means we also need
-                                // to ensure we call fireChannelReadCompletePending.
-                                fireChannelReadCompletePending = true;
-                                streamChannel = addNewStreamChannel(streamId);
-                                streamChannel.readable();
-                                pipeline().fireChannelRead(streamChannel);
-                            } else {
-                                streamChannel.readable();
+                        long readableIterator = Quiche.quiche_conn_readable(connAddr);
+                        if (readableIterator != -1) {
+                            try {
+                                for (;;) {
+                                    int readable = Quiche.quiche_stream_iter_next(readableIterator, readableStreams);
+                                    for (int i = 0; i < readable; i++) {
+                                        long streamId = readableStreams[i];
+                                        QuicheQuicStreamChannel streamChannel = streams.get(streamId);
+                                        if (streamChannel == null) {
+                                            // We create a new channel and fire it through the pipeline which
+                                            // means we also need to ensure we call fireChannelReadCompletePending.
+                                            fireChannelReadCompletePending = true;
+                                            streamChannel = addNewStreamChannel(streamId);
+                                            streamChannel.readable();
+                                            pipeline().fireChannelRead(streamChannel);
+                                        } else {
+                                            streamChannel.readable();
+                                        }
+                                    }
+                                    if (readable < readableStreams.length) {
+                                        break;
+                                    }
+                                }
+                            } finally {
+                                Quiche.quiche_stream_iter_free(readableIterator);
                             }
                         }
                     }

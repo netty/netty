@@ -326,23 +326,32 @@ final class Quiche {
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L282">quiche_conn_readable</a> and
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L329">quiche_stream_iter_next</a>.
-     *
-     * This method will fill the {@code readableStreams} array and return the number of streams that were readable. If
-     * the number is the same as the length of the array you should call it again.
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L282">quiche_conn_readable</a>.
      */
-    static native int quiche_conn_readable(long connAddr, long[] readableStreams);
+    static native long quiche_conn_readable(long connAddr);
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L285">quiche_conn_writabe</a> and
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L285">quiche_conn_writable</a>.
+     */
+    static native long quiche_conn_writable(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L329">quiche_stream_iter_next</a>.
      *
-     * This method will fill the {@code writableStreams} array and return the number of streams that were writable. If
-     * the number is the same as the length of the array you should call it again.
+     * This method will fill the {@code streamIds} array and return the number of streams that were filled into
+     * the array. If the number is the same as the length of the array you should call it again until it returns
+     * less to ensure you process all the streams later on.
      */
-    static native int quiche_conn_writable(long connAddr, long[] writableStreams);
+    static native int quiche_stream_iter_next(long iterAddr, long[] streamIds);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L332">quiche_stream_iter_free</a>.
+     *
+     */
+    static native void quiche_stream_iter_free(long iterAddr);
 
     /**
      * See

@@ -28,18 +28,24 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertTrue;
 
 public class QuicReadableTest {
 
     @Test
-    public void test() throws Exception  {
-        final CountDownLatch latch = new CountDownLatch(2048);
+    public void testCorrectlyHandleReadableStreams() throws Exception  {
+        int numOfStreams = 1024;
+        int readStreams = 512;
+        int expectedDataRead = readStreams * Integer.BYTES;
+        final CountDownLatch latch = new CountDownLatch(numOfStreams);
+        final AtomicInteger bytesRead = new AtomicInteger();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
                 new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                    private int counter;
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) {
                         // Ensure we dont read from the streams so all of these will be reported as readable
@@ -48,7 +54,19 @@ public class QuicReadableTest {
 
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
+                        counter++;
                         latch.countDown();
+                        if (counter > readStreams) {
+                            // Now set it to readable again for some channels
+                            ctx.channel().config().setAutoRead(true);
+                        }
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buffer = (ByteBuf) msg;
+                        bytesRead.addAndGet(buffer.readableBytes());
+                        buffer.release();
                     }
 
                     @Override
@@ -68,13 +86,16 @@ public class QuicReadableTest {
 
             ByteBuf data = Unpooled.directBuffer().writeLong(8);
             List<Channel> streams = new ArrayList<>();
-            for (int i = 0; i < 4096 + 1; i++) {
+            for (int i = 0; i < numOfStreams; i++) {
                 QuicStreamChannel stream = channel.createStream(
                         QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
-                streams.add(stream.writeAndFlush(Unpooled.directBuffer().writeLong(8)).sync().channel());
+                streams.add(stream.writeAndFlush(data.retainedSlice()).sync().channel());
             }
             data.release();
             latch.await();
+            while (bytesRead.get() < expectedDataRead) {
+                Thread.sleep(50);
+            }
             for (Channel stream: streams) {
                 stream.close().sync();
             }
