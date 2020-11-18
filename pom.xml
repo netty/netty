@@ -82,6 +82,7 @@
     <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
     <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
     <extraLdflags></extraLdflags>
+    <extraConfigureArg></extraConfigureArg>
   </properties>
 
   <profiles>
@@ -105,6 +106,7 @@
       </activation>
       <properties>
         <extraLdflags>-Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=10.6</extraConfigureArg>
       </properties>
     </profile>
   </profiles>
@@ -461,6 +463,7 @@
               <platform>.</platform>
               <verbose>true</verbose>
               <configureArgs>
+                <configureArg>${extraConfigureArg}</configureArg>
                 <configureArg>CFLAGS=${cflags}</configureArg>
                 <configureArg>LDFLAGS=${ldflags} ${extraLdflags}</configureArg>
                 <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
