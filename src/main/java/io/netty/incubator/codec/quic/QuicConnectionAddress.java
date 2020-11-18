@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /**
  * A {@link QuicConnectionAddress} that can be used to connect too.
@@ -48,6 +49,31 @@ public final class QuicConnectionAddress extends SocketAddress {
         }
         this.connId = connId;
         this.remote = remote;
+    }
+
+    @Override
+    public String toString() {
+        return "QuicConnectionAddress{" +
+                "connId=" + connId +
+                ", remote=" + remote +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(connId, remote);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof QuicConnectionAddress)) {
+            return false;
+        }
+        QuicConnectionAddress address = (QuicConnectionAddress) obj;
+        if (!connId.equals(address.connId)) {
+            return false;
+        }
+        return Objects.equals(remote, address.remote);
     }
 
     /**

@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * A {@link SocketAddress} for QUIC stream.
@@ -33,5 +34,26 @@ public final class QuicStreamAddress extends SocketAddress {
      */
     public long streamId() {
         return streamId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof QuicStreamAddress)) {
+            return false;
+        }
+        QuicStreamAddress that = (QuicStreamAddress) o;
+        return streamId == that.streamId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(streamId);
+    }
+
+    @Override
+    public String toString() {
+        return "QuicStreamAddress{" +
+                "streamId=" + streamId +
+                '}';
     }
 }
