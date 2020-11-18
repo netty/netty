@@ -176,6 +176,31 @@ public class QuicChannelConnectTest {
         }
     }
 
+    @Test
+    public void testConnectWithConnectedDatagramChannel() throws Throwable {
+        Channel server = QuicTestUtils.newServer(
+                new QuicChannelInitializer(new ChannelInboundHandlerAdapter()));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        ChannelFuture future = null;
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            Bootstrap bootstrap = QuicTestUtils.newConnectedClientBootstrap(
+                    QuicTestUtils.newQuicClientBuilder(), address);
+            future = bootstrap
+                    .handler(clientQuicChannelHandler)
+                    .connect(QuicConnectionAddress.random());
+            assertTrue(future.await().isSuccess());
+            assertTrue(future.channel().close().await().isSuccess());
+            ChannelFuture closeFuture = future.channel().closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            server.close().syncUninterruptibly();
+            // Close the parent Datagram channel as well.
+            QuicTestUtils.closeParent(future);
+        }
+    }
+
     private static final class ChannelStateVerifyHandler extends ChannelInboundHandlerAdapter {
         private volatile Throwable cause;
         @Override

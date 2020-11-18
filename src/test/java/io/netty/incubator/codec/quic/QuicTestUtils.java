@@ -62,6 +62,16 @@ final class QuicTestUtils {
         return builder.buildBootstrap(channel);
     }
 
+    static Bootstrap newConnectedClientBootstrap(QuicClientBuilder builder, InetSocketAddress remote) throws Exception {
+        Bootstrap bs = new Bootstrap();
+        Channel channel = bs.group(GROUP)
+                .channel(NioDatagramChannel.class)
+                // We don't want any special handling of the channel so just use a dummy handler.
+                .handler(new ChannelHandlerAdapter() { })
+                .connect(remote).sync().channel();
+        return builder.buildBootstrap(channel);
+    }
+
     static QuicClientBuilder newQuicClientBuilder() {
         return new QuicClientBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
