@@ -83,6 +83,11 @@
     <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
     <extraLdflags></extraLdflags>
     <extraConfigureArg></extraConfigureArg>
+    <!-- We need 10.12 as minimum to compile quiche and use it.
+         Anything below will fail when trying to load quiche with:
+         Symbol not found: ___isPlatformVersionAtLeast
+    -->
+    <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
   </properties>
 
   <profiles>
@@ -106,7 +111,7 @@
       </activation>
       <properties>
         <extraLdflags>-Wl,--exclude-libs,ALL -lrt</extraLdflags>
-        <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=10.6</extraConfigureArg>
+        <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
       </properties>
     </profile>
   </profiles>
@@ -208,16 +213,6 @@
                     <arg value="https://github.com/cloudflare/quiche" />
                     <arg value="${quicheCheckoutDir}" />
                   </exec>
-        
-                  <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
-                    <arg value="build" />
-                  </exec>
-                  <!-- delete the shared library as otherwise we may link against it and not against the static
-                       library.
-                  -->
-                  <delete>
-                    <fileset dir="${quicheBuildDir}" includes="*.so" />
-                  </delete>
                 </else>
               </if>
               <if>
@@ -228,9 +223,27 @@
                 <else>
                   <echo message="Building Quiche" />
 
-                  <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
-                    <arg value="build" />
-                  </exec>
+                  <if>
+                    <equals arg1="${os.detected.name}" arg2="osx" />
+                    <then>
+                      <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                        <arg value="build" />
+                        <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}"/>
+                      </exec>
+                    </then>
+                    <else>
+                      <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                        <arg value="build" />
+                      </exec>
+
+                      <!-- delete the shared library as otherwise we may link against it and not against the static
+                           library.
+                      -->
+                      <delete>
+                        <fileset dir="${quicheBuildDir}" includes="*.so" />
+                      </delete>
+                    </else>
+                  </if>
                 </else>
               </if>
             </target>
