@@ -713,7 +713,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {
                 // TODO: We could make this a bit more efficient by waiting until we have some data to send.
-                streamSend(streamId, Unpooled.EMPTY_BUFFER, false);
+                Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, false));
             } catch (Exception e) {
                 promise.setFailure(e);
                 return;

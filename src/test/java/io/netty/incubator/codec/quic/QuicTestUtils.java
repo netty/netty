@@ -72,9 +72,8 @@ final class QuicTestUtils {
                 .enableEarlyData().buildBootstrap(channel);
     }
 
-    private static Bootstrap newServerBootstrap(
-            QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer) {
-        ChannelHandler codec = new QuicServerBuilder()
+    static QuicServerBuilder newQuicServerBuilder() {
+        return new QuicServerBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(PROTOS)
@@ -86,8 +85,12 @@ final class QuicTestUtils {
                 .initialMaxStreamDataUnidirectional(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
-                .disableActiveMigration(true)
-                .enableEarlyData().buildCodec(tokenHandler, channelInitializer);
+                .disableActiveMigration(true);
+    }
+
+    private static Bootstrap newServerBootstrap(QuicServerBuilder serverBuilder,
+            QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer) {
+        ChannelHandler codec = serverBuilder.buildCodec(tokenHandler, channelInitializer);
         Bootstrap bs = new Bootstrap();
         return bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
@@ -96,9 +99,16 @@ final class QuicTestUtils {
                 .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
     }
 
+    static Channel newServer(QuicServerBuilder serverBuilder, QuicTokenHandler tokenHandler,
+                             QuicChannelInitializer channelInitializer)
+            throws Exception {
+        return newServerBootstrap(serverBuilder, tokenHandler, channelInitializer)
+                .bind().sync().channel();
+    }
+
     static Channel newServer(QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer)
             throws Exception {
-        return newServerBootstrap(tokenHandler, channelInitializer).bind().sync().channel();
+        return newServer(newQuicServerBuilder(), tokenHandler, channelInitializer);
     }
 
     static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
