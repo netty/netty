@@ -40,12 +40,21 @@ public abstract class QuicBuilder<B extends QuicBuilder<B>> {
     private Long maxAckDelay;
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
+    private QuicCongestionControlAlgorithm congestionControlAlgorithm;
 
     QuicBuilder() { }
 
     @SuppressWarnings("unchecked")
     protected final B self() {
         return (B) this;
+    }
+
+    /**
+     * Sets the congestion control algorithm to use.
+     */
+    public final B congestionControlAlgorithm(QuicCongestionControlAlgorithm congestionControlAlgorithm) {
+        this.congestionControlAlgorithm = congestionControlAlgorithm;
+        return self();
     }
 
     /**
@@ -275,6 +284,19 @@ public abstract class QuicBuilder<B extends QuicBuilder<B>> {
             }
             if (enableHystart != null) {
                 Quiche.quiche_config_enable_hystart(config, enableHystart);
+            }
+            if (congestionControlAlgorithm != null) {
+                switch (congestionControlAlgorithm) {
+                    case RENO:
+                        Quiche.quiche_config_set_cc_algorithm(config, Quiche.QUICHE_CC_RENO);
+                        break;
+                    case CUBIC:
+                        Quiche.quiche_config_set_cc_algorithm(config, Quiche.QUICHE_CC_CUBIC);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(
+                                "Unknown congestionControlAlgorithm: " + congestionControlAlgorithm);
+                }
             }
             return config;
         } catch (Throwable cause) {
