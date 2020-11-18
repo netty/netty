@@ -279,7 +279,7 @@ static void netty_quic_quiche_conn_on_timeout(JNIEnv* env, jclass clazz, jlong c
 
 inline static int transfer_to_array_and_free(JNIEnv* env, quiche_stream_iter* iter, jlong* elements, int len) {
     int i = 0;
-    while (quiche_stream_iter_next(iter, (uint64_t*) elements + i) && i < len) {
+    while (i < len && quiche_stream_iter_next(iter, (uint64_t*) elements + i)) {
         i++;
     }
     quiche_stream_iter_free(iter);
