@@ -229,11 +229,15 @@
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
                         <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}"/>
+                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
+                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
                       </exec>
                     </then>
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
+                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
+                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
                       </exec>
 
                       <!-- delete the shared library as otherwise we may link against it and not against the static
