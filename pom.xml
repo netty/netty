@@ -232,6 +232,13 @@
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
                       </exec>
+
+                      <!-- delete the shared library as otherwise we may link against it and not against the static
+                           library.
+                      -->
+                      <delete>
+                        <fileset dir="${quicheBuildDir}" includes="*.dylib" />
+                      </delete>
                     </then>
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
