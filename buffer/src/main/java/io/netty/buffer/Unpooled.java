@@ -211,6 +211,21 @@ public final class Unpooled {
     }
 
     /**
+     * Creates a new buffer which wraps the specified memory address. If {@code doFree} is true the
+     * memoryAddress will automatically be freed once the reference count of the {@link ByteBuf} reaches {@code 0}.
+     * <p>
+     * <strong>Note:</strong> This method is inherently unsafe, and may not be supported on all platforms.
+     */
+    public static ByteBuf wrappedBuffer(long memoryAddress, int size, boolean doFree) {
+        ByteBuffer buffer = PlatformDependent.directBuffer(memoryAddress, size);
+        if (PlatformDependent.hasUnsafe()) {
+            return new UnpooledUnsafeDirectByteBuf(ALLOC, buffer, size, doFree);
+        } else {
+            return new UnpooledDirectByteBuf(ALLOC, buffer, size, doFree, false);
+        }
+    }
+
+    /**
      * Creates a new buffer which wraps the specified buffer's readable bytes.
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
