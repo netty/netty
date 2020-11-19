@@ -132,6 +132,7 @@ public class HttpPostRequestDecoderTest {
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        req.release();
         decoder.destroy();
     }
 
@@ -178,6 +179,7 @@ public class HttpPostRequestDecoderTest {
             assertNotNull(datar);
             assertEquals(datas[i].getBytes(CharsetUtil.UTF_8).length, datar.length);
 
+            req.release();
             decoder.destroy();
         }
     }
@@ -211,6 +213,7 @@ public class HttpPostRequestDecoderTest {
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        req.release();
         decoder.destroy();
     }
 
@@ -368,6 +371,7 @@ public class HttpPostRequestDecoderTest {
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        req.release();
         decoder.destroy();
     }
 
@@ -397,6 +401,7 @@ public class HttpPostRequestDecoderTest {
         assertTrue(part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp 0.txt", fileUpload.getFilename());
+        req.release();
         decoder.destroy();
     }
 
@@ -427,6 +432,7 @@ public class HttpPostRequestDecoderTest {
         // Create decoder instance to test without any exception.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        req.release();
         decoder.destroy();
     }
 
@@ -459,8 +465,8 @@ public class HttpPostRequestDecoderTest {
         FileUpload fileUpload = (FileUpload) part1;
         byte[] fileBytes = fileUpload.get();
         assertTrue("the filecontent should not be decoded", filecontent.equals(new String(fileBytes)));
-        decoder.destroy();
         req.release();
+        decoder.destroy();
     }
 
     @Test
@@ -538,8 +544,8 @@ public class HttpPostRequestDecoderTest {
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertTrue(e.getCause() instanceof IllegalArgumentException);
         } finally {
-            decoder.destroy();
             content.release();
+            decoder.destroy();
         }
     }
 
@@ -573,8 +579,8 @@ public class HttpPostRequestDecoderTest {
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
-        decoder.destroy();
         req.release();
+        decoder.destroy();
     }
 
     // https://github.com/netty/netty/pull/7265
@@ -609,8 +615,8 @@ public class HttpPostRequestDecoderTest {
         assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
-        decoder.destroy();
         req.release();
+        decoder.destroy();
     }
 
     // https://github.com/netty/netty/pull/7265
@@ -704,6 +710,7 @@ public class HttpPostRequestDecoderTest {
         assertTrue(part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp-0.txt", fileUpload.getFilename());
+        req.release();
         decoder.destroy();
     }
 
@@ -752,7 +759,7 @@ public class HttpPostRequestDecoderTest {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/",
                 Unpooled.copiedBuffer("a=1&&b=2", CharsetUtil.US_ASCII));
         try {
-            new HttpPostStandardRequestDecoder(request);
+            new HttpPostStandardRequestDecoder(request).destroy();
         } finally {
             assertTrue(request.release());
         }
@@ -772,7 +779,7 @@ public class HttpPostRequestDecoderTest {
         buf.writeCharSequence("a=b&foo=%22bar%22&==", CharsetUtil.US_ASCII);
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", buf);
         try {
-            new HttpPostStandardRequestDecoder(request);
+            new HttpPostStandardRequestDecoder(request).destroy();
         } finally {
             assertTrue(request.release());
         }
@@ -823,8 +830,8 @@ public class HttpPostRequestDecoderTest {
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
 
-        decoder.destroy();
         req.release();
+        decoder.destroy();
     }
 
     @Test
@@ -860,8 +867,8 @@ public class HttpPostRequestDecoderTest {
         assertTrue(attr.getByteBuf().isDirect());
         assertEquals("los angeles", attr.getValue());
 
-        decoder.destroy();
         req.release();
+        decoder.destroy();
     }
 
     @Test
@@ -877,7 +884,7 @@ public class HttpPostRequestDecoderTest {
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertEquals("Invalid hex byte at index '0' in string: '%'", e.getMessage());
         } finally {
-            req.release();
+            assertTrue(req.release());
         }
     }
 
@@ -894,7 +901,7 @@ public class HttpPostRequestDecoderTest {
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertEquals("Invalid hex byte at index '0' in string: '%2'", e.getMessage());
         } finally {
-            req.release();
+            assertTrue(req.release());
         }
     }
 
@@ -911,7 +918,7 @@ public class HttpPostRequestDecoderTest {
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertEquals("Invalid hex byte at index '0' in string: '%Zc'", e.getMessage());
         } finally {
-            req.release();
+            assertTrue(req.release());
         }
     }
 
@@ -928,7 +935,7 @@ public class HttpPostRequestDecoderTest {
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertEquals("Invalid hex byte at index '0' in string: '%2g'", e.getMessage());
         } finally {
-            req.release();
+            assertTrue(req.release());
         }
     }
 }
