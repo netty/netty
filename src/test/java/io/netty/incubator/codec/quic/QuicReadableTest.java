@@ -38,8 +38,9 @@ public class QuicReadableTest {
     @Test
     public void testCorrectlyHandleReadableStreams() throws Throwable  {
         int numOfStreams = 1024;
-        int readStreams = 512;
-        int expectedDataRead = readStreams * Integer.BYTES;
+        int readStreams = numOfStreams / 2;
+        // We do write longs.
+        int expectedDataRead = readStreams * Long.BYTES;
         final CountDownLatch latch = new CountDownLatch(numOfStreams);
         final AtomicInteger bytesRead = new AtomicInteger();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
@@ -74,7 +75,7 @@ public class QuicReadableTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         serverErrorRef.set(cause);
                     }
 
@@ -99,7 +100,7 @@ public class QuicReadableTest {
                 QuicStreamChannel stream = channel.createStream(
                         QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                 clientErrorRef.set(cause);
                             }
                         }).get();
