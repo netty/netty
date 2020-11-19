@@ -165,7 +165,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                         logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                     }
                 } else {
-                    res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                    res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 }
             }
 
@@ -189,7 +189,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
             String protocol = req.headers().get(HttpHeaderNames.WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.headers().add(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+                res.headers().set(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
         return res;
