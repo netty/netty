@@ -24,13 +24,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import org.checkerframework.checker.units.qual.A;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class QuicConnectionStatsTest {
@@ -39,6 +43,7 @@ public class QuicConnectionStatsTest {
     public void testStatsAreCollected() throws Throwable {
         Channel server = null;
         QuicChannel client = null;
+        AtomicInteger counter = new AtomicInteger();
 
         try {
             Promise<QuicConnectionStats> serverActiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -61,10 +66,21 @@ public class QuicConnectionStatsTest {
                     channel.collectStats(promise);
                 }
             }, new ChannelInboundHandlerAdapter() {
+
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    counter.incrementAndGet();
+                }
+
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     // Let's just echo back the message.
                     ctx.writeAndFlush(msg);
+                }
+
+                @Override
+                public boolean isSharable() {
+                    return true;
                 }
             }));
 
@@ -91,6 +107,7 @@ public class QuicConnectionStatsTest {
                             public void operationComplete(ChannelFuture future) {
                                 // Close the underlying QuicChannel as well.
                                 future.channel().parent().close();
+                                //
                             }
                         });
                     }
@@ -102,6 +119,7 @@ public class QuicConnectionStatsTest {
             assertStats(client.collectStats().sync().getNow());
             assertNotNull(serverActiveStats.sync().getNow());
             assertStats(serverInactiveStats.sync().getNow());
+            assertEquals(1, counter.get());
         } finally {
             QuicTestUtils.closeParent(client);
             if (server != null) {

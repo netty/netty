@@ -44,6 +44,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private boolean readPending;
     private boolean flushPending;
     private boolean inRecv;
+    private boolean finReceived;
 
     private volatile boolean active = true;
     private volatile boolean inputShutdown;
@@ -214,6 +215,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
             // never receive data from the other side.
             parent().streamClosed(streamId());
+        } else {
+            removeStreamFromParent();
         }
     }
 
@@ -255,6 +258,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         if (!parent().streamSendMultiple(streamId(), alloc(), channelOutboundBuffer)) {
             flushPending = true;
+        }
+    }
+
+    private void removeStreamFromParent() {
+        if (!active && finReceived) {
+            parent().streamClosed(streamId());
         }
     }
 
@@ -321,12 +330,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         private void closeOnRead(ChannelPipeline pipeline) {
             // TODO: Improve
-            try {
-                this.close(this.voidPromise());
-            } finally {
-                // Now mark it as closed on the parent.
-                parent().streamClosed(streamId());
-            }
+            this.close(this.voidPromise());
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
@@ -369,23 +373,22 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                     // It's possible that the stream was marked as finish while we iterated over the readable streams
                     // or while we did have auto read disabled. If so we need to ensure we not try to read from it as it
                     // would produce an error.
-                    boolean close = parent.isStreamFinished(streamId());
                     boolean readCompleteNeeded = false;
                     boolean continueReading = true;
                     try {
-                        while (!close && continueReading) {
+                        while (!finReceived && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
                             switch (parent.streamRecv(streamId(), byteBuf)) {
                                 case DONE:
                                     // Nothing left to read;
                                     readable = false;
-                                    close = parent.isStreamFinished(streamId());
+                                    //close = parent.isStreamFinished(streamId());
                                     break;
                                 case FIN:
                                     // If we received a FIN we also should mark the channel as non readable as
                                     // there is nothing left to read really.
                                     readable = false;
-                                    close = true;
+                                    finReceived = true;
                                     break;
                                 case OK:
                                     break;
@@ -414,17 +417,19 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                         if (readCompleteNeeded) {
                             readComplete(allocHandle, pipeline);
                         }
-                        if (close) {
+                        if (finReceived) {
                             readable = false;
                             closeOnRead(pipeline);
                         }
                     } catch (Throwable cause) {
-                        handleReadException(pipeline, byteBuf, cause, close, allocHandle);
+                        readable = false;
+                        handleReadException(pipeline, byteBuf, cause, finReceived, allocHandle);
                     }
                 }
             } finally {
                 // About to leave the method lets reset so we can enter it again.
                 inRecv = false;
+                removeStreamFromParent();
             }
         }
 

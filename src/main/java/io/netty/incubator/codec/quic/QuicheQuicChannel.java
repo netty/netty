@@ -570,6 +570,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         long memoryAddress = buffer.memoryAddress();
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
+        if (recvLen == Quiche.QUICHE_ERR_INVALID_STREAM_STATE) {
+            // TODO: Figure out if this is a bug in quiche or if its a bug in our code...
+            assert isStreamFinished(streamId);
+            return StreamRecvResult.FIN;
+        }
+
         if (Quiche.throwIfError(recvLen)) {
             return StreamRecvResult.DONE;
         } else {
