@@ -43,6 +43,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private boolean readable;
     private boolean readPending;
     private boolean flushPending;
+    private boolean inRecv;
 
     private volatile boolean active = true;
     private volatile boolean inputShutdown;
@@ -346,69 +347,90 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         void recv() {
-            ChannelPipeline pipeline = pipeline();
-            ChannelConfig config = config();
-            ByteBufAllocator allocator = config.getAllocator();
-            RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
-            allocHandle.reset(config);
-            ByteBuf byteBuf = null;
-            QuicheQuicChannel parent = parent();
-            // It's possible that the stream was marked as finish while we iterated over the readable streams
-            // or while we did have auto read disabled. If so we need to ensure we not try to read from it as it
-            // would produce an error.
-            boolean close = parent.isStreamFinished(streamId());
-            boolean readCompleteNeeded = false;
-            boolean continueReading = true;
-            try {
-                while (!close && continueReading) {
-                    byteBuf = allocHandle.allocate(allocator);
-                    switch (parent.streamRecv(streamId(), byteBuf)) {
-                        case DONE:
-                            // Nothing left to read;
-                            readable = false;
-                            close = parent.isStreamFinished(streamId());
-                            break;
-                        case FIN:
-                            // If we received a FIN we also should mark the channel as non readable as there is nothing
-                            // left to read really.
-                            readable = false;
-                            close = true;
-                            break;
-                        case OK:
-                            break;
-                        default:
-                            throw new Error();
-                    }
-                    allocHandle.lastBytesRead(byteBuf.readableBytes());
-                    if (allocHandle.lastBytesRead() <= 0) {
-                        byteBuf.release();
-                        byteBuf = null;
-                        break;
-                    }
-                    // We did read one message.
-                    allocHandle.incMessagesRead(1);
-                    readCompleteNeeded = true;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-                    continueReading = allocHandle.continueReading();
-                }
+            if (inRecv) {
+                // As the use may call read() we need to guard against re-entrancy here as otherwise it could
+                // be possible that we re-enter this method while still processing it.
+                return;
+            }
 
-                if (readCompleteNeeded) {
-                    readComplete(allocHandle, pipeline);
+            inRecv = true;
+            try {
+                ChannelPipeline pipeline = pipeline();
+                ChannelConfig config = config();
+                ByteBufAllocator allocator = config.getAllocator();
+                RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
+
+                // We should loop as long as a read() was requested and there is anything left to read, which means the
+                // stream was marked as readable before.
+                while (readPending && readable) {
+                    allocHandle.reset(config);
+                    ByteBuf byteBuf = null;
+                    QuicheQuicChannel parent = parent();
+                    // It's possible that the stream was marked as finish while we iterated over the readable streams
+                    // or while we did have auto read disabled. If so we need to ensure we not try to read from it as it
+                    // would produce an error.
+                    boolean close = parent.isStreamFinished(streamId());
+                    boolean readCompleteNeeded = false;
+                    boolean continueReading = true;
+                    try {
+                        while (!close && continueReading) {
+                            byteBuf = allocHandle.allocate(allocator);
+                            switch (parent.streamRecv(streamId(), byteBuf)) {
+                                case DONE:
+                                    // Nothing left to read;
+                                    readable = false;
+                                    close = parent.isStreamFinished(streamId());
+                                    break;
+                                case FIN:
+                                    // If we received a FIN we also should mark the channel as non readable as
+                                    // there is nothing left to read really.
+                                    readable = false;
+                                    close = true;
+                                    break;
+                                case OK:
+                                    break;
+                                default:
+                                    throw new Error();
+                            }
+                            allocHandle.lastBytesRead(byteBuf.readableBytes());
+                            if (allocHandle.lastBytesRead() <= 0) {
+                                byteBuf.release();
+                                byteBuf = null;
+                                break;
+                            }
+                            // We did read one message.
+                            allocHandle.incMessagesRead(1);
+                            readCompleteNeeded = true;
+
+                            // It's important that we reset this to false before we call fireChannelRead(...)
+                            // as the user may request another read() from channelRead(...) callback.
+                            readPending = false;
+
+                            pipeline.fireChannelRead(byteBuf);
+                            byteBuf = null;
+                            continueReading = allocHandle.continueReading();
+                        }
+
+                        if (readCompleteNeeded) {
+                            readComplete(allocHandle, pipeline);
+                        }
+                        if (close) {
+                            readable = false;
+                            closeOnRead(pipeline);
+                        }
+                    } catch (Throwable cause) {
+                        handleReadException(pipeline, byteBuf, cause, close, allocHandle);
+                    }
                 }
-                if (close) {
-                    readable = false;
-                    closeOnRead(pipeline);
-                }
-            } catch (Throwable cause) {
-                handleReadException(pipeline, byteBuf, cause, close, allocHandle);
+            } finally {
+                // About to leave the method lets reset so we can enter it again.
+                inRecv = false;
             }
         }
 
         // Read was complete and something was read, so we we need to reset the readPending flags, the allocHandle
         // and call fireChannelReadComplete(). The user may schedule another read now.
         private void readComplete(RecvByteBufAllocator.Handle allocHandle, ChannelPipeline pipeline) {
-            readPending = false;
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
         }

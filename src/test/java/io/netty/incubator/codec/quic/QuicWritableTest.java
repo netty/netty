@@ -35,7 +35,16 @@ import static org.junit.Assert.assertTrue;
 public class QuicWritableTest {
 
     @Test
-    public void testCorrectlyHandleWritability() throws Throwable  {
+    public void testCorrectlyHandleWritabilityReadRequestedInReadComplete() throws Throwable {
+        testCorrectlyHandleWritability(true);
+    }
+
+    @Test
+    public void testCorrectlyHandleWritabilityReadRequestedInRead() throws Throwable {
+        testCorrectlyHandleWritability(false);
+    }
+
+    private static void testCorrectlyHandleWritability(boolean readInComplete) throws Throwable  {
         int bufferSize = 64 * 1024;
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
@@ -99,11 +108,17 @@ public class QuicWritableTest {
                                 ctx.close();
                                 assertTrue(writePromise.isDone());
                             }
+
+                            if (!readInComplete) {
+                                ctx.read();
+                            }
                         }
 
                         @Override
                         public void channelReadComplete(ChannelHandlerContext ctx) {
-                            ctx.read();
+                            if (readInComplete) {
+                                ctx.read();
+                            }
                         }
 
                         @Override
