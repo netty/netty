@@ -27,7 +27,7 @@ public final class QuicClientBuilder extends QuicBuilder<QuicClientBuilder> {
     /**
      * Build a QUIC codec for the client side.
      */
-    public ChannelHandler buildCodec() {
+    private ChannelHandler buildCodec() {
         return new QuicheQuicClientCodec(createConfig());
     }
 

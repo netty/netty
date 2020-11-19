@@ -29,18 +29,40 @@ public final class QuicConnectionAddress extends SocketAddress {
     final ByteBuffer connId;
     final InetSocketAddress remote;
 
+    /**
+     * Create a new instance
+     *
+     * @param connId the connection id to use.
+     */
     public QuicConnectionAddress(byte[] connId) {
         this(connId, null);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param connId the connection id to use.
+     * @param remote the remote address of the host to talk to.
+     */
     public QuicConnectionAddress(byte[] connId, InetSocketAddress remote) {
         this(ByteBuffer.wrap(connId.clone()), remote);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param connId the connection id to use.
+     */
     public QuicConnectionAddress(ByteBuffer connId) {
         this(connId, null);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param connId the connection id to use.
+     * @param remote the remote address of the host to talk to.
+     */
     public QuicConnectionAddress(ByteBuffer connId, InetSocketAddress remote) {
         Quic.ensureAvailability();
         if (connId.remaining() > Quiche.QUICHE_MAX_CONN_ID_LEN) {
@@ -78,7 +100,7 @@ public final class QuicConnectionAddress extends SocketAddress {
 
     /**
      * Return a random generated {@link QuicConnectionAddress} which can be used on a connected
-     * {@link io.netty.channel.Channel}.
+     * {@link {@link io.netty.channel.socket.DatagramChannel}.
      */
     public static QuicConnectionAddress random() {
         return new QuicConnectionAddress(QuicBuilder.randomGenerator().newId());

@@ -44,7 +44,7 @@ public interface QuicChannel extends Channel {
                                            Promise<QuicStreamChannel> promise);
 
     /**
-     * Returns the negotiated ALPN protocol or {@code null} if non has been negotiated.
+     * Returns the negotiated ALPN protocol or {@code null} if none has been negotiated.
      */
     byte[] applicationProtocol();
 
