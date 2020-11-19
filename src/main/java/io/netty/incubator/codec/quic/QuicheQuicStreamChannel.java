@@ -352,11 +352,15 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
             allocHandle.reset(config);
             ByteBuf byteBuf = null;
-            boolean close = false;
-            boolean readCompleteNeeded = false;
             QuicheQuicChannel parent = parent();
+            // It's possible that the stream was marked as finish while we iterated over the readable streams
+            // or while we did have auto read disabled. If so we need to ensure we not try to read from it as it
+            // would produce an error.
+            boolean close = parent.isStreamFinished(streamId());
+            boolean readCompleteNeeded = false;
+            boolean continueReading = true;
             try {
-                do {
+                while (!close && continueReading) {
                     byteBuf = allocHandle.allocate(allocator);
                     switch (parent.streamRecv(streamId(), byteBuf)) {
                         case DONE:
@@ -386,12 +390,14 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                     readCompleteNeeded = true;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
-                } while (allocHandle.continueReading() && !close);
+                    continueReading = allocHandle.continueReading();
+                }
 
                 if (readCompleteNeeded) {
                     readComplete(allocHandle, pipeline);
                 }
                 if (close) {
+                    readable = false;
                     closeOnRead(pipeline);
                 }
             } catch (Throwable cause) {

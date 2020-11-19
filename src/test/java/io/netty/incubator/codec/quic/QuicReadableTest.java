@@ -29,18 +29,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertTrue;
 
 public class QuicReadableTest {
 
     @Test
-    public void testCorrectlyHandleReadableStreams() throws Exception  {
+    public void testCorrectlyHandleReadableStreams() throws Throwable  {
         int numOfStreams = 1024;
         int readStreams = 512;
         int expectedDataRead = readStreams * Integer.BYTES;
         final CountDownLatch latch = new CountDownLatch(numOfStreams);
         final AtomicInteger bytesRead = new AtomicInteger();
+        final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
+
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
@@ -70,6 +74,11 @@ public class QuicReadableTest {
                     }
 
                     @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        serverErrorRef.set(cause);
+                    }
+
+                    @Override
                     public boolean isSharable() {
                         return true;
                     }
@@ -88,7 +97,12 @@ public class QuicReadableTest {
             List<Channel> streams = new ArrayList<>();
             for (int i = 0; i < numOfStreams; i++) {
                 QuicStreamChannel stream = channel.createStream(
-                        QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
+                        QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                                clientErrorRef.set(cause);
+                            }
+                        }).get();
                 streams.add(stream.writeAndFlush(data.retainedSlice()).sync().channel());
             }
             data.release();
@@ -100,10 +114,20 @@ public class QuicReadableTest {
                 stream.close().sync();
             }
             channel.close().sync();
+
+            throwIfNotNull(serverErrorRef);
+            throwIfNotNull(clientErrorRef);
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.
             QuicTestUtils.closeParent(future);
+        }
+    }
+
+    private static void throwIfNotNull(AtomicReference<Throwable> errorRef) throws Throwable {
+        Throwable cause = errorRef.get();
+        if (cause != null) {
+            throw cause;
         }
     }
 }
