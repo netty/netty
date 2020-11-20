@@ -257,6 +257,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         if (!parent().streamSendMultiple(streamId(), alloc(), channelOutboundBuffer)) {
+            parent().streamHasPendingWrites(streamId());
             flushPending = true;
         }
     }
