@@ -56,6 +56,16 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "start"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "stop"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.util.HashedWheelTimer$Worker",
                     "waitForNextTick"
             );
