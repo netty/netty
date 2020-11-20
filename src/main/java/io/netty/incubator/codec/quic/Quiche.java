@@ -28,11 +28,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
-import java.io.IOException;
 
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
-    private static final IntObjectMap<String> ERROR_MAP = new IntObjectHashMap<>();
     private static final boolean DEBUG_LOGGING_ENABLED = logger.isDebugEnabled();
 
     static {
@@ -512,36 +510,22 @@ final class Quiche {
      */
     private static native void quiche_enable_debug_logging(QuicheLogger logger);
 
-    static {
-        ERROR_MAP.put(QUICHE_ERR_DONE, "QUICHE_ERR_DONE");
-        ERROR_MAP.put(QUICHE_ERR_BUFFER_TOO_SHORT, "QUICHE_ERR_BUFFER_TOO_SHORT");
-        ERROR_MAP.put(QUICHE_ERR_UNKNOWN_VERSION, "QUICHE_ERR_UNKNOWN_VERSION");
-        ERROR_MAP.put(QUICHE_ERR_INVALID_FRAME, "QUICHE_ERR_INVALID_FRAME");
-        ERROR_MAP.put(QUICHE_ERR_INVALID_PACKET, "QUICHE_ERR_INVALID_PACKET");
-        ERROR_MAP.put(QUICHE_ERR_INVALID_STATE, "QUICHE_ERR_INVALID_STATE");
-        ERROR_MAP.put(QUICHE_ERR_INVALID_STREAM_STATE, "QUICHE_ERR_INVALID_STREAM_STATE");
-        ERROR_MAP.put(QUICHE_ERR_INVALID_TRANSPORT_PARAM, "QUICHE_ERR_INVALID_TRANSPORT_PARAM");
-        ERROR_MAP.put(QUICHE_ERR_CRYPTO_FAIL, "QUICHE_ERR_CRYPTO_FAIL");
-        ERROR_MAP.put(QUICHE_ERR_TLS_FAIL, "QUICHE_ERR_TLS_FAIL");
-        ERROR_MAP.put(QUICHE_ERR_FLOW_CONTROL, "QUICHE_ERR_FLOW_CONTROL");
-        ERROR_MAP.put(QUICHE_ERR_STREAM_LIMIT, "QUICHE_ERR_STREAM_LIMIT");
-        ERROR_MAP.put(QUICHE_ERR_FINAL_SIZE, "QUICHE_ERR_FINAL_SIZE");
-        ERROR_MAP.put(QUICHE_ERR_CONGESTION_CONTROL, "QUICHE_ERR_CONGESTION_CONTROL");
-    }
-
     static String errorAsString(int err) {
-        return ERROR_MAP.get(err);
+        return QuicError.valueOf(err).message();
     }
 
     static Exception newException(int err) {
-        String errStr = errorAsString(err);
+        final QuicError error = QuicError.valueOf(err);
+        final QuicheException reason = new QuicheException(error);
         if (err == QUICHE_ERR_TLS_FAIL) {
-            return new SSLHandshakeException(errStr);
+            final SSLHandshakeException sslExc = new SSLHandshakeException(error.message());
+            sslExc.initCause(reason);
+            return sslExc;
         }
         if (err == QUICHE_ERR_CRYPTO_FAIL) {
-            return new SSLException(errStr);
+            return new SSLException(error.message(), reason);
         }
-        return new IOException(errStr);
+        return reason;
     }
 
     static boolean throwIfError(int res) throws Exception {
