@@ -86,7 +86,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
-    private final long[] writableStreams = new long[128];
     // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
@@ -96,7 +95,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (future.isSuccess()) {
                 // Schedule timeout.
                 // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
