@@ -43,7 +43,7 @@ public class QuicStreamTypeTest {
         QuicChannel client = null;
         try {
             Promise<Throwable> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(null, new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
@@ -61,9 +61,9 @@ public class QuicStreamTypeTest {
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     ReferenceCountUtil.release(msg);
                 }
-            }));
+            });
 
-            client = (QuicChannel) QuicTestUtils.newClientBootstrap().handler(new ChannelInboundHandlerAdapter())
+            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
                     .connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
             QuicStreamChannel streamChannel = client.createStream(
                     QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
@@ -90,7 +90,7 @@ public class QuicStreamTypeTest {
             Promise<Void> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
             Promise<Throwable> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
 
-            server = QuicTestUtils.newServer(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     QuicChannel channel = (QuicChannel) ctx.channel();
@@ -103,10 +103,10 @@ public class QuicStreamTypeTest {
                         }
                     });
                 }
-            }, new ChannelInboundHandlerAdapter()));
+            }, new ChannelInboundHandlerAdapter());
 
-            client = (QuicChannel) QuicTestUtils.newClientBootstrap().handler(
-                    new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(),
+                    new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     // Do the write should fail
@@ -130,7 +130,7 @@ public class QuicStreamTypeTest {
                     // Let's close the stream
                     ctx.close();
                 }
-            })).connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
+            }).connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
 
             // Close stream and quic channel
             client.closeFuture().sync();

@@ -42,10 +42,10 @@ public class QuicStreamChannelCloseTest {
         Channel server = null;
         QuicChannel client = null;
         try {
-            server = QuicTestUtils.newServer(new QuicChannelInitializer(new StreamCreationHandler(type),
-                    new ChannelInboundHandlerAdapter()));
-            client = (QuicChannel) QuicTestUtils.newClientBootstrap().handler(
-                    new QuicChannelInitializer(new StreamHandler())).connect(
+            server = QuicTestUtils.newServer(new StreamCreationHandler(type),
+                    new ChannelInboundHandlerAdapter());
+            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(),
+                    new StreamHandler()).connect(
                             QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
 
             // Wait till the client was closed
@@ -72,8 +72,8 @@ public class QuicStreamChannelCloseTest {
         Channel server = null;
         QuicChannel client = null;
         try {
-            server = QuicTestUtils.newServer(new QuicChannelInitializer(new StreamHandler()));
-            client = (QuicChannel) QuicTestUtils.newClientBootstrap().handler(new StreamCreationHandler(type))
+            server = QuicTestUtils.newServer(null, new StreamHandler());
+            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new StreamCreationHandler(type), null)
                     .connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
 
             // Close stream and quic channel

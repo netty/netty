@@ -46,7 +46,7 @@ public class QuicConnectionStatsTest {
         try {
             Promise<QuicConnectionStats> serverActiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
             Promise<QuicConnectionStats> serverInactiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     collectStats(ctx, serverActiveStats);
@@ -80,9 +80,9 @@ public class QuicConnectionStatsTest {
                 public boolean isSharable() {
                     return true;
                 }
-            }));
+            });
 
-            client = (QuicChannel) QuicTestUtils.newClientBootstrap().handler(new ChannelInboundHandlerAdapter())
+            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
                     .connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
             assertNotNull(client.collectStats().sync().getNow());
             client.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {

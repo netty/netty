@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -61,8 +60,7 @@ public class QuicChannelEchoTest {
         final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
-        Channel server = QuicTestUtils.newServer(
-                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
                         ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
@@ -81,12 +79,10 @@ public class QuicChannelEchoTest {
                             }
                         });
                     }
-                }, sh));
+                }, sh);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(new QuicChannelInitializer(ch))
+            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), ch)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
 
@@ -139,13 +135,10 @@ public class QuicChannelEchoTest {
         final EchoHandler sh = new EchoHandler(true, autoRead);
         final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
-        Channel server = QuicTestUtils.newServer(
-                new QuicChannelInitializer(sh));
+        Channel server = QuicTestUtils.newServer(null, sh);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(new ChannelInboundHandlerAdapter())
+            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
 

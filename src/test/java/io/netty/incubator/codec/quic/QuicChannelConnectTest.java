@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -29,7 +28,6 @@ import org.junit.Test;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.channels.AlreadyConnectedException;
-import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -48,43 +46,11 @@ public class QuicChannelConnectTest {
         ChannelFuture future = null;
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
-                    .handler(verifyHandler)
+            future = QuicTestUtils.newChannelBuilder(verifyHandler, null)
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
                     .connect(QuicConnectionAddress.random((InetSocketAddress) socket.getLocalSocketAddress()));
             Throwable cause = future.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(ConnectTimeoutException.class));
-            ChannelFuture closeFuture = future.channel().closeFuture().await();
-            assertTrue(closeFuture.isSuccess());
-            verifyHandler.assertState();
-        } finally {
-            socket.close();
-            // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
-        }
-    }
-
-    @Test
-    public void testConnectPending() throws Throwable {
-        // Bind to something so we can use the port to connect too and so can ensure we really timeout.
-        DatagramSocket socket = new DatagramSocket();
-        ChannelFuture future = null;
-        try {
-            InetSocketAddress address = (InetSocketAddress) socket.getLocalSocketAddress();
-            ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            Channel registered = bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 0)
-                    .handler(verifyHandler).register().sync().channel();
-
-            future = registered.connect(QuicConnectionAddress.random(address));
-
-            // Try to connect again
-            ChannelFuture connectFuture = registered.connect(QuicConnectionAddress.random(address));
-
-            Throwable cause = connectFuture.await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(ConnectionPendingException.class));
-
-            future.channel().close().sync();
             ChannelFuture closeFuture = future.channel().closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             verifyHandler.assertState();
@@ -100,15 +66,12 @@ public class QuicChannelConnectTest {
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
 
-        Channel server = QuicTestUtils.newServer(
-                new QuicChannelInitializer(serverQuicChannelHandler, serverQuicStreamHandler));
+        Channel server = QuicTestUtils.newServer(serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         ChannelFuture future = null;
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(clientQuicChannelHandler)
+            future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
 
@@ -151,14 +114,12 @@ public class QuicChannelConnectTest {
             public int maxTokenLength() {
                 return 0;
             }
-        }, new QuicChannelInitializer(serverQuicChannelHandler, serverQuicStreamHandler));
+        }, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         ChannelFuture future = null;
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(clientQuicChannelHandler)
+            future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
 

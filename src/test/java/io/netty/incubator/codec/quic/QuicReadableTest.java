@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -49,7 +48,7 @@ public class QuicReadableTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                null, new ChannelInboundHandlerAdapter() {
                     private int counter;
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) {
@@ -83,13 +82,11 @@ public class QuicReadableTest {
                     public boolean isSharable() {
                         return true;
                     }
-                }));
+                });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         ChannelFuture future = null;
         try {
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(new ChannelInboundHandlerAdapter())
+            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
             QuicChannel channel = (QuicChannel) future.channel();

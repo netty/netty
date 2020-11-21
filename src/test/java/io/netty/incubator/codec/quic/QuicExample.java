@@ -45,7 +45,7 @@ public final class QuicExample {
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        ChannelHandler codec = new QuicServerBuilder()
+        ChannelHandler codec = new QuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
@@ -58,49 +58,47 @@ public final class QuicExample {
                 .initialMaxStreamsUnidirectional(100)
                 .disableActiveMigration(true)
                 .enableEarlyData()
-                .buildCodec(InsecureQuicTokenHandler.INSTANCE,
-                        new QuicChannelInitializer(
-                                // ChannelHandler that is added into QuicChannel pipeline.
-                                new ChannelInboundHandlerAdapter() {
-                                    @Override
-                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                        QuicChannel channel = (QuicChannel) ctx.channel();
-                                        // Create streams etc..
-                                    }
+                .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
+                // ChannelHandler that is added into QuicChannel pipeline.
+                .handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        QuicChannel channel = (QuicChannel) ctx.channel();
+                        // Create streams etc..
+                    }
 
-                                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                        LOGGER.info("Connection closed: {}",
-                                            ((QuicheQuicChannel) ctx.channel()).collectStats().getNow());
-                                    }
+                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        LOGGER.info("Connection closed: {}",
+                                ((QuicheQuicChannel) ctx.channel()).collectStats().getNow());
+                    }
 
-                                    @Override
-                                    public boolean isSharable() {
-                                        return true;
-                                    }
-                                },
-                                // ChannelHandler that is added into QuicStreamChannel pipeline.
-                                new ChannelInboundHandlerAdapter() {
-                                    @Override
-                                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                        ByteBuf byteBuf = (ByteBuf) msg;
-                                        try {
-                                            if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
-                                                ByteBuf buffer = ctx.alloc().directBuffer();
-                                                buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                })
+                .streamHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf byteBuf = (ByteBuf) msg;
+                        try {
+                            if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
+                                ByteBuf buffer = ctx.alloc().directBuffer();
+                                buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
 
-                                                // Write the buffer and close the stream once the write completes.
-                                                ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
-                                            }
-                                        } finally {
-                                            byteBuf.release();
-                                        }
-                                    }
+                                // Write the buffer and close the stream once the write completes.
+                                ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
+                            }
+                        } finally {
+                            byteBuf.release();
+                        }
+                    }
 
-                                    @Override
-                                    public boolean isSharable() {
-                                        return true;
-                                    }
-                                }));
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                }).buildCodec();
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)

@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,18 +49,17 @@ public class QuicStreamLimitTest {
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
                 InsecureQuicTokenHandler.INSTANCE,
-                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                null, new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
                         return true;
                     }
-                }));
+                });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         ChannelFuture future = null;
         try {
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap();
-            future = bootstrap
-                    .handler(new ChannelInboundHandlerAdapter())
+            future = QuicTestUtils.newChannelBuilder(
+                    new ChannelInboundHandlerAdapter(), null)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
             QuicChannel channel = (QuicChannel) future.channel();
@@ -97,7 +95,7 @@ public class QuicStreamLimitTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(),
                 InsecureQuicTokenHandler.INSTANCE,
-                new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandlerAdapter() {
 
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -133,22 +131,21 @@ public class QuicStreamLimitTest {
                     public boolean isSharable() {
                         return true;
                     }
-                }));
+                });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         ChannelFuture future = null;
         try {
-            Bootstrap bootstrap = QuicTestUtils.newClientBootstrap(QuicTestUtils.newQuicClientBuilder()
-                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1));
-            future = bootstrap
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .connect(QuicConnectionAddress.random(address));
+            future = QuicTestUtils.newChannelBuilder(QuicTestUtils.newQuicClientBuilder()
+                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1)).handler(
+                            new ChannelInboundHandlerAdapter())
+                    .streamHandler(
+                            new ChannelInboundHandlerAdapter()).connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
-            QuicChannel channel = (QuicChannel) future.channel();
 
             streamPromise.sync();
             // Second stream creation should fail.
             assertThat(stream2Promise.get(), CoreMatchers.instanceOf(IOException.class));
-            channel.close().sync();
+            future.channel().close().sync();
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.

@@ -85,6 +85,6 @@ public final class QuicConnectionAddress extends SocketAddress {
      * remote address.
      */
     public static QuicConnectionAddress random(InetSocketAddress remote) {
-        return new QuicConnectionAddress(QuicBuilder.randomGenerator().newId(), remote);
+        return new QuicConnectionAddress(Quic.randomGenerator().newId(), remote);
     }
 }

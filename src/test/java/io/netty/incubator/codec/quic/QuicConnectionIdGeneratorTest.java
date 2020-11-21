@@ -29,7 +29,7 @@ public class QuicConnectionIdGeneratorTest {
 
     @Test
     public void testRandomness() {
-        QuicConnectionIdGenerator idGenerator = QuicBuilder.randomGenerator();
+        QuicConnectionIdGenerator idGenerator = Quic.randomGenerator();
         ByteBuffer id = idGenerator.newId();
         ByteBuffer id2 = idGenerator.newId();
         assertThat(id.remaining(), greaterThan(0));
@@ -53,13 +53,13 @@ public class QuicConnectionIdGeneratorTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testThrowsIfInputTooBig() {
-        QuicConnectionIdGenerator idGenerator = QuicBuilder.randomGenerator();
+        QuicConnectionIdGenerator idGenerator = Quic.randomGenerator();
         idGenerator.newId(Integer.MAX_VALUE);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testThrowsIfInputTooBig2() {
-        QuicConnectionIdGenerator idGenerator = QuicBuilder.randomGenerator();
+        QuicConnectionIdGenerator idGenerator = Quic.randomGenerator();
         idGenerator.newId(ByteBuffer.wrap(new byte[8]), Integer.MAX_VALUE);
     }
 }

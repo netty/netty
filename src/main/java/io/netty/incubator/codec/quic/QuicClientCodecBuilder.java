@@ -15,23 +15,15 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.channel.ChannelHandler;
 
 /**
- * A {@link ChannelFactory} that is used for clients.
+ * {@link QuicCodecBuilder} for the client side.
  */
-final class QuicheQuicChannelFactory implements ChannelFactory<QuicheQuicChannel> {
-
-    private final Channel parent;
-
-    QuicheQuicChannelFactory(Channel parent) {
-        this.parent = ObjectUtil.checkNotNull(parent, "parent");
-    }
+public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
 
     @Override
-    public QuicheQuicChannel newChannel() {
-        return QuicheQuicChannel.forClient(parent);
+    protected ChannelHandler buildCodec(long config) {
+        return new QuicheQuicClientCodec(config);
     }
 }

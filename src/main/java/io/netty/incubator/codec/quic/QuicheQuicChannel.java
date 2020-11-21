@@ -24,18 +24,24 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -45,6 +51,7 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +59,8 @@ import java.util.concurrent.TimeUnit;
  * {@link QuicChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
  */
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(QuicheQuicChannel.class);
+
     enum StreamRecvResult {
         /**
          * Nothing more to read from the stream.
@@ -92,6 +101,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
+    private final ChannelHandler streamHandler;
+    private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
+    private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
 
     private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
         @Override
@@ -155,7 +167,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile InetSocketAddress remote;
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
-                      InetSocketAddress remote) {
+                      InetSocketAddress remote, ChannelHandler streamHandler,
+                              Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                              Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(parent);
         config = new DefaultChannelConfig(this);
         this.server = server;
@@ -166,16 +180,26 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.remote = remote;
         this.connAddr = connAddr;
         this.traceId = traceId;
+        this.streamHandler = streamHandler;
+        this.streamOptionsArray = streamOptionsArray;
+        this.streamAttrsArray = streamAttrsArray;
     }
 
-    static QuicheQuicChannel forClient(Channel parent) {
+    static QuicheQuicChannel forClient(Channel parent, ChannelHandler streamHandler,
+                                       Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null,
-                -1, null, (InetSocketAddress) parent.remoteAddress());
+                -1, null, (InetSocketAddress) parent.remoteAddress(), streamHandler,
+                streamOptionsArray, streamAttrsArray);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key,
-                                       long connAddr, String traceId, InetSocketAddress remote) {
-        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote);
+                                       long connAddr, String traceId, InetSocketAddress remote,
+                                       ChannelHandler streamHandler,
+                                       Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
+        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote,
+                streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
     private void connect(long configAddr) throws Exception {
@@ -258,6 +282,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         long nanos = Quiche.quiche_conn_timeout_as_nanos(connAddr);
         timeoutFuture = eventLoop().schedule(timeout,
                 nanos, TimeUnit.NANOSECONDS);
+    }
+
+    @Override
+    protected DefaultChannelPipeline newChannelPipeline() {
+        return new DefaultChannelPipeline(this) {
+            @Override
+            protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
+                QuicStreamChannel channel = (QuicStreamChannel) msg;
+                Quic.setChannelOptions(channel, streamOptionsArray, logger);
+                Quic.setAttributes(channel, streamAttrsArray);
+                channel.pipeline().addLast(streamHandler);
+                ctx.channel().eventLoop().register(channel);
+            }
+        };
     }
 
     @Override

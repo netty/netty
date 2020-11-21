@@ -19,7 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -48,32 +49,37 @@ final class QuicTestUtils {
             0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
     };
 
-    static Bootstrap newClientBootstrap() throws Exception {
-        return newClientBootstrap(newQuicClientBuilder());
+    static QuicChannelBootstrap newChannelBuilder(ChannelHandler handler, ChannelHandler streamHandler)
+            throws Exception {
+        QuicClientCodecBuilder builder = newQuicClientBuilder();
+        if (streamHandler == null) {
+            streamHandler = new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.close();
+                }
+
+                @Override
+                public boolean isSharable() {
+                    return true;
+                }
+            };
+        }
+        return newChannelBuilder(builder).handler(handler).streamHandler(streamHandler);
     }
 
-    static Bootstrap newClientBootstrap(QuicClientBuilder builder) throws Exception {
+    static QuicChannelBootstrap newChannelBuilder(QuicClientCodecBuilder builder) throws Exception {
         Bootstrap bs = new Bootstrap();
         Channel channel = bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
-                .handler(new ChannelHandlerAdapter() { })
+                .handler(builder.buildCodec())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
-        return builder.buildBootstrap(channel);
+        return new QuicChannelBootstrap(channel);
     }
 
-    static Bootstrap newConnectedClientBootstrap(QuicClientBuilder builder, InetSocketAddress remote) throws Exception {
-        Bootstrap bs = new Bootstrap();
-        Channel channel = bs.group(GROUP)
-                .channel(NioDatagramChannel.class)
-                // We don't want any special handling of the channel so just use a dummy handler.
-                .handler(new ChannelHandlerAdapter() { })
-                .connect(remote).sync().channel();
-        return builder.buildBootstrap(channel);
-    }
-
-    static QuicClientBuilder newQuicClientBuilder() {
-        return new QuicClientBuilder()
+    static QuicClientCodecBuilder newQuicClientBuilder() {
+        return new QuicClientCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(PROTOS)
@@ -89,8 +95,8 @@ final class QuicTestUtils {
                 .enableEarlyData();
     }
 
-    static QuicServerBuilder newQuicServerBuilder() {
-        return new QuicServerBuilder()
+    static QuicServerCodecBuilder newQuicServerBuilder() {
+        return new QuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(PROTOS)
@@ -105,9 +111,15 @@ final class QuicTestUtils {
                 .disableActiveMigration(true);
     }
 
-    private static Bootstrap newServerBootstrap(QuicServerBuilder serverBuilder,
-            QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer) {
-        ChannelHandler codec = serverBuilder.buildCodec(tokenHandler, channelInitializer);
+    private static Bootstrap newServerBootstrap(QuicServerCodecBuilder serverBuilder,
+                                                QuicTokenHandler tokenHandler, ChannelHandler handler,
+                                                ChannelHandler streamHandler) {
+        serverBuilder.tokenHandler(tokenHandler)
+                .streamHandler(streamHandler);
+        if (handler != null) {
+            serverBuilder.handler(handler);
+        }
+        ChannelHandler codec = serverBuilder.buildCodec();
         Bootstrap bs = new Bootstrap();
         return bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
@@ -116,20 +128,20 @@ final class QuicTestUtils {
                 .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
     }
 
-    static Channel newServer(QuicServerBuilder serverBuilder, QuicTokenHandler tokenHandler,
-                             QuicChannelInitializer channelInitializer)
+    static Channel newServer(QuicServerCodecBuilder serverBuilder, QuicTokenHandler tokenHandler,
+                             ChannelHandler handler, ChannelHandler streamHandler)
             throws Exception {
-        return newServerBootstrap(serverBuilder, tokenHandler, channelInitializer)
+        return newServerBootstrap(serverBuilder, tokenHandler, handler, streamHandler)
                 .bind().sync().channel();
     }
 
-    static Channel newServer(QuicTokenHandler tokenHandler, QuicChannelInitializer channelInitializer)
+    static Channel newServer(QuicTokenHandler tokenHandler, ChannelHandler handler, ChannelHandler streamHandler)
             throws Exception {
-        return newServer(newQuicServerBuilder(), tokenHandler, channelInitializer);
+        return newServer(newQuicServerBuilder(), tokenHandler, handler, streamHandler);
     }
 
-    static Channel newServer(QuicChannelInitializer channelInitializer) throws Exception {
-        return newServer(InsecureQuicTokenHandler.INSTANCE, channelInitializer);
+    static Channel newServer(ChannelHandler handler, ChannelHandler streamHandler) throws Exception {
+        return newServer(InsecureQuicTokenHandler.INSTANCE, handler, streamHandler);
     }
 
     static void closeParent(ChannelFuture future) throws Exception {

@@ -18,7 +18,9 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -26,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * {@link QuicheQuicCodec} for QUIC servers.
@@ -33,9 +36,14 @@ import java.nio.ByteBuffer;
 final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicServerCodec.class);
 
-    private final ChannelHandler quicChannelHandler;
     private final QuicConnectionIdGenerator connectionIdAddressGenerator;
     private final QuicTokenHandler tokenHandler;
+    private final ChannelHandler handler;
+    private final Map.Entry<ChannelOption<?>, Object>[] optionsArray;
+    private final Map.Entry<AttributeKey<?>, Object>[] attrsArray;
+    private final ChannelHandler streamHandler;
+    private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
+    private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     // TODO: Make this configurable ?
     private static final int MAX_LOCAL_CONN_ID = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private ByteBuf mintTokenBuffer;
@@ -43,11 +51,21 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
     QuicheQuicServerCodec(long config, QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
-                          ChannelHandler quicChannelHandler) {
+                          ChannelHandler handler,
+                          Map.Entry<ChannelOption<?>, Object>[] optionsArray,
+                          Map.Entry<AttributeKey<?>, Object>[] attrsArray,
+                          ChannelHandler streamHandler,
+                          Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                          Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(config, tokenHandler.maxTokenLength());
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
-        this.quicChannelHandler = quicChannelHandler;
+        this.handler = handler;
+        this.optionsArray = optionsArray;
+        this.attrsArray = attrsArray;
+        this.streamHandler = streamHandler;
+        this.streamOptionsArray = streamOptionsArray;
+        this.streamAttrsArray = streamAttrsArray;
     }
 
     @Override
@@ -156,11 +174,14 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         dcid.getBytes(dcid.readerIndex(), key);
 
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), ByteBuffer.wrap(key), conn, Quiche.traceId(conn, dcid), sender);
-        channel.pipeline().addLast(quicChannelHandler);
-
+                ctx.channel(), ByteBuffer.wrap(key), conn, Quiche.traceId(conn, dcid), sender,
+                streamHandler, streamOptionsArray, streamAttrsArray);
+        Quic.setChannelOptions(channel, optionsArray, LOGGER);
+        Quic.setAttributes(channel, attrsArray);
+        if (handler != null) {
+            channel.pipeline().addLast(handler);
+        }
         putChannel(channel);
-
         ctx.channel().eventLoop().register(channel);
         return channel;
     }

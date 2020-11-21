@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -43,14 +43,7 @@ public final class QuicClientExample {
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
-            Bootstrap bs = new Bootstrap();
-            Channel channel = bs.group(group)
-                    .channel(NioDatagramChannel.class)
-                    // We don't want any special handling of the channel so just use a dummy handler.
-                    .handler(new ChannelHandlerAdapter() { })
-                    .bind(0).sync().channel();
-
-            Bootstrap quicClientBootstrap = new QuicClientBuilder()
+            ChannelHandler codec = new QuicClientCodecBuilder()
                     .certificateChain("./src/test/resources/cert.crt")
                     .privateKey("./src/test/resources/cert.key")
                     .applicationProtocols(proto)
@@ -62,18 +55,24 @@ public final class QuicClientExample {
                     .initialMaxStreamsBidirectional(100)
                     .initialMaxStreamsUnidirectional(100)
                     .disableActiveMigration(true)
-                    .enableEarlyData().buildBootstrap(channel);
+                    .enableEarlyData().buildCodec();
 
-            QuicChannel quicChannel = (QuicChannel) quicClientBootstrap
-                            .handler(new QuicChannelInitializer(new ChannelInboundHandlerAdapter() {
-                                @Override
-                                public void channelActive(ChannelHandlerContext ctx) {
-                                    // We don't want to handle streams created by the server side, just close the
-                                    // stream and so send a fin.
-                                    ctx.close();
-                                }
-                            })).connect(QuicConnectionAddress.random(
-                                    new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
+            Bootstrap bs = new Bootstrap();
+            Channel channel = bs.group(group)
+                    .channel(NioDatagramChannel.class)
+                    .handler(codec)
+                    .bind(0).sync().channel();
+
+            QuicChannel quicChannel = (QuicChannel) new QuicChannelBootstrap(channel)
+                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) {
+                    // We don't want to handle streams created by the server side, just close the
+                    // stream and so send a fin.
+                    ctx.close();
+                }
+            }).connect(QuicConnectionAddress.random(
+                    new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {
