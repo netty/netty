@@ -39,7 +39,9 @@ public interface QuicChannel extends Channel {
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
      */
-    Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler);
+    default Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler) {
+        return createStream(type, handler, eventLoop().newPromise());
+    }
 
     /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Promise} once done.
@@ -48,6 +50,16 @@ public interface QuicChannel extends Channel {
      */
     Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                            Promise<QuicStreamChannel> promise);
+
+    /**
+     * Returns a new {@link QuicStreamChannelBootstrap} which makes it easy to bootstrap new {@link QuicStreamChannel}s
+     * with custom options and attributes. For simpler use-cases you may want to consider using
+     * {@link #createStream(QuicStreamType, ChannelHandler)} or
+     * {@link #createStream(QuicStreamType, ChannelHandler, Promise)} directly.
+     */
+    default QuicStreamChannelBootstrap newStreamBootstrap() {
+        return new QuicStreamChannelBootstrap(this);
+    }
 
     /**
      * Returns the negotiated ALPN protocol or {@code null} if none has been negotiated.
@@ -63,7 +75,9 @@ public interface QuicChannel extends Channel {
      * @param reason            the reason for the closure (which may be an empty {@link ByteBuf}.
      * @return                  the future that is notified.
      */
-    ChannelFuture close(boolean applicationClose, int error, ByteBuf reason);
+    default ChannelFuture close(boolean applicationClose, int error, ByteBuf reason) {
+        return close(applicationClose, error, reason, newPromise());
+    }
 
     /**
      * Close the {@link QuicChannel}
@@ -80,7 +94,9 @@ public interface QuicChannel extends Channel {
     /**
      * Collects statistics about the connection and notifies the {@link Future} once done.
      */
-    Future<QuicConnectionStats> collectStats();
+    default Future<QuicConnectionStats> collectStats() {
+        return collectStats(eventLoop().newPromise());
+    }
 
     /**
      * Collects statistics about the connection and notifies the {@link Promise} once done.

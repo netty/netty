@@ -298,11 +298,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler) {
-        return createStream(type, handler, eventLoop().newPromise());
-    }
-
-    @Override
     public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
         if (eventLoop().inEventLoop()) {
@@ -324,11 +319,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return null;
         }
         return Quiche.quiche_conn_application_proto(connAddr);
-    }
-
-    @Override
-    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason) {
-        return close(applicationClose, error, reason, newPromise());
     }
 
     @Override
@@ -1009,11 +999,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         QuicheQuicChannelAddress(QuicheQuicChannel channel) {
             this.channel = channel;
         }
-    }
-
-    @Override
-    public Future<QuicConnectionStats> collectStats() {
-        return collectStats(eventLoop().newPromise());
     }
 
     @Override

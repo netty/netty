@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -153,6 +154,32 @@ public final class Quic {
         } catch (Throwable t) {
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
+        }
+    }
+
+    /**
+     * Allow to specify a {@link ChannelOption} which is used for the {@link QuicStreamChannel} instances once they got
+     * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
+     */
+    static <T> void updateOptions(Map<ChannelOption<?>, Object> options, ChannelOption<T> option, T value) {
+        ObjectUtil.checkNotNull(option, "option");
+        if (value == null) {
+            options.remove(option);
+        } else {
+            options.put(option, value);
+        }
+    }
+
+    /**
+     * Allow to specify an initial attribute of the newly created {@link QuicStreamChannel}. If the {@code value} is
+     * {@code null}, the attribute of the specified {@code key} is removed.
+     */
+    static <T> void updateAttributes(Map<AttributeKey<?>, Object> attributes, AttributeKey<T> key, T value) {
+        ObjectUtil.checkNotNull(key, "key");
+        if (value == null) {
+            attributes.remove(key);
+        } else {
+            attributes.put(key, value);
         }
     }
 

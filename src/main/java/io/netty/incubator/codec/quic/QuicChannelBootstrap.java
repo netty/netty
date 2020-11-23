@@ -41,9 +41,9 @@ public final class QuicChannelBootstrap {
     private final Channel parent;
     // The order in which ChannelOptions are applied is important they may depend on each other for validation
     // purposes.
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new HashMap<AttributeKey<?>, Object>();
-    private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<>();
+    private final Map<AttributeKey<?>, Object> attrs = new HashMap<>();
+    private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> streamAttrs = new HashMap<>();
     private ChannelHandler handler;
     private ChannelHandler streamHandler;
@@ -62,12 +62,7 @@ public final class QuicChannelBootstrap {
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> QuicChannelBootstrap option(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
-        if (value == null) {
-            options.remove(option);
-        } else {
-            options.put(option, value);
-        }
+        Quic.updateOptions(options, option, value);
         return this;
     }
 
@@ -76,12 +71,7 @@ public final class QuicChannelBootstrap {
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> QuicChannelBootstrap attr(AttributeKey<T> key, T value) {
-        ObjectUtil.checkNotNull(key, "key");
-        if (value == null) {
-            attrs.remove(key);
-        } else {
-            attrs.put(key, value);
-        }
+        Quic.updateAttributes(attrs, key, value);
         return this;
     }
 
@@ -99,12 +89,7 @@ public final class QuicChannelBootstrap {
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> QuicChannelBootstrap streamOption(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
-        if (value == null) {
-            streamOptions.remove(option);
-        } else {
-            streamOptions.put(option, value);
-        }
+        Quic.updateOptions(streamOptions, option, value);
         return this;
     }
 
@@ -113,12 +98,7 @@ public final class QuicChannelBootstrap {
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> QuicChannelBootstrap streamAttr(AttributeKey<T> key, T value) {
-        ObjectUtil.checkNotNull(key, "key");
-        if (value == null) {
-            streamAttrs.remove(key);
-        } else {
-            streamAttrs.put(key, value);
-        }
+        Quic.updateAttributes(streamAttrs, key, value);
         return this;
     }
 

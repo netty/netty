@@ -46,12 +46,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> QuicServerCodecBuilder option(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
-        if (value == null) {
-            options.remove(option);
-        } else {
-            options.put(option, value);
-        }
+        Quic.updateOptions(options, option, value);
         return self();
     }
 
@@ -60,12 +55,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> QuicServerCodecBuilder attr(AttributeKey<T> key, T value) {
-        ObjectUtil.checkNotNull(key, "key");
-        if (value == null) {
-            attrs.remove(key);
-        } else {
-            attrs.put(key, value);
-        }
+        Quic.updateAttributes(attrs, key, value);
         return self();
     }
 
@@ -83,12 +73,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> QuicServerCodecBuilder streamOption(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
-        if (value == null) {
-            streamOptions.remove(option);
-        } else {
-            streamOptions.put(option, value);
-        }
+        Quic.updateOptions(streamOptions, option, value);
         return self();
     }
 
@@ -97,12 +82,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> QuicServerCodecBuilder streamAttr(AttributeKey<T> key, T value) {
-        ObjectUtil.checkNotNull(key, "key");
-        if (value == null) {
-            streamAttrs.remove(key);
-        } else {
-            streamAttrs.put(key, value);
-        }
+        Quic.updateAttributes(streamAttrs, key, value);
         return self();
     }
 
