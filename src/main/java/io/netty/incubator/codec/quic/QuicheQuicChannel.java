@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -31,7 +30,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
@@ -98,7 +96,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
-    private final ChannelConfig config;
+    private final QuicChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
     private final ChannelHandler streamHandler;
@@ -171,7 +169,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(parent);
-        config = new DefaultChannelConfig(this);
+        config = new DefaultQuicChannelConfig(this);
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
         this.key = key;
@@ -207,8 +205,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         assert this.traceId == null;
         assert this.key == null;
         ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
+        final String serverName = config().getPeerCertServerName();
         try {
-            long connection = Quiche.quiche_connect(null, idBuffer.memoryAddress() + idBuffer.readerIndex(),
+            long connection = Quiche.quiche_connect(serverName, idBuffer.memoryAddress() + idBuffer.readerIndex(),
                     idBuffer.readableBytes(), configAddr);
             if (connection == -1) {
                 ConnectException connectException = new ConnectException();
@@ -436,7 +435,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public ChannelConfig config() {
+    public QuicChannelConfig config() {
         return config;
     }
 

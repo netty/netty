@@ -29,6 +29,12 @@ import io.netty.util.concurrent.Promise;
 public interface QuicChannel extends Channel {
 
     /**
+     * Returns the configuration of this channel.
+     */
+    @Override
+    QuicChannelConfig config();
+
+    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
