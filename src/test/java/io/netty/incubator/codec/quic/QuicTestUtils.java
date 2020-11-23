@@ -75,7 +75,7 @@ final class QuicTestUtils {
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(builder.buildCodec())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
-        return new QuicChannelBootstrap(channel);
+        return QuicChannel.newBootstrap(channel);
     }
 
     static QuicClientCodecBuilder newQuicClientBuilder() {

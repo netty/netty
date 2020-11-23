@@ -63,7 +63,7 @@ public final class QuicClientExample {
                     .handler(codec)
                     .bind(0).sync().channel();
 
-            QuicChannel quicChannel = (QuicChannel) new QuicChannelBootstrap(channel)
+            QuicChannel quicChannel = (QuicChannel) QuicChannel.newBootstrap(channel)
                     .streamHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {

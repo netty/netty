@@ -53,7 +53,7 @@ public final class QuicChannelBootstrap {
      * This {@link io.netty.channel.ChannelPipeline} of the {@link Channel} needs to have the quic codec in the
      * pipeline.
      */
-    public QuicChannelBootstrap(Channel parent) {
+    QuicChannelBootstrap(Channel parent) {
         this.parent = ObjectUtil.checkNotNull(parent, "parent");
     }
 

@@ -102,4 +102,12 @@ public interface QuicChannel extends Channel {
      * Collects statistics about the connection and notifies the {@link Promise} once done.
      */
     Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise);
+
+    /**
+     * Creates a new {@link QuicChannelBootstrap} that can be used to create and connect new {@link QuicChannel}s to
+     * endpoints using the given {@link Channel} as transport layer.
+     */
+    static QuicChannelBootstrap newBootstrap(Channel channel) {
+        return new QuicChannelBootstrap(channel);
+    }
 }
