@@ -645,11 +645,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     boolean writable() {
-        handleWritableStreams();
-        ChannelFuture future = connectionSend();
-        if (future != null) {
-            future.addListener(timeoutScheduleListener);
-            return true;
+        if (handleWritableStreams()) {
+            ChannelFuture future = connectionSend();
+            if (future != null) {
+                future.addListener(timeoutScheduleListener);
+                return true;
+            }
         }
         return false;
     }
@@ -658,12 +659,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         flushPendingQueue.add(streamId);
     }
 
-    private void handleWritableStreams() {
+    private boolean handleWritableStreams() {
         int pending = flushPendingQueue.size();
         if (isConnDestroyed() || pending == 0) {
-            return;
+            return false;
         }
 
+        boolean mayNeedWrite = false;
         if (Quiche.quiche_conn_is_established(connAddr) ||
                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
             // We only want to process the number of channels that were in the queue when we entered
@@ -673,13 +675,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 Long streamId = flushPendingQueue.poll();
                 if (streamId == null) {
                     break;
-                }
-                QuicheQuicStreamChannel channel = streams.get(streamId.longValue());
-                if (channel != null) {
-                    channel.writable();
+                    // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
+                    // to notice that we can not write again.
+                } else if (Quiche.quiche_conn_stream_capacity(connAddr, streamId) <= 0) {
+                    // Still not writable, put back in the queue.
+                   flushPendingQueue.add(streamId);
+                } else {
+                    QuicheQuicStreamChannel channel = streams.get(streamId.longValue());
+                    if (channel != null) {
+                        mayNeedWrite = true;
+                        channel.writable();
+                    }
                 }
             }
         }
+        return mayNeedWrite;
     }
 
     /**
