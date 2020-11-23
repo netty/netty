@@ -239,6 +239,14 @@ static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
    return NOTE_DISCONNECTED;
 }
 
+static jboolean netty_kqueue_native_isSendFileSupported(JNIEnv* env, jclass clazz) {
+#ifdef __NetBSD__
+   return JNI_FALSE;
+#else
+   return JNI_TRUE;
+#endif
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evfiltRead", "()S", (void *) netty_kqueue_native_evfiltRead },
@@ -254,7 +262,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evError", "()S", (void *) netty_kqueue_native_evError },
   { "noteReadClosed", "()S", (void *) netty_kqueue_native_noteReadClosed },
   { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
-  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected }
+  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected },
+  { "isSendFileSupported", "()Z", (void *) netty_kqueue_native_isSendFileSupported }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {

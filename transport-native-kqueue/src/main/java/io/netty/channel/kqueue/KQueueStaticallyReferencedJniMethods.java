@@ -46,4 +46,6 @@ final class KQueueStaticallyReferencedJniMethods {
     static native short evfiltWrite();
     static native short evfiltUser();
     static native short evfiltSock();
+
+    static native boolean isSendFileSupported();
 }

@@ -38,6 +38,7 @@ import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfil
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltSock;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltUser;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltWrite;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.isSendFileSupported;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteConnReset;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteDisconnected;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteReadClosed;
@@ -84,6 +85,7 @@ final class Native {
     static final short EVFILT_WRITE = evfiltWrite();
     static final short EVFILT_USER = evfiltUser();
     static final short EVFILT_SOCK = evfiltSock();
+    static final boolean IS_SENDFILE_SUPPORTED = isSendFileSupported();
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());

@@ -321,7 +321,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         Object msg = in.current();
         if (msg instanceof ByteBuf) {
             return writeBytes(in, (ByteBuf) msg);
-        } else if (msg instanceof DefaultFileRegion) {
+        } else if (msg instanceof DefaultFileRegion && Native.IS_SENDFILE_SUPPORTED) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
