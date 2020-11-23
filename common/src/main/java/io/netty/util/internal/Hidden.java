@@ -79,6 +79,10 @@ class Hidden {
 
             builder.allowBlockingCallsInside(
                     "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "addTask");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
                     "takeTask");
 
             builder.allowBlockingCallsInside(
