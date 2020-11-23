@@ -65,14 +65,14 @@ public final class QuicClientExample {
 
             QuicChannel quicChannel = (QuicChannel) new QuicChannelBootstrap(channel)
                     .streamHandler(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) {
-                    // We don't want to handle streams created by the server side, just close the
-                    // stream and so send a fin.
-                    ctx.close();
-                }
-            }).connect(QuicConnectionAddress.random(
-                    new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            // We don't want to handle streams created by the server side, just close the
+                            // stream and so send a fin.
+                            ctx.close();
+                        }
+                    }).connect(QuicConnectionAddress.random(
+                            new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {
