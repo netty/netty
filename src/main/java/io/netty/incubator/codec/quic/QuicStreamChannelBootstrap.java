@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -118,9 +117,7 @@ public final class QuicStreamChannelBootstrap {
         }
         @Override
         protected void initChannel(QuicStreamChannel ch) {
-            Quic.setChannelOptions(ch, streamOptions, logger);
-            Quic.setAttributes(ch, streamAttrs);
-            ch.pipeline().addLast(streamHandler);
+            Quic.setupChannel(ch, streamOptions, streamAttrs, streamHandler, logger);
         }
     }
 }

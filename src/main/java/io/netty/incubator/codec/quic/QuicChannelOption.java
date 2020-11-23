@@ -17,6 +17,9 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelOption;
 
+/**
+ * {@link ChannelOption}s specific to QUIC.
+ */
 public final class QuicChannelOption<T> extends ChannelOption<T> {
 
     /**

@@ -120,11 +120,8 @@ public final class QuicChannelBootstrap {
         }
         QuicChannel channel = QuicheQuicChannel.forClient(parent,
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
-        Quic.setChannelOptions(channel, Quic.optionsArray(options), logger);
-        Quic.setAttributes(channel, Quic.attributesArray(attrs));
-        if (handler != null) {
-            channel.pipeline().addLast(handler);
-        }
+
+        Quic.setupChannel(channel, Quic.optionsArray(options), Quic.attributesArray(attrs), handler, logger);
         ChannelPromise promise = new DefaultChannelPromise(channel, parent.eventLoop());
         parent.eventLoop().register(channel).addListener(new ChannelFutureListener() {
             @Override

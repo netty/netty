@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
@@ -129,7 +130,7 @@ public final class Quic {
         return attributes.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
     }
 
-    static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {
+    private static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {
         for (Map.Entry<AttributeKey<?>, Object> e: attrs) {
             @SuppressWarnings("unchecked")
             AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
@@ -137,7 +138,7 @@ public final class Quic {
         }
     }
 
-    static void setChannelOptions(
+    private static void setChannelOptions(
             Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
         for (Map.Entry<ChannelOption<?>, Object> e: options) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
@@ -180,6 +181,16 @@ public final class Quic {
             attributes.remove(key);
         } else {
             attributes.put(key, value);
+        }
+    }
+
+    static void setupChannel(Channel ch, Map.Entry<ChannelOption<?>, Object>[] options,
+                             Map.Entry<AttributeKey<?>, Object>[] attrs, ChannelHandler handler,
+                             InternalLogger logger) {
+        Quic.setChannelOptions(ch, options, logger);
+        Quic.setAttributes(ch, attrs);
+        if (handler != null) {
+            ch.pipeline().addLast(handler);
         }
     }
 

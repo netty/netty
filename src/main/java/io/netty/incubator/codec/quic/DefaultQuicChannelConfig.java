@@ -26,7 +26,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 /**
- * A QUIC {@link ChannelConfig}.
+ * Default {@link QuicChannelConfig} implementation.
  */
 final class DefaultQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
 
@@ -34,7 +34,7 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
      * Optional parameter to verify peer's certificate.
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/fn.connect.html">server_name</a>.
      */
-    private String peerCertServerName;
+    private volatile String peerCertServerName;
 
     DefaultQuicChannelConfig(Channel channel) {
         super(channel);

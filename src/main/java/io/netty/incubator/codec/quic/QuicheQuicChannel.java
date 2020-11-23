@@ -289,9 +289,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             @Override
             protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
                 QuicStreamChannel channel = (QuicStreamChannel) msg;
-                Quic.setChannelOptions(channel, streamOptionsArray, logger);
-                Quic.setAttributes(channel, streamAttrsArray);
-                channel.pipeline().addLast(streamHandler);
+                Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
                 ctx.channel().eventLoop().register(channel);
             }
         };
