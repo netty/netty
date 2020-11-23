@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 public abstract class IovArrayTest {
 
     @Test
-    public void test() {
+    public void testNotFailsWihtoutMemoryAddress() {
         ByteBuf buffer = new NoMemoryAddressByteBuf(128);
         IovArray array = new IovArray(buffer);
 
