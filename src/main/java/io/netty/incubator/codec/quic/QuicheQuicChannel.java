@@ -612,7 +612,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
                 memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
         if (recvLen == Quiche.QUICHE_ERR_INVALID_STREAM_STATE) {
-            // TODO: Figure out if this is a bug in quiche or if its a bug in our code...
+            // Remove this workaround as soon there is a quiche release that pulled in:
+            // https://github.com/cloudflare/quiche/pull/742
             assert isStreamFinished(streamId);
             return StreamRecvResult.FIN;
         }
