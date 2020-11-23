@@ -34,6 +34,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.HashedWheelTimer;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
@@ -57,6 +58,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
@@ -125,6 +127,15 @@ public class NettyBlockHoundIntegrationTest {
         ScheduledFuture<?> f = eventExecutor.schedule(latch::countDown, 10, TimeUnit.MILLISECONDS);
         f.sync();
         latch.await();
+    }
+
+    @Test(timeout = 5000L)
+    public void testHashedWheelTimerStartStop() throws Exception {
+        HashedWheelTimer timer = new HashedWheelTimer();
+        Future<?> futureStart = GlobalEventExecutor.INSTANCE.submit(timer::start);
+        futureStart.get(5, TimeUnit.SECONDS);
+        Future<?> futureStop = GlobalEventExecutor.INSTANCE.submit(timer::stop);
+        futureStop.get(5, TimeUnit.SECONDS);
     }
 
     // Tests copied from io.netty.handler.ssl.SslHandlerTest
