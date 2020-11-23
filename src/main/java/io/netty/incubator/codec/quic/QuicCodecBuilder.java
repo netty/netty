@@ -225,19 +225,26 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return self();
     }
 
+    /**
+     * Validate the configuration before building the codec.
+     */
     protected void validate() { }
 
-    public final ChannelHandler buildCodec() {
+    /**
+     * Build the QUIC codec that should be added to the {@link io.netty.channel.ChannelPipeline} of the underlying
+     * {@link io.netty.channel.Channel} which is used as transport for QUIC.
+     */
+    public final ChannelHandler build() {
         validate();
-        return buildCodec(createConfig());
+        return build(createConfig());
     }
 
-    protected abstract ChannelHandler buildCodec(long config);
+    protected abstract ChannelHandler build(long config);
 
     /**
      * Creates the native config object and return it.
      */
-    protected final long createConfig() {
+    private long createConfig() {
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
             if (certPath != null && Quiche.quiche_config_load_cert_chain_from_pem_file(config, certPath) != 0) {

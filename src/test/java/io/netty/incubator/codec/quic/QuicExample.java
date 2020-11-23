@@ -98,7 +98,7 @@ public final class QuicExample {
                     public boolean isSharable() {
                         return true;
                     }
-                }).buildCodec();
+                }).build();
         try {
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)

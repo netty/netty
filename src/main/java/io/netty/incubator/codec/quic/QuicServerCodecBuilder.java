@@ -124,7 +124,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     @Override
-    protected ChannelHandler buildCodec(long config) {
+    protected ChannelHandler build(long config) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
@@ -133,7 +133,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
-        return new QuicheQuicServerCodec(createConfig(), tokenHandler, generator,
+        return new QuicheQuicServerCodec(config, tokenHandler, generator,
                 handler, Quic.optionsArray(options), Quic.attributesArray(attrs),
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
     }

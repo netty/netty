@@ -73,7 +73,7 @@ final class QuicTestUtils {
         Channel channel = bs.group(GROUP)
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
-                .handler(builder.buildCodec())
+                .handler(builder.build())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
         return QuicChannel.newBootstrap(channel);
     }
@@ -119,7 +119,7 @@ final class QuicTestUtils {
         if (handler != null) {
             serverBuilder.handler(handler);
         }
-        ChannelHandler codec = serverBuilder.buildCodec();
+        ChannelHandler codec = serverBuilder.build();
         Bootstrap bs = new Bootstrap();
         return bs.group(GROUP)
                 .channel(NioDatagramChannel.class)

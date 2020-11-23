@@ -55,7 +55,7 @@ public final class QuicClientExample {
                     .initialMaxStreamsBidirectional(100)
                     .initialMaxStreamsUnidirectional(100)
                     .disableActiveMigration(true)
-                    .enableEarlyData().buildCodec();
+                    .enableEarlyData().build();
 
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)

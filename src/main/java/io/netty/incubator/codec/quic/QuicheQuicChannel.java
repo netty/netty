@@ -1026,8 +1026,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return null;
         }
 
-        final QuicheQuicConnectionStats connStats =
-            new QuicheQuicConnectionStats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
+        final DefaultQuicConnectionStats connStats =
+            new DefaultQuicConnectionStats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
         promise.setSuccess(connStats);
         return connStats;
     }
