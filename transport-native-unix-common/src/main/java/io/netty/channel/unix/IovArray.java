@@ -62,6 +62,7 @@ public final class IovArray implements MessageProcessor {
      */
     private static final int MAX_CAPACITY = IOV_MAX * IOV_SIZE;
 
+    private final long memoryAddress;
     private final ByteBuf memory;
     private int count;
     private long size;
@@ -77,6 +78,12 @@ public final class IovArray implements MessageProcessor {
         assert memory.readerIndex() == 0;
         this.memory = PlatformDependent.hasUnsafe() ? memory : memory.order(
                 PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        if (memory.hasMemoryAddress()) {
+            memoryAddress = memory.memoryAddress();
+        } else {
+            // Fallback to using JNI as we were not be able to access the address otherwise.
+            memoryAddress = Buffer.memoryAddress(memory.internalNioBuffer(0, memory.capacity()));
+        }
     }
 
     public void clear() {
@@ -97,7 +104,6 @@ public final class IovArray implements MessageProcessor {
             // No more room!
             return false;
         }
-        long memoryAddress = memory.memoryAddress();
         if (buf.nioBufferCount() == 1) {
             if (len == 0) {
                 return true;
