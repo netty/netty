@@ -98,6 +98,10 @@ class Hidden {
                     "takeTask");
 
             builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "addTask");
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
                     "verify");
 
