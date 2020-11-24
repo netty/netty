@@ -310,12 +310,6 @@ final class Quiche {
     static native long quiche_conn_timeout_as_nanos(long connAddr);
 
     /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L291">
-     *     quiche_conn_timeout_as_millis</a>.
-     */
-    static native long quiche_conn_timeout_as_millis(long connAddr);
-
-    /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L294">quiche_conn_on_timeout</a>.
      */
@@ -326,12 +320,6 @@ final class Quiche {
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L282">quiche_conn_readable</a>.
      */
     static native long quiche_conn_readable(long connAddr);
-
-    /**
-     * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L285">quiche_conn_writable</a>.
-     */
-    static native long quiche_conn_writable(long connAddr);
 
     /**
      * See

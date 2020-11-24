@@ -269,24 +269,12 @@ static jlong netty_quic_quiche_conn_timeout_as_nanos(JNIEnv* env, jclass clazz, 
     return quiche_conn_timeout_as_nanos((quiche_conn *) conn);
 }
 
-static jlong netty_quic_quiche_conn_timeout_as_millis(JNIEnv* env, jclass clazz, jlong conn) {
-    return quiche_conn_timeout_as_millis((quiche_conn *) conn);
-}
-
 static void netty_quic_quiche_conn_on_timeout(JNIEnv* env, jclass clazz, jlong conn) {
     quiche_conn_on_timeout((quiche_conn *) conn);
 }
 
 static jlong netty_quic_quiche_conn_readable(JNIEnv* env, jclass clazz, jlong conn) {
     quiche_stream_iter* iter = quiche_conn_readable((quiche_conn *) conn);
-    if (iter == NULL) {
-        return -1;
-    }
-    return (jlong) iter;
-}
-
-static jlong netty_quic_quiche_conn_writable(JNIEnv* env, jclass clazz, jlong conn) {
-    quiche_stream_iter* iter = quiche_conn_writable((quiche_conn *) conn);
     if (iter == NULL) {
         return -1;
     }
@@ -505,10 +493,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_is_closed", "(J)Z", (void *) netty_quic_quiche_conn_is_closed },
   { "quiche_conn_stats", "(J)[J", (void *) netty_quic_quiche_conn_stats },
   { "quiche_conn_timeout_as_nanos", "(J)J", (void *) netty_quic_quiche_conn_timeout_as_nanos },
-  { "quiche_conn_timeout_as_millis", "(J)J", (void *) netty_quic_quiche_conn_timeout_as_millis },
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quic_quiche_conn_on_timeout },
   { "quiche_conn_readable", "(J)J", (void *) netty_quic_quiche_conn_readable },
-  { "quiche_conn_writable", "(J)J", (void *) netty_quic_quiche_conn_writable },
   { "quiche_stream_iter_free", "(J)V", (void *) netty_quic_quiche_stream_iter_free },
   { "quiche_stream_iter_next", "(J[J)I", (void *) netty_quic_quiche_stream_iter_next },
   { "quiche_conn_dgram_max_writable_len", "(J)I", (void* ) netty_quic_quiche_conn_dgram_max_writable_len },
