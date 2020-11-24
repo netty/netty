@@ -102,49 +102,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelHandler streamHandler;
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
+    private final TimeoutHandler timeoutHandler = new TimeoutHandler();
 
-    private final ChannelFutureListener timeoutScheduleListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            if (future.isSuccess()) {
-                // Schedule timeout.
-                // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
-                timeoutFuture = null;
-                scheduleTimeout();
-            }
-        }
-    };
-
-    private final Runnable timeout = new Runnable() {
-        @Override
-        public void run() {
-            if (!isConnDestroyed()) {
-                // Notify quiche there was a timeout.
-                Quiche.quiche_conn_on_timeout(connAddr);
-
-                if (Quiche.quiche_conn_is_closed(connAddr)) {
-                    timeoutFuture = null;
-                    forceClose();
-                } else {
-                    // We need to set writeEgressNeeded to true as we always need to call this method when
-                    // a timeout was triggered.
-                    // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send.
-                    connectionSendNeeded = true;
-                    ChannelFuture future = connectionSend();
-                    if (future != null) {
-                        future.addListener(timeoutScheduleListener);
-                        flushParent();
-                    }
-                    if (!closeAllIfConnectionClosed() && future != null) {
-                        // The connection is alive, reschedule.
-                        timeoutFuture = null;
-                        scheduleTimeout();
-                    }
-                }
-            }
-        }
-    };
-    private Future<?> timeoutFuture;
     private long connAddr;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
@@ -269,18 +228,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             finBuffer = null;
         }
         state = CLOSED;
-    }
 
-    private void scheduleTimeout() {
-        if (timeoutFuture != null) {
-            timeoutFuture.cancel(false);
-        }
-        if (isConnDestroyed()) {
-            return;
-        }
-        long nanos = Quiche.quiche_conn_timeout_as_nanos(connAddr);
-        timeoutFuture = eventLoop().schedule(timeout,
-                nanos, TimeUnit.NANOSECONDS);
+        timeoutHandler.cancel();
     }
 
     @Override
@@ -617,9 +566,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private void tryConnectionSend() {
         connectionSendNeeded = true;
         if (!fireChannelReadCompletePending) {
-            ChannelFuture future = connectionSend();
-            if (future != null) {
-                future.addListener(timeoutScheduleListener);
+            if (connectionSend()) {
                 flushParent();
             }
         }
@@ -634,11 +581,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     boolean writable() {
         if (handleWritableStreams()) {
-            ChannelFuture future = connectionSend();
-            if (future != null) {
-                future.addListener(timeoutScheduleListener);
-                return true;
-            }
+            return connectionSend();
         }
         return false;
     }
@@ -705,12 +648,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // Try flush more streams that had some flushes pending.
         handleWritableStreams();
 
-        ChannelFuture future = connectionSend();
-        if (future != null) {
-            future.addListener(timeoutScheduleListener);
-            return true;
-        }
-        return false;
+        return connectionSend();
     }
 
     private boolean isConnDestroyed() {
@@ -721,9 +659,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * Write datagrams if needed and return {@code true} if something was written and we need to call
      * {@link Channel#flush()} at some point.
      */
-    ChannelFuture connectionSend() {
+    private boolean connectionSend() {
         if (isConnDestroyed() || !connectionSendNeeded) {
-            return null;
+            return false;
         }
         connectionSendNeeded = false;
         ChannelFuture lastFuture = null;
@@ -758,7 +696,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             out.writerIndex(writerIndex + written);
             lastFuture = parent().write(new DatagramPacket(out, remote));
         }
-        return lastFuture;
+        if (lastFuture != null) {
+            lastFuture.addListener(timeoutHandler);
+            return true;
+        }
+        return false;
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
@@ -969,9 +911,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      */
     void finishConnect() {
         assert !server;
-        ChannelFuture future = connectionSend();
-        if (future != null) {
-            future.addListener(timeoutScheduleListener);
+        if (connectionSend()) {
             flushParent();
         }
     }
@@ -996,6 +936,64 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         QuicheQuicChannelAddress(QuicheQuicChannel channel) {
             this.channel = channel;
+        }
+    }
+
+    private final class TimeoutHandler implements ChannelFutureListener, Runnable {
+        private Future<?> timeoutFuture;
+
+        @Override
+        public void operationComplete(ChannelFuture future) {
+            if (future.isSuccess()) {
+                // Schedule timeout.
+                // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
+                timeoutFuture = null;
+                scheduleTimeout();
+            }
+        }
+
+        @Override
+        public void run() {
+            if (!isConnDestroyed()) {
+                // Notify quiche there was a timeout.
+                Quiche.quiche_conn_on_timeout(connAddr);
+
+                if (Quiche.quiche_conn_is_closed(connAddr)) {
+                    timeoutFuture = null;
+                    forceClose();
+                } else {
+                    // We need to set connectionSendNeeded to true as we always need to call this method when
+                    // a timeout was triggered.
+                    // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send.
+                    connectionSendNeeded = true;
+                    boolean send = connectionSend();
+                    if (send) {
+                        flushParent();
+                    }
+                    if (!closeAllIfConnectionClosed() && send) {
+                        // The connection is alive, reschedule.
+                        timeoutFuture = null;
+                        scheduleTimeout();
+                    }
+                }
+            }
+        }
+
+        private void scheduleTimeout() {
+            cancel();
+            if (isConnDestroyed()) {
+                return;
+            }
+            long nanos = Quiche.quiche_conn_timeout_as_nanos(connAddr);
+            timeoutFuture = eventLoop().schedule(this,
+                    nanos, TimeUnit.NANOSECONDS);
+        }
+
+        void cancel() {
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(false);
+                timeoutFuture = null;
+            }
         }
     }
 
