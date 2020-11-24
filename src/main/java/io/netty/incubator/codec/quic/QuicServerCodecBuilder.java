@@ -30,9 +30,9 @@ import java.util.Map;
 public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCodecBuilder> {
     // The order in which ChannelOptions are applied is important they may depend on each other for validation
     // purposes.
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new HashMap<AttributeKey<?>, Object>();
-    private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<>();
+    private final Map<AttributeKey<?>, Object> attrs = new HashMap<>();
+    private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> streamAttrs = new HashMap<>();
     private ChannelHandler handler;
     private ChannelHandler streamHandler;

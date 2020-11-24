@@ -62,12 +62,12 @@ public final class QuicExample {
                 // ChannelHandler that is added into QuicChannel pipeline.
                 .handler(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(ChannelHandlerContext ctx) {
                         QuicChannel channel = (QuicChannel) ctx.channel();
                         // Create streams etc..
                     }
 
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelInactive(ChannelHandlerContext ctx) {
                         LOGGER.info("Connection closed: {}",
                                 ((QuicheQuicChannel) ctx.channel()).collectStats().getNow());
                     }

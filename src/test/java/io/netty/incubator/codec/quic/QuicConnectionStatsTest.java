@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -66,7 +65,7 @@ public class QuicConnectionStatsTest {
             }, new ChannelInboundHandlerAdapter() {
 
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     counter.incrementAndGet();
                 }
 
@@ -100,13 +99,9 @@ public class QuicConnectionStatsTest {
                     received += buffer.readableBytes();
                     buffer.release();
                     if (received == bufferSize) {
-                        ctx.close().addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                // Close the underlying QuicChannel as well.
-                                future.channel().parent().close();
-                                //
-                            }
+                        ctx.close().addListener((ChannelFuture future) -> {
+                            // Close the underlying QuicChannel as well.
+                            future.channel().parent().close();
                         });
                     }
                 }

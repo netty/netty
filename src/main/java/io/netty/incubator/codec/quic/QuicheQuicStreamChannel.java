@@ -96,12 +96,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         if (eventLoop().inEventLoop()) {
             shutdownInput0(channelPromise);
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(channelPromise);
-                }
-            });
+            eventLoop().execute(() -> shutdownInput0(channelPromise));
         }
         return channelPromise;
     }
@@ -131,12 +126,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         if (eventLoop().inEventLoop()) {
             shutdownOutput0(channelPromise);
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownOutput0(channelPromise);
-                }
-            });
+            eventLoop().execute(() -> shutdownOutput0(channelPromise));
         }
         return channelPromise;
     }
@@ -161,12 +151,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         if (eventLoop().inEventLoop()) {
             shutdown0(channelPromise);
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdown0(channelPromise);
-                }
-            });
+            eventLoop().execute(() -> shutdown0(channelPromise));
         }
         return channelPromise;
     }
@@ -335,7 +320,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                                         RecvByteBufAllocator.Handle allocHandle) {
+                                         @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     pipeline.fireChannelRead(byteBuf);
@@ -363,6 +348,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 ChannelPipeline pipeline = pipeline();
                 ChannelConfig config = config();
                 ByteBufAllocator allocator = config.getAllocator();
+                @SuppressWarnings("deprecation")
                 RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
 
                 // We should loop as long as a read() was requested and there is anything left to read, which means the
@@ -436,7 +422,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
         // Read was complete and something was read, so we we need to reset the readPending flags, the allocHandle
         // and call fireChannelReadComplete(). The user may schedule another read now.
-        private void readComplete(RecvByteBufAllocator.Handle allocHandle, ChannelPipeline pipeline) {
+        private void readComplete(@SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle,
+                                  ChannelPipeline pipeline) {
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
         }

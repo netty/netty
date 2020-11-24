@@ -55,7 +55,7 @@ final class QuicTestUtils {
         if (streamHandler == null) {
             streamHandler = new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     ctx.close();
                 }
 

@@ -84,7 +84,7 @@ public final class QuicClientExample {
                         }
 
                         @Override
-                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelInactive(ChannelHandlerContext ctx) {
                             // Close the connection once the remote peer did close this stream.
                             ((QuicChannel) ctx.channel().parent()).close(true, 0,
                                     ctx.alloc().directBuffer(16)

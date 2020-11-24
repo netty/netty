@@ -220,7 +220,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public final void channelWritabilityChanged(ChannelHandlerContext ctx) {
         if (ctx.channel().isWritable()) {
             boolean writeDone = false;
             Iterator<Map.Entry<ByteBuffer, QuicheQuicChannel>> entries = connections.entrySet().iterator();

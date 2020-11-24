@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -92,14 +91,11 @@ public class QuicChannelEchoTest {
                     public void channelActive(ChannelHandlerContext ctx) {
                         setAllocator(ctx.channel());
                         ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
-                                .addListener(new FutureListener<QuicStreamChannel>() {
-                            @Override
-                            public void operationComplete(Future<QuicStreamChannel> future) {
-                                QuicStreamChannel stream = future.getNow();
-                                setAllocator(stream);
-                                List<ChannelFuture> futures = writeAllData(stream);
-                                writeFutures.set(futures);
-                            }
+                                .addListener((Future<QuicStreamChannel> future) -> {
+                                    QuicStreamChannel stream = future.getNow();
+                                    setAllocator(stream);
+                                    List<ChannelFuture> futures = writeAllData(stream);
+                                    writeFutures.set(futures);
                         });
                     }
                 }, sh);
@@ -153,7 +149,7 @@ public class QuicChannelEchoTest {
         ChannelFuture future = null;
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel());
             }
         }, sh);

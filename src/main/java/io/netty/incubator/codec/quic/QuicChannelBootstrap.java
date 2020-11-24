@@ -17,7 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -123,15 +122,12 @@ public final class QuicChannelBootstrap {
 
         Quic.setupChannel(channel, Quic.optionsArray(options), Quic.attributesArray(attrs), handler, logger);
         ChannelPromise promise = new DefaultChannelPromise(channel, parent.eventLoop());
-        parent.eventLoop().register(channel).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                Throwable cause = future.cause();
-                if (cause != null) {
-                    promise.setFailure(cause);
-                } else {
-                    channel.connect(address).addListener(new ChannelPromiseNotifier(promise));
-                }
+        parent.eventLoop().register(channel).addListener((ChannelFuture future) -> {
+            Throwable cause = future.cause();
+            if (cause != null) {
+                promise.setFailure(cause);
+            } else {
+                channel.connect(address).addListener(new ChannelPromiseNotifier(promise));
             }
         });
         return promise;

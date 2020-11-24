@@ -17,8 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -49,12 +47,8 @@ public class QuicStreamTypeTest {
                     QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
                     assertEquals(QuicStreamType.UNIDIRECTIONAL, channel.type());
                     assertFalse(channel.isLocalCreated());
-                    ctx.writeAndFlush(Unpooled.buffer().writeZero(8)).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            serverWritePromise.setSuccess(future.cause());
-                        }
-                    });
+                    ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
+                            .addListener(future -> serverWritePromise.setSuccess(future.cause()));
                 }
 
                 @Override
@@ -92,11 +86,11 @@ public class QuicStreamTypeTest {
 
             server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     QuicChannel channel = (QuicChannel) ctx.channel();
                     channel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             // Do the write which should succeed
                             ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
                                     .addListener(new PromiseNotifier<>(serverWritePromise));
@@ -110,12 +104,8 @@ public class QuicStreamTypeTest {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     // Do the write should fail
-                    ctx.writeAndFlush(Unpooled.buffer().writeZero(8)).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            clientWritePromise.setSuccess(future.cause());
-                        }
-                    });
+                    ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
+                            .addListener(future -> clientWritePromise.setSuccess(future.cause()));
                 }
 
                 @Override

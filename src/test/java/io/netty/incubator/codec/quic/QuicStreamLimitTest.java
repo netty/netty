@@ -98,28 +98,22 @@ public class QuicStreamLimitTest {
                 new ChannelInboundHandlerAdapter() {
 
                     @Override
-                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(ChannelHandlerContext ctx) {
                         QuicChannel channel = (QuicChannel) ctx.channel();
-                        channel.createStream(type, new ChannelInboundHandlerAdapter()).addListener(
-                                new FutureListener<QuicStreamChannel>() {
-                            @Override
-                            public void operationComplete(Future<QuicStreamChannel> future) {
-                                if (future.isSuccess()) {
-                                    QuicStreamChannel stream = future.getNow();
-                                    streamPromise.setSuccess(null);
-                                    channel.createStream(type, new ChannelInboundHandlerAdapter()).addListener(
-                                            new FutureListener<QuicStreamChannel>() {
-                                        @Override
-                                        public void operationComplete(Future<QuicStreamChannel> future) {
-                                            stream.close();
-                                            stream2Promise.setSuccess(future.cause());
-                                        }
-                                    });
-                                } else {
-                                    streamPromise.setFailure(future.cause());
-                                }
-                            }
-                        });
+                        channel.createStream(type, new ChannelInboundHandlerAdapter())
+                                .addListener((Future<QuicStreamChannel> future) -> {
+                                    if (future.isSuccess()) {
+                                        QuicStreamChannel stream = future.getNow();
+                                        streamPromise.setSuccess(null);
+                                        channel.createStream(type, new ChannelInboundHandlerAdapter())
+                                                .addListener((Future<QuicStreamChannel> f) -> {
+                                                    stream.close();
+                                                    stream2Promise.setSuccess(f.cause());
+                                                });
+                                    } else {
+                                        streamPromise.setFailure(future.cause());
+                                    }
+                                });
                     }
 
                     @Override
