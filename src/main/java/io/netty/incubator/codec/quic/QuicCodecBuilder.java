@@ -18,7 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 
 /**
- * Builder for QUIC.
+ * Abstract base class for {@code QUIC} codec builders.
  */
 public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
 

@@ -18,7 +18,8 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 
 /**
- * {@link QuicCodecBuilder} for the client side.
+ * {@link QuicCodecBuilder} that configures and builds a {@link ChannelHandler} that should be added to the
+ * {@link io.netty.channel.ChannelPipeline} of a {@code QUIC} client.
  */
 public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
 

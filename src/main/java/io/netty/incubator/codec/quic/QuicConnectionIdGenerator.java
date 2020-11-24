@@ -40,4 +40,11 @@ public interface QuicConnectionIdGenerator {
      * Returns the maximum length of a connection id.
      */
     int maxConnectionIdLength();
+
+    /**
+     * Return a {@link QuicConnectionIdGenerator} which randomly generates new connection ids.
+     */
+    static QuicConnectionIdGenerator randomGenerator() {
+        return SecureRandomQuicConnectionIdGenerator.INSTANCE;
+    }
 }

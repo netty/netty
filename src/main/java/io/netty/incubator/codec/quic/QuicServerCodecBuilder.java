@@ -25,7 +25,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * {@link QuicCodecBuilder} for the server side.
+ * {@link QuicCodecBuilder} that configures and builds a {@link ChannelHandler} that should be added to the
+ * {@link io.netty.channel.ChannelPipeline} of a {@code QUIC} server.
  */
 public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCodecBuilder> {
     // The order in which ChannelOptions are applied is important they may depend on each other for validation
@@ -96,7 +97,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     /**
-     * Sets the QuicConnectionIdAddressGenerator to use.
+     * Sets the {@link QuicConnectionIdGenerator} to use.
      */
     public QuicServerCodecBuilder connectionIdAddressGenerator(
             QuicConnectionIdGenerator connectionIdAddressGenerator) {
@@ -129,7 +130,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
         if (generator == null) {
-            generator = Quic.randomGenerator();
+            generator = QuicConnectionIdGenerator.randomGenerator();
         }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;

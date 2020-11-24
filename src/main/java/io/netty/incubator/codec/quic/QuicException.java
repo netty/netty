@@ -17,15 +17,21 @@ package io.netty.incubator.codec.quic;
 
 import java.io.IOException;
 
-public final class QuicheException extends IOException {
+/**
+ * Exception produced while processing {@code QUIC}.
+ */
+public final class QuicException extends IOException {
 
     private final QuicError error;
 
-    QuicheException(QuicError error) {
+    QuicException(QuicError error) {
         super(error.message());
         this.error = error;
     }
 
+    /**
+     * Returns the {@link QuicError} which was the cause of the {@link QuicException}.
+     */
     public QuicError error() {
         return error;
     }

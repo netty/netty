@@ -514,7 +514,7 @@ final class Quiche {
 
     static Exception newException(int err) {
         final QuicError error = QuicError.valueOf(err);
-        final QuicheException reason = new QuicheException(error);
+        final QuicException reason = new QuicException(error);
         if (err == QUICHE_ERR_TLS_FAIL) {
             final SSLHandshakeException sslExc = new SSLHandshakeException(error.message());
             sslExc.initCause(reason);
