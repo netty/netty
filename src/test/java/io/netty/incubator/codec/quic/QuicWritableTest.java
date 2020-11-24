@@ -78,7 +78,8 @@ public class QuicWritableTest {
                     .initialMaxStreamDataBidirectionalLocal(bufferSize / 4))
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
-                    .connect(QuicConnectionAddress.random(address));
+                    .remoteAddress(address)
+                    .connect();
             assertTrue(future.await().isSuccess());
             QuicChannel channel = (QuicChannel) future.channel();
             QuicStreamChannel stream = channel.createStream(

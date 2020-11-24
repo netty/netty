@@ -48,7 +48,8 @@ public class QuicChannelConnectTest {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
             future = QuicTestUtils.newChannelBuilder(verifyHandler, null)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
-                    .connect(QuicConnectionAddress.random((InetSocketAddress) socket.getLocalSocketAddress()));
+                    .remoteAddress(socket.getLocalSocketAddress())
+                    .connect();
             Throwable cause = future.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(ConnectTimeoutException.class));
             ChannelFuture closeFuture = future.channel().closeFuture().await();
@@ -72,11 +73,11 @@ public class QuicChannelConnectTest {
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
-                    .connect(QuicConnectionAddress.random(address));
+                    .remoteAddress(address).connect();
             assertTrue(future.await().isSuccess());
 
             // Try to connect again
-            ChannelFuture connectFuture = future.channel().connect(QuicConnectionAddress.random(address));
+            ChannelFuture connectFuture = future.channel().connect(QuicConnectionAddress.random());
             Throwable cause = connectFuture.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(AlreadyConnectedException.class));
             assertTrue(future.channel().close().await().isSuccess());
@@ -120,7 +121,7 @@ public class QuicChannelConnectTest {
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
-                    .connect(QuicConnectionAddress.random(address));
+                    .remoteAddress(address).connect();
             assertTrue(future.await().isSuccess());
 
             assertTrue(future.channel().close().await().isSuccess());

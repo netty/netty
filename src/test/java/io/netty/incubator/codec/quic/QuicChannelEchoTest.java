@@ -102,8 +102,8 @@ public class QuicChannelEchoTest {
         setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), ch)
-                    .connect(QuicConnectionAddress.random(address));
+            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), ch).remoteAddress(address)
+                    .connect();
             assertTrue(future.await().isSuccess());
             setAllocator(future.channel());
 
@@ -156,8 +156,8 @@ public class QuicChannelEchoTest {
         setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random(address));
+            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null).
+                    remoteAddress(address).connect();
             assertTrue(future.await().isSuccess());
 
             QuicChannel channel = (QuicChannel) future.channel();

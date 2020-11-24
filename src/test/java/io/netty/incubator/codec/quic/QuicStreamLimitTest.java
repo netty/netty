@@ -60,7 +60,8 @@ public class QuicStreamLimitTest {
         try {
             future = QuicTestUtils.newChannelBuilder(
                     new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random(address));
+                    .remoteAddress(address)
+                    .connect();
             assertTrue(future.await().isSuccess());
             QuicChannel channel = (QuicChannel) future.channel();
             QuicStreamChannel stream = channel.createStream(
@@ -130,10 +131,11 @@ public class QuicStreamLimitTest {
         ChannelFuture future = null;
         try {
             future = QuicTestUtils.newChannelBuilder(QuicTestUtils.newQuicClientBuilder()
-                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1)).handler(
-                            new ChannelInboundHandlerAdapter())
-                    .streamHandler(
-                            new ChannelInboundHandlerAdapter()).connect(QuicConnectionAddress.random(address));
+                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1))
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect();
             assertTrue(future.await().isSuccess());
 
             streamPromise.sync();

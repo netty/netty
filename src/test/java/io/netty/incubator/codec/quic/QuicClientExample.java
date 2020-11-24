@@ -71,8 +71,8 @@ public final class QuicClientExample {
                             // stream and so send a fin.
                             ctx.close();
                         }
-                    }).connect(QuicConnectionAddress.random(
-                            new InetSocketAddress(NetUtil.LOCALHOST4, 9999))).sync().channel();
+                    }).remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 9999)).
+                            connect().sync().channel();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {

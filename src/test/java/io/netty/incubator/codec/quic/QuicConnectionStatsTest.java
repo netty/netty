@@ -25,7 +25,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -82,7 +81,7 @@ public class QuicConnectionStatsTest {
             });
 
             client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
+                    .remoteAddress(server.localAddress()).connect().sync().channel();
             assertNotNull(client.collectStats().sync().getNow());
             client.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                 private final int bufferSize = 8;

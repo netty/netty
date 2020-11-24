@@ -25,8 +25,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
-
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -58,7 +56,8 @@ public class QuicStreamTypeTest {
             });
 
             client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
+                    .remoteAddress(server.localAddress())
+                    .connect().sync().channel();
             QuicStreamChannel streamChannel = client.createStream(
                     QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
             // Do the write which should succeed
@@ -120,7 +119,8 @@ public class QuicStreamTypeTest {
                     // Let's close the stream
                     ctx.close();
                 }
-            }).connect(QuicConnectionAddress.random((InetSocketAddress) server.localAddress())).sync().channel();
+            }).remoteAddress(server.localAddress())
+                    .connect().sync().channel();
 
             // Close stream and quic channel
             client.closeFuture().sync();

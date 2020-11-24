@@ -87,7 +87,7 @@ public class QuicReadableTest {
         ChannelFuture future = null;
         try {
             future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random(address));
+                    .remoteAddress(server.localAddress()).connect();
             assertTrue(future.await().isSuccess());
             QuicChannel channel = (QuicChannel) future.channel();
 

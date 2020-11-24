@@ -17,7 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -26,23 +25,21 @@ import static org.junit.Assert.assertNotEquals;
 
 public class QuicConnectionAddressTest {
 
-    private static final InetSocketAddress ADDRESS = new InetSocketAddress(0);
-
     @Test(expected = NullPointerException.class)
     public void testNullByteArray() {
-        new QuicConnectionAddress((byte[]) null, ADDRESS);
+        new QuicConnectionAddress((byte[]) null);
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullByteBuffer() {
-        new QuicConnectionAddress((ByteBuffer) null, ADDRESS);
+        new QuicConnectionAddress((ByteBuffer) null);
     }
 
     @Test
     public void testByteArrayIsCloned() {
         byte[] bytes = new byte[8];
         ThreadLocalRandom.current().nextBytes(bytes);
-        QuicConnectionAddress address = new QuicConnectionAddress(bytes, ADDRESS);
+        QuicConnectionAddress address = new QuicConnectionAddress(bytes);
         assertEquals(ByteBuffer.wrap(bytes), address.connId);
         ThreadLocalRandom.current().nextBytes(bytes);
         assertNotEquals(ByteBuffer.wrap(bytes), address.connId);
@@ -53,7 +50,7 @@ public class QuicConnectionAddressTest {
         byte[] bytes = new byte[8];
         ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        QuicConnectionAddress address = new QuicConnectionAddress(bytes, ADDRESS);
+        QuicConnectionAddress address = new QuicConnectionAddress(bytes);
         assertEquals(buffer, address.connId);
         buffer.position(1);
         assertNotEquals(buffer, address.connId);

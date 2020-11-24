@@ -42,7 +42,8 @@ public class QuicStreamChannelCreationTest {
         ChannelFuture future = null;
         try {
             future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random(address)).sync();
+                    .remoteAddress(address)
+                    .connect().sync();
             assertTrue(future.await().isSuccess());
 
             QuicChannel channel = (QuicChannel) future.channel();
@@ -74,7 +75,8 @@ public class QuicStreamChannelCreationTest {
         ChannelFuture future = null;
         try {
             future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .connect(QuicConnectionAddress.random(address)).sync();
+                    .remoteAddress(address)
+                    .connect().sync();
             assertTrue(future.await().isSuccess());
 
             QuicChannel channel = (QuicChannel) future.channel();

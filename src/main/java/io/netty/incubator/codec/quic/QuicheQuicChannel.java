@@ -103,6 +103,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler = new TimeoutHandler();
+    private final InetSocketAddress remote;
 
     private long connAddr;
     private boolean inFireChannelReadCompleteQueue;
@@ -121,7 +122,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final int ACTIVE = 2;
     private volatile int state;
     private volatile String traceId;
-    private volatile InetSocketAddress remote;
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
                       InetSocketAddress remote, ChannelHandler streamHandler,
@@ -142,11 +142,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.streamAttrsArray = streamAttrsArray;
     }
 
-    static QuicheQuicChannel forClient(Channel parent, ChannelHandler streamHandler,
+    static QuicheQuicChannel forClient(Channel parent, InetSocketAddress remote, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null,
-                -1, null, (InetSocketAddress) parent.remoteAddress(), streamHandler,
+                -1, null, remote, streamHandler,
                 streamOptionsArray, streamAttrsArray);
     }
 
@@ -740,9 +740,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 QuicConnectionAddress address = (QuicConnectionAddress) remote;
                 connectPromise = channelPromise;
                 connectId = address.connId.duplicate();
-                if (address.remote != null) {
-                    QuicheQuicChannel.this.remote = address.remote;
-                }
 
                 // Schedule connect timeout.
                 int connectTimeoutMillis = config().getConnectTimeoutMillis();

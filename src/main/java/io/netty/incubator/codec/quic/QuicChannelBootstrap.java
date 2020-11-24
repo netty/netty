@@ -27,6 +27,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,6 +46,8 @@ public final class QuicChannelBootstrap {
     private final Map<AttributeKey<?>, Object> attrs = new HashMap<>();
     private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> streamAttrs = new HashMap<>();
+    private SocketAddress remote;
+    private QuicConnectionAddress connectionAddress;
     private ChannelHandler handler;
     private ChannelHandler streamHandler;
 
@@ -111,13 +115,40 @@ public final class QuicChannelBootstrap {
     }
 
     /**
+     * Set the remote address of the host to talk to.
+     */
+    public QuicChannelBootstrap remoteAddress(SocketAddress remote) {
+        this.remote = ObjectUtil.checkNotNull(remote, "remote");
+        return this;
+    }
+
+    /**
+     * Set the {@link QuicConnectionAddress} to use. If none is specified a random address is generated on your
+     * behalf.
+     */
+    public QuicChannelBootstrap connectionAddress(QuicConnectionAddress connectionAddress) {
+        this.connectionAddress = ObjectUtil.checkNotNull(connectionAddress, "connectionAddress");
+        return this;
+    }
+
+    /**
      * Connects a {@link QuicChannel} to the {@link QuicConnectionAddress} and notifies the future once done.
      */
-    public ChannelFuture connect(QuicConnectionAddress address) {
+    public ChannelFuture connect() {
         if (streamHandler == null) {
             throw new IllegalStateException("streamHandler not set");
         }
-        QuicChannel channel = QuicheQuicChannel.forClient(parent,
+        SocketAddress remote = this.remote;
+        if (remote == null) {
+            remote = parent.remoteAddress();
+        }
+        if (remote == null) {
+            throw new IllegalStateException("remote not set");
+        }
+        final QuicConnectionAddress address = connectionAddress == null ?
+                QuicConnectionAddress.random() : connectionAddress;
+
+        QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress) remote,
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.optionsArray(options), Quic.attributesArray(attrs), handler, logger);
