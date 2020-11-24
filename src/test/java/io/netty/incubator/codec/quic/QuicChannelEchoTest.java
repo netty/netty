@@ -16,12 +16,14 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
@@ -50,7 +52,7 @@ public class QuicChannelEchoTest {
     }
 
     private final boolean autoRead;
-    private final boolean directBuffer;
+    private final ByteBufAllocator allocator;
 
     @Parameterized.Parameters(name =
             "{index}: autoRead = {0}, directBuffer = {1}")
@@ -65,26 +67,25 @@ public class QuicChannelEchoTest {
 
     public QuicChannelEchoTest(boolean autoRead, boolean directBuffer) {
         this.autoRead = autoRead;
-        this.directBuffer = directBuffer;
+        if (directBuffer) {
+            allocator = new UnpooledByteBufAllocator(true);
+        } else {
+            allocator = new UnpooledByteBufAllocator(false);
+        }
     }
 
     private ByteBuf allocateBuffer() {
-        return directBuffer ? Unpooled.directBuffer() : Unpooled.buffer();
+        return allocator.buffer();
     }
 
     private void setAllocator(Channel channel) {
-        if (directBuffer) {
-            channel.config().setAllocator(new UnpooledByteBufAllocator(true));
-        } else {
-            channel.config().setAllocator(new UnpooledByteBufAllocator(false));
-        }
+        channel.config().setAllocator(allocator);
     }
 
     @Test
     public void testEchoStartedFromServer() throws Throwable {
         final EchoHandler sh = new EchoHandler(true, autoRead);
         final EchoHandler ch = new EchoHandler(false, autoRead);
-        ChannelFuture future = null;
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -101,11 +102,16 @@ public class QuicChannelEchoTest {
                 }, sh);
         setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient();
+        QuicChannel quicChannel = null;
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), ch).remoteAddress(address)
-                    .connect();
-            assertTrue(future.await().isSuccess());
-            setAllocator(future.channel());
+            quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(ch)
+                    .remoteAddress(address)
+                    .option(ChannelOption.ALLOCATOR, allocator)
+                    .connect()
+                    .get();
 
             waitForData(ch, sh);
 
@@ -136,9 +142,10 @@ public class QuicChannelEchoTest {
 
             checkForException(ch, sh);
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
+            QuicTestUtils.closeIfNotNull(quicChannel);
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
@@ -155,15 +162,18 @@ public class QuicChannelEchoTest {
         }, sh);
         setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient();
+        QuicChannel quicChannel = null;
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null).
-                    remoteAddress(address).connect();
-            assertTrue(future.await().isSuccess());
+            quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(ch)
+                    .remoteAddress(address)
+                    .option(ChannelOption.ALLOCATOR, allocator)
+                    .connect()
+                    .get();
 
-            QuicChannel channel = (QuicChannel) future.channel();
-            setAllocator(channel);
-
-            QuicStreamChannel stream = channel.createStream(QuicStreamType.BIDIRECTIONAL, ch).sync().getNow();
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, ch).sync().getNow();
             setAllocator(stream);
 
             assertEquals(QuicStreamType.BIDIRECTIONAL, stream.type());
@@ -187,8 +197,9 @@ public class QuicChannelEchoTest {
             checkForException(ch, sh);
         } finally {
             server.close().syncUninterruptibly();
+            QuicTestUtils.closeIfNotNull(quicChannel);
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 

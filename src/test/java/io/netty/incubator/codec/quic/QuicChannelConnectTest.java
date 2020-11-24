@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
+import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
@@ -43,22 +44,22 @@ public class QuicChannelConnectTest {
     public void testConnectTimeout() throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
-            future = QuicTestUtils.newChannelBuilder(verifyHandler, null)
+            Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
+                    .handler(verifyHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
                     .remoteAddress(socket.getLocalSocketAddress())
                     .connect();
             Throwable cause = future.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(ConnectTimeoutException.class));
-            ChannelFuture closeFuture = future.channel().closeFuture().await();
-            assertTrue(closeFuture.isSuccess());
             verifyHandler.assertState();
         } finally {
             socket.close();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
@@ -69,28 +70,31 @@ public class QuicChannelConnectTest {
 
         Channel server = QuicTestUtils.newServer(serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
-                    .remoteAddress(address).connect();
-            assertTrue(future.await().isSuccess());
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
 
             // Try to connect again
-            ChannelFuture connectFuture = future.channel().connect(QuicConnectionAddress.random());
+            ChannelFuture connectFuture = quicChannel.connect(QuicConnectionAddress.random());
             Throwable cause = connectFuture.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(AlreadyConnectedException.class));
-            assertTrue(future.channel().close().await().isSuccess());
-            ChannelFuture closeFuture = future.channel().closeFuture().await();
+            assertTrue(quicChannel.close().await().isSuccess());
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
             serverQuicChannelHandler.assertState();
             serverQuicStreamHandler.assertState();
 
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
@@ -117,24 +121,26 @@ public class QuicChannelConnectTest {
             }
         }, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            future = QuicTestUtils.newChannelBuilder(clientQuicChannelHandler, null)
-                    .remoteAddress(address).connect();
-            assertTrue(future.await().isSuccess());
-
-            assertTrue(future.channel().close().await().isSuccess());
-            ChannelFuture closeFuture = future.channel().closeFuture().await();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            assertTrue(quicChannel.close().await().isSuccess());
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
             serverQuicChannelHandler.assertState();
             serverQuicStreamHandler.assertState();
 
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 

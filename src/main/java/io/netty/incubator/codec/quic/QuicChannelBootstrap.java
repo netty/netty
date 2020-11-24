@@ -19,10 +19,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -132,9 +132,16 @@ public final class QuicChannelBootstrap {
     }
 
     /**
-     * Connects a {@link QuicChannel} to the {@link QuicConnectionAddress} and notifies the future once done.
+     * Connects a {@link QuicChannel} to the remote peer and notifies the future once done.
      */
-    public ChannelFuture connect() {
+    public Future<QuicChannel> connect() {
+        return connect(parent.eventLoop().newPromise());
+    }
+
+    /**
+     * Connects a {@link QuicChannel} to the remote peer and notifies the promise once done.
+     */
+    public Future<QuicChannel> connect(Promise<QuicChannel> promise) {
         if (streamHandler == null) {
             throw new IllegalStateException("streamHandler not set");
         }
@@ -152,13 +159,20 @@ public final class QuicChannelBootstrap {
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.optionsArray(options), Quic.attributesArray(attrs), handler, logger);
-        ChannelPromise promise = new DefaultChannelPromise(channel, parent.eventLoop());
-        parent.eventLoop().register(channel).addListener((ChannelFuture future) -> {
+        EventLoop eventLoop = parent.eventLoop();
+        eventLoop.register(channel).addListener((ChannelFuture future) -> {
             Throwable cause = future.cause();
             if (cause != null) {
                 promise.setFailure(cause);
             } else {
-                channel.connect(address).addListener(new ChannelPromiseNotifier(promise));
+                channel.connect(address).addListener(f -> {
+                    Throwable error = f.cause();
+                    if (error != null) {
+                        promise.setFailure(error);
+                    } else {
+                        promise.setSuccess(channel);
+                    }
+                });
             }
         });
         return promise;

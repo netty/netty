@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
@@ -30,7 +29,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 public class QuicStreamLimitTest {
 
@@ -56,27 +54,25 @@ public class QuicStreamLimitTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
-            future = QuicTestUtils.newChannelBuilder(
-                    new ChannelInboundHandlerAdapter(), null)
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel).handler(
+                    new ChannelInboundHandlerAdapter()).streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
-                    .connect();
-            assertTrue(future.await().isSuccess());
-            QuicChannel channel = (QuicChannel) future.channel();
-            QuicStreamChannel stream = channel.createStream(
+                    .connect().get();
+            QuicStreamChannel stream = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).get();
 
             // Second stream creation should fail.
-            Throwable cause = channel.createStream(
+            Throwable cause = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).await().cause();
             assertThat(cause, CoreMatchers.instanceOf(IOException.class));
             stream.close().sync();
-            channel.close().sync();
+            quicChannel.close().sync();
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
@@ -128,24 +124,22 @@ public class QuicStreamLimitTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1));
         try {
-            future = QuicTestUtils.newChannelBuilder(QuicTestUtils.newQuicClientBuilder()
-                    .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1))
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
-                    .connect();
-            assertTrue(future.await().isSuccess());
-
+                    .connect().get();
             streamPromise.sync();
             // Second stream creation should fail.
             assertThat(stream2Promise.get(), CoreMatchers.instanceOf(IOException.class));
-            future.channel().close().sync();
+            quicChannel.close().sync();
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 }

@@ -24,8 +24,6 @@ import io.netty.util.ReferenceCountUtil;
 
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
-
 public class QuicStreamChannelCloseTest {
 
     @Test
@@ -40,22 +38,23 @@ public class QuicStreamChannelCloseTest {
 
     private static void testCloseFromServerWhileInActive(QuicStreamType type) throws Exception {
         Channel server = null;
-        QuicChannel client = null;
+        Channel channel = null;
         try {
             server = QuicTestUtils.newServer(new StreamCreationHandler(type),
                     new ChannelInboundHandlerAdapter());
-            client = (QuicChannel) QuicTestUtils.newChannelBuilder(
-                    new ChannelInboundHandlerAdapter(), new StreamHandler())
+            channel = QuicTestUtils.newClient();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new StreamHandler())
                     .remoteAddress(server.localAddress())
-                    .connect().sync().channel();
+                    .connect()
+                    .get();
 
             // Wait till the client was closed
-            client.closeFuture().sync();
+            quicChannel.closeFuture().sync();
         } finally {
-            QuicTestUtils.closeParent(client);
-            if (server != null) {
-                server.close().sync();
-            }
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
         }
     }
 
@@ -71,20 +70,22 @@ public class QuicStreamChannelCloseTest {
 
     private static void testCloseFromClientWhileInActive(QuicStreamType type) throws Exception {
         Channel server = null;
-        QuicChannel client = null;
+        Channel channel = null;
         try {
             server = QuicTestUtils.newServer(null, new StreamHandler());
-            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new StreamCreationHandler(type), null)
+            channel = QuicTestUtils.newClient();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new StreamCreationHandler(type))
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
-                    .connect().sync().channel();
+                    .connect()
+                    .get();
 
             // Close stream and quic channel
-            client.closeFuture().sync();
+            quicChannel.closeFuture().sync();
         } finally {
-            QuicTestUtils.closeParent(client);
-            if (server != null) {
-                server.close().sync();
-            }
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
         }
     }
 

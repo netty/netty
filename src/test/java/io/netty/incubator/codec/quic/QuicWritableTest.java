@@ -72,17 +72,16 @@ public class QuicWritableTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .initialMaxStreamDataBidirectionalLocal(bufferSize / 4));
         try {
-            future = QuicTestUtils.newChannelBuilder(QuicTestUtils.newQuicClientBuilder()
-                    .initialMaxStreamDataBidirectionalLocal(bufferSize / 4))
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
-                    .connect();
-            assertTrue(future.await().isSuccess());
-            QuicChannel channel = (QuicChannel) future.channel();
-            QuicStreamChannel stream = channel.createStream(
+                    .connect()
+                    .get();
+            QuicStreamChannel stream = quicChannel.createStream(
                     QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                         int bytes;
 
@@ -134,14 +133,14 @@ public class QuicWritableTest {
 
             writePromise.sync();
             stream.closeFuture().sync();
-            channel.close().sync();
+            quicChannel.close().sync();
 
             throwIfNotNull(serverErrorRef);
             throwIfNotNull(clientErrorRef);
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 

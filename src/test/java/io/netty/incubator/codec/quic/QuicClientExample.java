@@ -63,7 +63,7 @@ public final class QuicClientExample {
                     .handler(codec)
                     .bind(0).sync().channel();
 
-            QuicChannel quicChannel = (QuicChannel) QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .streamHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
@@ -71,8 +71,10 @@ public final class QuicClientExample {
                             // stream and so send a fin.
                             ctx.close();
                         }
-                    }).remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 9999)).
-                            connect().sync().channel();
+                    })
+                    .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 9999))
+                    .connect()
+                    .get();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {

@@ -38,7 +38,7 @@ public class QuicConnectionStatsTest {
     @Test
     public void testStatsAreCollected() throws Throwable {
         Channel server = null;
-        QuicChannel client = null;
+        Channel channel = null;
         AtomicInteger counter = new AtomicInteger();
 
         try {
@@ -79,11 +79,15 @@ public class QuicConnectionStatsTest {
                     return true;
                 }
             });
+            channel = QuicTestUtils.newClient();
 
-            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .remoteAddress(server.localAddress()).connect().sync().channel();
-            assertNotNull(client.collectStats().sync().getNow());
-            client.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect().get();
+            assertNotNull(quicChannel.collectStats().sync().getNow());
+            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                 private final int bufferSize = 8;
                 private int received;
 
@@ -107,16 +111,14 @@ public class QuicConnectionStatsTest {
             }).sync();
 
             // Wait until closure
-            client.closeFuture().sync();
-            assertStats(client.collectStats().sync().getNow());
+            quicChannel.closeFuture().sync();
+            assertStats(quicChannel.collectStats().sync().getNow());
             assertNotNull(serverActiveStats.sync().getNow());
             assertStats(serverInactiveStats.sync().getNow());
             assertEquals(1, counter.get());
         } finally {
-            QuicTestUtils.closeParent(client);
-            if (server != null) {
-                server.close().sync();
-            }
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
         }
     }
 

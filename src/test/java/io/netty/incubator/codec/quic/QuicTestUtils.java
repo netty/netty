@@ -17,10 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -49,33 +46,16 @@ final class QuicTestUtils {
             0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
     };
 
-    static QuicChannelBootstrap newChannelBuilder(ChannelHandler handler, ChannelHandler streamHandler)
-            throws Exception {
-        QuicClientCodecBuilder builder = newQuicClientBuilder();
-        if (streamHandler == null) {
-            streamHandler = new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) {
-                    ctx.close();
-                }
-
-                @Override
-                public boolean isSharable() {
-                    return true;
-                }
-            };
-        }
-        return newChannelBuilder(builder).handler(handler).streamHandler(streamHandler);
+    static Channel newClient() throws Exception {
+        return newClient(newQuicClientBuilder());
     }
 
-    static QuicChannelBootstrap newChannelBuilder(QuicClientCodecBuilder builder) throws Exception {
-        Bootstrap bs = new Bootstrap();
-        Channel channel = bs.group(GROUP)
+    static Channel newClient(QuicClientCodecBuilder builder) throws Exception {
+        return new Bootstrap().group(GROUP)
                 .channel(NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(builder.build())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
-        return QuicChannel.newBootstrap(channel);
     }
 
     static QuicClientCodecBuilder newQuicClientBuilder() {
@@ -144,15 +124,9 @@ final class QuicTestUtils {
         return newServer(InsecureQuicTokenHandler.INSTANCE, handler, streamHandler);
     }
 
-    static void closeParent(ChannelFuture future) throws Exception {
-        if (future != null) {
-            closeParent(future.channel());
-        }
-    }
-
-    static void closeParent(Channel channel) throws Exception {
+    static void closeIfNotNull(Channel channel) throws Exception {
         if (channel != null) {
-            channel.parent().close().sync();
+            channel.close().sync();
         }
     }
 }

@@ -18,19 +18,15 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.Assert.assertTrue;
 
 public class QuicReadableTest {
 
@@ -83,18 +79,19 @@ public class QuicReadableTest {
                         return true;
                     }
                 });
-        InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
-                    .remoteAddress(server.localAddress()).connect();
-            assertTrue(future.await().isSuccess());
-            QuicChannel channel = (QuicChannel) future.channel();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get();
 
             ByteBuf data = Unpooled.directBuffer().writeLong(8);
             List<Channel> streams = new ArrayList<>();
             for (int i = 0; i < numOfStreams; i++) {
-                QuicStreamChannel stream = channel.createStream(
+                QuicStreamChannel stream = quicChannel.createStream(
                         QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -111,14 +108,14 @@ public class QuicReadableTest {
             for (Channel stream: streams) {
                 stream.close().sync();
             }
-            channel.close().sync();
+            quicChannel.close().sync();
 
             throwIfNotNull(serverErrorRef);
             throwIfNotNull(clientErrorRef);
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 

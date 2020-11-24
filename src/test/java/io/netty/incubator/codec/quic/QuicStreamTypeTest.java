@@ -36,7 +36,7 @@ public class QuicStreamTypeTest {
     @Test
     public void testUnidirectionalCreatedByClient() throws Exception {
         Channel server = null;
-        QuicChannel client = null;
+        Channel channel = null;
         try {
             Promise<Throwable> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
             server = QuicTestUtils.newServer(null, new ChannelInboundHandlerAdapter() {
@@ -55,30 +55,33 @@ public class QuicStreamTypeTest {
                 }
             });
 
-            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
+            channel = QuicTestUtils.newClient();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
-                    .connect().sync().channel();
-            QuicStreamChannel streamChannel = client.createStream(
+                    .connect()
+                    .sync()
+                    .get();
+            QuicStreamChannel streamChannel = quicChannel.createStream(
                     QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
             // Do the write which should succeed
             streamChannel.writeAndFlush(Unpooled.buffer().writeZero(8)).sync();
 
             // Close stream and quic channel
             streamChannel.close().sync();
-            client.close().sync();
+            quicChannel.close().sync();
             assertThat(serverWritePromise.get(), instanceOf(UnsupportedOperationException.class));
         } finally {
-            QuicTestUtils.closeParent(client);
-            if (server != null) {
-                server.close().sync();
-            }
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
         }
     }
 
     @Test
     public void testUnidirectionalCreatedByServer() throws Exception {
         Channel server = null;
-        QuicChannel client = null;
+        Channel channel = null;
         try {
             Promise<Void> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
             Promise<Throwable> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -98,39 +101,40 @@ public class QuicStreamTypeTest {
                 }
             }, new ChannelInboundHandlerAdapter());
 
-            client = (QuicChannel) QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(),
-                    new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) {
-                    // Do the write should fail
-                    ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(future -> clientWritePromise.setSuccess(future.cause()));
-                }
+            channel = QuicTestUtils.newClient();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            // Do the write should fail
+                            ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
+                                    .addListener(future -> clientWritePromise.setSuccess(future.cause()));
+                        }
 
-                @Override
-                public void channelInactive(ChannelHandlerContext ctx) {
-                    // Close the QUIC channel as well.
-                    ctx.channel().parent().close();
-                }
+                        @Override
+                        public void channelInactive(ChannelHandlerContext ctx) {
+                            // Close the QUIC channel as well.
+                            ctx.channel().parent().close();
+                        }
 
-                @Override
-                public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                    ReferenceCountUtil.release(msg);
-                    // Let's close the stream
-                    ctx.close();
-                }
-            }).remoteAddress(server.localAddress())
-                    .connect().sync().channel();
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ReferenceCountUtil.release(msg);
+                            // Let's close the stream
+                            ctx.close();
+                        }
+                    })
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get();
 
-            // Close stream and quic channel
-            client.closeFuture().sync();
+            quicChannel.closeFuture().sync();
             assertTrue(serverWritePromise.await().isSuccess());
             assertThat(clientWritePromise.get(), instanceOf(UnsupportedOperationException.class));
         } finally {
-            QuicTestUtils.closeParent(client);
-            if (server != null) {
-                server.close().sync();
-            }
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
         }
     }
 }

@@ -39,16 +39,16 @@ public class QuicStreamChannelCreationTest {
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
-                    .connect().sync();
-            assertTrue(future.await().isSuccess());
-
-            QuicChannel channel = (QuicChannel) future.channel();
+                    .connect()
+                    .get();
             CountDownLatch latch = new CountDownLatch(1);
-            QuicStreamChannel stream = channel.createStream(QuicStreamType.UNIDIRECTIONAL,
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter() {
                @Override
                public void channelRegistered(ChannelHandlerContext ctx) {
@@ -60,10 +60,11 @@ public class QuicStreamChannelCreationTest {
             assertQuicStreamChannel(stream, QuicStreamType.UNIDIRECTIONAL, Boolean.TRUE, null);
             latch.await();
             stream.close().sync();
+            quicChannel.close().sync();
         } finally {
-            server.close().syncUninterruptibly();
+            server.close().sync();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
@@ -72,16 +73,16 @@ public class QuicStreamChannelCreationTest {
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        ChannelFuture future = null;
+        Channel channel = QuicTestUtils.newClient();
         try {
-            future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
-                    .connect().sync();
-            assertTrue(future.await().isSuccess());
-
-            QuicChannel channel = (QuicChannel) future.channel();
+                    .connect()
+                    .get();
             CountDownLatch latch = new CountDownLatch(1);
-            QuicStreamChannel stream = channel.newStreamBootstrap()
+            QuicStreamChannel stream = quicChannel.newStreamBootstrap()
                     .type(QuicStreamType.UNIDIRECTIONAL)
                     .attr(ATTRIBUTE_KEY, ATTRIBUTE_VALUE)
                     .option(ChannelOption.AUTO_READ,  Boolean.FALSE)
@@ -96,10 +97,11 @@ public class QuicStreamChannelCreationTest {
             assertQuicStreamChannel(stream, QuicStreamType.UNIDIRECTIONAL, Boolean.FALSE, ATTRIBUTE_VALUE);
             latch.await();
             stream.close().sync();
+            quicChannel.close().sync();
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.
-            QuicTestUtils.closeParent(future);
+            channel.close().sync();
         }
     }
 
