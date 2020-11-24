@@ -336,6 +336,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggered(evt);
         if (evt instanceof ChannelInputShutdownEvent) {
             // The decodeLast method is invoked when a channelInactive event is encountered.
             // This method is responsible for ending requests in some situations and must be called
@@ -343,7 +344,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             assert context.ctx == ctx || ctx == context;
             channelInputClosed(context, false);
         }
-        ctx.fireUserEventTriggered(evt);
     }
 
     private void channelInputClosed(ByteToMessageDecoderContext ctx, boolean callChannelInactive) {
@@ -376,7 +376,14 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     void channelInputClosed(ByteToMessageDecoderContext ctx) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation);
-            decodeLast(ctx, cumulation);
+            // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
+            // be unexpected.
+            if (!ctx.isRemoved()) {
+                // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
+                // See https://github.com/netty/netty/issues/10802.
+                ByteBuf buffer = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
+                decodeLast(ctx, buffer);
+            }
         } else {
             decodeLast(ctx, Unpooled.EMPTY_BUFFER);
         }
