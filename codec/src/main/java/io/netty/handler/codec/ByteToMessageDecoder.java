@@ -402,7 +402,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation, out);
-            decodeLast(ctx, cumulation, out);
+            // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
+            // be unexpected.
+            if (!ctx.isRemoved()) {
+                // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
+                // See https://github.com/netty/netty/issues/10802.
+                ByteBuf buffer = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
+                decodeLast(ctx, buffer, out);
+            }
         } else {
             decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
         }
