@@ -49,7 +49,7 @@ final class Quiche {
     }
 
     private static void loadNativeLibrary() {
-        String staticLibName = "netty_quic_quiche";
+        String staticLibName = "netty_quiche";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Quiche.class);
         try {

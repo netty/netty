@@ -478,7 +478,7 @@
           <execution>
             <id>build-native-lib</id>
             <configuration>
-              <name>netty_quic_quiche_${os.detected.arch}</name>
+              <name>netty_quiche_${os.detected.arch}</name>
               <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
               <libDirectory>${project.build.outputDirectory}</libDirectory>
               <!-- We use Maven's artifact classifier instead.
