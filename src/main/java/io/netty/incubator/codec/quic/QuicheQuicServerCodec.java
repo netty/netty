@@ -49,7 +49,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private ByteBuf mintTokenBuffer;
     private ByteBuf connIdBuffer;
 
-    QuicheQuicServerCodec(long config, QuicTokenHandler tokenHandler,
+    QuicheQuicServerCodec(QuicheConfig config, QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
                           ChannelHandler handler,
                           Map.Entry<ChannelOption<?>, Object>[] optionsArray,
@@ -160,10 +160,10 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         final long conn;
         if (noToken) {
             conn = Quiche.quiche_accept_no_token(
-                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), MAX_LOCAL_CONN_ID, config);
+                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), MAX_LOCAL_CONN_ID, nativeConfig);
         } else {
             conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), MAX_LOCAL_CONN_ID,
-                    Quiche.memoryAddress(token) + offset, token.readableBytes() - offset, config);
+                    Quiche.memoryAddress(token) + offset, token.readableBytes() - offset, nativeConfig);
         }
         if (conn < 0) {
             LOGGER.debug("quiche_accept failed");

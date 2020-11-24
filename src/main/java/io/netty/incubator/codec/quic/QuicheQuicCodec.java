@@ -54,9 +54,10 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private ByteBuf tokenBuffer;
     private ByteBuf tokenLenBuffer;
 
-    protected final long config;
+    protected final QuicheConfig config;
+    protected long nativeConfig;
 
-    QuicheQuicCodec(long config, int maxTokenLength) {
+    QuicheQuicCodec(QuicheConfig config, int maxTokenLength) {
         this.config = config;
         this.maxTokenLength = maxTokenLength;
     }
@@ -79,6 +80,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         dcidLenBuffer = allocateNativeOrder(Integer.BYTES);
         tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
         tokenBuffer = allocateNativeOrder(maxTokenLength);
+        nativeConfig = config.createNativeConfig();
     }
 
     @SuppressWarnings("deprecation")
@@ -100,7 +102,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
         needsFireChannelReadComplete.clear();
 
-        Quiche.quiche_config_free(config);
+        Quiche.quiche_config_free(nativeConfig);
 
         versionBuffer.release();
         scidBuffer.release();

@@ -125,7 +125,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     @Override
-    protected ChannelHandler build(long config) {
+    protected ChannelHandler build(QuicheConfig config) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;

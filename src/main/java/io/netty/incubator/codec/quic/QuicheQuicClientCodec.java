@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
  */
 final class QuicheQuicClientCodec extends QuicheQuicCodec {
 
-    QuicheQuicClientCodec(long config) {
+    QuicheQuicClientCodec(QuicheConfig config) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
         super(config, Quic.MAX_DATAGRAM_SIZE);
@@ -48,7 +48,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                         SocketAddress localAddress, ChannelPromise promise) {
         final QuicheQuicChannel channel;
         try {
-            channel = QuicheQuicChannel.handleConnect(remoteAddress, config);
+            channel = QuicheQuicChannel.handleConnect(remoteAddress, nativeConfig);
         } catch (Exception e) {
             promise.setFailure(e);
             return;
