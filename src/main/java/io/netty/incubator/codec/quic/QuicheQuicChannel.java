@@ -93,7 +93,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
-    // TODO: Consider using quiche_conn_stream_init_application_data(...) and quiche_conn_stream_application_data(...)
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
     private final QuicChannelConfig config;
@@ -352,7 +351,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         // TODO: handle this
     }
 
@@ -697,7 +696,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                            Promise<QuicStreamChannel> promise) {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {
-                // TODO: We could make this a bit more efficient by waiting until we have some data to send.
                 Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, false));
             } catch (Exception e) {
                 promise.setFailure(e);
