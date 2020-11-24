@@ -166,7 +166,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
         final String serverName = config().getPeerCertServerName();
         try {
-            long connection = Quiche.quiche_connect(serverName, idBuffer.memoryAddress() + idBuffer.readerIndex(),
+            long connection = Quiche.quiche_connect(serverName, Quiche.memoryAddress(idBuffer) + idBuffer.readerIndex(),
                     idBuffer.readableBytes(), configAddr);
             if (connection == -1) {
                 ConnectException connectException = new ConnectException();
@@ -358,7 +358,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             closeData = null;
         }
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
-                reason.memoryAddress() + reason.readerIndex(), reason.readableBytes()));
+                Quiche.memoryAddress(reason) + reason.readerIndex(), reason.readableBytes()));
     }
 
     @Override
@@ -537,7 +537,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private int streamSend(long streamId, ByteBuf buffer, boolean fin) throws Exception {
         return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
-                buffer.memoryAddress() + buffer.readerIndex(), buffer.readableBytes(), fin);
+                Quiche.memoryAddress(buffer) + buffer.readerIndex(), buffer.readableBytes(), fin);
     }
 
     StreamRecvResult streamRecv(long streamId, ByteBuf buffer) throws Exception {
@@ -545,9 +545,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             finBuffer = alloc().directBuffer(1);
         }
         int writerIndex = buffer.writerIndex();
-        long memoryAddress = buffer.memoryAddress();
+        long memoryAddress = Quiche.memoryAddress(buffer);
         int recvLen = Quiche.quiche_conn_stream_recv(connectionAddressChecked(), streamId,
-                memoryAddress + writerIndex, buffer.writableBytes(), finBuffer.memoryAddress());
+                memoryAddress + writerIndex, buffer.writableBytes(), Quiche.memoryAddress(finBuffer));
         if (recvLen == Quiche.QUICHE_ERR_INVALID_STREAM_STATE) {
             // Remove this workaround as soon there is a quiche release that pulled in:
             // https://github.com/cloudflare/quiche/pull/742
@@ -675,7 +675,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         for (;;) {
             ByteBuf out = alloc().directBuffer(len);
             int writerIndex = out.writerIndex();
-            int written = Quiche.quiche_conn_send(connAddr, out.memoryAddress() + writerIndex, out.writableBytes());
+            int written = Quiche.quiche_conn_send(
+                    connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes());
 
             try {
                 if (Quiche.throwIfError(written)) {
@@ -803,12 +804,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             ByteBuf tmpBuffer = null;
             // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
-            if (buffer.isReadOnly() || !buffer.hasMemoryAddress()) {
+            if (buffer.isReadOnly()) {
                 buffer = tmpBuffer = alloc().directBuffer(buffer.readableBytes()).writeBytes(buffer);
             }
             int bufferReadable = buffer.readableBytes();
             int bufferReaderIndex = buffer.readerIndex();
-            long memoryAddress = buffer.memoryAddress() + bufferReaderIndex;
+            long memoryAddress = Quiche.memoryAddress(buffer) + bufferReaderIndex;
 
             // We need to call quiche_conn_send(...),
             // see https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
@@ -869,7 +870,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
                 } while (bufferReadable > 0);
             } finally {
-                buffer.skipBytes((int) (memoryAddress - buffer.memoryAddress()));
+                buffer.skipBytes((int) (memoryAddress - Quiche.memoryAddress(buffer)));
                 if (tmpBuffer != null) {
                     tmpBuffer.release();
                 }

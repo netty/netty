@@ -116,7 +116,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         DatagramPacket packet = (DatagramPacket) msg;
         try {
             ByteBuf buffer = ((DatagramPacket) msg).content();
-            long contentAddress = buffer.memoryAddress() + buffer.readerIndex();
+            long contentAddress = Quiche.memoryAddress(buffer) + buffer.readerIndex();
             int contentReadable = buffer.readableBytes();
 
             // Ret various len values so quiche_header_info can make use of these.
@@ -125,10 +125,10 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             tokenLenBuffer.setInt(0, maxTokenLength);
 
             int res = Quiche.quiche_header_info(contentAddress, contentReadable, Quiche.QUICHE_MAX_CONN_ID_LEN,
-                    versionBuffer.memoryAddress(), typeBuffer.memoryAddress(),
-                    scidBuffer.memoryAddress(), scidLenBuffer.memoryAddress(),
-                    dcidBuffer.memoryAddress(), dcidLenBuffer.memoryAddress(),
-                    tokenBuffer.memoryAddress(), tokenLenBuffer.memoryAddress());
+                    Quiche.memoryAddress(versionBuffer), Quiche.memoryAddress(typeBuffer),
+                    Quiche.memoryAddress(scidBuffer), Quiche.memoryAddress(scidLenBuffer),
+                    Quiche.memoryAddress(dcidBuffer), Quiche.memoryAddress(dcidLenBuffer),
+                    Quiche.memoryAddress(tokenBuffer), Quiche.memoryAddress(tokenLenBuffer));
             if (res >= 0) {
                 int version = versionBuffer.getInt(0);
                 byte type = typeBuffer.getByte(0);

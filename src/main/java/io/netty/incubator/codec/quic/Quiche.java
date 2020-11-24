@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import java.nio.ByteBuffer;
 
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
@@ -509,6 +510,17 @@ final class Quiche {
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L108">quiche_config_new</a>.
      */
     private static native void quiche_enable_debug_logging(QuicheLogger logger);
+
+    private static native long buffer_memory_address(ByteBuffer buffer);
+
+    /**
+     * Returns the memory address if the {@link ByteBuf}
+     */
+    static long memoryAddress(ByteBuf buf) {
+        assert buf.isDirect();
+        return buf.hasMemoryAddress() ? buf.memoryAddress() :
+                buffer_memory_address(buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
+    }
 
     static String errorAsString(int err) {
         return QuicError.valueOf(err).message();

@@ -450,6 +450,10 @@ static void netty_quic_quiche_enable_debug_logging(JNIEnv* env, jclass clazz, jo
     quiche_enable_debug_logging(log_to_java, NULL);
 }
 
+static jlong netty_quic_buffer_memory_address(JNIEnv* env, jclass clazz, jobject buffer) {
+    return (jlong) (*env)->GetDirectBufferAddress(env, buffer);
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -528,7 +532,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_set_disable_active_migration", "(JZ)V", (void *) netty_quic_quiche_config_set_disable_active_migration },
   { "quiche_config_set_cc_algorithm", "(JI)V", (void *) netty_quic_quiche_config_set_cc_algorithm },
   { "quiche_config_enable_hystart", "(JZ)V", (void *) netty_quic_quiche_config_enable_hystart },
-  { "quiche_config_free", "(J)V", (void *) netty_quic_quiche_config_free }
+  { "quiche_config_free", "(J)V", (void *) netty_quic_quiche_config_free },
+  { "buffer_memory_address", "(Ljava/nio/ByteBuffer;)J", (void *) netty_quic_buffer_memory_address}
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
