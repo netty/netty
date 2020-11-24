@@ -491,7 +491,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
 
                 final int res;
-                if (!buffer.hasMemoryAddress()) {
+                if (!buffer.isDirect()) {
                     ByteBuf tmpBuffer = allocator.directBuffer(readable);
                     try {
                         tmpBuffer.writeBytes(buffer, buffer.readerIndex(), readable);
@@ -805,7 +805,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
             if (buffer.isReadOnly()) {
-                buffer = tmpBuffer = alloc().directBuffer(buffer.readableBytes()).writeBytes(buffer);
+                tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                tmpBuffer.writeBytes(buffer);
+                buffer = tmpBuffer;
             }
             int bufferReadable = buffer.readableBytes();
             int bufferReaderIndex = buffer.readerIndex();

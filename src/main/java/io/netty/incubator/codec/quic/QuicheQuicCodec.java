@@ -116,43 +116,59 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         DatagramPacket packet = (DatagramPacket) msg;
         try {
             ByteBuf buffer = ((DatagramPacket) msg).content();
-            long contentAddress = Quiche.memoryAddress(buffer) + buffer.readerIndex();
-            int contentReadable = buffer.readableBytes();
-
-            // Ret various len values so quiche_header_info can make use of these.
-            scidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
-            dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
-            tokenLenBuffer.setInt(0, maxTokenLength);
-
-            int res = Quiche.quiche_header_info(contentAddress, contentReadable, Quiche.QUICHE_MAX_CONN_ID_LEN,
-                    Quiche.memoryAddress(versionBuffer), Quiche.memoryAddress(typeBuffer),
-                    Quiche.memoryAddress(scidBuffer), Quiche.memoryAddress(scidLenBuffer),
-                    Quiche.memoryAddress(dcidBuffer), Quiche.memoryAddress(dcidLenBuffer),
-                    Quiche.memoryAddress(tokenBuffer), Quiche.memoryAddress(tokenLenBuffer));
-            if (res >= 0) {
-                int version = versionBuffer.getInt(0);
-                byte type = typeBuffer.getByte(0);
-                int scidLen = scidLenBuffer.getInt(0);
-                int dcidLen = dcidLenBuffer.getInt(0);
-                int tokenLen = tokenLenBuffer.getInt(0);
-
-                QuicheQuicChannel channel = quicPacketRead(ctx, packet.sender(), packet.recipient(),
-                        type, version, scidBuffer.setIndex(0, scidLen),
-                        dcidBuffer.setIndex(0, dcidLen), tokenBuffer.setIndex(0, tokenLen));
-                if (channel != null) {
-                    channel.recv(packet.content());
-                    if (channel.markInFireChannelReadCompleteQueue()) {
-                        needsFireChannelReadComplete.add(channel);
-                    }
+            if (!buffer.isDirect()) {
+                // We need a direct buffer as otherwise we can not access the memoryAddress.
+                // Let's do a copy to direct memory.
+                ByteBuf direct = ctx.alloc().directBuffer(buffer.readableBytes());
+                try {
+                    direct.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    channelRead(ctx, packet.sender(), packet.recipient(), direct);
+                } finally {
+                    direct.release();
                 }
             } else {
-                LOGGER.debug("Unable to parse QUIC header via quiche_header_info: {}", Quiche.errorAsString(res));
+                channelRead(ctx, packet.sender(), packet.recipient(), buffer);
             }
         } finally {
             packet.release();
         }
     }
 
+    private void channelRead(ChannelHandlerContext ctx, InetSocketAddress sender,
+                             InetSocketAddress recipient, ByteBuf buffer) throws Exception {
+        long contentAddress = Quiche.memoryAddress(buffer) + buffer.readerIndex();
+        int contentReadable = buffer.readableBytes();
+
+        // Ret various len values so quiche_header_info can make use of these.
+        scidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
+        dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
+        tokenLenBuffer.setInt(0, maxTokenLength);
+
+        int res = Quiche.quiche_header_info(contentAddress, contentReadable, Quiche.QUICHE_MAX_CONN_ID_LEN,
+                Quiche.memoryAddress(versionBuffer), Quiche.memoryAddress(typeBuffer),
+                Quiche.memoryAddress(scidBuffer), Quiche.memoryAddress(scidLenBuffer),
+                Quiche.memoryAddress(dcidBuffer), Quiche.memoryAddress(dcidLenBuffer),
+                Quiche.memoryAddress(tokenBuffer), Quiche.memoryAddress(tokenLenBuffer));
+        if (res >= 0) {
+            int version = versionBuffer.getInt(0);
+            byte type = typeBuffer.getByte(0);
+            int scidLen = scidLenBuffer.getInt(0);
+            int dcidLen = dcidLenBuffer.getInt(0);
+            int tokenLen = tokenLenBuffer.getInt(0);
+
+            QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
+                    type, version, scidBuffer.setIndex(0, scidLen),
+                    dcidBuffer.setIndex(0, dcidLen), tokenBuffer.setIndex(0, tokenLen));
+            if (channel != null) {
+                channel.recv(buffer);
+                if (channel.markInFireChannelReadCompleteQueue()) {
+                    needsFireChannelReadComplete.add(channel);
+                }
+            }
+        } else {
+            LOGGER.debug("Unable to parse QUIC header via quiche_header_info: {}", Quiche.errorAsString(res));
+        }
+    }
     /**
      * Handle a QUIC packet and return {@code true} if we need to call {@link ChannelHandlerContext#flush()}.
      *

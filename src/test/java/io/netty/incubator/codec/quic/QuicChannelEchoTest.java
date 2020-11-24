@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -25,10 +26,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(Parameterized.class)
 public class QuicChannelEchoTest {
 
     private static final Random random = new Random();
@@ -45,17 +50,39 @@ public class QuicChannelEchoTest {
         random.nextBytes(data);
     }
 
-    @Test
-    public void testEchoStartedFromServerWithAutoRead() throws Throwable {
-        testEchoStartedFromServer(true);
+    private final boolean autoRead;
+    private final boolean directBuffer;
+
+    @Parameterized.Parameters(name =
+            "{index}: autoRead = {0}, directBuffer = {1}")
+    public static Collection<Object[]> data() {
+        List<Object[]> config = new ArrayList<>();
+        config.add(new Object[] { true, false});
+        config.add(new Object[] { true, true});
+        config.add(new Object[] { false, true});
+        config.add(new Object[] { false, false});
+        return config;
+    }
+
+    public QuicChannelEchoTest(boolean autoRead, boolean directBuffer) {
+        this.autoRead = autoRead;
+        this.directBuffer = directBuffer;
+    }
+
+    private ByteBuf allocateBuffer() {
+        return directBuffer ? Unpooled.directBuffer() : Unpooled.buffer();
+    }
+
+    private void setAllocator(Channel channel) {
+        if (directBuffer) {
+            channel.config().setAllocator(new UnpooledByteBufAllocator(true));
+        } else {
+            channel.config().setAllocator(new UnpooledByteBufAllocator(false));
+        }
     }
 
     @Test
-    public void testEchoStartedFromServerWithoutAutoRead() throws Throwable {
-        testEchoStartedFromServer(false);
-    }
-
-    private void testEchoStartedFromServer(boolean autoRead) throws Throwable {
+    public void testEchoStartedFromServer() throws Throwable {
         final EchoHandler sh = new EchoHandler(true, autoRead);
         final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
@@ -63,28 +90,26 @@ public class QuicChannelEchoTest {
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
+                        setAllocator(ctx.channel());
                         ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
                                 .addListener(new FutureListener<QuicStreamChannel>() {
                             @Override
                             public void operationComplete(Future<QuicStreamChannel> future) {
                                 QuicStreamChannel stream = future.getNow();
-                                List<ChannelFuture> futures = new ArrayList<>();
-                                for (int i = 0; i < data.length;) {
-                                    int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-                                    ByteBuf buf = Unpooled.directBuffer().writeBytes(data, i, length);
-                                    futures.add(stream.writeAndFlush(buf));
-                                    i += length;
-                                }
+                                setAllocator(stream);
+                                List<ChannelFuture> futures = writeAllData(stream);
                                 writeFutures.set(futures);
                             }
                         });
                     }
                 }, sh);
+        setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
             future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), ch)
                     .connect(QuicConnectionAddress.random(address));
             assertTrue(future.await().isSuccess());
+            setAllocator(future.channel());
 
             waitForData(ch, sh);
 
@@ -122,20 +147,17 @@ public class QuicChannelEchoTest {
     }
 
     @Test
-    public void testEchoStartedFromClientWithAutoRead() throws Throwable {
-        testEchoStartedFromClient(true);
-    }
-
-    @Test
-    public void testEchoStartedFromClientWithoutAutoRead() throws Throwable {
-        testEchoStartedFromClient(false);
-    }
-
-    private static void testEchoStartedFromClient(boolean autoRead) throws Throwable {
+    public void testEchoStartedFromClient() throws Throwable {
         final EchoHandler sh = new EchoHandler(true, autoRead);
         final EchoHandler ch = new EchoHandler(false, autoRead);
         ChannelFuture future = null;
-        Channel server = QuicTestUtils.newServer(null, sh);
+        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                setAllocator(ctx.channel());
+            }
+        }, sh);
+        setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         try {
             future = QuicTestUtils.newChannelBuilder(new ChannelInboundHandlerAdapter(), null)
@@ -143,18 +165,15 @@ public class QuicChannelEchoTest {
             assertTrue(future.await().isSuccess());
 
             QuicChannel channel = (QuicChannel) future.channel();
+            setAllocator(channel);
+
             QuicStreamChannel stream = channel.createStream(QuicStreamType.BIDIRECTIONAL, ch).sync().getNow();
+            setAllocator(stream);
 
             assertEquals(QuicStreamType.BIDIRECTIONAL, stream.type());
             assertEquals(0, stream.streamId());
             assertTrue(stream.isLocalCreated());
-            List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
-            for (int i = 0; i < data.length;) {
-                int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-                ByteBuf buf = Unpooled.directBuffer().writeBytes(data, i, length);
-                futures.add(stream.writeAndFlush(buf));
-                i += length;
-            }
+            List<ChannelFuture> futures = writeAllData(stream);
 
             for (ChannelFuture f: futures) {
                 f.sync();
@@ -175,6 +194,17 @@ public class QuicChannelEchoTest {
             // Close the parent Datagram channel as well.
             QuicTestUtils.closeParent(future);
         }
+    }
+
+    private List<ChannelFuture> writeAllData(Channel channel) {
+        List<ChannelFuture> futures = new ArrayList<>();
+        for (int i = 0; i < data.length;) {
+            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            ByteBuf buf = allocateBuffer().writeBytes(data, i, length);
+            futures.add(channel.writeAndFlush(buf));
+            i += length;
+        }
+        return futures;
     }
 
     private static void waitForData(EchoHandler h1, EchoHandler h2) {
@@ -209,7 +239,7 @@ public class QuicChannelEchoTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean server;
         private final boolean autoRead;
         volatile Channel channel;
@@ -224,6 +254,7 @@ public class QuicChannelEchoTest {
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
             ctx.channel().config().setAutoRead(autoRead);
+            setAllocator(ctx.channel());
             ctx.fireChannelRegistered();
         }
 
