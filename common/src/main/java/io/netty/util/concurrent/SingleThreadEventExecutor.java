@@ -831,9 +831,9 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                 STATE_UPDATER.set(this, ST_TERMINATED);
                 terminationFuture.tryFailure(cause);
 
-                if (!(cause instanceof Exception)) {
-                    // Also rethrow as it may be an OOME for example
-                    PlatformDependent.throwException(cause);
+                if (cause instanceof Error) {
+                    // Rethrow errors so they can't be ignored.
+                    throw cause;
                 }
                 return true;
             }
