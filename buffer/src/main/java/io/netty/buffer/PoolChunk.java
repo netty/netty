@@ -15,11 +15,9 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.PriorityQueue;
 
@@ -133,8 +131,6 @@ import java.util.PriorityQueue;
  *
  */
 final class PoolChunk<T> implements PoolChunkMetric {
-
-    private static final int OFFSET_BIT_LENGTH = 15;
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
@@ -153,12 +149,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * store the first page and last page of each avail run
      */
-    private final IntObjectMap<Long> runsAvailMap;
+    private final LongLongHashMap runsAvailMap;
 
     /**
      * manage all avail runs
      */
-    private final PriorityQueue<Long>[] runsAvail;
+    private final LongPriorityQueue[] runsAvail;
 
     /**
      * manage all subpages in this chunk
@@ -197,7 +193,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         freeBytes = chunkSize;
 
         runsAvail = newRunsAvailqueueArray(maxPageIdx);
-        runsAvailMap = new IntObjectHashMap<Long>();
+        runsAvailMap = new LongLongHashMap();
         subpages = new PoolSubpage[chunkSize >> pageShifts];
 
         //insert initial run, offset = 0, pages = chunkSize / pageSize
@@ -223,18 +219,17 @@ final class PoolChunk<T> implements PoolChunkMetric {
         cachedNioBuffers = null;
     }
 
-    @SuppressWarnings("unchecked")
-    private static PriorityQueue<Long>[] newRunsAvailqueueArray(int size) {
-        PriorityQueue<Long>[] queueArray = new PriorityQueue[size];
+    private static LongPriorityQueue[] newRunsAvailqueueArray(int size) {
+        LongPriorityQueue[] queueArray = new LongPriorityQueue[size];
         for (int i = 0; i < queueArray.length; i++) {
-            queueArray[i] = new PriorityQueue<Long>();
+            queueArray[i] = new LongPriorityQueue();
         }
         return queueArray;
     }
 
-    private void insertAvailRun(int runOffset, int pages, Long handle) {
+    private void insertAvailRun(int runOffset, int pages, long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(pages);
-        PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
+        LongPriorityQueue queue = runsAvail[pageIdxFloor];
         queue.offer(handle);
 
         //insert first page of run
@@ -245,18 +240,18 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
     }
 
-    private void insertAvailRun0(int runOffset, Long handle) {
-        Long pre = runsAvailMap.put(runOffset, handle);
-        assert pre == null;
+    private void insertAvailRun0(int runOffset, long handle) {
+        long pre = runsAvailMap.put(runOffset, handle);
+        assert pre == 0;
     }
 
-    private void removeAvailRun(Long handle) {
+    private void removeAvailRun(long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
-        PriorityQueue<Long> queue = runsAvail[pageIdxFloor];
+        LongPriorityQueue queue = runsAvail[pageIdxFloor];
         removeAvailRun(queue, handle);
     }
 
-    private void removeAvailRun(PriorityQueue<Long> queue, Long handle) {
+    private void removeAvailRun(LongPriorityQueue queue, long handle) {
         queue.remove(handle);
 
         int runOffset = runOffset(handle);
@@ -273,7 +268,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return runOffset + pages - 1;
     }
 
-    private Long getAvailRunByOffset(int runOffset) {
+    private long getAvailRunByOffset(int runOffset) {
         return runsAvailMap.get(runOffset);
     }
 
@@ -334,10 +329,10 @@ final class PoolChunk<T> implements PoolChunkMetric {
             }
 
             //get run with min offset in this queue
-            PriorityQueue<Long> queue = runsAvail[queueIdx];
-            Long handle = queue.poll();
+            LongPriorityQueue queue = runsAvail[queueIdx];
+            long handle = queue.poll();
 
-            assert handle != null && !isUsed(handle);
+            assert handle != 0 && !isUsed(handle);
 
             removeAvailRun(queue, handle);
 
@@ -380,7 +375,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             return arena.nPSizes - 1;
         }
         for (int i = pageIdx; i < arena.nPSizes; i++) {
-            PriorityQueue<Long> queue = runsAvail[i];
+            LongPriorityQueue queue = runsAvail[i];
             if (queue != null && !queue.isEmpty()) {
                 return i;
             }
@@ -507,8 +502,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
-            Long pastRun = getAvailRunByOffset(runOffset - 1);
-            if (pastRun == null) {
+            long pastRun = getAvailRunByOffset(runOffset - 1);
+            if (pastRun == 0) {
                 return handle;
             }
 
@@ -531,8 +526,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int runOffset = runOffset(handle);
             int runPages = runPages(handle);
 
-            Long nextRun = getAvailRunByOffset(runOffset + runPages);
-            if (nextRun == null) {
+            long nextRun = getAvailRunByOffset(runOffset + runPages);
+            if (nextRun == 0) {
                 return handle;
             }
 
@@ -642,5 +637,162 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     static int bitmapIdx(long handle) {
         return (int) handle;
+    }
+
+    private static final class LongLongHashMap {
+        private static final int MAX_PROBE = 4;
+        private int mask = 31;
+        private long[] array = new long[mask + 1];
+        private long zeroVal;
+
+        public long put(long key, long value) {
+            if (key == 0) {
+                long prev = zeroVal;
+                zeroVal = value;
+                return prev;
+            }
+
+            for (;;) {
+                int index = index(key);
+                for (int i = 0; i < MAX_PROBE; i++) {
+                    long existing = array[index];
+                    if (existing == key || existing == 0) {
+                        long prev = array[index + 1];
+                        array[index] = key;
+                        array[index + 1] = value;
+                        return prev;
+                    }
+                    index = index + 2 & mask;
+                }
+                expand(); // Grow array and re-hash.
+            }
+        }
+
+        public void remove(long key) {
+            if (key == 0) {
+                zeroVal = 0;
+                return;
+            }
+            int index = index(key);
+            for (int i = 0; i < MAX_PROBE; i++) {
+                long existing = array[index];
+                if (existing == key) {
+                    array[index] = 0;
+                    array[index + 1] = 0;
+                    break;
+                }
+                index = index + 2 & mask;
+            }
+        }
+
+        public long get(long key) {
+            if (key == 0) {
+                return zeroVal;
+            }
+            int index = index(key);
+            for (int i = 0; i < MAX_PROBE; i++) {
+                long existing = array[index];
+                if (existing == key) {
+                    return array[index + 1];
+                }
+                index = index + 2 & mask;
+            }
+            return -1;
+        }
+
+        private int index(long key) {
+            return (int) (key << 1 & mask);
+        }
+
+        private void expand() {
+            long[] prev = array;
+            int newSize = prev.length * 2;
+            mask = newSize - 1;
+            array = new long[newSize];
+            for (int i = 0; i < prev.length >> 1; i += 2) {
+                long key = prev[i];
+                long val = prev[i + 1];
+                put(key, val);
+            }
+        }
+    }
+
+    private static final class LongPriorityQueue {
+        private long[] array = new long[9];
+        private int size;
+
+        public void offer(long handle) {
+            size++;
+            if (size == array.length) {
+                // Grow queue capacity.
+                array = Arrays.copyOf(array, 1 + (array.length - 1) * 2);
+            }
+            array[size] = handle;
+            lift();
+        }
+
+        public void remove(long value) {
+            for (int i = 1; i <= size; i++) {
+                if (array[i] == value) {
+                    if (i == size) {
+                        array[i] = 0;
+                    } else {
+                        array[i] = array[size];
+                        sink(i);
+                    }
+                    size--;
+                    return;
+                }
+            }
+        }
+
+        public long poll() {
+            if (size == 0) {
+                return 0;
+            }
+            long val = array[1];
+            array[1] = array[size];
+            array[size] = 0;
+            size--;
+            sink(1);
+            return val;
+        }
+
+        public boolean isEmpty() {
+            return size == 0;
+        }
+
+        private void lift() {
+            int index = size;
+            int parentIndex;
+            while (index > 1 && subord(parentIndex = index >> 1, index)) {
+                swap(index, parentIndex);
+                index = parentIndex;
+            }
+        }
+
+        private void sink(int index) {
+            int child;
+            while ((child = index << 1) <= size) {
+                if (child < size && subord(child, child + 1)) {
+                    child++;
+                }
+                if (!subord(index, child)) {
+                    break;
+                }
+                swap(index, child);
+                index = child;
+            }
+        }
+
+        private boolean subord(int a, int b) {
+            return array[a] > array[b];
+        }
+
+        private void swap(int a, int b) {
+            long value = array[a];
+            array[a] = array[b];
+            array[b] = value;
+        }
     }
 }
