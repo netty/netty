@@ -45,7 +45,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
     private static final int DEFAULT_SMALL_CACHE_SIZE;
     private static final int DEFAULT_NORMAL_CACHE_SIZE;
-    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+    static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
     private static final long DEFAULT_CACHE_TRIM_INTERVAL_MILLIS;
     private static final boolean DEFAULT_USE_CACHE_FOR_ALL_THREADS;
