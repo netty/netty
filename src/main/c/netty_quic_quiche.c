@@ -627,7 +627,7 @@ JNIEXPORT jint JNI_OnLoad_netty_quiche(JavaVM* vm, void* reserved) {
 }
 
 // Invoked by the JVM when statically linked
-JNIEXPORT void JNI_OnUnload_netty_quiche_JNI_OnLoad(JavaVM* vm, void* reserved) {
+JNIEXPORT void JNI_OnUnload_netty_quiche(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_quiche_JNI_OnUnload);
     global_vm = NULL;
 }
