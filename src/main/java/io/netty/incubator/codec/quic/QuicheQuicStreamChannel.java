@@ -24,9 +24,10 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ import java.net.SocketAddress;
 final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private final ChannelConfig config;
+    private final QuicStreamChannelConfig config;
     private final QuicStreamAddress address;
     private boolean readable;
     private boolean readPending;
@@ -52,7 +53,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         super(parent);
-        config = new DefaultChannelConfig(this);
+        config = new DefaultQuicStreamChannelConfig(this);
         this.address = new QuicStreamAddress(streamId);
     }
 
@@ -292,6 +293,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     }
 
     private final class QuicStreamChannelUnsafe extends AbstractUnsafe {
+
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress1, ChannelPromise channelPromise) {
             channelPromise.setFailure(new UnsupportedOperationException());
@@ -315,8 +317,16 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         private void closeOnRead(ChannelPipeline pipeline) {
-            // TODO: Improve
-            this.close(this.voidPromise());
+            if (config.isAllowHalfClosure() && type() == QuicStreamType.BIDIRECTIONAL && active) {
+                // If we receive a fin there will be no more data to read so we need to fire both events
+                // to be consistent with other transports.
+                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+            } else {
+                // This was an unidirectional stream which means as soon as we received FIN we need
+                // close the connection.
+                close(voidPromise());
+            }
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
@@ -332,7 +342,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             readComplete(allocHandle, pipeline);
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                this.closeOnRead(pipeline);
+                closeOnRead(pipeline);
             }
         }
 
@@ -353,7 +363,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
                 // We should loop as long as a read() was requested and there is anything left to read, which means the
                 // stream was marked as readable before.
-                while (readPending && readable) {
+                while (active && readPending && readable) {
                     allocHandle.reset(config);
                     ByteBuf byteBuf = null;
                     QuicheQuicChannel parent = parent();
