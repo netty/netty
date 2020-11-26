@@ -36,11 +36,15 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        QuicStreamFrame streamFrame = (QuicStreamFrame) msg;
-        fin = streamFrame.hasFin();
-        ByteBuf buffer = streamFrame.content().retain();
-        streamFrame.release();
-
+        ByteBuf buffer;
+        if (msg instanceof QuicStreamFrame) {
+            QuicStreamFrame streamFrame = (QuicStreamFrame) msg;
+            fin = streamFrame.hasFin();
+            buffer = streamFrame.content().retain();
+            streamFrame.release();
+        } else {
+            buffer = (ByteBuf) msg;
+        }
         super.channelRead(ctx, buffer);
     }
 
@@ -86,6 +90,9 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x1:
                         // HEADERS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
+                        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+                        decodeHeaders(headersFrame.headers(), in, payLoadLength);
+                        out.add(headersFrame);
                         break;
                     case 0x3:
                         // CANCEL_PUSH
@@ -96,22 +103,14 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x4:
                         // SETTINGS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
-                        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
-                        while (payLoadLength > 0) {
-                            int keyLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-                            long key = readVariableLength(in, keyLen);
-                            payLoadLength -= keyLen;
-                            int valueLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-                            long value = readVariableLength(in, valueLen);
-                            payLoadLength -= valueLen;
-
-                            settingsFrame.put(key, value);
-                        }
-                        out.add(settingsFrame);
+                        out.add(decodeSettings(in, payLoadLength));
                         break;
                     case 0x5:
                         // PUSH_PROMISE
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
+                        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame();
+                        decodeHeaders(pushPromiseFrame.headers(), in, payLoadLength);
+                        out.add(pushPromiseFrame);
                         break;
                     case 0x7:
                         // GO_AWAY
@@ -134,6 +133,31 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
         } finally {
             in.readerIndex(readerIndex + payLoadLength);
         }
+    }
+
+    @Override
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        super.decodeLast(ctx, in, out);
+        fin = true;
+    }
+
+    private static Http3SettingsFrame decodeSettings(ByteBuf in, int payLoadLength) {
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+        while (payLoadLength > 0) {
+            int keyLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
+            long key = readVariableLength(in, keyLen);
+            payLoadLength -= keyLen;
+            int valueLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
+            long value = readVariableLength(in, valueLen);
+            payLoadLength -= valueLen;
+
+            settingsFrame.put(key, value);
+        }
+        return settingsFrame;
+    }
+
+    private static void decodeHeaders(Http3Headers headers, ByteBuf in, int payLoadLength) {
+        // TODO: implement me, for this we will need QPACK.
     }
 
     /**

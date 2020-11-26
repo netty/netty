@@ -15,19 +15,10 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.util.collection.LongObjectHashMap;
-import io.netty.util.collection.LongObjectMap;
-
-public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
-
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>();
+public final class DefaultHttp3HeadersFrame implements Http3HeadersFrame {
     @Override
-    public Long get(long key) {
-        return settings.get(key);
-    }
-
-    @Override
-    public void put(long key, Long value) {
-        settings.put(key, value);
+    public Http3Headers headers() {
+        // TODO: Fix me
+        return null;
     }
 }

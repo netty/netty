@@ -15,19 +15,12 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.util.collection.LongObjectHashMap;
-import io.netty.util.collection.LongObjectMap;
-
-public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
-
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>();
-    @Override
-    public Long get(long key) {
-        return settings.get(key);
-    }
-
-    @Override
-    public void put(long key, Long value) {
-        settings.put(key, value);
-    }
+/**
+ * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5>PUSH_PROMISE</a>.
+ */
+public interface Http3PushPromiseFrame extends Http3Frame {
+    /**
+     * Returns the carried headers.
+     */
+    Http3Headers headers();
 }
