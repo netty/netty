@@ -67,7 +67,7 @@
   </developers>
 
   <properties>
-    <javaModuleName>io.netty.incubator.transport.io_uring</javaModuleName>
+    <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>false</skipTests>
     <netty.version>4.1.54.Final</netty.version>
