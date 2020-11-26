@@ -69,68 +69,68 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
     }
 
     @Override
-    public DefaultQuicChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+    public QuicChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         super.setConnectTimeoutMillis(connectTimeoutMillis);
         return this;
     }
 
     @Override
     @Deprecated
-    public DefaultQuicChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+    public QuicChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setWriteSpinCount(int writeSpinCount) {
+    public QuicChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setAllocator(ByteBufAllocator allocator) {
+    public QuicChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public QuicChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         super.setRecvByteBufAllocator(allocator);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setAutoRead(boolean autoRead) {
+    public QuicChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setAutoClose(boolean autoClose) {
+    public QuicChannelConfig setAutoClose(boolean autoClose) {
         super.setAutoClose(autoClose);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+    public QuicChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+    public QuicChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+    public QuicChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
         super.setWriteBufferWaterMark(writeBufferWaterMark);
         return this;
     }
 
     @Override
-    public DefaultQuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+    public QuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
     }
@@ -141,7 +141,7 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
     }
 
     @Override
-    public DefaultQuicChannelConfig setPeerCertServerName(String peerCertServerName) {
+    public QuicChannelConfig setPeerCertServerName(String peerCertServerName) {
         this.peerCertServerName = peerCertServerName;
         return this;
     }
