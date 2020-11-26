@@ -331,7 +331,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             LongPriorityQueue queue = runsAvail[queueIdx];
             long handle = queue.poll();
 
-            assert handle != 0 && !isUsed(handle);
+            assert handle != LongPriorityQueue.NO_VALUE && !isUsed(handle) : "invalid handle: " + handle;
 
             removeAvailRun(queue, handle);
 

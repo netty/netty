@@ -22,10 +22,14 @@ import java.util.Arrays;
  * The implementation is based on the binary heap, as described in Algorithms by Sedgewick and Wayne.
  */
 final class LongPriorityQueue {
+    public static final int NO_VALUE = -1;
     private long[] array = new long[9];
     private int size;
 
     public void offer(long handle) {
+        if (handle == NO_VALUE) {
+            throw new IllegalArgumentException("The NO_VALUE (" + NO_VALUE + ") cannot be added to the queue.");
+        }
         size++;
         if (size == array.length) {
             // Grow queue capacity.
@@ -52,7 +56,7 @@ final class LongPriorityQueue {
 
     public long poll() {
         if (size == 0) {
-            return 0;
+            return NO_VALUE;
         }
         long val = array[1];
         array[1] = array[size];
