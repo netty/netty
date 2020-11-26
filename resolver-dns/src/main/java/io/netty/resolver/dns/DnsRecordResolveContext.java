@@ -84,4 +84,10 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
         // Do not cache.
         // XXX: When we implement cache, we would need to retain the reference count of the result record.
     }
+
+    @Override
+    DnsCnameCache cnameCache() {
+        // We don't use a cache here at all as we also don't cache if we end up using the DnsRecordResolverContext.
+        return NoopDnsCnameCache.INSTANCE;
+    }
 }
