@@ -23,8 +23,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
-import java.nio.ByteBuffer;
-import java.security.SecureRandom;
 import java.util.Map;
 
 public final class Quic {
@@ -52,16 +50,14 @@ public final class Quic {
     }
 
     /**
-     * Returns {@code true} if and only if the <a href="https://netty.io/wiki/native-transports.html">{@code
-     * netty-transport-native-epoll}</a> is available.
+     * Returns {@code true} if and only if the QUIC implementation is usable on the running platform is available.
      */
     public static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;
     }
 
     /**
-     * Ensure that <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is
-     * available.
+     * Ensure that QUIC implementation is usable on the running platform is available.
      *
      * @throws UnsatisfiedLinkError if unavailable
      */
@@ -73,8 +69,7 @@ public final class Quic {
     }
 
     /**
-     * Returns the cause of unavailability of <a href="https://netty.io/wiki/native-transports.html">
-     * {@code netty-transport-native-epoll}</a>.
+     * Returns the cause of unavailability.
      *
      * @return the cause if unavailable. {@code null} if available.
      */
