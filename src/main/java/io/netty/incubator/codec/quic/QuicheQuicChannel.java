@@ -74,6 +74,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         OK
     }
 
+    enum StreamSendResult {
+        /**
+         * Nothing more to sent and no FIN flag
+         */
+        DONE,
+        /**
+         * FIN flag sent.
+         */
+        FIN,
+        /**
+         * No more space, need to retry
+         */
+        NO_SPACE
+    }
+
     private static final class CloseData implements ChannelFutureListener {
         final boolean applicationClose;
         final int err;
@@ -460,17 +475,27 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         Quiche.notifyPromise(res, promise);
     }
 
-    boolean streamSendMultiple(long streamId, ByteBufAllocator allocator, ChannelOutboundBuffer streamOutboundBuffer)
-            throws Exception {
+    StreamSendResult streamSendMultiple(long streamId, ByteBufAllocator allocator,
+                                        ChannelOutboundBuffer streamOutboundBuffer) throws Exception {
         boolean sendSomething = false;
         try {
             for (;;) {
-                ByteBuf buffer = (ByteBuf) streamOutboundBuffer.current();
-                if (buffer == null) {
+                Object current =  streamOutboundBuffer.current();
+                if (current == null) {
                     break;
                 }
+                final ByteBuf buffer;
+                final boolean fin;
+                if (current instanceof ByteBuf) {
+                    buffer = (ByteBuf) current;
+                    fin = false;
+                } else {
+                    QuicStreamFrame streamFrame = (QuicStreamFrame) current;
+                    buffer = streamFrame.content();
+                    fin = streamFrame.hasFin();
+                }
                 int readable = buffer.readableBytes();
-                if (readable == 0) {
+                if (readable == 0 && !fin) {
                     // Skip empty buffers.
                     streamOutboundBuffer.remove();
                     continue;
@@ -481,22 +506,25 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     ByteBuf tmpBuffer = allocator.directBuffer(readable);
                     try {
                         tmpBuffer.writeBytes(buffer, buffer.readerIndex(), readable);
-                        res = streamSend(streamId, tmpBuffer, false);
+                        res = streamSend(streamId, tmpBuffer, fin);
                     } finally {
                         tmpBuffer.release();
                     }
                 } else {
-                    res = streamSend(streamId, buffer, false);
+                    res = streamSend(streamId, buffer, fin);
                 }
 
                 if (Quiche.throwIfError(res) || res == 0) {
                     // stream has no capacity left stop trying to send.
-                    return false;
+                    return StreamSendResult.NO_SPACE;
                 }
                 streamOutboundBuffer.removeBytes(res);
                 sendSomething = true;
+                if (fin) {
+                    return StreamSendResult.FIN;
+                }
             }
-            return true;
+            return StreamSendResult.DONE;
         } finally {
             if (sendSomething) {
                 // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either

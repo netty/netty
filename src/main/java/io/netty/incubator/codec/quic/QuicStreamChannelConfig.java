@@ -25,6 +25,17 @@ import io.netty.channel.socket.DuplexChannelConfig;
  * {@link DuplexChannelConfig} for QUIC streams.
  */
 public interface QuicStreamChannelConfig extends DuplexChannelConfig {
+    /**
+     * Set this to {@code true} if the {@link QuicStreamChannel} should read {@link QuicStreamFrame}s and fire these
+     * through the {@link io.netty.channel.ChannelPipeline}, {@code false} if it uses {@link io.netty.buffer.ByteBuf}.
+     */
+    QuicStreamChannelConfig setReadFrames(boolean readFrames);
+
+    /**
+     * Returns {@code true} if the {@link QuicStreamChannel} will read {@link QuicStreamFrame}s and fire these through
+     * the {@link io.netty.channel.ChannelPipeline}, {@code false} if it uses {@link io.netty.buffer.ByteBuf}.
+     */
+    boolean isReadFrames();
 
     @Override
     QuicStreamChannelConfig setAllowHalfClosure(boolean allowHalfClosure);

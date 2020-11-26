@@ -15,37 +15,41 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.socket.DuplexChannel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 /**
- * A QUIC stream.
+ * A QUIC STREAM_FRAME.
  */
-public interface QuicStreamChannel extends DuplexChannel {
-
-    @Override
-    QuicStreamAddress localAddress();
-
-    @Override
-    QuicStreamAddress remoteAddress();
+public interface QuicStreamFrame extends ByteBufHolder {
 
     /**
-     * Returns {@code true} if the stream was created locally.
+     * Returns {@code true} if the frame has the FIN set, which means it notifies the remote peer that
+     * there will be no more writing happen. {@code false} otherwise.
      */
-    boolean isLocalCreated();
-
-    /**
-     * Returns the {@link QuicStreamType} of the stream.
-     */
-    QuicStreamType type();
-
-    /**
-     * The id of the stream.
-     */
-    long streamId();
+    boolean hasFin();
 
     @Override
-    QuicChannel parent();
+    QuicStreamFrame copy();
 
     @Override
-    QuicStreamChannelConfig config();
+    QuicStreamFrame duplicate();
+
+    @Override
+    QuicStreamFrame retainedDuplicate();
+
+    @Override
+    QuicStreamFrame replace(ByteBuf content);
+
+    @Override
+    QuicStreamFrame retain();
+
+    @Override
+    QuicStreamFrame retain(int increment);
+
+    @Override
+    QuicStreamFrame touch();
+
+    @Override
+    QuicStreamFrame touch(Object hint);
 }

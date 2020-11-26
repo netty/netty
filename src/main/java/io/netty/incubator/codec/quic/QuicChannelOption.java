@@ -29,6 +29,14 @@ public final class QuicChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<String> PEER_CERT_SERVER_NAME =
         valueOf(QuicChannelOption.class, "PEER_CERT_SERVER_NAME");
 
+    /**
+     * If set to {@code true} the {@link QuicStreamChannel} will read {@link QuicStreamFrame}s and fire it through
+     * the pipeline, if {@code false} it will read {@link io.netty.buffer.ByteBuf} and translate the FIN flag to
+     * events.
+     */
+    public static final ChannelOption<Boolean> READ_FRAMES =
+            valueOf(QuicChannelOption.class, "READ_FRAMES");
+
     @SuppressWarnings({ "deprecation" })
     private QuicChannelOption() {
         super(null);

@@ -17,8 +17,8 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -28,10 +28,11 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.internal.StringUtil;
 
-import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.function.Supplier;
 
 /**
  * {@link QuicStreamChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
@@ -46,6 +47,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private boolean flushPending;
     private boolean inRecv;
     private boolean finReceived;
+    private boolean finSent;
 
     private volatile boolean active = true;
     private volatile boolean inputShutdown;
@@ -196,7 +198,10 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doClose() throws Exception {
         active = false;
-        parent().streamClose(streamId());
+        if (!finSent) {
+            finSent = true;
+            parent().streamClose(streamId());
+        }
         if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
             // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
             // never receive data from the other side.
@@ -216,7 +221,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (!(msg instanceof ByteBuf)) {
+        if (!(msg instanceof ByteBuf || msg instanceof QuicStreamFrame)) {
             throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
         }
         return msg;
@@ -226,25 +231,49 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
         // reset first as streamSendMultiple may notify futures.
         flushPending = false;
+        if (finSent) {
+            failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
+                    "Fin was sent already"));
+            return;
+        }
         if (type() == QuicStreamType.UNIDIRECTIONAL && !isLocalCreated()) {
-            if (channelOutboundBuffer.isEmpty()) {
-                // nothing to do.
-                return;
-            }
-
-            UnsupportedOperationException exception = new UnsupportedOperationException(
-                    "Writes on non-local created streams that are unidirectional are not supported");
-            for (;;) {
-                if (!channelOutboundBuffer.remove(exception)) {
-                    // failed all writes.
-                    return;
-                }
-            }
+            failOutboundBuffer(channelOutboundBuffer, () -> new UnsupportedOperationException(
+                    "Writes on non-local created streams that are unidirectional are not supported"));
+            return;
         }
 
-        if (!parent().streamSendMultiple(streamId(), alloc(), channelOutboundBuffer)) {
-            parent().streamHasPendingWrites(streamId());
-            flushPending = true;
+        QuicheQuicChannel.StreamSendResult result = parent()
+                .streamSendMultiple(streamId(), alloc(), channelOutboundBuffer);
+        switch (result) {
+            case NO_SPACE:
+                parent().streamHasPendingWrites(streamId());
+                flushPending = true;
+                break;
+            case DONE:
+                // Did sent everything without any FIN.
+                break;
+            case FIN:
+                failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
+                        "Fin was sent already"));
+                finSent = true;
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    private void failOutboundBuffer(ChannelOutboundBuffer outboundBuffer, Supplier<Exception> exceptionSupplier) {
+        if (outboundBuffer.isEmpty()) {
+            // nothing to do.
+            return;
+        }
+
+        Exception exception = exceptionSupplier.get();
+        for (;;) {
+            if (!outboundBuffer.remove(exception)) {
+                // failed all writes.
+                return;
+            }
         }
     }
 
@@ -255,7 +284,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     }
 
     @Override
-    public ChannelConfig config() {
+    public QuicStreamChannelConfig config() {
         return config;
     }
 
@@ -305,7 +334,19 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 // We already have a flush pending that needs to be done once the stream becomes writable again.
                 return;
             }
-            super.flush0();
+            boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
+            try {
+                super.flush0();
+            } finally {
+                // Let's check if we should close the channel now.
+                // If it's a unidirectional channel we can close it as there will be no fin that we can read
+                // from the remote peer. If its an bidirectional channel we should only close the channel if we
+                // also received the fin from the remote peer.
+                if (!wasFinSent && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
+                    // close the channel now
+                    close(voidPromise());
+                }
+            }
         }
 
         void flushIfPending() {
@@ -316,8 +357,10 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             }
         }
 
-        private void closeOnRead(ChannelPipeline pipeline) {
-            if (config.isAllowHalfClosure() && type() == QuicStreamType.BIDIRECTIONAL && active) {
+        private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
+            if (readFrames && finReceived && finSent) {
+                close(voidPromise());
+            } else if (config.isAllowHalfClosure() && type() == QuicStreamType.BIDIRECTIONAL && active) {
                 // If we receive a fin there will be no more data to read so we need to fire both events
                 // to be consistent with other transports.
                 pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
@@ -329,8 +372,9 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                                         @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle) {
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause,
+                                         @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle,
+                                         boolean readFrames) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     pipeline.fireChannelRead(byteBuf);
@@ -341,8 +385,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
             readComplete(allocHandle, pipeline);
             pipeline.fireExceptionCaught(cause);
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                closeOnRead(pipeline);
+            if (finReceived) {
+                closeOnRead(pipeline, readFrames);
             }
         }
 
@@ -356,10 +400,11 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             inRecv = true;
             try {
                 ChannelPipeline pipeline = pipeline();
-                ChannelConfig config = config();
+                QuicStreamChannelConfig config = config();
                 ByteBufAllocator allocator = config.getAllocator();
                 @SuppressWarnings("deprecation")
                 RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
+                boolean readFrames = config.isReadFrames();
 
                 // We should loop as long as a read() was requested and there is anything left to read, which means the
                 // stream was marked as readable before.
@@ -394,8 +439,14 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                             allocHandle.lastBytesRead(byteBuf.readableBytes());
                             if (allocHandle.lastBytesRead() <= 0) {
                                 byteBuf.release();
-                                byteBuf = null;
-                                break;
+                                if (finReceived && readFrames) {
+                                    // If we read QuicStreamFrames we should fire an frame through the pipeline
+                                    // with an empty buffer but the fin flag set to true.
+                                    byteBuf = Unpooled.EMPTY_BUFFER;
+                                } else {
+                                    byteBuf = null;
+                                    break;
+                                }
                             }
                             // We did read one message.
                             allocHandle.incMessagesRead(1);
@@ -405,7 +456,11 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                             // as the user may request another read() from channelRead(...) callback.
                             readPending = false;
 
-                            pipeline.fireChannelRead(byteBuf);
+                            if (readFrames) {
+                                pipeline.fireChannelRead(new DefaultQuicStreamFrame(byteBuf, finReceived));
+                            } else {
+                                pipeline.fireChannelRead(byteBuf);
+                            }
                             byteBuf = null;
                             continueReading = allocHandle.continueReading();
                         }
@@ -415,11 +470,11 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                         }
                         if (finReceived) {
                             readable = false;
-                            closeOnRead(pipeline);
+                            closeOnRead(pipeline, readFrames);
                         }
                     } catch (Throwable cause) {
                         readable = false;
-                        handleReadException(pipeline, byteBuf, cause, finReceived, allocHandle);
+                        handleReadException(pipeline, byteBuf, cause, allocHandle, readFrames);
                     }
                 }
             } finally {

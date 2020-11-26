@@ -26,6 +26,7 @@ import java.util.Map;
 
 final class DefaultQuicStreamChannelConfig extends DefaultChannelConfig implements QuicStreamChannelConfig {
     private volatile boolean allowHalfClosure;
+    private volatile boolean readFrames;
 
     DefaultQuicStreamChannelConfig(QuicStreamChannel channel) {
         super(channel);
@@ -34,7 +35,7 @@ final class DefaultQuicStreamChannelConfig extends DefaultChannelConfig implemen
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         if (isHalfClosureSupported()) {
-            return getOptions(super.getOptions(), ChannelOption.ALLOW_HALF_CLOSURE);
+            return getOptions(super.getOptions(), ChannelOption.ALLOW_HALF_CLOSURE, QuicChannelOption.READ_FRAMES);
         }
         return super.getOptions();
     }
@@ -45,7 +46,9 @@ final class DefaultQuicStreamChannelConfig extends DefaultChannelConfig implemen
         if (option == ChannelOption.ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
         }
-
+        if (option == QuicChannelOption.READ_FRAMES) {
+            return (T) Boolean.valueOf(isReadFrames());
+        }
         return super.getOption(option);
     }
 
@@ -59,9 +62,22 @@ final class DefaultQuicStreamChannelConfig extends DefaultChannelConfig implemen
                 return true;
             }
             return false;
-        } else {
-            return super.setOption(option, value);
         }
+        if (option == QuicChannelOption.READ_FRAMES) {
+            setReadFrames((Boolean) value);
+        }
+        return super.setOption(option, value);
+    }
+
+    @Override
+    public QuicStreamChannelConfig setReadFrames(boolean readFrames) {
+        this.readFrames = readFrames;
+        return this;
+    }
+
+    @Override
+    public boolean isReadFrames() {
+        return readFrames;
     }
 
     @Override
