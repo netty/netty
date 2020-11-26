@@ -15,7 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
-final class NativeStaticallyReferencedJniMethods {
+final class QuicheNativeStaticallyReferencedJniMethods {
 
     static native int quiche_protocol_version();
     static native int quiche_max_conn_id_len();
@@ -40,5 +40,5 @@ final class NativeStaticallyReferencedJniMethods {
     static native int quiche_cc_reno();
     static native int quiche_cc_cubic();
 
-    private NativeStaticallyReferencedJniMethods() { }
+    private QuicheNativeStaticallyReferencedJniMethods() { }
 }

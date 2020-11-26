@@ -26,9 +26,9 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STATICALLY_CLASSNAME "io/netty/incubator/codec/quic/NativeStaticallyReferencedJniMethods"
+#define STATICALLY_CLASSNAME "io/netty/incubator/codec/quic/QuicheNativeStaticallyReferencedJniMethods"
 #define QUICHE_CLASSNAME "io/netty/incubator/codec/quic/Quiche"
-
+#define LIBRARYNAME "netty_quiche"
 
 static jclass    quiche_logger_class;
 static jmethodID quiche_logger_class_log;
@@ -623,7 +623,7 @@ static void netty_quiche_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_quiche(JavaVM* vm, void* reserved) {
     global_vm = vm;
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_quiche", netty_quiche_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, LIBRARYNAME, netty_quiche_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
@@ -635,7 +635,7 @@ JNIEXPORT void JNI_OnUnload_netty_quiche(JavaVM* vm, void* reserved) {
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     global_vm = vm;
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_quiche", netty_quiche_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, LIBRARYNAME, netty_quiche_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
