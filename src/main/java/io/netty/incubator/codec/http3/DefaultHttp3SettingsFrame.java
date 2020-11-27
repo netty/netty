@@ -20,7 +20,8 @@ import io.netty.util.collection.LongObjectMap;
 
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>();
+    private final LongObjectMap<Long> settings = new LongObjectHashMap<>(4);
+
     @Override
     public Long get(long key) {
         return settings.get(key);
