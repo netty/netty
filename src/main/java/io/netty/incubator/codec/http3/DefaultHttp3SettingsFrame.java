@@ -18,6 +18,9 @@ package io.netty.incubator.codec.http3;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 
+import java.util.Iterator;
+import java.util.Map;
+
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
     private final LongObjectMap<Long> settings = new LongObjectHashMap<>(4);
@@ -30,5 +33,10 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     @Override
     public void put(long key, Long value) {
         settings.put(key, value);
+    }
+
+    @Override
+    public Iterator<Map.Entry<Long, Long>> iterator() {
+        return settings.entrySet().iterator();
     }
 }

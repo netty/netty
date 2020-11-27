@@ -15,10 +15,12 @@
  */
 package io.netty.incubator.codec.http3;
 
+import java.util.Map;
+
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4>SETTINGS</a>.
  */
-public interface Http3SettingsFrame extends Http3Frame {
+public interface Http3SettingsFrame extends Http3Frame, Iterable<Map.Entry<Long, Long>> {
     Long get(long key);
     void put(long key, Long value);
 }
