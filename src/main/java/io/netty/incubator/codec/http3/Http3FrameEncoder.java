@@ -25,22 +25,26 @@ import io.netty.util.ReferenceCountUtil;
 public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg instanceof Http3DataFrame) {
-            writeDataFrame(ctx, (Http3DataFrame) msg, promise);
-        } else if (msg instanceof Http3HeadersFrame) {
-            writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
-        } else if (msg instanceof Http3CancelPushFrame) {
-            writeCancelPushFrame(ctx, (Http3CancelPushFrame) msg, promise);
-        } else if (msg instanceof Http3SettingsFrame) {
-            writeSettingsFrame(ctx, (Http3SettingsFrame) msg, promise);
-        } else if (msg instanceof Http3PushPromiseFrame) {
-            writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
-        } else if (msg instanceof Http3GoAwayFrame) {
-            writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, promise);
-        } else if (msg instanceof Http3MaxPushIdFrame) {
-            writeMaxPushIdFrame(ctx, (Http3MaxPushIdFrame) msg, promise);
-        } else {
-            unsupported(msg, promise);
+        try {
+            if (msg instanceof Http3DataFrame) {
+                writeDataFrame(ctx, (Http3DataFrame) msg, promise);
+            } else if (msg instanceof Http3HeadersFrame) {
+                writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
+            } else if (msg instanceof Http3CancelPushFrame) {
+                writeCancelPushFrame(ctx, (Http3CancelPushFrame) msg, promise);
+            } else if (msg instanceof Http3SettingsFrame) {
+                writeSettingsFrame(ctx, (Http3SettingsFrame) msg, promise);
+            } else if (msg instanceof Http3PushPromiseFrame) {
+                writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
+            } else if (msg instanceof Http3GoAwayFrame) {
+                writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, promise);
+            } else if (msg instanceof Http3MaxPushIdFrame) {
+                writeMaxPushIdFrame(ctx, (Http3MaxPushIdFrame) msg, promise);
+            } else {
+                unsupported(msg, promise);
+            }
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
     }
 
@@ -49,24 +53,18 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         ByteBuf out = ctx.alloc().directBuffer();
         writeVariableLengthInteger(out, 0x0);
         writeVariableLengthInteger(out, frame.content().readableBytes());
-        writeBufferToContext(ctx, Unpooled.wrappedUnmodifiableBuffer(out, frame.content().retain()), promise);
-        frame.release();
+        ByteBuf content = frame.content().retain();
+        writeBufferToContext(ctx, Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
     }
 
     private static void writeHeadersFrame(
             ChannelHandlerContext ctx, Http3HeadersFrame frame, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x1);
-        writeHeaders(out, frame.headers());
-        writeBufferToContext(ctx, out, promise);
+        writeFrameWithHeaders(ctx, 0x1, frame.headers(), promise);
     }
 
     private static void writeCancelPushFrame(
             ChannelHandlerContext ctx, Http3CancelPushFrame frame, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x3);
-        writeVariableLengthInteger(out, frame.id());
-        writeBufferToContext(ctx, out, promise);
+        writeFrameWithId(ctx, 0x3, frame.id(), promise);
     }
 
     private static void writeSettingsFrame(
@@ -82,30 +80,35 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private static void writePushPromiseFrame(
             ChannelHandlerContext ctx, Http3PushPromiseFrame frame, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x5);
-        writeHeaders(out, frame.headers());
-        writeBufferToContext(ctx, out, promise);
+        writeFrameWithHeaders(ctx, 0x5, frame.headers(), promise);
     }
 
     private static void writeGoAwayFrame(
             ChannelHandlerContext ctx, Http3GoAwayFrame frame, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x7);
-        writeVariableLengthInteger(out, frame.id());
-        writeBufferToContext(ctx, out, promise);
+        writeFrameWithId(ctx, 0x7, frame.id(), promise);
     }
 
     private static void writeMaxPushIdFrame(
             ChannelHandlerContext ctx, Http3MaxPushIdFrame frame, ChannelPromise promise) {
+        writeFrameWithId(ctx, 0xd, frame.id(), promise);
+    }
+
+    private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id, ChannelPromise promise) {
         ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0xd);
-        writeVariableLengthInteger(out, frame.id());
+        writeVariableLengthInteger(out, type);
+        writeVariableLengthInteger(out, id);
+        writeBufferToContext(ctx, out, promise);
+    }
+
+    private static void writeFrameWithHeaders(ChannelHandlerContext ctx, long type, Http3Headers headers,
+                                              ChannelPromise promise) {
+        ByteBuf out = ctx.alloc().directBuffer();
+        writeVariableLengthInteger(out, type);
+        writeHeaders(out, headers);
         writeBufferToContext(ctx, out, promise);
     }
 
     private static void unsupported(Object msg, ChannelPromise promise) {
-        ReferenceCountUtil.release(msg);
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -118,19 +121,23 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
                 break;
             case 2:
                 out.writeShort((short) value);
-                out.setByte(writerIndex, out.getByte(writerIndex) | 0x40);
+                encodeLengthIntoBuffer(out, writerIndex, (byte) 0x40);
                 break;
             case 4:
                 out.writeInt((int) value);
-                out.setByte(writerIndex, out.getByte(writerIndex) | 0x80);
+                encodeLengthIntoBuffer(out, writerIndex, (byte) 0x80);
                 break;
             case 8:
                 out.writeLong(value);
-                out.setByte(writerIndex, out.getByte(writerIndex) | 0xc0);
+                encodeLengthIntoBuffer(out, writerIndex, (byte) 0xc0);
                 break;
             default:
                 throw new IllegalArgumentException();
         }
+    }
+
+    private static void encodeLengthIntoBuffer(ByteBuf out, int index, byte b) {
+        out.setByte(index, out.getByte(index) | b);
     }
 
     private static void writeHeaders(ByteBuf out, Http3Headers headers) {
