@@ -27,10 +27,6 @@ final class LongLongHashMap {
     private long zeroVal;
     private final long emptyVal;
 
-    LongLongHashMap() {
-        this(0);
-    }
-
     LongLongHashMap(long emptyVal) {
         this.emptyVal = emptyVal;
         zeroVal = emptyVal;

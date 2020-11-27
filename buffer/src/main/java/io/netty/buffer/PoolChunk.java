@@ -192,7 +192,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         freeBytes = chunkSize;
 
         runsAvail = newRunsAvailqueueArray(maxPageIdx);
-        runsAvailMap = new LongLongHashMap();
+        runsAvailMap = new LongLongHashMap(-1);
         subpages = new PoolSubpage[chunkSize >> pageShifts];
 
         //insert initial run, offset = 0, pages = chunkSize / pageSize
@@ -241,7 +241,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private void insertAvailRun0(int runOffset, long handle) {
         long pre = runsAvailMap.put(runOffset, handle);
-        assert pre == 0;
+        assert pre == -1;
     }
 
     private void removeAvailRun(long handle) {
@@ -502,7 +502,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int runPages = runPages(handle);
 
             long pastRun = getAvailRunByOffset(runOffset - 1);
-            if (pastRun == 0) {
+            if (pastRun == -1) {
                 return handle;
             }
 
@@ -526,7 +526,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int runPages = runPages(handle);
 
             long nextRun = getAvailRunByOffset(runOffset + runPages);
-            if (nextRun == 0) {
+            if (nextRun == -1) {
                 return handle;
             }
 
