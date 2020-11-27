@@ -57,6 +57,7 @@ public final class QuicChannelBootstrap {
      * pipeline.
      */
     QuicChannelBootstrap(Channel parent) {
+        Quic.ensureAvailability();
         this.parent = ObjectUtil.checkNotNull(parent, "parent");
     }
 

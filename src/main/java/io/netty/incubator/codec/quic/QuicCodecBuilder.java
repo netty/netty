@@ -42,7 +42,9 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean enableHystart;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
 
-    QuicCodecBuilder() { }
+    QuicCodecBuilder() {
+        Quic.ensureAvailability();
+    }
 
     @SuppressWarnings("unchecked")
     protected final B self() {

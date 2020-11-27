@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.util.Map;
@@ -38,12 +37,11 @@ public final class Quic {
     static {
         Throwable cause = null;
 
-        if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
-            cause = new UnsupportedOperationException(
-                    "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
-        } else {
+        try {
             String version = Quiche.quiche_version();
             assert version != null;
+        } catch (Throwable error) {
+            cause = error;
         }
 
         UNAVAILABILITY_CAUSE = cause;
