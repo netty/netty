@@ -20,10 +20,25 @@ package io.netty.buffer;
  * PoolChunk}.
  */
 final class LongLongHashMap {
-    private static final int MAX_PROBE = 4;
-    private int mask = 31;
-    private long[] array = new long[mask + 1];
+    private static final int MASK_TEMPLATE = ~1;
+    private int mask;
+    private long[] array;
+    private int maxProbe;
     private long zeroVal;
+    private final long emptyVal;
+
+    LongLongHashMap() {
+        this(0);
+    }
+
+    LongLongHashMap(long emptyVal) {
+        this.emptyVal = emptyVal;
+        zeroVal = emptyVal;
+        int initialSize = 32;
+        array = new long[initialSize];
+        mask = initialSize - 1;
+        computeMaskAndProbe();
+    }
 
     public long put(long key, long value) {
         if (key == 0) {
@@ -34,12 +49,20 @@ final class LongLongHashMap {
 
         for (;;) {
             int index = index(key);
-            for (int i = 0; i < MAX_PROBE; i++) {
+            for (int i = 0; i < maxProbe; i++) {
                 long existing = array[index];
                 if (existing == key || existing == 0) {
-                    long prev = array[index + 1];
+                    long prev = existing == 0? emptyVal : array[index + 1];
                     array[index] = key;
                     array[index + 1] = value;
+                    for (; i < maxProbe; i++) { // Nerf any existing misplaced entries.
+                        index = index + 2 & mask;
+                        if (array[index] == key) {
+                            array[index] = 0;
+                            prev = array[index + 1];
+                            break;
+                        }
+                    }
                     return prev;
                 }
                 index = index + 2 & mask;
@@ -50,15 +73,14 @@ final class LongLongHashMap {
 
     public void remove(long key) {
         if (key == 0) {
-            zeroVal = 0;
+            zeroVal = emptyVal;
             return;
         }
         int index = index(key);
-        for (int i = 0; i < MAX_PROBE; i++) {
+        for (int i = 0; i < maxProbe; i++) {
             long existing = array[index];
             if (existing == key) {
                 array[index] = 0;
-                array[index + 1] = 0;
                 break;
             }
             index = index + 2 & mask;
@@ -70,29 +92,42 @@ final class LongLongHashMap {
             return zeroVal;
         }
         int index = index(key);
-        for (int i = 0; i < MAX_PROBE; i++) {
+        for (int i = 0; i < maxProbe; i++) {
             long existing = array[index];
             if (existing == key) {
                 return array[index + 1];
             }
             index = index + 2 & mask;
         }
-        return -1;
+        return emptyVal;
     }
 
     private int index(long key) {
-        return (int) (key << 1 & mask);
+        // Hash with murmur64, and mask.
+        key ^= key >>> 33;
+        key *= 0xff51afd7ed558ccdL;
+        key ^= key >>> 33;
+        key *= 0xc4ceb9fe1a85ec53L;
+        key ^= key >>> 33;
+        return (int) key & mask;
     }
 
     private void expand() {
         long[] prev = array;
-        int newSize = prev.length * 2;
-        mask = newSize - 1;
-        array = new long[newSize];
-        for (int i = 0; i < prev.length >> 1; i += 2) {
+        array = new long[prev.length * 2];
+        computeMaskAndProbe();
+        for (int i = 0; i < prev.length; i += 2) {
             long key = prev[i];
-            long val = prev[i + 1];
-            put(key, val);
+            if (key != 0) {
+                long val = prev[i + 1];
+                put(key, val);
+            }
         }
+    }
+
+    private void computeMaskAndProbe() {
+        int length = array.length;
+        mask = length - 1 & MASK_TEMPLATE;
+        maxProbe = (int) Math.log(length);
     }
 }
