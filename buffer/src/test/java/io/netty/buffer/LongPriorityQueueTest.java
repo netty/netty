@@ -42,7 +42,7 @@ class LongPriorityQueueTest {
     public void mustReturnValuesInOrder() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(5, 30);
-        ArrayList<Long> values = new ArrayList<>();
+        ArrayList<Long> values = new ArrayList<Long>();
         for (int i = 0; i < initialValues; i++) {
             values.add(tlr.nextLong(0, Long.MAX_VALUE));
         }
@@ -78,7 +78,7 @@ class LongPriorityQueueTest {
     public void internalRemoveOfAllElements() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(5, 30);
-        ArrayList<Long> values = new ArrayList<>();
+        ArrayList<Long> values = new ArrayList<Long>();
         LongPriorityQueue pq = new LongPriorityQueue();
         for (int i = 0; i < initialValues; i++) {
             long value = tlr.nextLong(0, Long.MAX_VALUE);
@@ -96,7 +96,7 @@ class LongPriorityQueueTest {
     public void internalRemoveMustPreserveOrder() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(5, 30);
-        ArrayList<Long> values = new ArrayList<>();
+        ArrayList<Long> values = new ArrayList<Long>();
         LongPriorityQueue pq = new LongPriorityQueue();
         for (int i = 0; i < initialValues; i++) {
             long value = tlr.nextLong(0, Long.MAX_VALUE);

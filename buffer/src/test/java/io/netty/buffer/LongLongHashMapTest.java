@@ -41,7 +41,7 @@ class LongLongHashMapTest {
     @Test
     public void mustHandleCollisions() {
         LongLongHashMap map = new LongLongHashMap(-1);
-        Set<Long> set = new HashSet<>();
+        Set<Long> set = new HashSet<Long>();
         long v = 1;
         for (int i = 0; i < 63; i++) {
             assertThat(map.put(v, v)).isEqualTo(-1);
@@ -61,7 +61,7 @@ class LongLongHashMapTest {
     public void randomOperations() {
         int operations = 6000;
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
-        Map<Long, Long> expected = new HashMap<>();
+        Map<Long, Long> expected = new HashMap<Long, Long>();
         LongLongHashMap actual = new LongLongHashMap(-1);
         OfLong itr = tlr.longs(0, operations).limit(operations * 50).iterator();
         while (itr.hasNext()) {
