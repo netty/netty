@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,25 +55,30 @@ public class QuicChannelEchoTest {
 
     private final boolean autoRead;
     private final ByteBufAllocator allocator;
+    private final boolean composite;
 
     @Parameterized.Parameters(name =
-            "{index}: autoRead = {0}, directBuffer = {1}")
+            "{index}: autoRead = {0}, directBuffer = {1}, composite = {2}")
     public static Collection<Object[]> data() {
         List<Object[]> config = new ArrayList<>();
-        config.add(new Object[] { true, false});
-        config.add(new Object[] { true, true});
-        config.add(new Object[] { false, true});
-        config.add(new Object[] { false, false});
+        for (int a = 0; a < 2; a++) {
+            for (int b = 0; b < 2; b++) {
+                for (int c = 0; c < 2; c++) {
+                    config.add(new Object[] { a == 0, b == 0, c == 0 });
+                }
+            }
+        }
         return config;
     }
 
-    public QuicChannelEchoTest(boolean autoRead, boolean directBuffer) {
+    public QuicChannelEchoTest(boolean autoRead, boolean directBuffer, boolean composite) {
         this.autoRead = autoRead;
         if (directBuffer) {
             allocator = new UnpooledByteBufAllocator(true);
         } else {
             allocator = new UnpooledByteBufAllocator(false);
         }
+        this.composite = composite;
     }
 
     private ByteBuf allocateBuffer() {
@@ -204,14 +211,25 @@ public class QuicChannelEchoTest {
     }
 
     private List<ChannelFuture> writeAllData(Channel channel) {
-        List<ChannelFuture> futures = new ArrayList<>();
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ByteBuf buf = allocateBuffer().writeBytes(data, i, length);
-            futures.add(channel.writeAndFlush(buf));
-            i += length;
+        if (composite) {
+            CompositeByteBuf compositeByteBuf = allocator.compositeBuffer();
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+                ByteBuf buf = allocateBuffer().writeBytes(data, i, length);
+                compositeByteBuf.addComponent(true, buf);
+                i += length;
+            }
+            return Collections.singletonList(channel.writeAndFlush(compositeByteBuf));
+        } else {
+            List<ChannelFuture> futures = new ArrayList<>();
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+                ByteBuf buf = allocateBuffer().writeBytes(data, i, length);
+                futures.add(channel.writeAndFlush(buf));
+                i += length;
+            }
+            return futures;
         }
-        return futures;
     }
 
     private static void waitForData(EchoHandler h1, EchoHandler h2) {

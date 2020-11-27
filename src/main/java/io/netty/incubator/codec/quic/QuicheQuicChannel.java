@@ -510,6 +510,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     } finally {
                         tmpBuffer.release();
                     }
+                } else if (buffer.nioBufferCount() > 1) {
+                    ByteBuffer[] nioBuffers  = buffer.nioBuffers();
+                    int lastIdx = nioBuffers.length - 1;
+                    for (int i = 0; i < lastIdx; i++) {
+                        ByteBuffer nioBuffer = nioBuffers[i];
+                        while (nioBuffer.hasRemaining()) {
+                            int localRes = streamSend(streamId, nioBuffer, false);
+                            if (Quiche.throwIfError(localRes) || localRes == 0) {
+                                // stream has no capacity left stop trying to send.
+                                return StreamSendResult.NO_SPACE;
+                            }
+                            nioBuffer.position(nioBuffer.position() + localRes);
+
+                            streamOutboundBuffer.removeBytes(localRes);
+                            sendSomething = true;
+                        }
+                    }
+                    res = streamSend(streamId, nioBuffers[lastIdx], fin);
                 } else {
                     res = streamSend(streamId, buffer, fin);
                 }
@@ -552,6 +570,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private int streamSend(long streamId, ByteBuf buffer, boolean fin) throws Exception {
         return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
                 Quiche.memoryAddress(buffer) + buffer.readerIndex(), buffer.readableBytes(), fin);
+    }
+
+    private int streamSend(long streamId, ByteBuffer buffer, boolean fin) throws Exception {
+        return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
+                Quiche.memoryAddress(buffer) + buffer.position(), buffer.remaining(), fin);
     }
 
     StreamRecvResult streamRecv(long streamId, ByteBuf buffer) throws Exception {

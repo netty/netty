@@ -511,6 +511,11 @@ final class Quiche {
                 buffer_memory_address(buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
     }
 
+    static long memoryAddress(ByteBuffer buf) {
+        assert buf.isDirect();
+        return buffer_memory_address(buf);
+    }
+
     static String errorAsString(int err) {
         return QuicError.valueOf(err).message();
     }
