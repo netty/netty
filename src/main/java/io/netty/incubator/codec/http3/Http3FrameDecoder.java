@@ -173,8 +173,7 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
             case 4:
                 return in.readUnsignedInt() & 0x3fffffff;
             case 8:
-                // TODO: Fix me
-                return in.readLong();
+                return in.readLong() & 0x3fffffffffffffffL;
             default:
                 throw new DecoderException("FIX ME");
         }
