@@ -18,7 +18,6 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.DecoderException;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
 
 import java.util.List;
@@ -28,8 +27,8 @@ import java.util.List;
  */
 public final class Http3FrameDecoder extends ByteToMessageDecoder {
 
-    private long type;
-    private long payLoadLength;
+    private long type = -1;
+    private long payLoadLength = -1;
 
     // TODO: Do something with this...
     private boolean fin;
@@ -68,9 +67,9 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
             if (in.readableBytes() < payloadLen) {
                 return;
             }
-            payLoadLength = payloadLen;
+            payLoadLength = readVariableLength(in, payloadLen);
         }
-        if (payLoadLength < in.readableBytes()) {
+        if (in.readableBytes() < payLoadLength) {
             return;
         }
 
@@ -175,7 +174,7 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
             case 8:
                 return in.readLong() & 0x3fffffffffffffffL;
             default:
-                throw new DecoderException("FIX ME");
+                throw new IllegalArgumentException();
         }
     }
 
@@ -185,15 +184,14 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
      */
     private static int decodeVariableLengthInteger(byte b) {
         byte val = (byte) (b >> 6);
-
         if ((val & 1) != 0) {
-            if (val != 0) {
+            if ((val & 2) != 0) {
                 return 8;
             }
-            return 4;
-        }
-        if (val != 0) {
             return 2;
+        }
+        if ((val & 2) != 0) {
+            return 4;
         }
         return 1;
     }

@@ -39,4 +39,21 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     public Iterator<Map.Entry<Long, Long>> iterator() {
         return settings.entrySet().iterator();
     }
+
+    @Override
+    public int hashCode() {
+        return settings.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DefaultHttp3SettingsFrame that = (DefaultHttp3SettingsFrame) o;
+        return that.settings.equals(settings);
+    }
 }

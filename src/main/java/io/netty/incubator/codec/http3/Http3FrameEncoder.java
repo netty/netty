@@ -96,6 +96,7 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id, ChannelPromise promise) {
         ByteBuf out = ctx.alloc().directBuffer();
         writeVariableLengthInteger(out, type);
+        writeVariableLengthInteger(out, numBytesForVariableLengthInteger(id));
         writeVariableLengthInteger(out, id);
         writeBufferToContext(ctx, out, promise);
     }
@@ -154,7 +155,7 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
      *     Variable-Length Integer Encoding</a>.
      */
     private static int numBytesForVariableLengthInteger(long value) {
-        if (value <= 64) {
+        if (value <= 63) {
             return 1;
         }
         if (value <= 16383) {
