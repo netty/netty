@@ -107,6 +107,11 @@ public class Http3FrameEncoderDecoderTest {
         settingsFrame.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
         settingsFrame.put(Http3Constants.SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
         settingsFrame.put(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        // Ensure we can encode and decode all sizes correctly.
+        settingsFrame.put(63, 63L);
+        settingsFrame.put(16383, 16383L);
+        settingsFrame.put(1073741823, 1073741823L);
+        settingsFrame.put(4611686018427387903L, 4611686018427387903L);
         testFrameEncodedAndDecoded(settingsFrame);
     }
 
