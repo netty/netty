@@ -190,7 +190,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
     }
 
-    // Method must be called inside synchronized(this) { ... } block
+    // Method must be called inside synchronized(this) { ... } block
     private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache threadCache) {
         if (q050.allocate(buf, reqCapacity, sizeIdx, threadCache) ||
             q025.allocate(buf, reqCapacity, sizeIdx, threadCache) ||
