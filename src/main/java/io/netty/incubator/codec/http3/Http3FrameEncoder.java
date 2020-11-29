@@ -22,6 +22,10 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.function.Consumer;
+
 public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -70,11 +74,33 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     private static void writeSettingsFrame(
             ChannelHandlerContext ctx, Http3SettingsFrame frame, ChannelPromise promise) {
         ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x4);
-        frame.forEach(e -> {
-            writeVariableLengthInteger(out, e.getKey());
-            writeVariableLengthInteger(out, e.getValue());
-        });
+        int initialWriterIndex = out.writerIndex();
+        // Move 16 bytes forward as this is the maximum amount we could ever need for the type + payload length.
+        int payloadStartIndex = initialWriterIndex + 16;
+        out.writerIndex(payloadStartIndex);
+        int payloadLength = 0;
+
+        for (Map.Entry<Long, Long> e : frame) {
+            Long key = e.getKey();
+            Long value = e.getValue();
+            int keyLen = numBytesForVariableLengthInteger(key);
+            int valueLen = numBytesForVariableLengthInteger(value);
+            writeVariableLengthInteger(out, key, keyLen);
+            writeVariableLengthInteger(out, value, valueLen);
+            payloadLength += keyLen + valueLen;
+        }
+
+        int finalWriterIndex = out.writerIndex();
+        int len = numBytesForVariableLengthInteger(payloadLength);
+        out.writerIndex(payloadStartIndex - len);
+        writeVariableLengthInteger(out, payloadLength, len);
+
+        int typeLength = numBytesForVariableLengthInteger(0x4);
+        int startIndex = payloadStartIndex - len - typeLength;
+        out.writerIndex(startIndex);
+        writeVariableLengthInteger(out, 0x4, typeLength);
+
+        out.setIndex(startIndex, finalWriterIndex);
         writeBufferToContext(ctx, out, promise);
     }
 
@@ -115,6 +141,10 @@ public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private static void writeVariableLengthInteger(ByteBuf out, long value) {
         int numBytes = numBytesForVariableLengthInteger(value);
+        writeVariableLengthInteger(out, value, numBytes);
+    }
+
+    private static void writeVariableLengthInteger(ByteBuf out, long value, int numBytes) {
         int writerIndex = out.writerIndex();
         switch (numBytes) {
             case 1:

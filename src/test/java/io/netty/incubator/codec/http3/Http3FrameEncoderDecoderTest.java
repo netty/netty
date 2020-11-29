@@ -101,6 +101,15 @@ public class Http3FrameEncoderDecoderTest {
         testFrameEncodedAndDecoded(new DefaultHttp3MaxPushIdFrame(1073741823));
     }
 
+    @Test
+    public void testHttp3SettingsFrame() {
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+        settingsFrame.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
+        settingsFrame.put(Http3Constants.SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
+        settingsFrame.put(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        testFrameEncodedAndDecoded(settingsFrame);
+    }
+
     private void testFrameEncodedAndDecoded(Http3Frame frame) {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new Http3FrameEncoder());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new Http3FrameDecoder());
