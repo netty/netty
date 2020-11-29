@@ -22,6 +22,9 @@ import io.netty.incubator.codec.quic.QuicStreamFrame;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthInteger;
+
 /**
  * Decodes {@link Http3Frame}s.
  */
@@ -53,21 +56,21 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
             return;
         }
         if (type == -1) {
-            int typeLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
+            int typeLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             if (in.readableBytes() < typeLen) {
                 return;
             }
-            type = readVariableLength(in, typeLen);
+            type = readVariableLengthInteger(in, typeLen);
             if (!in.isReadable()) {
                 return;
             }
         }
         if (payLoadLength == -1) {
-            int payloadLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
+            int payloadLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             if (in.readableBytes() < payloadLen) {
                 return;
             }
-            payLoadLength = readVariableLength(in, payloadLen);
+            payLoadLength = readVariableLengthInteger(in, payloadLen);
         }
         if (in.readableBytes() < payLoadLength) {
             return;
@@ -96,8 +99,8 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x3:
                         // CANCEL_PUSH
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
-                        int pushIdLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3CancelPushFrame(readVariableLength(in, pushIdLen)));
+                        int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                        out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
                         break;
                     case 0x4:
                         // SETTINGS
@@ -114,14 +117,14 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x7:
                         // GO_AWAY
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
-                        int idLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3GoAwayFrame(readVariableLength(in, idLen)));
+                        int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                        out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
                         break;
                     case 0xd:
                         // MAX_PUSH_ID
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
-                        int pidLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3MaxPushIdFrame(readVariableLength(in, pidLen)));
+                        int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                        out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                         break;
                     default:
                         // Handling reserved frame types
@@ -143,11 +146,11 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
     private static Http3SettingsFrame decodeSettings(ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         while (payLoadLength > 0) {
-            int keyLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-            long key = readVariableLength(in, keyLen);
+            int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            long key = readVariableLengthInteger(in, keyLen);
             payLoadLength -= keyLen;
-            int valueLen = decodeVariableLengthInteger(in.getByte(in.readerIndex()));
-            long value = readVariableLength(in, valueLen);
+            int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
 
             settingsFrame.put(key, value);
@@ -159,40 +162,4 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
         // TODO: implement me, for this we will need QPACK.
     }
 
-    /**
-     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-16">
-     *     Variable-Length Integer Encoding </a>
-     */
-    private static long readVariableLength(ByteBuf in, int len) {
-        switch (len) {
-            case 1:
-                return in.readUnsignedByte();
-            case 2:
-                return in.readUnsignedShort() & 0x3fff;
-            case 4:
-                return in.readUnsignedInt() & 0x3fffffff;
-            case 8:
-                return in.readLong() & 0x3fffffffffffffffL;
-            default:
-                throw new IllegalArgumentException();
-        }
-    }
-
-    /**
-     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-16">
-     *     Variable-Length Integer Encoding </a>
-     */
-    private static int decodeVariableLengthInteger(byte b) {
-        byte val = (byte) (b >> 6);
-        if ((val & 1) != 0) {
-            if ((val & 2) != 0) {
-                return 8;
-            }
-            return 2;
-        }
-        if ((val & 2) != 0) {
-            return 4;
-        }
-        return 1;
-    }
 }
