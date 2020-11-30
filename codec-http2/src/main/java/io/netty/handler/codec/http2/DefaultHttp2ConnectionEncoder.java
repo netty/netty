@@ -120,6 +120,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
             final boolean endOfStream, ChannelPromise promise) {
+        promise = promise.unvoid();
         final Http2Stream stream;
         try {
             stream = requireStream(streamId);
