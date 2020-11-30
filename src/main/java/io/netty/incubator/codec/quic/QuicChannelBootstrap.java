@@ -143,8 +143,8 @@ public final class QuicChannelBootstrap {
      * Connects a {@link QuicChannel} to the remote peer and notifies the promise once done.
      */
     public Future<QuicChannel> connect(Promise<QuicChannel> promise) {
-        if (streamHandler == null) {
-            throw new IllegalStateException("streamHandler not set");
+        if (handler == null && streamHandler == null) {
+            throw new IllegalStateException("handler and streamHandler not set");
         }
         SocketAddress remote = this.remote;
         if (remote == null) {

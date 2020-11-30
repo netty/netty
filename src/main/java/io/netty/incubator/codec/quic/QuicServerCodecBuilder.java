@@ -116,8 +116,8 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     @Override
     protected void validate() {
         super.validate();
-        if (streamHandler == null) {
-            throw new IllegalStateException("streamHandler not set");
+        if (handler == null && streamHandler == null) {
+            throw new IllegalStateException("handler and streamHandler not set");
         }
         if (tokenHandler == null) {
             throw new IllegalStateException("tokenHandler not set");
