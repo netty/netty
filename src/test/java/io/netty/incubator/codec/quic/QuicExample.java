@@ -69,7 +69,7 @@ public final class QuicExample {
 
                     public void channelInactive(ChannelHandlerContext ctx) {
                         LOGGER.info("Connection closed: {}",
-                                ((QuicheQuicChannel) ctx.channel()).collectStats().getNow());
+                                ((QuicChannel) ctx.channel()).collectStats().getNow());
                     }
 
                     @Override
