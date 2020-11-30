@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -29,7 +30,11 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariable
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 
 public final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
-    private final QpackEncoder qpackEncoder = new QpackEncoder();
+    private final QpackEncoder qpackEncoder;
+
+    Http3FrameEncoder(QpackEncoder qpackEncoder) {
+        this.qpackEncoder = ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
+    }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

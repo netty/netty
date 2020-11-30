@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -29,13 +30,17 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthI
  * Decodes {@link Http3Frame}s.
  */
 public final class Http3FrameDecoder extends ByteToMessageDecoder {
-    private final QpackDecoder qpackDecoder = new QpackDecoder();
+    private final QpackDecoder qpackDecoder;
 
     private long type = -1;
     private long payLoadLength = -1;
 
     // TODO: Do something with this...
     private boolean fin;
+
+    Http3FrameDecoder(QpackDecoder qpackDecoder) {
+        this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
