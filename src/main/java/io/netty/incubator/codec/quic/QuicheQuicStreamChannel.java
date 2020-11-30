@@ -342,7 +342,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 // If it's a unidirectional channel we can close it as there will be no fin that we can read
                 // from the remote peer. If its an bidirectional channel we should only close the channel if we
                 // also received the fin from the remote peer.
-                if (!wasFinSent && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
+                if (!wasFinSent && QuicheQuicStreamChannel.this.finSent
+                        && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
                     // close the channel now
                     close(voidPromise());
                 }
