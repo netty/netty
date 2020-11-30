@@ -115,6 +115,27 @@ public class Http3FrameEncoderDecoderTest {
         testFrameEncodedAndDecoded(settingsFrame);
     }
 
+    @Test
+    public void testHttp3HeadersFrame() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        addRequestHeaders(headersFrame.headers());
+        testFrameEncodedAndDecoded(headersFrame);
+    }
+
+    @Test
+    public void testHttpPushPromiseFrame() {
+        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
+        addRequestHeaders(pushPromiseFrame.headers());
+        testFrameEncodedAndDecoded(pushPromiseFrame);
+    }
+
+    private static void addRequestHeaders(Http3Headers headers) {
+        headers.add(":authority", "netty.quic"); // name only
+        headers.add(":path", "/"); // name & value
+        headers.add(":method", "GET"); // name & value with few options per name
+        headers.add("x-qpack-draft", "19");
+    }
+
     private void testFrameEncodedAndDecoded(Http3Frame frame) {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new Http3FrameEncoder());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new Http3FrameDecoder());

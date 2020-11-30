@@ -67,7 +67,6 @@ final class QpackEncoder {
         } else {
             encodeIndexed(out, index);
         }
-        return;
     }
 
     private void encodeIndexed(ByteBuf out, int index) {

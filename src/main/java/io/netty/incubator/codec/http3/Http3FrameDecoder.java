@@ -29,6 +29,7 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthI
  * Decodes {@link Http3Frame}s.
  */
 public final class Http3FrameDecoder extends ByteToMessageDecoder {
+    private final QpackDecoder qpackDecoder = new QpackDecoder();
 
     private long type = -1;
     private long payLoadLength = -1;
@@ -51,7 +52,7 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!in.isReadable()) {
             return;
         }
@@ -93,7 +94,7 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                         // HEADERS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
                         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                        decodeHeaders(headersFrame.headers(), in, payLoadLength);
+                        decodeHeaders(headersFrame.headers(), in);
                         out.add(headersFrame);
                         break;
                     case 0x3:
@@ -110,8 +111,10 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x5:
                         // PUSH_PROMISE
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
-                        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame();
-                        decodeHeaders(pushPromiseFrame.headers(), in, payLoadLength);
+                        int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
+                                readVariableLengthInteger(in, pushPromiseIdLen));
+                        decodeHeaders(pushPromiseFrame.headers(), in);
                         out.add(pushPromiseFrame);
                         break;
                     case 0x7:
@@ -158,8 +161,7 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
         return settingsFrame;
     }
 
-    private static void decodeHeaders(Http3Headers headers, ByteBuf in, int payLoadLength) {
-        // TODO: implement me, for this we will need QPACK.
+    private void decodeHeaders(Http3Headers headers, ByteBuf in) throws Http3Exception {
+        qpackDecoder.decodeHeaders(in, headers, true);
     }
-
 }

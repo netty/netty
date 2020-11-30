@@ -20,6 +20,11 @@ package io.netty.incubator.codec.http3;
  */
 public interface Http3PushPromiseFrame extends Http3Frame {
     /**
+     * Returns the push id.
+     */
+    long id();
+
+    /**
      * Returns the carried headers.
      */
     Http3Headers headers();

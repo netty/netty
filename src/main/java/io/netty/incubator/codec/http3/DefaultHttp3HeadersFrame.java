@@ -15,10 +15,41 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.util.internal.ObjectUtil;
+
+import java.util.Objects;
+
 public final class DefaultHttp3HeadersFrame implements Http3HeadersFrame {
+
+    private final Http3Headers headers;
+
+    public DefaultHttp3HeadersFrame() {
+        this(new DefaultHttp3Headers());
+    }
+
+    public DefaultHttp3HeadersFrame(Http3Headers headers) {
+        this.headers = ObjectUtil.checkNotNull(headers, "headers");
+    }
+
     @Override
     public Http3Headers headers() {
-        // TODO: Fix me
-        return null;
+        return headers;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DefaultHttp3HeadersFrame that = (DefaultHttp3HeadersFrame) o;
+        return Objects.equals(headers, that.headers);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(headers);
     }
 }
