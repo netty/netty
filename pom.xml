@@ -100,6 +100,7 @@
       </activation>
       <properties>
         <extraLdflags>-Wl,-exported_symbol,_JNI_*</extraLdflags>
+        <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
       </properties>
     </profile>
     <profile>
@@ -110,8 +111,7 @@
         </os>
       </activation>
       <properties>
-        <extraLdflags>-Wl,--exclude-libs,ALL -lrt</extraLdflags>
-        <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
+        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
       </properties>
     </profile>
   </profiles>
