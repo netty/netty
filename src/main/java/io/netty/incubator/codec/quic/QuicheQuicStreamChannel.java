@@ -86,7 +86,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public boolean isInputShutdown() {
-        return inputShutdown || !isActive();
+        return inputShutdown;
     }
 
     @Override
@@ -116,7 +116,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public boolean isOutputShutdown() {
-        return outputShutdown || !isActive();
+        return outputShutdown;
     }
 
     @Override
@@ -203,6 +203,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             parent().streamClose(streamId());
         }
         if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
+            inputShutdown = true;
+            outputShutdown = true;
             // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
             // never receive data from the other side.
             parent().streamClosed(streamId());
@@ -256,6 +258,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                 failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
                         "Fin was sent already"));
                 finSent = true;
+                outputShutdown = true;
                 break;
             default:
                 throw new Error();
@@ -280,6 +283,8 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private void removeStreamFromParent() {
         if (!active && finReceived) {
             parent().streamClosed(streamId());
+            inputShutdown = true;
+            outputShutdown = true;
         }
     }
 
@@ -431,6 +436,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
                                     // there is nothing left to read really.
                                     readable = false;
                                     finReceived = true;
+                                    inputShutdown = true;
                                     break;
                                 case OK:
                                     break;

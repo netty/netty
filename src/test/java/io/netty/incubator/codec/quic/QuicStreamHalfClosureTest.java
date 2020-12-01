@@ -100,7 +100,10 @@ public class QuicStreamHalfClosureTest {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            queue.add(3);
+            if (!halfClosureSupported) {
+                addIsShutdown(ctx);
+            }
+            queue.add(4);
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
         }
@@ -108,25 +111,38 @@ public class QuicStreamHalfClosureTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
+            if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
+                queue.add(1);
+            }
         }
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt == ChannelInputShutdownEvent.INSTANCE) {
-                queue.add(1);
-            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                addIsShutdown(ctx);
                 queue.add(2);
+            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                queue.add(3);
                 ctx.close();
+            }
+        }
+
+        private void addIsShutdown(ChannelHandlerContext ctx) {
+            if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
+                if (!Integer.valueOf(1).equals(queue.peek())) {
+                    queue.add(1);
+                }
             }
         }
 
         void assertSequence() throws Exception {
             assertEquals(0, (int) queue.take());
+            assertEquals(1, (int) queue.take());
             if (halfClosureSupported) {
-                assertEquals(1, (int) queue.take());
                 assertEquals(2, (int) queue.take());
+                assertEquals(3, (int) queue.take());
             }
-            assertEquals(3, (int) queue.take());
+            assertEquals(4, (int) queue.take());
             assertTrue(queue.isEmpty());
         }
     }
