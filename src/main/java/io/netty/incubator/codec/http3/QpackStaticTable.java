@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import io.netty.handler.codec.UnsupportedValueConverter;
@@ -144,7 +145,7 @@ final class QpackStaticTable {
      */
     static final int length = STATIC_TABLE.size();
 
-    private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap(length);
+    private static final CharSequenceMap<List<Integer>> STATIC_INDEX_BY_NAME = createMap(length);
 
     private static QpackHeaderField newEmptyHeaderField(String name) {
         return new QpackHeaderField(AsciiString.cached(name), AsciiString.EMPTY_STRING);
@@ -167,11 +168,12 @@ final class QpackStaticTable {
      * table. Returns -1 if the header field name is not in the static table.
      */
     static int getIndex(CharSequence name) {
-        Integer index = STATIC_INDEX_BY_NAME.get(name);
+        List<Integer> index = STATIC_INDEX_BY_NAME.get(name);
         if (index == null) {
             return NOT_FOUND;
         }
-        return index;
+
+        return index.get(0);
     }
 
     /**
@@ -181,39 +183,42 @@ final class QpackStaticTable {
      *    c) -1 if name was not found in the static table.
      */
     static int findFieldIndex(CharSequence name, CharSequence value) {
-        int nameIndex = getIndex(name);
+        final List<Integer> nameIndex = STATIC_INDEX_BY_NAME.get(name);
 
         // Early return if name not found in the table.
-        if (nameIndex == NOT_FOUND) {
+        if (nameIndex == null) {
             return NOT_FOUND;
         }
 
         // If name was found, check all subsequence elements of the table for exact match.
-        int index = nameIndex;
-        while (index < length) {
-            QpackHeaderField field = getField(index);
-            if (QpackUtil.equalsVariableTime(name, field.name) && QpackUtil.equalsVariableTime(value, field.value)) {
+        for (int index: nameIndex) {
+            QpackHeaderField field = STATIC_TABLE.get(index);
+            if (QpackUtil.equalsVariableTime(value, field.value)) {
                 return index;
             }
-            index++;
         }
 
         // No exact match was found but we still can reference the name.
-        return nameIndex | MASK_NAME_REF;
+        return nameIndex.get(0) | MASK_NAME_REF;
     }
 
     /**
      * Creates a map CharSequenceMap header name to index value to allow quick lookup.
      */
     @SuppressWarnings("unchecked")
-    private static CharSequenceMap<Integer> createMap(int length) {
-        CharSequenceMap<Integer> mapping =
-            new CharSequenceMap<Integer>(true, UnsupportedValueConverter.<Integer>instance(), length);
-        // Iterate through the static table in reverse order to
-        // save the smallest index for a given name in the map.
-        for (int index = length - 1; index >= 0; index--) {
-            QpackHeaderField field = getField(index);
-            mapping.set(field.name, index);
+    private static CharSequenceMap<List<Integer>> createMap(int length) {
+        CharSequenceMap<List<Integer>> mapping =
+            new CharSequenceMap<List<Integer>>(true, UnsupportedValueConverter.<List<Integer>>instance(), length);
+        for (int index = 0; index < length; index++) {
+            final QpackHeaderField field = getField(index);
+            final List<Integer> cursor = mapping.get(field.name);
+            if (cursor == null) {
+                final List<Integer> holder = new ArrayList<>(16);
+                holder.add(index);
+                mapping.set(field.name, holder);
+            } else {
+                cursor.add(index);
+            }
         }
         return mapping;
     }
