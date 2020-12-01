@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Objects;
 
@@ -46,5 +47,10 @@ public final class DefaultHttp3CancelPushFrame implements Http3CancelPushFrame {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(id=" + id() + ')';
     }
 }

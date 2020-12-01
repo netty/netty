@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Objects;
 
@@ -51,5 +52,10 @@ public final class DefaultHttp3HeadersFrame implements Http3HeadersFrame {
     @Override
     public int hashCode() {
         return Objects.hash(headers);
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(headers=" + headers() + ')';
     }
 }

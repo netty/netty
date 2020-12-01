@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -55,6 +56,11 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         }
         DefaultHttp3SettingsFrame that = (DefaultHttp3SettingsFrame) o;
         return that.settings.equals(settings);
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(settings=" + settings + ')';
     }
 
     public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {

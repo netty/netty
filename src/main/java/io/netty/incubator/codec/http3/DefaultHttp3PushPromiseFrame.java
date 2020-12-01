@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Objects;
 
@@ -59,5 +60,10 @@ public final class DefaultHttp3PushPromiseFrame implements Http3PushPromiseFrame
     @Override
     public int hashCode() {
         return Objects.hash(id, headers);
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(id=" + id() + ", headers=" + headers() + ')';
     }
 }

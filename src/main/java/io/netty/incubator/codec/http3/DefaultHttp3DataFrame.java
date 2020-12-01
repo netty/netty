@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.util.internal.StringUtil;
 
 public final class DefaultHttp3DataFrame extends DefaultByteBufHolder implements Http3DataFrame {
 
@@ -66,5 +67,10 @@ public final class DefaultHttp3DataFrame extends DefaultByteBufHolder implements
     public Http3DataFrame touch(Object hint) {
         super.touch(hint);
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(content=" + content() + ')';
     }
 }
