@@ -107,6 +107,13 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         }
         ctx.fireChannelRead(msg);
     }
+
+    private static void readIfNoAutoRead(ChannelHandlerContext ctx) {
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
+    }
+
     private final class Http3ServerOutboundControlStreamHandler
             extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
         Http3ServerOutboundControlStreamHandler() {
@@ -202,6 +209,15 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
                             ReferenceCountUtil.release(frame);
                         }
                     }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        ctx.fireChannelReadComplete();
+
+                        // control streams should always be processed, no matter what the user is doing in terms of
+                        // configuration and AUTO_READ.
+                        readIfNoAutoRead(ctx);
+                    }
                 });
                 if (controlStreamHandler != null) {
                     // The user want's to be notified about control frames, add the handler to the pipeline.
@@ -259,6 +275,15 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            ctx.fireChannelReadComplete();
+
+            // QPACK streams should always be processed, no matter what the user is doing in terms of configuration
+            // and AUTO_READ.
+            readIfNoAutoRead(ctx);
         }
 
         @Override
