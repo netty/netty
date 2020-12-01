@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufHolder;
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.1>DATA</a>.
  */
-public interface Http3DataFrame extends ByteBufHolder, Http3Frame {
+public interface Http3DataFrame extends ByteBufHolder, Http3RequestStreamFrame, Http3PushStreamFrame {
 
     @Override
     Http3DataFrame copy();

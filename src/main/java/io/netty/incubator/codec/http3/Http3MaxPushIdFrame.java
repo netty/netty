@@ -18,7 +18,7 @@ package io.netty.incubator.codec.http3;
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7>MAX_PUSH_ID</a>.
  */
-public interface Http3MaxPushIdFrame extends Http3Frame {
+public interface Http3MaxPushIdFrame extends Http3ControlStreamFrame {
 
     /**
      * Returns the maximum value for a Push ID that the server can use.

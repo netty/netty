@@ -16,12 +16,8 @@
 package io.netty.incubator.codec.http3;
 
 /**
- * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6>GOAWAY</a>.
+ * Marker interface for frames that can be sent and received on a
+ * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7">HTTP3 push stream</a>.
  */
-public interface Http3GoAwayFrame extends Http3ControlStreamFrame {
-
-    /**
-     * Returns the id.
-     */
-    long id();
+public interface Http3PushStreamFrame extends Http3Frame {
 }

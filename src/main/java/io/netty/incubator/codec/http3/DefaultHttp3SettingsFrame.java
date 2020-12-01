@@ -56,4 +56,16 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         DefaultHttp3SettingsFrame that = (DefaultHttp3SettingsFrame) o;
         return that.settings.equals(settings);
     }
+
+    public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
+        DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
+        if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
+            copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
+        } else {
+            for (Map.Entry<Long, Long> entry: settingsFrame) {
+                copy.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return copy;
+    }
 }
