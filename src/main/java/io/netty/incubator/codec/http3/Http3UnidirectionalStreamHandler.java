@@ -46,18 +46,24 @@ abstract class Http3UnidirectionalStreamHandler extends ByteToMessageDecoder {
         long type = Http3CodecUtils.readVariableLengthInteger(in, len);
         QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
         if (type == 0x00) {
-            initControlStream(streamChannel);
-            streamChannel.pipeline().addFirst(
+            // We need to add the encoder / decoder before calling initControlStream(...) as this may also add handlers
+            // to the pipeline.
+            streamChannel.pipeline().addLast(
                     new Http3FrameEncoder(qpackEncoder),
                     new Http3FrameDecoder(qpackDecoder));
+            initControlStream(streamChannel);
         } else if (type == 0x01) {
             int pushIdLen = Http3CodecUtils.numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             if (in.readableBytes() < pushIdLen) {
                 return;
             }
             long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
+            // We need to add the encoder / decoder before calling initPushStream(...) as this may also add handlers
+            // to the pipeline.
+            streamChannel.pipeline().addLast(
+                    new Http3FrameEncoder(qpackEncoder),
+                    new Http3FrameDecoder(qpackDecoder));
             initPushStream(streamChannel, pushId);
-            streamChannel.pipeline().addFirst(new Http3FrameEncoder(qpackEncoder), new Http3FrameDecoder(qpackDecoder));
         } else if (type == 0x02) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
             initQpackEncoderStream(streamChannel);
@@ -66,7 +72,9 @@ abstract class Http3UnidirectionalStreamHandler extends ByteToMessageDecoder {
             initQpackDecoderStream(streamChannel);
         } else {
             if (initUnknownStream((QuicStreamChannel) ctx.channel(), type, in)) {
-                streamChannel.pipeline().addFirst(new Http3FrameEncoder(qpackEncoder),
+                // Ensure we add the encoder / decoder in the right place.
+                ctx.pipeline().addAfter(ctx.name(), null, new Http3FrameEncoder(qpackEncoder));
+                ctx.pipeline().addAfter(ctx.pipeline().context(Http3FrameEncoder.class).name(), null,
                         new Http3FrameDecoder(qpackDecoder));
             } else {
                 return;
