@@ -76,7 +76,7 @@
     <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
     <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
-    <quicheBuildDir>${quicheCheckoutDir}/target/debug</quicheBuildDir>
+    <quicheBuildDir>${quicheCheckoutDir}/target/release</quicheBuildDir>
     <quiche.version>0.6.0</quiche.version>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
@@ -228,6 +228,7 @@
                     <then>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
+                        <arg value="--release" />
                         <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}"/>
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
@@ -243,6 +244,7 @@
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
+                        <arg value="--release" />
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
                       </exec>
