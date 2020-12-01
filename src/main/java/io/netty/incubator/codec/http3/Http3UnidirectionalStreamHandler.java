@@ -61,11 +61,9 @@ abstract class Http3UnidirectionalStreamHandler extends ByteToMessageDecoder {
         } else if (type == 0x02) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
             initQpackEncoderStream(streamChannel);
-            streamChannel.pipeline().addFirst(new Http3FrameEncoder(qpackEncoder), new Http3FrameDecoder(qpackDecoder));
         } else if (type == 0x03) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
             initQpackDecoderStream(streamChannel);
-            streamChannel.pipeline().addFirst(new Http3FrameEncoder(qpackEncoder), new Http3FrameDecoder(qpackDecoder));
         } else {
             if (initUnknownStream((QuicStreamChannel) ctx.channel(), type, in)) {
                 streamChannel.pipeline().addFirst(new Http3FrameEncoder(qpackEncoder),

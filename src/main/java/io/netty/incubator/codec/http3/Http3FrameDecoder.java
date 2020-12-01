@@ -35,9 +35,6 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
     private long type = -1;
     private long payLoadLength = -1;
 
-    // TODO: Do something with this...
-    private boolean fin;
-
     Http3FrameDecoder(QpackDecoder qpackDecoder) {
         this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
     }
@@ -47,7 +44,6 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
         ByteBuf buffer;
         if (msg instanceof QuicStreamFrame) {
             QuicStreamFrame streamFrame = (QuicStreamFrame) msg;
-            fin = streamFrame.hasFin();
             buffer = streamFrame.content().retain();
             streamFrame.release();
         } else {
@@ -143,12 +139,6 @@ public final class Http3FrameDecoder extends ByteToMessageDecoder {
         } finally {
             in.readerIndex(readerIndex + payLoadLength);
         }
-    }
-
-    @Override
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        super.decodeLast(ctx, in, out);
-        fin = true;
     }
 
     private static Http3SettingsFrame decodeSettings(ByteBuf in, int payLoadLength) {
