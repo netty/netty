@@ -15,14 +15,16 @@
  */
 package io.netty.incubator.codec.http3;
 
+import java.util.function.BiConsumer;
+
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 
 /**
- * {@link io.netty.incubator.codec.http3.QpackDecoder.Sink} that does add header names and values to
+ * {@link BiConsumer} that does add header names and values to
  * {@link Http3Headers} while also validate these.
  */
-final class Http3HeadersSink implements QpackDecoder.Sink {
+final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     private final Http3Headers headers;
     private final long maxHeaderListSize;
     private final boolean validate;
@@ -50,7 +52,7 @@ final class Http3HeadersSink implements QpackDecoder.Sink {
     }
 
     @Override
-    public void appendToHeaderList(CharSequence name, CharSequence value) {
+    public void accept(CharSequence name, CharSequence value) {
         headersLength += QpackHeaderField.sizeOf(name, value);
         exceededMaxLength |= headersLength > maxHeaderListSize;
 

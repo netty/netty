@@ -18,6 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 
+import java.util.function.BiConsumer;
+
 final class QpackDecoder {
 
     private static final QpackException HEADER_ILLEGAL_INDEX_VALUE =
@@ -28,10 +30,10 @@ final class QpackDecoder {
     private final QpackHuffmanDecoder huffmanDecoder = new QpackHuffmanDecoder();
 
     /**
-     * Decode the header block and add these to the {@link Sink}.
+     * Decode the header block and add these to the {@link BiConsumer}.
      * This method assumes the entire header block is contained in {@code in}.
      */
-    public void decode(ByteBuf in, Sink sink) throws QpackException {
+    public void decode(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
         // Required Insert Count
         // https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-4.5.1.1
         decodePrefixedInteger(in, 8);
@@ -74,31 +76,32 @@ final class QpackDecoder {
         return i;
     }
 
-    private static void decodeIndexed(ByteBuf in, Sink sink) throws QpackException {
+    private static void decodeIndexed(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
         if ((in.getByte(in.readerIndex()) & 0x40) == 0x40) {
             final int staticIndex = (int) decodePrefixedInteger(in, 6);
             final QpackHeaderField field = getIndexedHeader(staticIndex);
-            sink.appendToHeaderList(field.name, field.value);
+            sink.accept(field.name, field.value);
         } else {
             throw new UnsupportedOperationException("dynamic table is not implemented");
         }
     }
 
-    private void decodeLiteralWithNameReference(ByteBuf in, Sink sink) throws QpackException {
+    private void decodeLiteralWithNameReference(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink)
+            throws QpackException {
         if ((in.getByte(in.readerIndex()) & 0x10) == 0x10) {
             final int staticNameIndex = (int) decodePrefixedInteger(in, 4);
             final CharSequence name = getIndexedName(staticNameIndex);
             final CharSequence value = decodePrefixedStringLiteral(in);
-            sink.appendToHeaderList(name, value);
+            sink.accept(name, value);
         } else {
             throw new UnsupportedOperationException("dynamic table is not implemented");
         }
     }
 
-    private void decodeLiteral(ByteBuf in, Sink sink) throws QpackException {
+    private void decodeLiteral(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
         final CharSequence name = decodePrefixedStringLiteral(in, (byte) 0x8, 3);
         final CharSequence value = decodePrefixedStringLiteral(in);
-        sink.appendToHeaderList(name, value);
+        sink.accept(name, value);
     }
 
     private CharSequence decodePrefixedStringLiteral(ByteBuf in) throws QpackException {
@@ -133,9 +136,5 @@ final class QpackDecoder {
             return QpackStaticTable.getField(index);
         }
         throw HEADER_ILLEGAL_INDEX_VALUE;
-    }
-
-    interface Sink {
-        void appendToHeaderList(CharSequence name, CharSequence value);
     }
 }
