@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.function.Supplier;
 
@@ -30,8 +31,8 @@ final class Http3ControlStreamOutboundHandler
     Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings,
                                       Supplier<Http3FrameCodec> codecSupplier) {
         super(Http3ControlStreamFrame.class);
-        this.localSettings = localSettings;
-        this.codecSupplier = codecSupplier;
+        this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
+        this.codecSupplier = ObjectUtil.checkNotNull(codecSupplier, "codecSupplier");
     }
 
     @Override
@@ -44,17 +45,8 @@ final class Http3ControlStreamOutboundHandler
         ctx.write(buffer);
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
         ctx.pipeline().addFirst(codecSupplier.get());
-        final Http3SettingsFrame settingsFrame;
-        if (localSettings == null) {
-            settingsFrame = new DefaultHttp3SettingsFrame();
-        } else {
-            settingsFrame = DefaultHttp3SettingsFrame.copyOf(localSettings);
-        }
-        // As we not support the dynamic table at the moment lets override whatever the user specified and set
-        // the capacity to 0.
-        settingsFrame.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
         // If writing of the local settings fails let's just teardown the connection.
-        ctx.writeAndFlush(settingsFrame).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        ctx.writeAndFlush(localSettings).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         ctx.fireChannelActive();
     }

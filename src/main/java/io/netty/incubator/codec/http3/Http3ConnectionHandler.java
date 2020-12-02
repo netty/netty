@@ -28,10 +28,7 @@ import java.util.function.Supplier;
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
-    private static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
-
-    private final Supplier<Http3FrameCodec> codecSupplier =
-            Http3FrameCodec.newSupplier(new QpackDecoder(), DEFAULT_MAX_HEADER_LIST_SIZE, new QpackEncoder());
+    private final Supplier<Http3FrameCodec> codecSupplier;
     private final boolean server;
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler inboundControlStreamHandler;
@@ -52,7 +49,21 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                            Http3SettingsFrame localSettings) {
         this.server = server;
         this.inboundControlStreamHandler = inboundControlStreamHandler;
+        if (localSettings == null) {
+            localSettings = new DefaultHttp3SettingsFrame();
+        } else {
+            localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
+        }
+        Long maxFieldSectionSize = localSettings.get(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        if (maxFieldSectionSize == null) {
+            maxFieldSectionSize = Http3CodecUtils.DEFAULT_MAX_HEADER_LIST_SIZE;
+            localSettings.put(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE, maxFieldSectionSize);
+        }
+        // As we not support the dynamic table at the moment lets override whatever the user specified and set
+        // the capacity to 0.
+        localSettings.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
         this.localSettings = localSettings;
+        codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
     }
 
     @Override

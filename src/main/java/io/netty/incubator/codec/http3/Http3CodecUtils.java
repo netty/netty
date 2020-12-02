@@ -23,6 +23,7 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.CharsetUtil;
 
 final class Http3CodecUtils {
+    static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
 
     private Http3CodecUtils() { }
 
