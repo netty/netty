@@ -34,9 +34,10 @@ import java.util.function.Supplier;
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> for the server-side.
  */
 public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAdapter {
+    private static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
 
     private final Supplier<Http3FrameCodec> codecSupplier =
-            Http3FrameCodec.newSupplier(new QpackDecoder(), new QpackEncoder());
+            Http3FrameCodec.newSupplier(new QpackDecoder(), DEFAULT_MAX_HEADER_LIST_SIZE, new QpackEncoder());
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler requestStreamHandler;
     private final ChannelHandler controlStreamHandler;

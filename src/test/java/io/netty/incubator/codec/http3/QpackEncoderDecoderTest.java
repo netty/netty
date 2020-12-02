@@ -25,7 +25,7 @@ import io.netty.util.AsciiString;
 
 public class QpackEncoderDecoderTest {
     @Test
-    public void testEncodeDecode() throws Http3Exception {
+    public void testEncodeDecode() throws QpackException {
         final QpackEncoder encoder = new QpackEncoder();
         final QpackDecoder decoder = new QpackDecoder();
 
@@ -41,7 +41,7 @@ public class QpackEncoderDecoderTest {
         final Http3Headers decHeaders = new DefaultHttp3Headers();
 
         encoder.encodeHeaders(out, encHeaders);
-        decoder.decodeHeaders(out, decHeaders, false);
+        decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false));
 
         assertEquals(5, decHeaders.size());
         assertEquals(new AsciiString("netty.quic"), decHeaders.authority());

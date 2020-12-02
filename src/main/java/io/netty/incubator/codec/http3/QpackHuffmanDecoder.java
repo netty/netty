@@ -4646,7 +4646,8 @@ final class QpackHuffmanDecoder implements ByteProcessor {
             HUFFMAN_FAIL << 8,
     };
 
-    private static final Http3Exception BAD_ENCODING = new Http3Exception("QPACK - Bad Encoding");
+    private static final QpackException BAD_ENCODING =  QpackException.newStatic(QpackHuffmanDecoder.class,
+            "decode(...)", "QPACK - Bad Encoding");
 
     private byte[] dest;
     private int k;
@@ -4659,9 +4660,9 @@ final class QpackHuffmanDecoder implements ByteProcessor {
      *
      * @param buf the string literal to be decoded
      * @return the output stream for the compressed data
-     * @throws Http3Exception EOS Decoded
+     * @throws QpackException EOS Decoded
      */
-    public AsciiString decode(ByteBuf buf, int length) throws Http3Exception {
+    public AsciiString decode(ByteBuf buf, int length) throws QpackException {
         if (length == 0) {
             return AsciiString.EMPTY_STRING;
         }

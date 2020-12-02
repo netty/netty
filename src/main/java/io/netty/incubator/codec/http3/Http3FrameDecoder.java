@@ -30,13 +30,16 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthI
  * Decodes {@link Http3Frame}s.
  */
 final class Http3FrameDecoder extends ByteToMessageDecoder {
+
+    private final long maxHeaderListSize;
     private final QpackDecoder qpackDecoder;
 
     private long type = -1;
     private long payLoadLength = -1;
 
-    Http3FrameDecoder(QpackDecoder qpackDecoder) {
+    Http3FrameDecoder(QpackDecoder qpackDecoder, long maxHeaderListSize) {
         this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
+        this.maxHeaderListSize = ObjectUtil.checkPositive(maxHeaderListSize, "maxHeaderListSize");
     }
 
     @Override
@@ -156,7 +159,16 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
         return settingsFrame;
     }
 
-    private void decodeHeaders(Http3Headers headers, ByteBuf in) throws Http3Exception {
-        qpackDecoder.decodeHeaders(in, headers, true);
+    /**
+     * Decode the header block into header fields.
+     * <p>
+     * This method assumes the entire header block is contained in {@code in}.
+     */
+    private void decodeHeaders(Http3Headers headers, ByteBuf in) throws Http3Exception, QpackException {
+        Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true);
+        qpackDecoder.decode(in, sink);
+
+        // Throws exception if detected any problem so far
+        sink.finish();
     }
 }

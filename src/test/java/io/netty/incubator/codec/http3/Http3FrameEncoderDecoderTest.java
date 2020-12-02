@@ -138,7 +138,7 @@ public class Http3FrameEncoderDecoderTest {
 
     private void testFrameEncodedAndDecoded(Http3Frame frame) {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new Http3FrameEncoder(new QpackEncoder()));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new Http3FrameDecoder(new QpackDecoder()));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new Http3FrameDecoder(new QpackDecoder(), 1024));
 
         assertTrue(encoderChannel.writeOutbound(retainAndDuplicate(frame)));
         ByteBuf buffer = encoderChannel.readOutbound();

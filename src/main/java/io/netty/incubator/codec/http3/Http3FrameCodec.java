@@ -24,15 +24,16 @@ import java.util.function.Supplier;
  * Codec that handles decoding and encoding of {@link Http3Frame}s.
  */
 final class Http3FrameCodec extends CombinedChannelDuplexHandler<Http3FrameDecoder, Http3FrameEncoder> {
-    Http3FrameCodec(QpackDecoder qpackDecoder, QpackEncoder qpackEncoder) {
-        super(new Http3FrameDecoder(qpackDecoder), new Http3FrameEncoder(qpackEncoder));
+    Http3FrameCodec(QpackDecoder qpackDecoder, long maxHeaderListSize, QpackEncoder qpackEncoder) {
+        super(new Http3FrameDecoder(qpackDecoder, maxHeaderListSize), new Http3FrameEncoder(qpackEncoder));
     }
 
-    static Supplier<Http3FrameCodec> newSupplier(QpackDecoder qpackDecoder, QpackEncoder qpackEncoder) {
+    static Supplier<Http3FrameCodec> newSupplier(QpackDecoder qpackDecoder,
+                                                 long maxHeaderListSize, QpackEncoder qpackEncoder) {
         ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
         ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
 
         // QPACK decoder and encoder are shared between streams in a connection.
-        return () ->  new Http3FrameCodec(qpackDecoder, qpackEncoder);
+        return () ->  new Http3FrameCodec(qpackDecoder, maxHeaderListSize, qpackEncoder);
     }
 }
