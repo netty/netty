@@ -36,7 +36,7 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             Http3FrameCodec.newSupplier(new QpackDecoder(), DEFAULT_MAX_HEADER_LIST_SIZE, new QpackEncoder());
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler requestStreamHandler;
-    private final ChannelHandler controlStreamHandler;
+    private final ChannelHandler inboundControlStreamHandler;
 
     // TODO: Use this stream to sent other control frames as well.
     private QuicStreamChannel localControlStream;
@@ -53,18 +53,19 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
 
     /**
      * Create a new instance.
-     * @param requestStreamHandler  the {@link ChannelHandler} that is used for each new request stream.
-     *                              This handler will receive {@link Http3HeadersFrame} and {@link Http3DataFrame}s.
-     * @param controlStreamHandler  the {@link ChannelHandler} which will be notified about
-     *                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not interested
-     *                              in these.
-     * @param localSettings         the local {@link Http3SettingsFrame} that should be sent to the remote peer or
-     *                              {@code null} if the default settings should be used.
+     * @param requestStreamHandler          the {@link ChannelHandler} that is used for each new request stream.
+     *                                      This handler will receive {@link Http3HeadersFrame} and
+     *                                      {@link Http3DataFrame}s.
+     * @param inboundControlStreamHandler   the {@link ChannelHandler} which will be notified about
+     *                                      {@link Http3RequestStreamFrame}s or {@code null} if the user is not
+     *                                      interested in these.
+     * @param localSettings                 the local {@link Http3SettingsFrame} that should be sent to the remote peer
+     *                                      or {@code null} if the default settings should be used.
      */
-    public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler, ChannelHandler controlStreamHandler,
+    public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler, ChannelHandler inboundControlStreamHandler,
                                         Http3SettingsFrame localSettings) {
         this.requestStreamHandler = ObjectUtil.checkNotNull(requestStreamHandler, "requestStreamHandler");
-        this.controlStreamHandler = controlStreamHandler;
+        this.inboundControlStreamHandler = inboundControlStreamHandler;
         this.localSettings = localSettings;
     }
 
@@ -101,11 +102,19 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
                 break;
             case UNIDIRECTIONAL:
                 pipeline.addLast(
-                        new Http3UnidirectionalStreamInboundHandler(true, codecSupplier, controlStreamHandler));
+                        new Http3UnidirectionalStreamInboundHandler(true, codecSupplier, inboundControlStreamHandler));
                 break;
             default:
                 throw new Error();
         }
         ctx.fireChannelRead(msg);
+    }
+
+    /**
+     * Always returns {@code false} as it keeps state.
+     */
+    @Override
+    public boolean isSharable() {
+        return false;
     }
 }
