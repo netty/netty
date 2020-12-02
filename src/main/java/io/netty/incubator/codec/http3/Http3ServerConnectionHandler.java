@@ -97,7 +97,7 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             case BIDIRECTIONAL:
                 // Add the encoder and decoder in the pipeline so we can handle Http3Frames
                 pipeline.addLast(codecSupplier.get());
-                pipeline.addLast(new Http3FrameTypeValidationHandler<>(Http3RequestStreamFrame.class));
+                pipeline.addLast(new Http3RequestStreamValidationHandler());
                 pipeline.addLast(requestStreamHandler);
                 break;
             case UNIDIRECTIONAL:
@@ -158,7 +158,7 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             criticalStreamClosed(ctx);
             ctx.fireChannelInactive();
         }

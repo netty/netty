@@ -15,10 +15,28 @@
  */
 package io.netty.incubator.codec.http3;
 
-public class Http3Exception extends Exception {
+import io.netty.util.internal.ObjectUtil;
 
-    Http3Exception(String message) {
+/**
+ * An exception related to violate the HTTP3 spec.
+ */
+public final class Http3Exception extends Exception {
+    private final Http3ErrorCode errorCode;
+
+    public Http3Exception(Http3ErrorCode errorCode, String message) {
         super(message);
+        this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
     }
 
+    public Http3Exception(Http3ErrorCode errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
+    }
+
+    /**
+     * Returns the related {@link Http3ErrorCode}.
+     */
+    public Http3ErrorCode errorCode() {
+        return errorCode;
+    }
 }

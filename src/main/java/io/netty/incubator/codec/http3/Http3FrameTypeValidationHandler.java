@@ -18,8 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.StringUtil;
 
 class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuplexHandler {
 
@@ -39,9 +39,7 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
         if (frameType.isInstance(msg)) {
             write(ctx, cast(msg), promise);
         } else {
-            ReferenceCountUtil.release(msg);
-            // TODO: Handle me with the right error.
-            promise.setFailure(new UnsupportedMessageTypeException());
+            frameTypeUnexpected(promise, msg);
         }
     }
 
@@ -54,8 +52,7 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
         if (frameType.isInstance(msg)) {
             channelRead(ctx, cast(msg));
         } else {
-            ReferenceCountUtil.release(msg);
-            frameTypeUnexpected(ctx);
+            frameTypeUnexpected(ctx, msg);
         }
     }
 
@@ -63,7 +60,15 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
         ctx.fireChannelRead(frame);
     }
 
-    private static void frameTypeUnexpected(ChannelHandlerContext ctx) {
+    static void frameTypeUnexpected(ChannelPromise promise, Object frame) {
+        String type = StringUtil.simpleClassName(frame);
+        ReferenceCountUtil.release(frame);
+        promise.setFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                "Frame of type " + type + " unexpected"));
+    }
+
+    static void frameTypeUnexpected(ChannelHandlerContext ctx, Object frame) {
+        ReferenceCountUtil.release(frame);
         Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_FRAME_UNEXPECTED, "Frame type unexpected");
     }
 }
