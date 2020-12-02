@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 
 final class QpackHuffmanEncoder {
 
@@ -57,7 +56,7 @@ final class QpackHuffmanEncoder {
                 encodeProcessor.out = out;
                 string.forEachByte(encodeProcessor);
             } catch (Exception e) {
-                PlatformDependent.throwException(e);
+                throw new IllegalStateException(e);
             } finally {
                 encodeProcessor.end();
             }
@@ -106,8 +105,7 @@ final class QpackHuffmanEncoder {
                 string.forEachByte(encodedLengthProcessor);
                 return encodedLengthProcessor.length();
             } catch (Exception e) {
-                PlatformDependent.throwException(e);
-                return -1;
+                throw new IllegalStateException(e);
             }
         } else {
             return getEncodedLengthSlowPath(data);

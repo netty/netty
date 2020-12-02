@@ -28,7 +28,7 @@ final class Http3HeadersSink implements QpackDecoder.Sink {
     private final boolean validate;
     private long headersLength;
     private boolean exceededMaxLength;
-    private Http3Exception validationException;
+    private Http3HeadersValidationException validationException;
     private HeaderType previousType;
 
     Http3HeadersSink(Http3Headers headers, long maxHeaderListSize, boolean validate) {
@@ -40,9 +40,9 @@ final class Http3HeadersSink implements QpackDecoder.Sink {
     /**
      * This method must be called after the sink is used.
      */
-    void finish() throws Http3Exception {
+    void finish() throws Http3HeadersValidationException {
         if (exceededMaxLength) {
-            throw new Http3Exception(
+            throw new Http3HeadersValidationException(
                     String.format("Header size exceeded max allowed size (%d)", maxHeaderListSize));
         } else if (validationException != null) {
             throw validationException;
@@ -62,7 +62,7 @@ final class Http3HeadersSink implements QpackDecoder.Sink {
         if (validate) {
             try {
                 previousType = validate(name, previousType);
-            } catch (Http3Exception ex) {
+            } catch (Http3HeadersValidationException ex) {
                 validationException = ex;
                 return;
             }
@@ -71,21 +71,23 @@ final class Http3HeadersSink implements QpackDecoder.Sink {
         headers.add(name, value);
     }
 
-    private static HeaderType validate(CharSequence name, HeaderType previousHeaderType) throws Http3Exception {
+    private static HeaderType validate(CharSequence name, HeaderType previousHeaderType) {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
-                throw new Http3Exception(String.format("Pseudo-header field '%s' found after regular header.", name));
+                throw new Http3HeadersValidationException(
+                        String.format("Pseudo-header field '%s' found after regular header.", name));
             }
 
             final Http3Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
             if (pseudoHeader == null) {
-                throw new Http3Exception(String.format("Invalid HTTP/3 pseudo-header '%s' encountered.", name));
+                throw new Http3HeadersValidationException(
+                        String.format("Invalid HTTP/3 pseudo-header '%s' encountered.", name));
             }
 
             final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
             if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
-                throw new Http3Exception(String.format("Mix of request and response pseudo-headers."));
+                throw new Http3HeadersValidationException("Mix of request and response pseudo-headers.");
             }
 
             return currentHeaderType;

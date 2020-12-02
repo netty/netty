@@ -19,7 +19,6 @@ import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
@@ -38,31 +37,26 @@ public final class DefaultHttp3Headers
         @Override
         public void validateName(CharSequence name) {
             if (name == null || name.length() == 0) {
-                PlatformDependent.throwException(
-                    new Http3Exception(String.format("empty headers are not allowed [%s]", name)));
+                throw new Http3HeadersValidationException(String.format("empty headers are not allowed [%s]", name));
             }
             if (name instanceof AsciiString) {
                 final int index;
                 try {
                     index = ((AsciiString) name).forEachByte(HTTP3_NAME_VALIDATOR_PROCESSOR);
-                } catch (Http3Exception e) {
-                    PlatformDependent.throwException(e);
-                    return;
+                } catch (Http3HeadersValidationException e) {
+                    throw e;
                 } catch (Throwable t) {
-                    PlatformDependent.throwException(
-                        new Http3Exception(String.format("unexpected error. invalid header name [%s]", name)));
-                    return;
+                    throw new Http3HeadersValidationException(
+                            String.format("unexpected error. invalid header name [%s]", name), t);
                 }
 
                 if (index != -1) {
-                    PlatformDependent.throwException(
-                        new Http3Exception(String.format("invalid header name [%s]", name)));
+                    throw new Http3HeadersValidationException(String.format("invalid header name [%s]", name));
                 }
             } else {
                 for (int i = 0; i < name.length(); ++i) {
                     if (isUpperCase(name.charAt(i))) {
-                        PlatformDependent.throwException(
-                            new Http3Exception(String.format("invalid header name [%s]", name)));
+                        throw new Http3HeadersValidationException(String.format("invalid header name [%s]", name));
                     }
                 }
             }
