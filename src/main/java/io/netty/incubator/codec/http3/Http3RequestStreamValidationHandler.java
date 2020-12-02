@@ -26,57 +26,74 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     }
     private State readState = State.Initial;
     private State writeState = State.Initial;
+    private final boolean server;
 
-    Http3RequestStreamValidationHandler() {
+    Http3RequestStreamValidationHandler(boolean server) {
         super(Http3RequestStreamFrame.class);
+        this.server = server;
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, ChannelPromise promise) {
-        switch (writeState) {
-            case Initial:
-                if (!(frame instanceof Http3HeadersFrame)) {
+        if (!(frame instanceof Http3PushPromiseFrame)) {
+            switch (writeState) {
+                case Initial:
+                    if (!(frame instanceof Http3HeadersFrame)) {
+                        frameTypeUnexpected(promise, frame);
+                        return;
+                    }
+                    writeState = State.Started;
+                    break;
+                case Started:
+                    if (frame instanceof Http3HeadersFrame) {
+                        // trailers
+                        writeState = State.End;
+                    }
+                    break;
+                case End:
                     frameTypeUnexpected(promise, frame);
                     return;
-                }
-                writeState = State.Started;
-                break;
-            case Started:
-                if (frame instanceof Http3HeadersFrame) {
-                    // trailers
-                    writeState = State.End;
-                }
-                break;
-            case End:
-                frameTypeUnexpected(promise, frame);
-                return;
-            default:
-                throw new Error();
+                default:
+                    throw new Error();
+            }
+        } else if (!server) {
+            // Only supported on the server.
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
+            frameTypeUnexpected(promise, frame);
+            return;
         }
+
         ctx.write(frame, promise);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame) {
-        switch (readState) {
-            case Initial:
-                if (!(frame instanceof Http3HeadersFrame)) {
+        if (!(frame instanceof Http3PushPromiseFrame)) {
+            switch (readState) {
+                case Initial:
+                    if (!(frame instanceof Http3HeadersFrame)) {
+                        frameTypeUnexpected(ctx, frame);
+                        return;
+                    }
+                    readState = State.Started;
+                    break;
+                case Started:
+                    if (frame instanceof Http3HeadersFrame) {
+                        // trailers
+                        readState = State.End;
+                    }
+                    break;
+                case End:
                     frameTypeUnexpected(ctx, frame);
                     return;
-                }
-                readState = State.Started;
-                break;
-            case Started:
-                if (frame instanceof Http3HeadersFrame) {
-                    // trailers
-                    readState = State.End;
-                }
-                break;
-            case End:
-                frameTypeUnexpected(ctx, frame);
-                return;
-            default:
-                throw new Error();
+                default:
+                    throw new Error();
+            }
+        } else if (!server) {
+            // Only supported on the server.
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
+            frameTypeUnexpected(ctx, frame);
+            return;
         }
         ctx.fireChannelRead(frame);
     }

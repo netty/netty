@@ -18,8 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 
 final class Http3CodecUtils {
@@ -143,5 +143,11 @@ final class Http3CodecUtils {
             buffer = Unpooled.EMPTY_BUFFER;
         }
         parent.close(true, errorCode.code, buffer);
+    }
+
+    static void readIfNoAutoRead(ChannelHandlerContext ctx) {
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
     }
 }

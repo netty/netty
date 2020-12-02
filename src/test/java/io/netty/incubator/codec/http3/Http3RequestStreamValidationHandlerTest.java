@@ -41,7 +41,7 @@ import static org.mockito.Mockito.when;
 public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValidationHandlerTest {
     @Override
     protected Http3FrameTypeValidationHandler<Http3RequestStreamFrame> newValidationHandler() {
-        return new Http3RequestStreamValidationHandler();
+        return new Http3RequestStreamValidationHandler(true);
     }
 
     @Test
