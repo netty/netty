@@ -95,7 +95,7 @@ class LongPriorityQueueTest {
     @Test
     public void internalRemoveMustPreserveOrder() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
-        int initialValues = tlr.nextInt(5, 30);
+        int initialValues = tlr.nextInt(1, 30);
         ArrayList<Long> values = new ArrayList<Long>();
         LongPriorityQueue pq = new LongPriorityQueue();
         for (int i = 0; i < initialValues; i++) {
@@ -127,13 +127,21 @@ class LongPriorityQueueTest {
         pq.offer(10);
         pq.offer(6);
         pq.remove(10);
+        assertThat(pq.peek()).isEqualTo(5);
+        assertThat(pq.peek()).isEqualTo(5);
         assertThat(pq.poll()).isEqualTo(5);
+        assertThat(pq.peek()).isEqualTo(5);
         assertThat(pq.poll()).isEqualTo(5);
+        assertThat(pq.peek()).isEqualTo(6);
         assertThat(pq.poll()).isEqualTo(6);
+        assertThat(pq.peek()).isEqualTo(6);
+        assertThat(pq.peek()).isEqualTo(6);
         assertThat(pq.poll()).isEqualTo(6);
+        assertThat(pq.peek()).isEqualTo(10);
         assertThat(pq.poll()).isEqualTo(10);
         assertThat(pq.poll()).isEqualTo(10);
         assertTrue(pq.isEmpty());
         assertThat(pq.poll()).isEqualTo(LongPriorityQueue.NO_VALUE);
+        assertThat(pq.peek()).isEqualTo(LongPriorityQueue.NO_VALUE);
     }
 }

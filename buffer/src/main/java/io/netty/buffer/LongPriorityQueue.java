@@ -36,22 +36,25 @@ final class LongPriorityQueue {
             array = Arrays.copyOf(array, 1 + (array.length - 1) * 2);
         }
         array[size] = handle;
-        lift();
+        lift(size);
     }
 
     public void remove(long value) {
         for (int i = 1; i <= size; i++) {
             if (array[i] == value) {
-                if (i == size) {
-                    array[i] = 0;
-                } else {
-                    array[i] = array[size];
-                    sink(i);
-                }
-                size--;
+                array[i] = array[size--];
+                lift(i);
+                sink(i);
                 return;
             }
         }
+    }
+
+    public long peek() {
+        if (size == 0) {
+            return NO_VALUE;
+        }
+        return array[1];
     }
 
     public long poll() {
@@ -70,8 +73,7 @@ final class LongPriorityQueue {
         return size == 0;
     }
 
-    private void lift() {
-        int index = size;
+    private void lift(int index) {
         int parentIndex;
         while (index > 1 && subord(parentIndex = index >> 1, index)) {
             swap(index, parentIndex);
