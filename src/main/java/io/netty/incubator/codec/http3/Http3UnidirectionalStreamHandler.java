@@ -17,21 +17,21 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * {@link ByteToMessageDecoder} which helps to detect the type of unidirectional stream.
  */
 abstract class Http3UnidirectionalStreamHandler extends ByteToMessageDecoder {
-    private final QpackDecoder qpackDecoder;
-    private final QpackEncoder qpackEncoder;
+    private final Supplier<Http3FrameCodec> codecSupplier;
 
-    Http3UnidirectionalStreamHandler(QpackDecoder qpackDecoder, QpackEncoder qpackEncoder) {
-        this.qpackDecoder = qpackDecoder;
-        this.qpackEncoder = qpackEncoder;
+    Http3UnidirectionalStreamHandler(Supplier<Http3FrameCodec> codecSupplier) {
+        this.codecSupplier = codecSupplier;
     }
 
     @Override
@@ -46,41 +46,37 @@ abstract class Http3UnidirectionalStreamHandler extends ByteToMessageDecoder {
         long type = Http3CodecUtils.readVariableLengthInteger(in, len);
         QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
         if (type == 0x00) {
-            // We need to add the encoder / decoder before calling initControlStream(...) as this may also add handlers
-            // to the pipeline.
-            streamChannel.pipeline().addLast(
-                    new Http3FrameEncoder(qpackEncoder),
-                    new Http3FrameDecoder(qpackDecoder));
             initControlStream(streamChannel);
+            // Replace this handler with the codec now.
+            replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x01) {
             int pushIdLen = Http3CodecUtils.numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             if (in.readableBytes() < pushIdLen) {
                 return;
             }
             long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
-            // We need to add the encoder / decoder before calling initPushStream(...) as this may also add handlers
-            // to the pipeline.
-            streamChannel.pipeline().addLast(
-                    new Http3FrameEncoder(qpackEncoder),
-                    new Http3FrameDecoder(qpackDecoder));
             initPushStream(streamChannel, pushId);
+            // Replace this handler with the codec now.
+            replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x02) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
             initQpackEncoderStream(streamChannel);
+            // Replace this handler with the codec now.
+            replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x03) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
             initQpackDecoderStream(streamChannel);
-        } else {
-            if (initUnknownStream((QuicStreamChannel) ctx.channel(), type, in)) {
-                // Ensure we add the encoder / decoder in the right place.
-                ctx.pipeline().addAfter(ctx.name(), null, new Http3FrameEncoder(qpackEncoder));
-                ctx.pipeline().addAfter(ctx.pipeline().context(Http3FrameEncoder.class).name(), null,
-                        new Http3FrameDecoder(qpackDecoder));
-            } else {
-                return;
-            }
+            // Replace this handler with the codec now.
+            replaceThisWithCodec(ctx.pipeline());
+        } else if (initUnknownStream((QuicStreamChannel) ctx.channel(), type, in)) {
+            // Ensure we add the encoder / decoder in the right place.
+            replaceThisWithCodec(ctx.pipeline());
         }
-        ctx.pipeline().remove(this);
+    }
+
+    private void replaceThisWithCodec(ChannelPipeline pipeline) {
+        // Replace this handler with the codec now.
+       pipeline.replace(this, null, codecSupplier.get());
     }
 
     /**

@@ -28,13 +28,15 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.function.Supplier;
+
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> for the server-side.
  */
 public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAdapter {
-    // QPACK decoder and encoder are shared between streams in a connection.
-    private final QpackDecoder qpackDecoder = new QpackDecoder();
-    private final QpackEncoder qpackEncoder = new QpackEncoder();
+
+    private final Supplier<Http3FrameCodec> codecSupplier =
+            Http3FrameCodec.newSupplier(new QpackDecoder(), new QpackEncoder());
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler requestStreamHandler;
     private final ChannelHandler controlStreamHandler;
@@ -93,14 +95,12 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         switch (channel.type()) {
             case BIDIRECTIONAL:
                 // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-                pipeline.addLast(new Http3FrameEncoder(qpackEncoder))
-                        .addLast(new Http3FrameDecoder(qpackDecoder));
+                pipeline.addLast(codecSupplier.get());
                 pipeline.addLast(new Http3FrameTypeValidationHandler<>(Http3RequestStreamFrame.class));
                 pipeline.addLast(requestStreamHandler);
                 break;
             case UNIDIRECTIONAL:
-                pipeline.addLast(new Http3ServerUnidirectionalStreamHandler(
-                        qpackDecoder, qpackEncoder, controlStreamHandler));
+                pipeline.addLast(new Http3ServerUnidirectionalStreamHandler(codecSupplier, controlStreamHandler));
                 break;
             default:
                 throw new Error();
@@ -131,9 +131,7 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             Http3CodecUtils.writeVariableLengthInteger(buffer, 0x00);
             ctx.write(buffer);
             // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-            ctx.pipeline().addFirst(
-                    new Http3FrameEncoder(qpackEncoder),
-                    new Http3FrameDecoder(qpackDecoder));
+            ctx.pipeline().addFirst(codecSupplier.get());
             final Http3SettingsFrame settingsFrame;
             if (localSettings == null) {
                 settingsFrame = new DefaultHttp3SettingsFrame();
@@ -165,9 +163,9 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         private QuicStreamChannel qpackEncoderStream;
         private QuicStreamChannel qpackDecoderStream;
 
-        Http3ServerUnidirectionalStreamHandler(QpackDecoder qpackDecoder, QpackEncoder qpackEncoder,
+        Http3ServerUnidirectionalStreamHandler(Supplier<Http3FrameCodec> codecSupplier,
                                                ChannelHandler controlStreamHandler) {
-            super(qpackDecoder, qpackEncoder);
+            super(codecSupplier);
             this.controlStreamHandler = controlStreamHandler;
         }
 

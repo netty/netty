@@ -29,7 +29,7 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthI
 /**
  * Decodes {@link Http3Frame}s.
  */
-public final class Http3FrameDecoder extends ByteToMessageDecoder {
+final class Http3FrameDecoder extends ByteToMessageDecoder {
     private final QpackDecoder qpackDecoder;
 
     private long type = -1;
