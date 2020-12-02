@@ -56,7 +56,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (!in.isReadable()) {
             return;
         }
@@ -98,8 +98,9 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         // HEADERS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
                         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                        decodeHeaders(headersFrame.headers(), in);
-                        out.add(headersFrame);
+                        if (decodeHeaders(ctx, headersFrame.headers(), in)) {
+                            out.add(headersFrame);
+                        }
                         break;
                     case 0x3:
                         // CANCEL_PUSH
@@ -118,8 +119,9 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
                         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                                 readVariableLengthInteger(in, pushPromiseIdLen));
-                        decodeHeaders(pushPromiseFrame.headers(), in);
-                        out.add(pushPromiseFrame);
+                        if (decodeHeaders(ctx, pushPromiseFrame.headers(), in)) {
+                            out.add(pushPromiseFrame);
+                        }
                         break;
                     case 0x7:
                         // GO_AWAY
@@ -164,11 +166,25 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
      * <p>
      * This method assumes the entire header block is contained in {@code in}.
      */
-    private void decodeHeaders(Http3Headers headers, ByteBuf in) throws Http3Exception, QpackException {
-        Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true);
-        qpackDecoder.decode(in, sink);
-
-        // Throws exception if detected any problem so far
-        sink.finish();
+    private boolean decodeHeaders(ChannelHandlerContext ctx, Http3Headers headers, ByteBuf in) {
+        try {
+            Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true);
+            qpackDecoder.decode(in, sink);
+            // Throws exception if detected any problem so far
+            sink.finish();
+        } catch (QpackException e) {
+            // Must be treated as a connection error.
+            Http3CodecUtils.closeParent(
+                    ctx.channel(), Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
+                    "Decompression of header block failed.");
+            return false;
+        } catch (Http3HeadersValidationException e) {
+            ctx.fireExceptionCaught(e);
+            // We should close the stream.
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1.3
+            ctx.close();
+            return false;
+        }
+        return true;
     }
 }

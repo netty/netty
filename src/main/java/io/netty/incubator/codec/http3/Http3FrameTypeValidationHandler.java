@@ -55,12 +55,15 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
             channelRead(ctx, cast(msg));
         } else {
             ReferenceCountUtil.release(msg);
-            // TODO: Handle me with the right error.
-            throw new UnsupportedMessageTypeException();
+            frameTypeUnexpected(ctx);
         }
     }
 
     public void channelRead(ChannelHandlerContext ctx, T frame) throws Exception {
         ctx.fireChannelRead(frame);
+    }
+
+    private static void frameTypeUnexpected(ChannelHandlerContext ctx) {
+        Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_FRAME_UNEXPECTED, "Frame type unexpected");
     }
 }

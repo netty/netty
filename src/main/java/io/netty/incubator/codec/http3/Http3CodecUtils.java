@@ -16,6 +16,11 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.CharsetUtil;
 
 final class Http3CodecUtils {
 
@@ -126,5 +131,17 @@ final class Http3CodecUtils {
             return 4;
         }
         return 1;
+    }
+
+    static void closeParent(Channel channel, Http3ErrorCode errorCode, String msg) {
+        QuicChannel parent = (QuicChannel) channel.parent();
+        final ByteBuf buffer;
+        if (msg != null) {
+            buffer = parent.alloc().directBuffer();
+            buffer.writeCharSequence(msg, CharsetUtil.US_ASCII);
+        } else {
+            buffer = Unpooled.EMPTY_BUFFER;
+        }
+        parent.close(true, errorCode.code, buffer);
     }
 }

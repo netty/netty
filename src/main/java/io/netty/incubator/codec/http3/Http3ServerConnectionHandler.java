@@ -152,12 +152,24 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
             if (evt instanceof ChannelInputShutdownEvent) {
-                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
-                // TODO: H3_CLOSED_CRITICAL_STREAM
+                criticalStreamClosed(ctx);
             }
             ctx.fireUserEventTriggered(evt);
         }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            criticalStreamClosed(ctx);
+            ctx.fireChannelInactive();
+        }
+
+        // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
+        private void criticalStreamClosed(ChannelHandlerContext ctx) {
+            Http3CodecUtils.closeParent(
+                    ctx.channel(), Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical stream closed.");
+        }
     }
+
     private static final class Http3ServerUnidirectionalStreamHandler extends Http3UnidirectionalStreamHandler {
         private final ChannelHandler controlStreamHandler;
         private QuicStreamChannel remoteControlStream;
@@ -195,7 +207,10 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
                             // TODO: Add QPACK stream creation.
 
                         } else if (firstFrame) {
-                            // TODO: Handle H3_MISSING_SETTINGS
+                            // Only one control stream is allowed.
+                            // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1
+                            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_MISSING_SETTINGS,
+                                    "Missing settings frame.");
                         } else {
                             // TODO: Handle all other frames
                         }
@@ -225,13 +240,15 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             } else {
                 // Only one control stream is allowed.
                 // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1
-                // TODO: Handle H3_STREAM_CREATION_ERROR
+                Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                        "Received multiple control streams.");
             }
         }
 
         @Override
         protected void initPushStream(QuicStreamChannel channel, long id) {
-            // TODO: Handle H3_STREAM_CREATION_ERROR
+            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                    "Server received push stream.");
         }
 
         @Override
@@ -243,7 +260,8 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             } else {
                 // Only one stream is allowed.
                 // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-                // TODO: Handle H3_STREAM_CREATION_ERROR
+                Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                        "Received multiple QPACK encoder streams.");
             }
         }
 
@@ -256,7 +274,8 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
             } else {
                 // Only one stream is allowed.
                 // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-                // TODO: Handle H3_STREAM_CREATION_ERROR
+                Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                        "Received multiple QPACK decoder streams.");
             }
         }
     }
@@ -288,10 +307,21 @@ public final class Http3ServerConnectionHandler extends ChannelInboundHandlerAda
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof ChannelInputShutdownEvent) {
-                // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-                // TODO: H3_CLOSED_CRITICAL_STREAM
+                criticalStreamClosed(ctx);
             }
             ctx.fireUserEventTriggered(evt);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx)  {
+            criticalStreamClosed(ctx);
+            ctx.fireChannelInactive();
+        }
+
+        // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+        private void criticalStreamClosed(ChannelHandlerContext ctx) {
+            Http3CodecUtils.closeParent((QuicStreamChannel) ctx.channel(),
+                    Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical QPACK stream closed.");
         }
     }
 }
