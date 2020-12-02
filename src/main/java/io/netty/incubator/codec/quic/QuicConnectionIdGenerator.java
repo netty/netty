@@ -22,10 +22,6 @@ import java.nio.ByteBuffer;
  */
 public interface QuicConnectionIdGenerator {
     /**
-     * Creates a new {@link QuicConnectionAddress} with the maximum length.
-     */
-    ByteBuffer newId();
-    /**
      * Creates a new {@link QuicConnectionAddress} with the given length.
      */
     ByteBuffer newId(int length);

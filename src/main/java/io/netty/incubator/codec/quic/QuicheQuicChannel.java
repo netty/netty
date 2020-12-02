@@ -126,7 +126,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ByteBuf finBuffer;
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private ByteBuffer connectId;
+    private QuicConnectionAddress connectAddress;
     private ByteBuffer key;
     private CloseData closeData;
     private QuicConnectionStats statsAtClose;
@@ -173,23 +173,28 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
-    private void connect(long configAddr) throws Exception {
+    private void connect(long configAddr, int localConnIdLength) throws Exception {
         assert this.connAddr == -1;
         assert this.traceId == null;
         assert this.key == null;
+        QuicConnectionAddress address = this.connectAddress;
+        if (address == QuicConnectionAddress.EPHEMERAL) {
+            address = QuicConnectionAddress.random(localConnIdLength);
+        } else {
+            if (address.connId.remaining() != localConnIdLength) {
+                failConnectPromiseAndThrow(new IllegalArgumentException("connectionAddress has length "
+                        + address.connId.remaining()
+                        + " instead of " + localConnIdLength));
+            }
+        }
+        ByteBuffer connectId = address.connId.duplicate();
         ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
         final String serverName = config().getPeerCertServerName();
         try {
             long connection = Quiche.quiche_connect(serverName, Quiche.memoryAddress(idBuffer) + idBuffer.readerIndex(),
                     idBuffer.readableBytes(), configAddr);
             if (connection == -1) {
-                ConnectException connectException = new ConnectException();
-                ChannelPromise promise = connectPromise;
-                if (promise != null) {
-                    connectPromise = null;
-                    promise.tryFailure(connectException);
-                }
-                throw connectException;
+                failConnectPromiseAndThrow(new ConnectException());
             }
             this.traceId = Quiche.traceId(connection, idBuffer);
             this.connAddr = connection;
@@ -199,6 +204,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         } finally {
             idBuffer.release();
         }
+    }
+
+    private void failConnectPromiseAndThrow(Exception e) throws Exception {
+        ChannelPromise promise = connectPromise;
+        if (promise != null) {
+            connectPromise = null;
+            promise.tryFailure(e);
+        }
+        throw e;
     }
 
     ByteBuffer key() {
@@ -788,7 +802,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 QuicConnectionAddress address = (QuicConnectionAddress) remote;
                 connectPromise = channelPromise;
-                connectId = address.connId.duplicate();
+                connectAddress = address;
 
                 // Schedule connect timeout.
                 int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -944,11 +958,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     // TODO: Come up with something better.
-    static QuicheQuicChannel handleConnect(SocketAddress address, long config) throws Exception {
+    static QuicheQuicChannel handleConnect(SocketAddress address, long config, int localConnIdLength) throws Exception {
         if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
             QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
             QuicheQuicChannel channel = addr.channel;
-            channel.connect(config);
+            channel.connect(config, localConnIdLength);
             return channel;
         }
         return null;

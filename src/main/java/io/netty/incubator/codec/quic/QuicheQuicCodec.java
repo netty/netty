@@ -55,10 +55,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private ByteBuf tokenLenBuffer;
 
     protected final QuicheConfig config;
+    protected final int localConnIdLength;
     protected long nativeConfig;
 
-    QuicheQuicCodec(QuicheConfig config, int maxTokenLength) {
+    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength) {
         this.config = config;
+        this.localConnIdLength = localConnIdLength;
         this.maxTokenLength = maxTokenLength;
     }
 
@@ -146,7 +148,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
         tokenLenBuffer.setInt(0, maxTokenLength);
 
-        int res = Quiche.quiche_header_info(contentAddress, contentReadable, Quiche.QUICHE_MAX_CONN_ID_LEN,
+        int res = Quiche.quiche_header_info(contentAddress, contentReadable, localConnIdLength,
                 Quiche.memoryAddress(versionBuffer), Quiche.memoryAddress(typeBuffer),
                 Quiche.memoryAddress(scidBuffer), Quiche.memoryAddress(scidLenBuffer),
                 Quiche.memoryAddress(dcidBuffer), Quiche.memoryAddress(dcidLenBuffer),

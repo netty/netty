@@ -47,7 +47,7 @@ public final class QuicChannelBootstrap {
     private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> streamAttrs = new HashMap<>();
     private SocketAddress remote;
-    private QuicConnectionAddress connectionAddress;
+    private QuicConnectionAddress connectionAddress = QuicConnectionAddress.EPHEMERAL;
     private ChannelHandler handler;
     private ChannelHandler streamHandler;
 
@@ -153,9 +153,7 @@ public final class QuicChannelBootstrap {
         if (remote == null) {
             throw new IllegalStateException("remote not set");
         }
-        final QuicConnectionAddress address = connectionAddress == null ?
-                QuicConnectionAddress.random() : connectionAddress;
-
+        final QuicConnectionAddress address = connectionAddress;
         QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress) remote,
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
 

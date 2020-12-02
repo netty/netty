@@ -41,6 +41,70 @@ import static org.junit.Assert.fail;
 public class QuicChannelConnectTest {
 
     @Test
+    public void testAddressValidation() throws Throwable {
+        // Bind to something so we can use the port to connect too and so can ensure we really timeout.
+        DatagramSocket socket = new DatagramSocket();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().localConnectionIdLength(10));
+        try {
+            ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
+            Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
+                    .handler(verifyHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(socket.getLocalSocketAddress())
+                    .connectionAddress(QuicConnectionAddress.random(20))
+                    .connect();
+            Throwable cause = future.await().cause();
+            assertThat(cause, CoreMatchers.instanceOf(IllegalArgumentException.class));
+            verifyHandler.assertState();
+        } finally {
+            socket.close();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testConnectWithCustomIdLength() throws Throwable {
+        testConnectWithCustomIdLength(10);
+    }
+
+    @Test
+    public void testConnectWithCustomIdLengthOfZero() throws Throwable {
+        testConnectWithCustomIdLength(0);
+    }
+
+    private static void testConnectWithCustomIdLength(int idLength) throws Throwable {
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+        ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+                        .localConnectionIdLength(idLength),
+                InsecureQuicTokenHandler.INSTANCE, serverQuicChannelHandler, serverQuicStreamHandler);
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .localConnectionIdLength(idLength));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            assertTrue(quicChannel.close().await().isSuccess());
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            serverQuicChannelHandler.assertState();
+            serverQuicStreamHandler.assertState();
+
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
     public void testConnectTimeout() throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();

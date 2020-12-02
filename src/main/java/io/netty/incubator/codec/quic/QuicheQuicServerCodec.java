@@ -44,12 +44,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private final ChannelHandler streamHandler;
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
-    // TODO: Make this configurable ?
-    private static final int MAX_LOCAL_CONN_ID = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private ByteBuf mintTokenBuffer;
     private ByteBuf connIdBuffer;
 
-    QuicheQuicServerCodec(QuicheConfig config, QuicTokenHandler tokenHandler,
+    QuicheQuicServerCodec(QuicheConfig config,
+                          int localConnIdLength,
+                          QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
                           ChannelHandler handler,
                           Map.Entry<ChannelOption<?>, Object>[] optionsArray,
@@ -57,7 +57,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           ChannelHandler streamHandler,
                           Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                           Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        super(config, tokenHandler.maxTokenLength());
+        super(config, localConnIdLength, tokenHandler.maxTokenLength());
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         this.handler = handler;
@@ -71,7 +71,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         super.handlerAdded(ctx);
-        connIdBuffer = allocateNativeOrder(MAX_LOCAL_CONN_ID);
+        connIdBuffer = allocateNativeOrder(localConnIdLength);
         mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
     }
 
@@ -126,7 +126,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             // The remote peer did not send a token.
             if (tokenHandler.writeToken(mintTokenBuffer, dcid, sender)) {
                 ByteBuffer connId = connectionIdAddressGenerator.newId(
-                        dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), MAX_LOCAL_CONN_ID);
+                        dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
                 connIdBuffer.writeBytes(connId);
 
                 ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -160,9 +160,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         final long conn;
         if (noToken) {
             conn = Quiche.quiche_accept_no_token(
-                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), MAX_LOCAL_CONN_ID, nativeConfig);
+                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength, nativeConfig);
         } else {
-            conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), MAX_LOCAL_CONN_ID,
+            conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength,
                     Quiche.memoryAddress(token) + offset, token.readableBytes() - offset, nativeConfig);
         }
         if (conn < 0) {
@@ -171,7 +171,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
 
         // Now create the key to store the channel in the map.
-        byte[] key = new byte[MAX_LOCAL_CONN_ID];
+        byte[] key = new byte[localConnIdLength];
         dcid.getBytes(dcid.readerIndex(), key);
 
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(

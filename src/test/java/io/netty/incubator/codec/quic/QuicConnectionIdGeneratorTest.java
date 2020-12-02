@@ -30,8 +30,8 @@ public class QuicConnectionIdGeneratorTest {
     @Test
     public void testRandomness() {
         QuicConnectionIdGenerator idGenerator = QuicConnectionIdGenerator.randomGenerator();
-        ByteBuffer id = idGenerator.newId();
-        ByteBuffer id2 = idGenerator.newId();
+        ByteBuffer id = idGenerator.newId(Quiche.QUICHE_MAX_CONN_ID_LEN);
+        ByteBuffer id2 = idGenerator.newId(Quiche.QUICHE_MAX_CONN_ID_LEN);
         assertThat(id.remaining(), greaterThan(0));
         assertThat(id2.remaining(), greaterThan(0));
         assertNotEquals(id, id2);

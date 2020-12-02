@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandler;
 public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
 
     @Override
-    protected ChannelHandler build(QuicheConfig config) {
-        return new QuicheQuicClientCodec(config);
+    protected ChannelHandler build(QuicheConfig config, int localConnIdLength) {
+        return new QuicheQuicClientCodec(config, localConnIdLength);
     }
 }

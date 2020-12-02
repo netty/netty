@@ -27,11 +27,6 @@ final class SecureRandomQuicConnectionIdGenerator implements QuicConnectionIdGen
     }
 
     @Override
-    public ByteBuffer newId() {
-        return newId(maxConnectionIdLength());
-    }
-
-    @Override
     public ByteBuffer newId(int length) {
         if (length > maxConnectionIdLength()) {
             throw new IllegalArgumentException();
