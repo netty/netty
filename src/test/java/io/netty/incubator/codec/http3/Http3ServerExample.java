@@ -26,7 +26,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -38,26 +37,17 @@ public final class Http3ServerExample {
     private Http3ServerExample() { }
 
     public static void main(String... args) throws Exception {
-        byte[] proto = new byte[] {
-                0x05, 'h', '3', '-', '2', '9',
-                0x05, 'h', '3', '-', '3', '0',
-                0x05, 'h', '3', '-', '3', '1',
-                0x05, 'h', '3', '-', '3', '2'
-        };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        ChannelHandler codec = new QuicServerCodecBuilder()
+        ChannelHandler codec = Http3.newQuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
-                .applicationProtocols(proto)
                 .maxIdleTimeout(5000)
                 .maxUdpPayloadSize(1350)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
-                .initialMaxStreamsUnidirectional(100)
-                .initialMaxStreamDataUnidirectional(100000)
                 .disableActiveMigration(true)
                 .enableEarlyData()
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
