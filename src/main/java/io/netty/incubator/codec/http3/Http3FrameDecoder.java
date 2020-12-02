@@ -172,6 +172,9 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             qpackDecoder.decode(in, sink);
             // Throws exception if detected any problem so far
             sink.finish();
+        } catch (Http3Exception e) {
+            Http3CodecUtils.closeParent(ctx.channel(), e.errorCode(), e.getMessage());
+            return false;
         } catch (QpackException e) {
             // Must be treated as a connection error.
             Http3CodecUtils.closeParent(

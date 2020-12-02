@@ -42,9 +42,9 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     /**
      * This method must be called after the sink is used.
      */
-    void finish() throws Http3HeadersValidationException {
+    void finish() throws Http3HeadersValidationException, Http3Exception {
         if (exceededMaxLength) {
-            throw new Http3HeadersValidationException(
+            throw new Http3Exception(Http3ErrorCode.H3_EXCESSIVE_LOAD,
                     String.format("Header size exceeded max allowed size (%d)", maxHeaderListSize));
         } else if (validationException != null) {
             throw validationException;
