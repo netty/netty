@@ -692,6 +692,14 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void canCloseStreamWithVoidPromise() throws Exception {
+        handler = newHandler();
+        handler.closeStream(stream, ctx.voidPromise());
+        verify(stream, times(1)).close();
+        verifyNoMoreInteractions(stream);
+    }
+
+    @Test
     public void channelReadCompleteTriggersFlush() throws Exception {
         handler = newHandler();
         handler.channelReadComplete(ctx);
