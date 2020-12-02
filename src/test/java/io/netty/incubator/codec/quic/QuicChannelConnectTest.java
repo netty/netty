@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,6 +31,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.channels.AlreadyConnectedException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -164,8 +166,10 @@ public class QuicChannelConnectTest {
 
     @Test
     public void testConnectWithoutTokenValidation() throws Throwable {
+        int numBytes = 8;
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
-        ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch clientLatch = new CountDownLatch(1);
 
         Channel server = QuicTestUtils.newServer(new QuicTokenHandler() {
             // Disable token validation
@@ -183,7 +187,7 @@ public class QuicChannelConnectTest {
             public int maxTokenLength() {
                 return 0;
             }
-        }, serverQuicChannelHandler, serverQuicStreamHandler);
+        }, serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         try {
@@ -194,17 +198,43 @@ public class QuicChannelConnectTest {
                     .remoteAddress(address)
                     .connect()
                     .get();
-            assertTrue(quicChannel.close().await().isSuccess());
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new BytesCountingHandler(clientLatch, numBytes)).get();
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
+            clientLatch.await();
+
+            stream.close().sync();
+            quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
+            serverLatch.await();
             serverQuicChannelHandler.assertState();
-            serverQuicStreamHandler.assertState();
 
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+        }
+    }
+    private static final class BytesCountingHandler extends ChannelInboundHandlerAdapter {
+        private final CountDownLatch latch;
+        private final int numBytes;
+        private int bytes;
+
+        BytesCountingHandler(CountDownLatch latch, int numBytes) {
+            this.latch = latch;
+            this.numBytes = numBytes;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ByteBuf buffer = (ByteBuf) msg;
+            bytes += buffer.readableBytes();
+            ctx.writeAndFlush(buffer);
+            if (bytes == numBytes) {
+                latch.countDown();
+            }
         }
     }
 

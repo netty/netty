@@ -158,24 +158,30 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
 
         final long conn;
+        final ByteBuffer key;
         if (noToken) {
+            connIdBuffer.clear();
+            key = connectionIdAddressGenerator.newId(
+                    dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
+            connIdBuffer.writeBytes(key.duplicate());
             conn = Quiche.quiche_accept_no_token(
-                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength, nativeConfig);
+                    Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex(), localConnIdLength, nativeConfig);
         } else {
             conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength,
                     Quiche.memoryAddress(token) + offset, token.readableBytes() - offset, nativeConfig);
+
+            // Now create the key to store the channel in the map.
+            byte[] bytes = new byte[localConnIdLength];
+            dcid.getBytes(dcid.readerIndex(), bytes);
+            key = ByteBuffer.wrap(bytes);
         }
         if (conn < 0) {
             LOGGER.debug("quiche_accept failed");
             return null;
         }
 
-        // Now create the key to store the channel in the map.
-        byte[] key = new byte[localConnIdLength];
-        dcid.getBytes(dcid.readerIndex(), key);
-
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), ByteBuffer.wrap(key), conn, Quiche.traceId(conn, dcid), sender,
+                ctx.channel(), key, conn, Quiche.traceId(conn, dcid), sender,
                 streamHandler, streamOptionsArray, streamAttrsArray);
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         putChannel(channel);
