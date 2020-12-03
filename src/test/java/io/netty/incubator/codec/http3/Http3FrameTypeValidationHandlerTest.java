@@ -76,7 +76,11 @@ public class Http3FrameTypeValidationHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
                 newValidationHandler());
         Http3ControlStreamFrame requestStreamFrame = new Http3ControlStreamFrame() { };
-        assertFalse(channel.writeInbound(requestStreamFrame));
+        try {
+            channel.writeInbound(requestStreamFrame);
+        } catch (Exception e) {
+            assertException(e);
+        }
         assertFalse(channel.finish());
         verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
         argumentCaptor.getValue().release();

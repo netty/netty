@@ -173,13 +173,12 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             // Throws exception if detected any problem so far
             sink.finish();
         } catch (Http3Exception e) {
-            Http3CodecUtils.closeParent(ctx.channel(), e.errorCode(), e.getMessage());
+            Http3CodecUtils.connectionError(ctx, e, true);
             return false;
         } catch (QpackException e) {
             // Must be treated as a connection error.
-            Http3CodecUtils.closeParent(
-                    ctx.channel(), Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
-                    "Decompression of header block failed.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
+                    "Decompression of header block failed.", true);
             return false;
         } catch (Http3HeadersValidationException e) {
             ctx.fireExceptionCaught(e);

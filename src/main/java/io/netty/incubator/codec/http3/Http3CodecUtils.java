@@ -17,7 +17,6 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.CharsetUtil;
@@ -134,11 +133,40 @@ final class Http3CodecUtils {
         return 1;
     }
 
-    static void closeParent(Channel channel, Http3ErrorCode errorCode, String msg) {
-        QuicChannel parent = (QuicChannel) channel.parent();
+    /**
+     * A connection-error should be handled as defined in the HTTP3 spec.
+     * @param ctx           the {@link ChannelHandlerContext} of the handle that handles it.
+     * @param exception     the {@link Http3Exception} that caused the error.
+     * @param fireException {@code true} if we should also fire the {@link Http3Exception} through the pipeline.
+     */
+    static void connectionError(ChannelHandlerContext ctx, Http3Exception exception, boolean fireException) {
+        if (fireException) {
+            ctx.fireExceptionCaught(exception);
+        }
+        connectionError(ctx, exception.errorCode(), exception.getMessage());
+    }
+
+    /**
+     * A connection-error should be handled as defined in the HTTP3 spec.
+     * @param ctx           the {@link ChannelHandlerContext} of the handle that handles it.
+     * @param errorCode     the {@link Http3ErrorCode} that caused the error.
+     * @param msg           the message that should be used as reason for the error, may be {@code null}.
+     * @param fireException {@code true} if we should also fire the {@link Http3Exception} through the pipeline.
+     */
+    static void connectionError(ChannelHandlerContext ctx, Http3ErrorCode errorCode,
+                                String msg, boolean fireException) {
+         if (fireException) {
+             ctx.fireExceptionCaught(new Http3Exception(errorCode, msg));
+         }
+         connectionError(ctx, errorCode, msg);
+    }
+
+    private static void connectionError(ChannelHandlerContext ctx, Http3ErrorCode errorCode, String msg) {
+        QuicChannel parent = (QuicChannel) ctx.channel().parent();
         final ByteBuf buffer;
         if (msg != null) {
-            buffer = parent.alloc().directBuffer();
+            // As we call an operation on the parent we should also use the parents allocator to allocate the buffer.
+            buffer = parent.alloc().buffer();
             buffer.writeCharSequence(msg, CharsetUtil.US_ASCII);
         } else {
             buffer = Unpooled.EMPTY_BUFFER;

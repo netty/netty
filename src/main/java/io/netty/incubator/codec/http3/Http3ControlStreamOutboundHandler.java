@@ -67,7 +67,7 @@ final class Http3ControlStreamOutboundHandler
 
     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
     private void criticalStreamClosed(ChannelHandlerContext ctx) {
-        Http3CodecUtils.closeParent(
-                ctx.channel(), Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical stream closed.");
+        Http3CodecUtils.connectionError(
+                ctx, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical stream closed.", false);
     }
 }

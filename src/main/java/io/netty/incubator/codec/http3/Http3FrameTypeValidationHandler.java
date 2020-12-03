@@ -69,6 +69,6 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
 
     static void frameTypeUnexpected(ChannelHandlerContext ctx, Object frame) {
         ReferenceCountUtil.release(frame);
-        Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_FRAME_UNEXPECTED, "Frame type unexpected");
+        Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED, "Frame type unexpected", true);
     }
 }

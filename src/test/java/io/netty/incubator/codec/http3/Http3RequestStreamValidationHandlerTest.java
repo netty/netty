@@ -55,7 +55,11 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
                 newValidationHandler());
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
-        assertFalse(channel.writeInbound(dataFrame));
+        try {
+            channel.writeInbound(dataFrame);
+        } catch (Exception e) {
+            assertException(e);
+        }
         assertFalse(channel.finish());
         verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
         argumentCaptor.getValue().release();
@@ -75,19 +79,23 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         Http3DataFrame dataFrame2 = new DefaultHttp3DataFrame(Unpooled.buffer());
-        Http3DataFrame dat3Frame3 = new DefaultHttp3DataFrame(Unpooled.buffer());
+        Http3DataFrame dataFrame3 = new DefaultHttp3DataFrame(Unpooled.buffer());
         Http3HeadersFrame trailersFrame = new DefaultHttp3HeadersFrame();
 
         assertTrue(channel.writeInbound(headersFrame));
         assertTrue(channel.writeInbound(dataFrame.retainedDuplicate()));
         assertTrue(channel.writeInbound(dataFrame2.retainedDuplicate()));
         assertTrue(channel.writeInbound(trailersFrame));
-        assertTrue(channel.writeInbound(dat3Frame3));
+        try {
+            channel.writeInbound(dataFrame3);
+        } catch (Exception e) {
+            assertException(e);
+        }
 
         assertTrue(channel.finish());
         verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
         argumentCaptor.getValue().release();
-        assertEquals(0, dat3Frame3.refCnt());
+        assertEquals(0, dataFrame3.refCnt());
 
         assertFrame(headersFrame, channel.readInbound());
         assertFrame(dataFrame, channel.readInbound());

@@ -18,7 +18,6 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 
 final class QpackStreamHandler extends ChannelInboundHandlerAdapter {
@@ -62,7 +61,7 @@ final class QpackStreamHandler extends ChannelInboundHandlerAdapter {
 
     // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
     private void criticalStreamClosed(ChannelHandlerContext ctx) {
-        Http3CodecUtils.closeParent((QuicStreamChannel) ctx.channel(),
-                Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical QPACK stream closed.");
+        Http3CodecUtils.connectionError(ctx,
+                Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical QPACK stream closed.", false);
     }
 }

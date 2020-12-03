@@ -41,8 +41,8 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             firstFrame = false;
         }
         if (firstFrame && !(frame instanceof Http3SettingsFrame)) {
-            Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_MISSING_SETTINGS,
-                    "Missing settings frame.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
+                    "Missing settings frame.", forwardControlFrames);
         } else if (frame instanceof Http3SettingsFrame) {
             // TODO: handle this.
             Http3SettingsFrame settingsFrame = (Http3SettingsFrame) frame;
@@ -53,11 +53,11 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             Http3GoAwayFrame goAwayFrame = (Http3GoAwayFrame) frame;
             long id = goAwayFrame.id();
             if (!server && id % 4 != 0) {
-                Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                        "GOAWAY received with ID of non-request stream.");
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                        "GOAWAY received with ID of non-request stream.", forwardControlFrames);
             } else if (receivedGoawayId != null && id > receivedGoawayId) {
-                Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_ID_ERROR,
-                        "GOAWAY received with ID larger than previously received.");
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                        "GOAWAY received with ID larger than previously received.", forwardControlFrames);
             } else {
                 receivedGoawayId = id;
             }
@@ -65,11 +65,11 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             long id = ((Http3MaxPushIdFrame) frame).id();
 
             if (!server) {
-                Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                        "MAX_PUSH_ID received by client.");
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                        "MAX_PUSH_ID received by client.", forwardControlFrames);
             } else if (receivedMaxPushId != 0 && id < receivedMaxPushId) {
-                Http3CodecUtils.closeParent(ctx.channel(), Http3ErrorCode.H3_ID_ERROR,
-                        "MAX_PUSH_ID reduced limit.");
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                        "MAX_PUSH_ID reduced limit.", forwardControlFrames);
             } else {
                 receivedMaxPushId = id;
             }
@@ -90,7 +90,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.fireChannelReadComplete();
 
         // control streams should always be processed, no matter what the user is doing in terms of

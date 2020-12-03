@@ -43,6 +43,10 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         this.controlStreamHandler = controlStreamHandler;
     }
 
+    private boolean isForwardingEvents() {
+        return controlStreamHandler != null;
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!in.isReadable()) {
@@ -53,9 +57,8 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             return;
         }
         long type = Http3CodecUtils.readVariableLengthInteger(in, len);
-        QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
         if (type == 0x00) {
-            initControlStream(streamChannel);
+            initControlStream(ctx);
             // Replace this handler with the codec now.
             replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x01) {
@@ -64,20 +67,20 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
                 return;
             }
             long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
-            initPushStream(streamChannel, pushId);
+            initPushStream(ctx, pushId);
             // Replace this handler with the codec now.
             replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x02) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
-            initQpackEncoderStream(streamChannel);
+            initQpackEncoderStream(ctx);
             // Replace this handler with the codec now.
             replaceThisWithCodec(ctx.pipeline());
         } else if (type == 0x03) {
             // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
-            initQpackDecoderStream(streamChannel);
+            initQpackDecoderStream(ctx);
             // Replace this handler with the codec now.
             replaceThisWithCodec(ctx.pipeline());
-        } else if (initUnknownStream((QuicStreamChannel) ctx.channel(), type, in)) {
+        } else if (initUnknownStream(ctx, type, in)) {
             // Ensure we add the encoder / decoder in the right place.
             replaceThisWithCodec(ctx.pipeline());
         }
@@ -92,20 +95,20 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * Called if the current {@link QuicStreamChannel} is a
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1">control stream</a>.
      */
-    private void initControlStream(QuicStreamChannel channel) {
+    private void initControlStream(ChannelHandlerContext ctx) {
         if (remoteControlStream == null) {
-            remoteControlStream = channel;
-            boolean forwardControlStreamFrames = controlStreamHandler != null;
-            channel.pipeline().addLast(new Http3ControlStreamInboundHandler(server, forwardControlStreamFrames));
+            remoteControlStream = (QuicStreamChannel) ctx.channel();
+            boolean forwardControlStreamFrames = isForwardingEvents();
+            ctx.pipeline().addLast(new Http3ControlStreamInboundHandler(server, forwardControlStreamFrames));
             if (forwardControlStreamFrames) {
                 // The user want's to be notified about control frames, add the handler to the pipeline.
-                channel.pipeline().addLast(controlStreamHandler);
+                ctx.pipeline().addLast(controlStreamHandler);
             }
         } else {
             // Only one control stream is allowed.
             // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1
-            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
-                    "Received multiple control streams.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                    "Received multiple control streams.", false);
         }
     }
 
@@ -113,10 +116,10 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * Called if the current {@link QuicStreamChannel} is a
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.2">push stream</a>.
      */
-    private void initPushStream(QuicStreamChannel channel, long id) {
+    private void initPushStream(ChannelHandlerContext ctx, long id) {
         if (server) {
-            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
-                    "Server received push stream.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                    "Server received push stream.", false);
         } else {
             // TODO: Handle me
         }
@@ -126,16 +129,16 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * <a href="https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#name-encoder-and-decoder-streams">
      *     QPACK encoder stream</a>.
      */
-    private void initQpackEncoderStream(QuicStreamChannel channel) {
+    private void initQpackEncoderStream(ChannelHandlerContext ctx) {
         if (qpackEncoderStream == null) {
-            qpackEncoderStream = channel;
+            qpackEncoderStream = (QuicStreamChannel) ctx.channel();
             // Just drop stuff on the floor as we dont support dynamic table atm.
-            channel.pipeline().addLast(QpackStreamHandler.INSTANCE);
+            ctx.pipeline().addLast(QpackStreamHandler.INSTANCE);
         } else {
             // Only one stream is allowed.
             // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
-                    "Received multiple QPACK encoder streams.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                    "Received multiple QPACK encoder streams.", false);
         }
     }
     /**
@@ -143,26 +146,26 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * <a href="https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#name-encoder-and-decoder-streams">
      *     QPACK decoder stream</a>.
      */
-    private void initQpackDecoderStream(QuicStreamChannel channel) {
+    private void initQpackDecoderStream(ChannelHandlerContext ctx) {
         if (qpackDecoderStream == null) {
-            qpackDecoderStream = channel;
+            qpackDecoderStream = (QuicStreamChannel) ctx.channel();
             // Just drop stuff on the floor as we dont support dynamic table atm.
-            channel.pipeline().addLast(QpackStreamHandler.INSTANCE);
+            ctx.pipeline().addLast(QpackStreamHandler.INSTANCE);
         } else {
             // Only one stream is allowed.
             // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-            Http3CodecUtils.closeParent(channel, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
-                    "Received multiple QPACK decoder streams.");
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                    "Received multiple QPACK decoder streams.", false);
         }
     }
 
     /**
      * Called if we couldn't detect the stream type of the current  {@link QuicStreamChannel}.
      */
-    protected boolean initUnknownStream(QuicStreamChannel channel,
+    protected boolean initUnknownStream(ChannelHandlerContext ctx,
                                      @SuppressWarnings("unused") long streamType,
                                      @SuppressWarnings("unused") ByteBuf in) throws Exception {
-        channel.close();
+        ctx.close();
         return true;
     }
 }
