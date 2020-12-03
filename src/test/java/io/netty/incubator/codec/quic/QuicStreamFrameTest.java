@@ -17,9 +17,9 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -44,7 +44,7 @@ public class QuicStreamFrameTest {
         Channel server = null;
         Channel channel = null;
         try {
-            StreamHandler handler = new StreamHandler();
+            StreamHandler handler = new StreamHandler(type);
             server = QuicTestUtils.newServer(null, handler);
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -77,7 +77,7 @@ public class QuicStreamFrameTest {
                 public void channelActive(ChannelHandlerContext ctx)  {
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(ChannelFutureListener.CLOSE);
+                            .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                 }
             });
         }
@@ -85,6 +85,12 @@ public class QuicStreamFrameTest {
 
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
         private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
+        private final QuicStreamType type;
+
+        StreamHandler(QuicStreamType type) {
+            this.type = type;
+        }
+
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
             ctx.channel().config().setOption(QuicChannelOption.READ_FRAMES, true);
@@ -93,9 +99,17 @@ public class QuicStreamFrameTest {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            queue.add(2);
+            queue.add(3);
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                queue.add(2);
+                ctx.channel().parent().close();
+            }
         }
 
         @Override
@@ -114,7 +128,13 @@ public class QuicStreamFrameTest {
         void assertSequence() throws Exception {
             assertEquals(0, (int) queue.take());
             assertEquals(1, (int) queue.take());
-            assertEquals(2, (int) queue.take());
+
+            if (type == QuicStreamType.BIDIRECTIONAL) {
+                // ChannelInputShutdownReadComplete is only triggered for BIDIRECTIONAL as UNIDIRECTIONAL outbound
+                // is not readable by design.
+                assertEquals(2, (int) queue.take());
+            }
+            assertEquals(3, (int) queue.take());
             assertTrue(queue.isEmpty());
         }
     }

@@ -568,7 +568,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    void streamClose(long streamId) throws Exception {
+    void streamSendFin(long streamId) throws Exception {
         try {
             // Just write an empty buffer and set fin to true.
             Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, true));

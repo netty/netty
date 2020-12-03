@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.ReferenceCountUtil;
 
 import org.junit.Test;
@@ -116,6 +117,14 @@ public class QuicStreamChannelCloseTest {
         public void channelInactive(ChannelHandlerContext ctx) {
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                // Received a FIN
+                ctx.close();
+            }
         }
 
         @Override

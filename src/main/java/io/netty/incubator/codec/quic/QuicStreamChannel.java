@@ -15,12 +15,20 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.socket.DuplexChannel;
 
 /**
  * A QUIC stream.
  */
 public interface QuicStreamChannel extends DuplexChannel {
+
+    /**
+     * Should be added to a {@link ChannelFuture} when the FIN should be sent to the remote peer and no more
+     * writes will happen.
+     */
+    ChannelFutureListener SHUTDOWN_OUTPUT = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
 
     @Override
     QuicStreamAddress localAddress();
