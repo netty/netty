@@ -18,6 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
@@ -42,6 +44,14 @@ public class Http3FrameEncoderDecoderTest {
 
     public Http3FrameEncoderDecoderTest(boolean fragmented) {
         this.fragmented = fragmented;
+    }
+
+    protected ChannelOutboundHandler newEncoder() {
+        return new Http3FrameEncoder(new QpackEncoder());
+    }
+
+    protected ChannelInboundHandler newDecoder() {
+        return new Http3FrameDecoder(new QpackDecoder(), Long.MAX_VALUE);
     }
 
     @Test
@@ -137,8 +147,8 @@ public class Http3FrameEncoderDecoderTest {
     }
 
     private void testFrameEncodedAndDecoded(Http3Frame frame) {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(new Http3FrameEncoder(new QpackEncoder()));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new Http3FrameDecoder(new QpackDecoder(), 1024));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(newEncoder());
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(newDecoder());
 
         assertTrue(encoderChannel.writeOutbound(retainAndDuplicate(frame)));
         ByteBuf buffer = encoderChannel.readOutbound();
