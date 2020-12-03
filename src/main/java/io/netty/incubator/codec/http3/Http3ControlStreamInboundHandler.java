@@ -43,6 +43,8 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
         if (firstFrame && !(frame instanceof Http3SettingsFrame)) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
                     "Missing settings frame.", forwardControlFrames);
+            ReferenceCountUtil.release(frame);
+            return;
         } else if (frame instanceof Http3SettingsFrame) {
             // TODO: handle this.
             Http3SettingsFrame settingsFrame = (Http3SettingsFrame) frame;
@@ -55,9 +57,13 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             if (!server && id % 4 != 0) {
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
                         "GOAWAY received with ID of non-request stream.", forwardControlFrames);
+                ReferenceCountUtil.release(frame);
+                return;
             } else if (receivedGoawayId != null && id > receivedGoawayId) {
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
                         "GOAWAY received with ID larger than previously received.", forwardControlFrames);
+                ReferenceCountUtil.release(frame);
+                return;
             } else {
                 receivedGoawayId = id;
             }
@@ -67,9 +73,13 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             if (!server) {
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
                         "MAX_PUSH_ID received by client.", forwardControlFrames);
-            } else if (receivedMaxPushId != 0 && id < receivedMaxPushId) {
+                ReferenceCountUtil.release(frame);
+                return;
+            } else if (receivedMaxPushId != null && id < receivedMaxPushId) {
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
                         "MAX_PUSH_ID reduced limit.", forwardControlFrames);
+                ReferenceCountUtil.release(frame);
+                return;
             } else {
                 receivedMaxPushId = id;
             }

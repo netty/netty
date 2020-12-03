@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class Http3FrameEncoderDecoderTest {
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{index}: fragmented = {0}")
     public static Object[] parameters() {
         return new Object[] { false, true };
     }

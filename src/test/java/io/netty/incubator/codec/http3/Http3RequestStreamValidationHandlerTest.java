@@ -26,10 +26,14 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -40,8 +44,13 @@ import static org.mockito.Mockito.when;
 
 public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValidationHandlerTest {
     @Override
-    protected Http3FrameTypeValidationHandler<Http3RequestStreamFrame> newValidationHandler() {
+    protected Http3FrameTypeValidationHandler<Http3RequestStreamFrame> newHandler() {
         return new Http3RequestStreamValidationHandler(true);
+    }
+
+    @Override
+    protected List<Http3RequestStreamFrame> newValidFrames() {
+        return Arrays.asList(new DefaultHttp3HeadersFrame(), new DefaultHttp3DataFrame(Unpooled.directBuffer()));
     }
 
     @Test
@@ -53,12 +62,13 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
 
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                newValidationHandler());
+                newHandler());
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         try {
             channel.writeInbound(dataFrame);
+            fail();
         } catch (Exception e) {
-            assertException(e);
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
         assertFalse(channel.finish());
         verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
@@ -75,7 +85,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
 
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                newValidationHandler());
+                newHandler());
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         Http3DataFrame dataFrame2 = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -88,8 +98,9 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.writeInbound(trailersFrame));
         try {
             channel.writeInbound(dataFrame3);
+            fail();
         } catch (Exception e) {
-            assertException(e);
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
 
         assertTrue(channel.finish());
@@ -106,13 +117,14 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testInvalidFrameSequenceStartOutbound() {
-        EmbeddedChannel channel = new EmbeddedChannel(newValidationHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
 
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         try {
             channel.writeOutbound(dataFrame);
+            fail();
         } catch (Exception e) {
-            assertException(e);
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
         assertFalse(channel.finish());
         assertEquals(0, dataFrame.refCnt());
@@ -120,7 +132,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testInvalidFrameSequenceEndOutbound() {
-        EmbeddedChannel channel = new EmbeddedChannel(newValidationHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -134,8 +146,9 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
         try {
             channel.writeOutbound(dat3Frame3);
+            fail();
         } catch (Exception e) {
-            assertException(e);
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
         assertTrue(channel.finish());
         assertEquals(0, dat3Frame3.refCnt());
