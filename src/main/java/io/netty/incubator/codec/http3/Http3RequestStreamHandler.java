@@ -27,8 +27,8 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
  */
 public abstract class Http3RequestStreamHandler extends ChannelInboundHandlerAdapter {
     private static final Http3DataFrame EMPTY = new DefaultHttp3DataFrame(Unpooled.EMPTY_BUFFER);
-    private boolean notified;
-    private boolean requestStarted;
+    private boolean lastFrameDetected;
+    private boolean firstFrameReceived;
 
     /**
      * Always returns {@code true} as this handler and sub-types are not sharable, due internal state.
@@ -40,18 +40,19 @@ public abstract class Http3RequestStreamHandler extends ChannelInboundHandlerAda
 
     @Override
     public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        requestStarted = true;
-        if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
-            notified = true;
+        firstFrameReceived = true;
+        boolean inputShutdown = ((QuicStreamChannel) ctx.channel()).isInputShutdown();
+        if (inputShutdown) {
+            lastFrameDetected = true;
         }
-        channelRead(ctx, (Http3RequestStreamFrame) msg, ((QuicStreamChannel) ctx.channel()).isInputShutdown());
+        channelRead(ctx, (Http3RequestStreamFrame) msg, inputShutdown);
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt == ChannelInputShutdownEvent.INSTANCE) {
-            if (!notified && requestStarted) {
-                notified = true;
+            if (!lastFrameDetected && firstFrameReceived) {
+                lastFrameDetected = true;
                 channelRead(ctx, EMPTY, true);
             }
         }

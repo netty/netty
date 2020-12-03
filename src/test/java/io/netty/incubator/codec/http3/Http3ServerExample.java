@@ -75,7 +75,7 @@ public final class Http3ServerExample {
                                                 if (isLast) {
                                                     ctx.writeAndFlush(new DefaultHttp3DataFrame(
                                                             Unpooled.wrappedBuffer(CONTENT)))
-                                                            .addListener(ChannelFutureListener.CLOSE);
+                                                            .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                                                 }
                                                 ReferenceCountUtil.release(frame);
                                             }

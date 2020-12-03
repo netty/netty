@@ -46,7 +46,7 @@ public final class Http3 {
 
     /**
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2">
-     *     Minimum data for unidirectional streams</a>.
+     *     Minimum max data for unidirectional streams</a>.
      */
     public static final int MIN_INITIAL_MAX_STREAM_DATA_UNIDIRECTIONAL = 1024;
 
@@ -67,6 +67,6 @@ public final class Http3 {
     private static <T extends QuicCodecBuilder<T>> T configure(T builder) {
         return builder.initialMaxStreamsUnidirectional(MIN_INITIAL_MAX_STREAMS_UNIDIRECTIONAL)
                 .initialMaxStreamDataUnidirectional(MIN_INITIAL_MAX_STREAM_DATA_UNIDIRECTIONAL)
-                .applicationProtocols(H3_PROTOS);
+                .applicationProtocols(supportedApplicationProtocols());
     }
 }
