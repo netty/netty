@@ -1,0 +1,8 @@
+brew 'autoconf'
+brew 'automake'
+brew 'libtool'
+brew 'perl'
+brew 'ninja'
+brew 'golang'
+brew 'cmake'
+brew 'rust'
