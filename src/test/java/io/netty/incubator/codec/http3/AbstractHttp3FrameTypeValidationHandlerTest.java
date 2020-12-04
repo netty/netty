@@ -15,33 +15,23 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.ReferenceCounted;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
+import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
+import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 
 public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http3Frame> {
 
@@ -53,24 +43,24 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testValidTypeInbound() {
-        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
+        EmbeddedChannel channel = newChannel(newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeInbound(valid));
             T read = channel.readInbound();
-            assertSame(valid, read);
+            assertFrameSame(valid, read);
         }
         assertFalse(channel.finish());
     }
 
     @Test
     public void testValidTypeOutput() {
-        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
+        EmbeddedChannel channel = newChannel(newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeOutbound(valid));
             T read = channel.readOutbound();
-            assertSame(valid, read);
+            assertFrameSame(valid, read);
         }
         assertFalse(channel.finish());
     }
@@ -78,8 +68,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
     @Test
     public void testInvalidTypeInbound() {
         QuicChannel parent = mockParent();
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                newHandler());
+        EmbeddedChannel channel = newChannel(parent, newHandler());
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
@@ -89,9 +78,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
             } catch (Exception e) {
                 assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
             }
-            if (invalid instanceof ReferenceCounted) {
-                assertEquals(0, ((ReferenceCounted) invalid).refCnt());
-            }
+            assertFrameReleased(invalid);
         }
         verifyClose(invalidFrames.size(), Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertFalse(channel.finish());
@@ -99,7 +86,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testInvalidTypeOutput() {
-        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
+        EmbeddedChannel channel = newChannel(newHandler());
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
@@ -107,42 +94,18 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
                 channel.writeOutbound(invalid);
                 fail();
             } catch (Exception e) {
-                assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
+                Http3TestUtils.assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
             }
-            if (invalid instanceof ReferenceCounted) {
-                assertEquals(0, ((ReferenceCounted) invalid).refCnt());
-            }
+            assertFrameReleased(invalid);
         }
         assertFalse(channel.finish());
     }
 
-    protected static void assertException(Http3ErrorCode code, Exception e) {
-        MatcherAssert.assertThat(e, CoreMatchers.instanceOf(Http3Exception.class));
-        Http3Exception exception = (Http3Exception) e;
-        assertEquals(code, exception.errorCode());
+    private EmbeddedChannel newChannel(Http3FrameTypeValidationHandler<T> handler) {
+        return newChannel(null, handler);
     }
 
-    protected void verifyClose(Http3ErrorCode expectedCode, QuicChannel parent) {
-        verifyClose(1, expectedCode, parent);
-    }
-
-    protected void verifyClose(int times, Http3ErrorCode expectedCode, QuicChannel parent) {
-        ArgumentCaptor<ByteBuf> argumentCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        try {
-            verify(parent, times(times)).close(eq(true),
-                    eq(expectedCode.code), argumentCaptor.capture());
-        } finally {
-            for (ByteBuf buffer : argumentCaptor.getAllValues()) {
-                buffer.release();
-            }
-        }
-    }
-
-    protected static QuicChannel mockParent() {
-        QuicChannel parent = mock(QuicChannel.class);
-        when(parent.close(anyBoolean(), anyInt(),
-                any(ByteBuf.class))).thenReturn(new DefaultChannelPromise(parent));
-        when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
-        return parent;
+    protected EmbeddedChannel newChannel(Channel parent, Http3FrameTypeValidationHandler<T> handler) {
+        return new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false, handler);
     }
 }

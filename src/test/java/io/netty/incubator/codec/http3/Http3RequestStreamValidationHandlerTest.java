@@ -15,32 +15,25 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
+import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
+import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValidationHandlerTest {
     @Override
@@ -55,12 +48,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testInvalidFrameSequenceStartInbound() {
-        QuicChannel parent = mock(QuicChannel.class);
-        ArgumentCaptor<ByteBuf> argumentCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        when(parent.close(anyBoolean(), anyInt(),
-                any(ByteBuf.class))).thenReturn(new DefaultChannelPromise(parent));
-        when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
-
+        QuicChannel parent = mockParent();
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
                 newHandler());
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -70,19 +58,14 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         } catch (Exception e) {
             assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
-        assertFalse(channel.finish());
-        verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
-        argumentCaptor.getValue().release();
+        verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertEquals(0, dataFrame.refCnt());
+        assertFalse(channel.finish());
     }
 
     @Test
     public void testInvalidFrameSequenceEndInbound() {
-        QuicChannel parent = mock(QuicChannel.class);
-        ArgumentCaptor<ByteBuf> argumentCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        when(parent.close(anyBoolean(), anyInt(),
-                any(ByteBuf.class))).thenReturn(new DefaultChannelPromise(parent));
-        when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        QuicChannel parent = mockParent();
 
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
                 newHandler());
@@ -103,15 +86,14 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
             assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         }
 
+        verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertTrue(channel.finish());
-        verify(parent).close(eq(true), eq(Http3ErrorCode.H3_FRAME_UNEXPECTED.code), argumentCaptor.capture());
-        argumentCaptor.getValue().release();
         assertEquals(0, dataFrame3.refCnt());
 
-        assertFrame(headersFrame, channel.readInbound());
-        assertFrame(dataFrame, channel.readInbound());
-        assertFrame(dataFrame2, channel.readInbound());
-        assertFrame(trailersFrame, channel.readInbound());
+        assertFrameEquals(headersFrame, channel.readInbound());
+        assertFrameEquals(dataFrame, channel.readInbound());
+        assertFrameEquals(dataFrame2, channel.readInbound());
+        assertFrameEquals(trailersFrame, channel.readInbound());
         assertNull(channel.readInbound());
     }
 
@@ -153,19 +135,10 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.finish());
         assertEquals(0, dat3Frame3.refCnt());
 
-        assertFrame(headersFrame, channel.readOutbound());
-        assertFrame(dataFrame, channel.readOutbound());
-        assertFrame(dataFrame2, channel.readOutbound());
-        assertFrame(trailersFrame, channel.readOutbound());
+        assertFrameEquals(headersFrame, channel.readOutbound());
+        assertFrameEquals(dataFrame, channel.readOutbound());
+        assertFrameEquals(dataFrame2, channel.readOutbound());
+        assertFrameEquals(trailersFrame, channel.readOutbound());
         assertNull(channel.readOutbound());
-    }
-
-    private static void assertFrame(Http3Frame expected, Http3Frame actual) {
-        try {
-            assertEquals(expected, actual);
-        } finally {
-            ReferenceCountUtil.release(expected);
-            ReferenceCountUtil.release(actual);
-        }
     }
 }

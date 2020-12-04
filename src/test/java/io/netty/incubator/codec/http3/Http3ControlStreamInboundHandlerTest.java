@@ -18,8 +18,6 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -29,11 +27,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
+import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
+import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
 public class Http3ControlStreamInboundHandlerTest extends
@@ -102,7 +103,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testValidGoAwayFrame() {
-        QuicChannel parent = mock(QuicChannel.class);
+        QuicChannel parent = mockParent();
         EmbeddedChannel channel = newInitChannel(parent);
         writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
         writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
@@ -167,7 +168,9 @@ public class Http3ControlStreamInboundHandlerTest extends
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         assertEquals(forwardControlFrames, channel.writeInbound(settingsFrame));
         if (forwardControlFrames) {
-            assertSame(settingsFrame, channel.readInbound());
+            assertFrameSame(settingsFrame, channel.readInbound());
+        } else {
+            assertFrameReleased(settingsFrame);
         }
         return channel;
     }
@@ -175,12 +178,9 @@ public class Http3ControlStreamInboundHandlerTest extends
     private void writeValidFrame(EmbeddedChannel channel, Http3ControlStreamFrame controlStreamFrame) {
         assertEquals(forwardControlFrames, channel.writeInbound(controlStreamFrame));
         if (forwardControlFrames) {
-            assertSame(controlStreamFrame, channel.readInbound());
-            ReferenceCountUtil.release(controlStreamFrame);
+            assertFrameSame(controlStreamFrame, channel.readInbound());
         } else {
-            if (controlStreamFrame instanceof ReferenceCounted) {
-                assertEquals(0, ((ReferenceCounted) controlStreamFrame).refCnt());
-            }
+            assertFrameReleased(controlStreamFrame);
         }
     }
 
@@ -195,9 +195,7 @@ public class Http3ControlStreamInboundHandlerTest extends
             }
         } else {
             assertFalse(channel.writeInbound(controlStreamFrame));
-            if (controlStreamFrame instanceof ReferenceCounted) {
-                assertEquals(0, ((ReferenceCounted) controlStreamFrame).refCnt());
-            }
         }
+        assertFrameReleased(controlStreamFrame);
     }
 }

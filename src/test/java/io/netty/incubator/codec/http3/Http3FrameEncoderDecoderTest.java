@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -163,9 +162,7 @@ public class Http3FrameEncoderDecoderTest {
             assertTrue(decoderChannel.writeInbound(buffer));
         }
         Http3Frame readFrame = decoderChannel.readInbound();
-        assertEquals(frame, readFrame);
-        ReferenceCountUtil.release(readFrame);
-        ReferenceCountUtil.release(frame);
+        Http3TestUtils.assertFrameEquals(frame, readFrame);
         assertFalse(encoderChannel.finish());
         assertFalse(decoderChannel.finish());
     }

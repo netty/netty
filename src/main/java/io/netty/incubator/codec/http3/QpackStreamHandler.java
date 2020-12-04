@@ -48,20 +48,16 @@ final class QpackStreamHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof ChannelInputShutdownEvent) {
-            criticalStreamClosed(ctx);
+            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+            Http3CodecUtils.criticalStreamClosed(ctx);
         }
         ctx.fireUserEventTriggered(evt);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        criticalStreamClosed(ctx);
+        // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+        Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
-    }
-
-    // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
-    private void criticalStreamClosed(ChannelHandlerContext ctx) {
-        Http3CodecUtils.connectionError(ctx,
-                Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical QPACK stream closed.", false);
     }
 }

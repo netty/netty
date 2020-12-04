@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.ObjectUtil;
@@ -26,10 +27,10 @@ import java.util.function.Supplier;
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
     private final Http3SettingsFrame localSettings;
-    private final Supplier<Http3FrameCodec> codecSupplier;
+    private final Supplier<? extends ChannelHandler> codecSupplier;
 
     Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings,
-                                      Supplier<Http3FrameCodec> codecSupplier) {
+                                      Supplier<? extends ChannelHandler> codecSupplier) {
         super(Http3ControlStreamFrame.class);
         this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
         this.codecSupplier = ObjectUtil.checkNotNull(codecSupplier, "codecSupplier");
@@ -54,20 +55,16 @@ final class Http3ControlStreamOutboundHandler
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof ChannelInputShutdownEvent) {
-            criticalStreamClosed(ctx);
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
+            Http3CodecUtils.criticalStreamClosed(ctx);
         }
         ctx.fireUserEventTriggered(evt);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        criticalStreamClosed(ctx);
+        // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
+        Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
-    }
-
-    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
-    private void criticalStreamClosed(ChannelHandlerContext ctx) {
-        Http3CodecUtils.connectionError(
-                ctx, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical stream closed.", false);
     }
 }

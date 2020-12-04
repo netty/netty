@@ -133,6 +133,14 @@ final class Http3CodecUtils {
         return 1;
     }
 
+    static void criticalStreamClosed(ChannelHandlerContext ctx) {
+        if (ctx.channel().parent().isActive()) {
+            // Stream was closed while the parent channel is still active
+            Http3CodecUtils.connectionError(
+                    ctx, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, "Critical stream closed.", false);
+        }
+    }
+
     /**
      * A connection-error should be handled as defined in the HTTP3 spec.
      * @param ctx           the {@link ChannelHandlerContext} of the handle that handles it.
