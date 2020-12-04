@@ -19,9 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -115,11 +117,12 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                     "Server received push stream.", false);
         } else {
-            // TODO: Handle me
-            // Replace this handler with the codec now.
-            replaceThisWithCodec(ctx.pipeline());
+            // TODO: Handle push streams correctly
+            // Replace this handler with a handler that just drops bytes on the floor.
+            ctx.pipeline().replace(this, null, ReleaseHandler.INSTANCE);
         }
     }
+
     /**
      * Called if the current {@link Channel} is a
      * <a href="https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#name-encoder-and-decoder-streams">
@@ -160,5 +163,19 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
                                      @SuppressWarnings("unused") long streamType,
                                      @SuppressWarnings("unused") ByteBuf in) throws Exception {
         ctx.close();
+    }
+
+    private static final class ReleaseHandler extends ChannelInboundHandlerAdapter {
+        static final ReleaseHandler INSTANCE = new ReleaseHandler();
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ReferenceCountUtil.release(msg);
+        }
     }
 }

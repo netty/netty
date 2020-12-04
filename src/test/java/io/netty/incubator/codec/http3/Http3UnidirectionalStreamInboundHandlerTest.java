@@ -50,6 +50,36 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
+    public void testUnkownStream() {
+        EmbeddedChannel channel = newChannel();
+        ByteBuf buffer = Unpooled.buffer(8);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x06);
+        assertFalse(channel.writeInbound(buffer));
+        assertEquals(0, buffer.refCnt());
+        assertNull(channel.pipeline().context(Http3UnidirectionalStreamInboundHandler.class));
+        assertFalse(channel.isActive());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testPushStream() {
+        EmbeddedChannel channel = newChannel();
+        ByteBuf buffer = Unpooled.buffer(8);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x01);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
+        assertFalse(channel.writeInbound(buffer));
+        assertEquals(0, buffer.refCnt());
+        if (server) {
+            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
+        } else {
+            ByteBuf b = Unpooled.buffer();
+            assertFalse(channel.writeInbound(b));
+            assertEquals(0, b.refCnt());
+        }
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testControlStream() {
         testStreamSetup(0x00, Http3ControlStreamInboundHandler.class, true);
     }
@@ -65,18 +95,12 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     private void testStreamSetup(long type, Class<? extends ChannelHandler> clazz, boolean hasCodec) {
-        QuicChannel parent = Http3TestUtils.mockParent();
-        AttributeMap map = new DefaultAttributeMap();
-        when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
-        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(true,
-                CodecHandler::new, null);
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
-                true, false, handler);
+        EmbeddedChannel channel = newChannel();
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
-        assertNull(channel.pipeline().context(handler));
+        assertNull(channel.pipeline().context(Http3UnidirectionalStreamInboundHandler.class));
         assertNotNull(channel.pipeline().context(clazz));
         if (hasCodec) {
             assertNotNull(channel.pipeline().context(CodecHandler.class));
@@ -85,7 +109,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         }
         assertFalse(channel.finish());
 
-        channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+        channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
                 true, false, new Http3UnidirectionalStreamInboundHandler(server,
                 CodecHandler::new, null));
 
@@ -94,8 +118,18 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
-        Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, parent);
+        Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
         assertFalse(channel.finish());
+    }
+
+    private EmbeddedChannel newChannel() {
+        QuicChannel parent = Http3TestUtils.mockParent();
+        AttributeMap map = new DefaultAttributeMap();
+        when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
+        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(true,
+                CodecHandler::new, null);
+        return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, handler);
     }
 
     private static final class CodecHandler extends ChannelHandlerAdapter {  }
