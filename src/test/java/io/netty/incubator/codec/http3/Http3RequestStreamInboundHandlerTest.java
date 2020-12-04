@@ -28,11 +28,11 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
 
-public class Http3RequestStreamHandlerTest {
+public class Http3RequestStreamInboundHandlerTest {
 
     @Test
     public void testDetectLastViaIsShutdown() {
-        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamHandler());
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamInboundHandler());
         assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
         channel.shutdownInput();
@@ -45,7 +45,7 @@ public class Http3RequestStreamHandlerTest {
 
     @Test
     public void testDetectLastViaUserEvent() {
-        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamHandler());
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamInboundHandler());
         assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
@@ -64,7 +64,7 @@ public class Http3RequestStreamHandlerTest {
         assertEquals(isLast, channel.readInbound());
     }
 
-    private static final class TestHttp3RequestStreamHandler extends Http3RequestStreamHandler {
+    private static final class TestHttp3RequestStreamInboundHandler extends Http3RequestStreamInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, boolean isLast) {
             ctx.fireChannelRead(frame);
