@@ -390,6 +390,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
                 Quiche.memoryAddress(reason) + reason.readerIndex(), reason.readableBytes()));
+
+        // As we called quiche_conn_close(...) we need to ensure we will call quiche_conn_send(...) either
+        // now or we will do so once we see the channelReadComplete event.
+        //
+        // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.close
+        tryConnectionSend();
     }
 
     @Override
