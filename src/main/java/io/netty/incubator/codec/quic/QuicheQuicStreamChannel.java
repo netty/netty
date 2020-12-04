@@ -401,11 +401,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
             if (readFrames && finReceived && finSent) {
                 close(voidPromise());
-            } else if (config.isAllowHalfClosure() && type() == QuicStreamType.BIDIRECTIONAL && active) {
-                // If we receive a fin there will be no more data to read so we need to fire both events
-                // to be consistent with other transports.
-                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+            } else if (config.isAllowHalfClosure()) {
+                if (finReceived) {
+                    // If we receive a fin there will be no more data to read so we need to fire both events
+                    // to be consistent with other transports.
+                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                    if (finSent) {
+                        // This was an unidirectional stream which means as soon as we received FIN and sent a FIN
+                        // we need close the connection.
+                        close(voidPromise());
+                    }
+                }
             } else {
                 // This was an unidirectional stream which means as soon as we received FIN we need
                 // close the connection.

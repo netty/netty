@@ -89,20 +89,13 @@ public class QuicStreamHalfClosureTest {
 
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
         private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
-        private boolean halfClosureSupported;
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
-            halfClosureSupported = ((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL;
-            assertEquals(halfClosureSupported,
-                    ctx.channel().config().setOption(ChannelOption.ALLOW_HALF_CLOSURE, true));
             queue.add(0);
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            if (!halfClosureSupported) {
-                addIsShutdown(ctx);
-            }
             queue.add(4);
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
@@ -138,10 +131,8 @@ public class QuicStreamHalfClosureTest {
         void assertSequence() throws Exception {
             assertEquals(0, (int) queue.take());
             assertEquals(1, (int) queue.take());
-            if (halfClosureSupported) {
-                assertEquals(2, (int) queue.take());
-                assertEquals(3, (int) queue.take());
-            }
+            assertEquals(2, (int) queue.take());
+            assertEquals(3, (int) queue.take());
             assertEquals(4, (int) queue.take());
             assertTrue(queue.isEmpty());
         }

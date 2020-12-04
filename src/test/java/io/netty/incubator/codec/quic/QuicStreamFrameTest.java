@@ -128,12 +128,7 @@ public class QuicStreamFrameTest {
         void assertSequence() throws Exception {
             assertEquals(0, (int) queue.take());
             assertEquals(1, (int) queue.take());
-
-            if (type == QuicStreamType.BIDIRECTIONAL) {
-                // ChannelInputShutdownReadComplete is only triggered for BIDIRECTIONAL as UNIDIRECTIONAL outbound
-                // is not readable by design.
-                assertEquals(2, (int) queue.take());
-            }
+            assertEquals(2, (int) queue.take());
             assertEquals(3, (int) queue.take());
             assertTrue(queue.isEmpty());
         }
