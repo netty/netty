@@ -26,7 +26,6 @@ import java.util.List;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
-import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
