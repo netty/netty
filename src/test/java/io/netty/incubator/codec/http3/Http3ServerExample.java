@@ -18,7 +18,6 @@ package io.netty.incubator.codec.http3;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -37,7 +36,6 @@ public final class Http3ServerExample {
     private Http3ServerExample() { }
 
     public static void main(String... args) throws Exception {
-
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         ChannelHandler codec = Http3.newQuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
@@ -60,7 +58,7 @@ public final class Http3ServerExample {
                                     // Called for each request-stream,
                                     @Override
                                     protected void initChannel(QuicStreamChannel ch) {
-                                        ch.pipeline().addLast(new Http3RequestStreamHandler() {
+                                        ch.pipeline().addLast(new Http3RequestStreamInboundHandler() {
 
                                             @Override
                                             public void channelRead(ChannelHandlerContext ctx,

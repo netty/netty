@@ -33,8 +33,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler inboundControlStreamHandler;
 
-    // TODO: Use this stream to sent other control frames as well.
-    private QuicStreamChannel localControlStream;
+    private Http3ControlStreamFrameDispatcher controlStreamFrameDispatcher;
 
     /**
      * Create a new instance.
@@ -79,7 +78,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                 // TODO: Handle me the right way.
                 ctx.close();
             } else {
-                localControlStream = (QuicStreamChannel) f.get();
+                controlStreamFrameDispatcher = new Http3ControlStreamFrameDispatcher((QuicStreamChannel) f.get());
             }
         });
 
@@ -91,7 +90,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         QuicStreamChannel channel = (QuicStreamChannel) msg;
         switch (channel.type()) {
             case BIDIRECTIONAL:
-                initBidirectionalStream(channel, codecSupplier);
+                initBidirectionalStream(channel, codecSupplier, controlStreamFrameDispatcher);
                 break;
             case UNIDIRECTIONAL:
                 channel.pipeline().addLast(
@@ -104,7 +103,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         ctx.fireChannelRead(msg);
     }
 
-    abstract void initBidirectionalStream(QuicStreamChannel channel, Supplier<Http3FrameCodec> codecSupplier);
+    abstract void initBidirectionalStream(QuicStreamChannel channel, Supplier<Http3FrameCodec> codecSupplier,
+                                          Http3ControlStreamFrameDispatcher dispatcher);
 
     /**
      * Always returns {@code false} as it keeps state.

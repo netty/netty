@@ -25,7 +25,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
  * {@link ChannelInboundHandlerAdapter} which makes it easy to handle
  * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7">HTTP3 request streams</a>.
  */
-public abstract class Http3RequestStreamHandler extends ChannelInboundHandlerAdapter {
+public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHandlerAdapter {
     private static final Http3DataFrame EMPTY = new DefaultHttp3DataFrame(Unpooled.EMPTY_BUFFER);
     private boolean lastFrameDetected;
     private boolean firstFrameReceived;
