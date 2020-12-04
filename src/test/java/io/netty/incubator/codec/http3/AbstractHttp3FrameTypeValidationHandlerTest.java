@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.util.ReferenceCounted;
 import org.junit.Test;
 
 import java.util.List;
