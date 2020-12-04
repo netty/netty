@@ -67,7 +67,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         writeVariableLengthInteger(out, 0x0);
         writeVariableLengthInteger(out, frame.content().readableBytes());
         ByteBuf content = frame.content().retain();
-        writeBufferToContext(ctx, Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
+        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
     }
 
     private void writeHeadersFrame(
@@ -115,7 +115,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         writeVariableLengthInteger(out, type, typeLength);
 
         out.setIndex(startIndex, finalWriterIndex);
-        writeBufferToContext(ctx, out, promise);
+        ctx.write(out, promise);
     }
 
     private void writePushPromiseFrame(
@@ -142,15 +142,10 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         writeVariableLengthInteger(out, type);
         writeVariableLengthInteger(out, numBytesForVariableLengthInteger(id));
         writeVariableLengthInteger(out, id);
-        writeBufferToContext(ctx, out, promise);
+        ctx.write(out, promise);
     }
 
     private static void unsupported(ChannelPromise promise) {
         promise.setFailure(new UnsupportedOperationException());
-    }
-
-    private static void writeBufferToContext(ChannelHandlerContext ctx, ByteBuf buffer, ChannelPromise promise) {
-        // TODO: Maybe this should be wrapped in a QuicStreamFrame.
-        ctx.write(buffer, promise);
     }
 }
