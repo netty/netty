@@ -411,7 +411,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     final int localWrittenBytes = ch.write(buffer);
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
-                    }else {
+                    } else {
                         adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
                         in.removeBytes(localWrittenBytes);
                     }
@@ -428,10 +428,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     //See https://github.com/netty/netty/issues/10353
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
-                    }else {
+                    } else {
                         // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
-                        adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
-                                maxBytesPerGatheringWrite);
+                        adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,maxBytesPerGatheringWrite);
                         in.removeBytes(localWrittenBytes);
                     }
                     --writeSpinCount;
