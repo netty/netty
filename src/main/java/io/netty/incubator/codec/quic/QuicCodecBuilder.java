@@ -16,7 +16,11 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.util.internal.ObjectUtil;
+
+
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Abstract base class for {@code QUIC} codec builders.
@@ -65,7 +69,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * Set the path to the certificate chain to use.
      */
     public final B certificateChain(String path) {
-        certPath = path;
+        certPath = checkNotNull(path, "path");
         return self();
     }
 
@@ -73,7 +77,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * Set the path to the private key to use.
      */
     public final B privateKey(String path) {
-        keyPath = path;
+        keyPath = checkNotNull(path, "path");
         return self();
     }
 
@@ -117,8 +121,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_idle_timeout">
      *     set_max_idle_timeout</a>.
      */
-    public final B maxIdleTimeout(long nanos) {
-        this.maxIdleTimeout = nanos;
+    public final B maxIdleTimeout(long millis) {
+        this.maxIdleTimeout = checkPositiveOrZero(millis, "value");
         return self();
     }
     /**
@@ -126,7 +130,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_max_udp_payload_size</a>.
      */
     public final B maxUdpPayloadSize(long size) {
-        this.maxUdpPayloadSize = size;
+        this.maxUdpPayloadSize = checkPositiveOrZero(size, "value");
         return self();
     }
 
@@ -135,7 +139,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_data</a>.
      */
     public final B initialMaxData(long value) {
-        this.initialMaxData = value;
+        this.initialMaxData = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -145,7 +149,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_stream_data_bidi_local</a>.
      */
     public final B initialMaxStreamDataBidirectionalLocal(long value) {
-        this.initialMaxStreamDataBidiLocal = value;
+        this.initialMaxStreamDataBidiLocal = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -155,7 +159,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_stream_data_bidi_remote</a>.
      */
     public final B initialMaxStreamDataBidirectionalRemote(long value) {
-        this.initialMaxStreamDataBidiRemote = value;
+        this.initialMaxStreamDataBidiRemote = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -165,7 +169,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_streams_uni</a>.
      */
     public final B initialMaxStreamDataUnidirectional(long value) {
-        this.initialMaxStreamDataUni = value;
+        this.initialMaxStreamDataUni = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -175,7 +179,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_streams_bidi</a>.
      */
     public final B initialMaxStreamsBidirectional(long value) {
-        this.initialMaxStreamsBidi = value;
+        this.initialMaxStreamsBidi = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -185,7 +189,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_initial_max_streams_uni</a>.
      */
     public final B initialMaxStreamsUnidirectional(long value) {
-        this.initialMaxStreamsUni = value;
+        this.initialMaxStreamsUni = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -195,7 +199,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_ack_delay_exponent</a>.
      */
     public final B ackDelayExponent(long value) {
-        this.ackDelayExponent = value;
+        this.ackDelayExponent = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -205,7 +209,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *     set_max_ack_delay</a>.
      */
     public final B maxAckDelay(long value) {
-        this.maxAckDelay = value;
+        this.maxAckDelay = checkPositiveOrZero(value, "value");
         return self();
     }
 
@@ -233,7 +237,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * Sets the local connection id length that is used.
      */
     public final B localConnectionIdLength(int value) {
-        this.localConnIdLength = ObjectUtil.checkInRange(value, 0, Quiche.QUICHE_MAX_CONN_ID_LEN,  "value");
+        this.localConnIdLength = checkInRange(value, 0, Quiche.QUICHE_MAX_CONN_ID_LEN,  "value");
         return self();
     }
 
