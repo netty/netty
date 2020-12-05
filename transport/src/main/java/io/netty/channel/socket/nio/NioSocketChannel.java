@@ -431,7 +431,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     } else {
                         // Casting to int is safe
                         // because we limit the total amount of data in the nioBuffers to int above.
-                        adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes, maxBytesPerGatheringWrite);
+                        adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
+                                maxBytesPerGatheringWrite);
                         in.removeBytes(localWrittenBytes);
                     }
                     --writeSpinCount;
