@@ -405,13 +405,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // to check if the total size of all the buffers is non-zero.
                     ByteBuffer buffer = nioBuffers[0];
                     int attemptedBytes = buffer.remaining();
+
+                    //if ch.write(buffer) fail. do write spin. by wangzihaogithub 2020/12/5
+                    //See https://github.com/netty/netty/issues/10353
                     final int localWrittenBytes = ch.write(buffer);
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
-                        return;
+                    }else {
+                        adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
+                        in.removeBytes(localWrittenBytes);
                     }
-                    adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
                     --writeSpinCount;
                     break;
                 }
@@ -421,14 +424,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // We limit the max amount to int above so cast is safe
                     long attemptedBytes = in.nioBufferSize();
                     final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                    //if ch.write(buffer) fail. do write spin. by wangzihaogithub 2020/12/5
+                    //See https://github.com/netty/netty/issues/10353
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
-                        return;
+                    }else {
+                        // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
+                        adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
+                                maxBytesPerGatheringWrite);
+                        in.removeBytes(localWrittenBytes);
                     }
-                    // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
-                    adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
-                            maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
                     --writeSpinCount;
                     break;
                 }
