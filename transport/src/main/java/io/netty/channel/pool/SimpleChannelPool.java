@@ -391,7 +391,7 @@ public class SimpleChannelPool implements ChannelPool {
         for (;;) {
             Channel channel = pollChannel();
             if (channel == null) {
-                break;
+                continue; // Skip 'null' channel
             }
             // Just ignore any errors that are reported back from close().
             channel.close().awaitUninterruptibly();
