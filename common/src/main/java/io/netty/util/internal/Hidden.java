@@ -111,6 +111,10 @@ class Hidden {
                     "sun.security.ssl.SSLEngineImpl",
                     "unwrap");
 
+            builder.allowBlockingCallsInside(
+                    "sun.security.ssl.SSLEngineImpl",
+                    "wrap");
+
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
