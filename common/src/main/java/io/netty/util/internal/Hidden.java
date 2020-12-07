@@ -105,6 +105,10 @@ class Hidden {
                     "sun.security.ssl.SSLEngineImpl",
                     "unwrap");
 
+            builder.allowBlockingCallsInside(
+                    "sun.security.ssl.SSLEngineImpl",
+                    "wrap");
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }
