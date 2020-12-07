@@ -49,7 +49,18 @@ services:
       args:
         gcc_version : "4.9-2016.02"
 
-  cross-compile-aarch64:
+  cross-compile-aarch64-shell:
+    image: netty:cross_compile_aarch64
+    depends_on: [cross-compile-aarch64-runtime-setup]
+    volumes:
+      - ~/.ssh:/root/.ssh:delegated
+      - ~/.gnupg:/root/.gnupg:delegated
+      - ..:/code:delegated
+      - ~/.m2:/root/.m2:delegated
+    entrypoint: /bin/bash
+    working_dir: /code
+
+  cross-compile-aarch64-build:
     image: netty:cross_compile_aarch64
     depends_on: [cross-compile-aarch64-runtime-setup]
     volumes:
