@@ -76,9 +76,7 @@ public class StompSubframeEncoderTest {
 
         channel.writeOutbound(frame);
 
-        ByteBuf headers = channel.readOutbound();
-        ByteBuf content = channel.readOutbound();
-        ByteBuf fullFrame = Unpooled.wrappedBuffer(headers, content);
+        ByteBuf fullFrame = channel.readOutbound();
         assertEquals(SEND_FRAME_UTF8, fullFrame.toString(CharsetUtil.UTF_8));
         assertTrue(fullFrame.release());
     }
