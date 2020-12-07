@@ -213,7 +213,8 @@
     <profile>
       <id>linux-aarch64</id>
       <properties>
-        <jni.classifier>${os.detected.name}-aarch64</jni.classifier>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
       </properties>
       <build>
         <pluginManagement>
