@@ -163,7 +163,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
         try {
             task.run();
         } catch (Throwable t) {
-            logger.warn("A task raised an exception. Task: {}", task, t);
+            logger.warn(String.format("A task raised an exception. Task: {}", task), t);
         }
     }
 
