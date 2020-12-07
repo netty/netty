@@ -44,7 +44,7 @@ public class QuicStreamFrameTest {
         Channel server = null;
         Channel channel = null;
         try {
-            StreamHandler handler = new StreamHandler(type);
+            StreamHandler handler = new StreamHandler();
             server = QuicTestUtils.newServer(null, handler);
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -85,11 +85,6 @@ public class QuicStreamFrameTest {
 
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
         private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
-        private final QuicStreamType type;
-
-        StreamHandler(QuicStreamType type) {
-            this.type = type;
-        }
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
@@ -108,6 +103,10 @@ public class QuicStreamFrameTest {
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
                 queue.add(2);
+                if (((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL) {
+                    // Let's write back a fin which will also close the channel and so call channelInactive(...)
+                    ctx.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.EMPTY_BUFFER, true));
+                }
                 ctx.channel().parent().close();
             }
         }
@@ -117,10 +116,6 @@ public class QuicStreamFrameTest {
             QuicStreamFrame frame = (QuicStreamFrame) msg;
             if (frame.hasFin()) {
                 queue.add(1);
-                if (((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL) {
-                    // Let's write back a fin which will also close the channel and so call channelInactive(...)
-                    ctx.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.EMPTY_BUFFER, true));
-                }
             }
             frame.release();
         }

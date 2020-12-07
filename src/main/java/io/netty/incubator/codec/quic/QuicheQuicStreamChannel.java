@@ -42,6 +42,14 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     private final QuicStreamChannelConfig config;
     private final QuicStreamAddress address;
+    private final Runnable finUpdater = new Runnable() {
+        @Override
+        public void run() {
+            finSent = true;
+            outputShutdown = true;
+        }
+    };
+
     private boolean readable;
     private boolean readPending;
     private boolean flushPending;
@@ -283,7 +291,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
 
         QuicheQuicChannel.StreamSendResult result = parent()
-                .streamSendMultiple(streamId(), alloc(), channelOutboundBuffer);
+                .streamSendMultiple(streamId(), alloc(), channelOutboundBuffer, finUpdater);
         switch (result) {
             case NO_SPACE:
                 parent().streamHasPendingWrites(streamId());
@@ -295,8 +303,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
             case FIN:
                 failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
                         "Fin was sent already"));
-                finSent = true;
-                outputShutdown = true;
                 break;
             default:
                 throw new Error();

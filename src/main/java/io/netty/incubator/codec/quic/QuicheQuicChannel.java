@@ -496,7 +496,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     StreamSendResult streamSendMultiple(long streamId, ByteBufAllocator allocator,
-                                        ChannelOutboundBuffer streamOutboundBuffer) throws Exception {
+                                        ChannelOutboundBuffer streamOutboundBuffer, Runnable finSent) throws Exception {
         boolean sendSomething = false;
         try {
             for (;;) {
@@ -516,7 +516,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
                 int readable = buffer.readableBytes();
                 if (readable == 0 && !fin) {
-                    // Skip empty buffers.
+                    // Skip empty buffers, but only if its not a FIN.
                     streamOutboundBuffer.remove();
                     continue;
                 }
@@ -543,8 +543,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             }
                             nioBuffer.position(nioBuffer.position() + localRes);
 
-                            streamOutboundBuffer.removeBytes(localRes);
                             sendSomething = true;
+                            streamOutboundBuffer.removeBytes(localRes);
                         }
                     }
                     res = streamSend(streamId, nioBuffers[lastIdx], fin);
@@ -552,15 +552,27 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     res = streamSend(streamId, buffer, fin);
                 }
 
-                if (Quiche.throwIfError(res) || res == 0) {
+                if (Quiche.throwIfError(res)) {
                     // stream has no capacity left stop trying to send.
                     return StreamSendResult.NO_SPACE;
                 }
-                streamOutboundBuffer.removeBytes(res);
+
+                if (res == 0) {
+                    // If readable == 0 we know it was because of a FIN as otherwise we would have skipped the write
+                    // in the first place.
+                    if (readable == 0) {
+                        sendSomething = true;
+                        return handleFin(streamOutboundBuffer, -1, finSent);
+                    }
+                    // We couldn't send the data as there was not enough space.
+                    return StreamSendResult.NO_SPACE;
+                }
+
                 sendSomething = true;
                 if (fin) {
-                    return StreamSendResult.FIN;
+                    return handleFin(streamOutboundBuffer, res, finSent);
                 }
+                streamOutboundBuffer.removeBytes(res);
             }
             return StreamSendResult.DONE;
         } finally {
@@ -572,6 +584,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 tryConnectionSend();
             }
         }
+    }
+
+    private static StreamSendResult handleFin(ChannelOutboundBuffer streamOutboundBuffer, int res, Runnable finSent) {
+        // We need to let the caller know we did sent a FIN before we actually remove the bytes from the
+        // outbound buffer. This is required as removeBytes(...) will notify the promise of the writes
+        // which may try to send a FIN again which would produce a FINAL_SIZE error.
+        finSent.run();
+
+        if (res == -1) {
+            // -1 means we did write an empty frame with a FIN.
+            streamOutboundBuffer.remove();
+        } else {
+            streamOutboundBuffer.removeBytes(res);
+        }
+        return StreamSendResult.FIN;
     }
 
     void streamSendFin(long streamId) throws Exception {
