@@ -235,19 +235,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return true;
     }
 
-    @Override
-    public QuicStreamChannel stream(long streamId) {
-        if (eventLoop().inEventLoop()) {
-            return streams.get(streamId);
-        }
-        try {
-            return eventLoop().submit(() -> streams.get(streamId)).await().getNow();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return null;
-        }
-    }
-
     void forceClose() {
         if (isConnDestroyed()) {
             // Just return if we already destroyed the underlying connection.

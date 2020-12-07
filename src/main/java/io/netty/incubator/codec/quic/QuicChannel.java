@@ -35,12 +35,6 @@ public interface QuicChannel extends Channel {
     QuicChannelConfig config();
 
     /**
-     * Returns the {@link QuicStreamChannel} for the given {@code streamId} or {@code null} if none for this id exists
-     * yet or exists anymore.
-     */
-    QuicStreamChannel stream(long streamId);
-
-    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
