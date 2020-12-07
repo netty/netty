@@ -230,15 +230,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     protected void doClose() throws Exception {
         active = false;
-        sendFinIfNeeded();
-        if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
-            inputShutdown = true;
-            outputShutdown = true;
-            // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
-            // never receive data from the other side.
-            parent().streamClosed(streamId());
-        } else {
-            removeStreamFromParent();
+        try {
+            sendFinIfNeeded();
+        } finally {
+            if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
+                inputShutdown = true;
+                outputShutdown = true;
+                // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
+                // never receive data from the other side.
+                parent().streamClosed(streamId());
+            } else {
+                removeStreamFromParent();
+            }
         }
     }
 
@@ -359,6 +362,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         if (readPending) {
             ((QuicStreamChannelUnsafe) unsafe()).recv();
         }
+    }
+
+    void forceClose() {
+        // Set received to true to ensure we will actual remove it from the internal map once we send the fin.
+        finSent = true;
+        unsafe().close(unsafe().voidPromise());
     }
 
     private final class QuicStreamChannelUnsafe extends AbstractUnsafe {

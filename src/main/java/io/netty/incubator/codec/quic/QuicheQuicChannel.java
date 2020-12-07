@@ -663,16 +663,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 Long streamId = flushPendingQueue.poll();
                 if (streamId == null) {
                     break;
-                    // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
-                    // to notice that we can not write again.
-                } else if (Quiche.quiche_conn_stream_capacity(connAddr, streamId) <= 0) {
+                }
+                // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
+                // to notice that we can not write again.
+                int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
+                if (capacity == 0) {
                     // Still not writable, put back in the queue.
-                   flushPendingQueue.add(streamId);
+                    flushPendingQueue.add(streamId);
                 } else {
-                    QuicheQuicStreamChannel channel = streams.get(streamId.longValue());
+                    long sid = streamId;
+                    QuicheQuicStreamChannel channel = streams.get(sid);
                     if (channel != null) {
-                        mayNeedWrite = true;
-                        channel.writable();
+                        if (capacity > 0) {
+                            mayNeedWrite = true;
+                            channel.writable();
+                        } else {
+                            if (!Quiche.quiche_conn_stream_finished(connAddr, sid)) {
+                                // Only fire an exception if the error was not caused because the stream is considered
+                                // finished.
+                                channel.pipeline().fireExceptionCaught(Quiche.newException(capacity));
+                            }
+                            // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
+                            channel.forceClose();
+                        }
                     }
                 }
             }
