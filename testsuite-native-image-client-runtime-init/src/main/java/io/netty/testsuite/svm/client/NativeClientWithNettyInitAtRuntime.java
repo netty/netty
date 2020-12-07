@@ -13,8 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.testsuite.svm.client;
+
+import io.netty.util.NetUtil;
 
 /**
- * A client that uses netty-dns and gets compiled to a native image.
+ * A client that triggers runtime initialization of NetUtil when
+ * built to a native image.
  */
-package io.netty.testsuite.svm.client;
+public final class NativeClientWithNettyInitAtRuntime {
+    /**
+     * Main entry point (not instantiable)
+     */
+    private NativeClientWithNettyInitAtRuntime() {
+    }
+
+    public static void main(String[] args) {
+        System.out.println(NetUtil.LOCALHOST4);
+        System.out.println(NetUtil.LOCALHOST6);
+        System.out.println(NetUtil.LOCALHOST);
+    }
+}

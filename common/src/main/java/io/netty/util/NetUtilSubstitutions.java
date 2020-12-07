@@ -45,6 +45,10 @@ final class NetUtilSubstitutions {
             // using https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
             return NetUtilLocalhost4LazyHolder.LOCALHOST4;
         }
+
+        static void set(Inet4Address ignored) {
+            // a no-op setter to avoid exceptions when NetUtil is initialized at run-time
+        }
     }
 
     private static final class NetUtilLocalhost4LazyHolder {
@@ -56,6 +60,10 @@ final class NetUtilSubstitutions {
             // using https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
             return NetUtilLocalhost6LazyHolder.LOCALHOST6;
         }
+
+        static void set(Inet6Address ignored) {
+            // a no-op setter to avoid exceptions when NetUtil is initialized at run-time
+        }
     }
 
     private static final class NetUtilLocalhost6LazyHolder {
@@ -66,6 +74,10 @@ final class NetUtilSubstitutions {
         static InetAddress get() {
             // using https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
             return NetUtilLocalhostLazyHolder.LOCALHOST;
+        }
+
+        static void set(InetAddress ignored) {
+            // a no-op setter to avoid exceptions when NetUtil is initialized at run-time
         }
     }
 
