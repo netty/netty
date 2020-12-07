@@ -71,7 +71,7 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
-          <classifier>linux-aarch64</classifier>
+          <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -107,7 +107,7 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
-          <classifier>linux-aarch64</classifier>
+          <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
