@@ -70,7 +70,7 @@
     <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>false</skipTests>
-    <netty.version>4.1.54.Final</netty.version>
+    <netty.version>4.1.55.Final</netty.version>
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
