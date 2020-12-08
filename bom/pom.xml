@@ -201,7 +201,7 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>5.0.0.Final-SNAPSHOT</version>
-        <classifier>linux-aarch64</classifier>
+        <classifier>linux-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -224,7 +224,7 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>5.0.0.Final-SNAPSHOT</version>
-        <classifier>linux-aarch64</classifier>
+        <classifier>linux-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
