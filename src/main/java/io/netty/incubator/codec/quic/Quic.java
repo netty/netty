@@ -49,6 +49,8 @@ public final class Quic {
 
     /**
      * Returns {@code true} if and only if the QUIC implementation is usable on the running platform is available.
+     *
+     * @return {@code true} if this QUIC implementation can be used on the current platform, {@code false} otherwise.
      */
     public static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;

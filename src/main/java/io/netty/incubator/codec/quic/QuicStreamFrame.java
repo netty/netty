@@ -26,6 +26,8 @@ public interface QuicStreamFrame extends ByteBufHolder {
     /**
      * Returns {@code true} if the frame has the FIN set, which means it notifies the remote peer that
      * there will be no more writing happen. {@code false} otherwise.
+     *
+     * @return {@code true} if the FIN flag should be set, {@code false} otherwise.
      */
     boolean hasFin();
 

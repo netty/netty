@@ -27,17 +27,28 @@ public interface QuicTokenHandler {
     /**
      * Generate a new token for the given destination connection id and address. This token is written to {@code out}.
      * If no token should be generated and so no token validation should take place at all this method should return
-     * {@link false}.
+     * {@code false}.
+     *
+     * @param out       {@link ByteBuf} into which the token will be written.
+     * @param dcid      the destination connection id.
+     * @param address   the {@link InetSocketAddress} of the sender.
+     * @return          {@code true} if a token was written and so validation should happen, {@code false} otherwise.
      */
     boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address);
 
     /**
-     * Return the given toke and return the offset, {@code -1} is returned if the token is not valid.
+     * Validate the token and return the offset, {@code -1} is returned if the token is not valid.
+     *
+     * @param token     the {@link ByteBuf} that contains the token. The ownership is not transferred.
+     * @param address   the {@link InetSocketAddress} of the sender.
+     * @return          the start index after the token or {@code -1} if the token was not valid.
      */
     int validateToken(ByteBuf token, InetSocketAddress address);
 
     /**
      * Return the maximal token length.
+     *
+     * @return the maximal supported token length.
      */
     int maxTokenLength();
 }

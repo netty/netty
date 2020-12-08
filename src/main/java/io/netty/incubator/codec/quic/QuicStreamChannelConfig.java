@@ -28,12 +28,20 @@ public interface QuicStreamChannelConfig extends DuplexChannelConfig {
     /**
      * Set this to {@code true} if the {@link QuicStreamChannel} should read {@link QuicStreamFrame}s and fire these
      * through the {@link io.netty.channel.ChannelPipeline}, {@code false} if it uses {@link io.netty.buffer.ByteBuf}.
+     *
+     * @param readFrames    {@code true} if {@link QuicStreamFrame}s should be used, {@code false} if
+     *                      {@link io.netty.buffer.ByteBuf} should be used.
+     * @return              this instance itself.
+     *
      */
     QuicStreamChannelConfig setReadFrames(boolean readFrames);
 
     /**
      * Returns {@code true} if the {@link QuicStreamChannel} will read {@link QuicStreamFrame}s and fire these through
      * the {@link io.netty.channel.ChannelPipeline}, {@code false} if it uses {@link io.netty.buffer.ByteBuf}.
+     *
+     * @return  {@code true} if {@link QuicStreamFrame}s should be used, {@code false} if
+     *          {@link io.netty.buffer.ByteBuf} should be used.
      */
     boolean isReadFrames();
 

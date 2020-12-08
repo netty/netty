@@ -31,6 +31,8 @@ public final class QuicStreamAddress extends SocketAddress {
 
     /**
      * Return the id of the stream.
+     *
+     * @return the id.
      */
     public long streamId() {
         return streamId;

@@ -31,6 +31,8 @@ public final class QuicException extends IOException {
 
     /**
      * Returns the {@link QuicError} which was the cause of the {@link QuicException}.
+     *
+     * @return  the {@link QuicError} that caused this {@link QuicException}.
      */
     public QuicError error() {
         return error;

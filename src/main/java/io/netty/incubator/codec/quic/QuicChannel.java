@@ -38,6 +38,11 @@ public interface QuicChannel extends Channel {
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
+     *
+     * @param type      the {@link QuicStreamType} of the {@link QuicStreamChannel}.
+     * @param handler   the {@link ChannelHandler} that will be added to the {@link QuicStreamChannel}s
+     *                  {@link io.netty.channel.ChannelPipeline} during the stream creation.
+     * @return          the {@link Future} that will be notified once the operation completes.
      */
     default Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler) {
         return createStream(type, handler, eventLoop().newPromise());
@@ -47,6 +52,12 @@ public interface QuicChannel extends Channel {
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Promise} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
+     *
+     * @param type      the {@link QuicStreamType} of the {@link QuicStreamChannel}.
+     * @param handler   the {@link ChannelHandler} that will be added to the {@link QuicStreamChannel}s
+     *                  {@link io.netty.channel.ChannelPipeline} during the stream creation.
+     * @param promise   the {@link ChannelPromise} that will be notified once the operation completes.
+     * @return          the {@link Future} that will be notified once the operation completes.
      */
     Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                            Promise<QuicStreamChannel> promise);
@@ -56,6 +67,8 @@ public interface QuicChannel extends Channel {
      * with custom options and attributes. For simpler use-cases you may want to consider using
      * {@link #createStream(QuicStreamType, ChannelHandler)} or
      * {@link #createStream(QuicStreamType, ChannelHandler, Promise)} directly.
+     *
+     * @return {@link QuicStreamChannelBootstrap} that can be used to bootstrap a {@link QuicStreamChannel}.
      */
     default QuicStreamChannelBootstrap newStreamBootstrap() {
         return new QuicStreamChannelBootstrap(this);
@@ -63,6 +76,8 @@ public interface QuicChannel extends Channel {
 
     /**
      * Returns the negotiated ALPN protocol or {@code null} if none has been negotiated.
+     *
+     * @return the application protocol or {@code null} if none has been negotiated.
      */
     byte[] applicationProtocol();
 
@@ -93,6 +108,8 @@ public interface QuicChannel extends Channel {
 
     /**
      * Collects statistics about the connection and notifies the {@link Future} once done.
+     *
+     * @return the {@link Future} that is notified once the stats were collected.
      */
     default Future<QuicConnectionStats> collectStats() {
         return collectStats(eventLoop().newPromise());
@@ -100,12 +117,18 @@ public interface QuicChannel extends Channel {
 
     /**
      * Collects statistics about the connection and notifies the {@link Promise} once done.
+     *
+     * @param   promise the {@link ChannelPromise} that is notified once the stats were collected.
+     * @return          the {@link Future} that is notified once the stats were collected.
      */
     Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise);
 
     /**
      * Creates a new {@link QuicChannelBootstrap} that can be used to create and connect new {@link QuicChannel}s to
      * endpoints using the given {@link Channel} as transport layer.
+     *
+     * @param channel   the {@link Channel} that is used as transport layer.
+     * @return          {@link QuicChannelBootstrap} that can be used to bootstrap a client side {@link QuicChannel}.
      */
     static QuicChannelBootstrap newBootstrap(Channel channel) {
         return new QuicChannelBootstrap(channel);

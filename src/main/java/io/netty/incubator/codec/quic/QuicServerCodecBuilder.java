@@ -40,11 +40,19 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     private QuicConnectionIdGenerator connectionIdAddressGenerator;
     private QuicTokenHandler tokenHandler;
 
+    /**
+     * Creates a new instance.
+     */
     public QuicServerCodecBuilder() { }
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link QuicChannel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
+     *
+     * @param option    the {@link ChannelOption} to apply to the {@link QuicChannel}.
+     * @param value     the value of the option.
+     * @param <T>       the type of the value.
+     * @return          this instance.
      */
     public <T> QuicServerCodecBuilder option(ChannelOption<T> option, T value) {
         Quic.updateOptions(options, option, value);
@@ -54,6 +62,11 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Allow to specify an initial attribute of the newly created {@link QuicChannel}.  If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
+     *
+     * @param key       the {@link AttributeKey} to apply to the {@link QuicChannel}.
+     * @param value     the value of the attribute.
+     * @param <T>       the type of the value.
+     * @return          this instance.
      */
     public <T> QuicServerCodecBuilder attr(AttributeKey<T> key, T value) {
         Quic.updateAttributes(attrs, key, value);
@@ -63,6 +76,10 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Set the {@link ChannelHandler} that is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicChannel} once created.
+     *
+     * @param handler   the {@link ChannelHandler} that is added to the {@link QuicChannel}s
+     *                  {@link io.netty.channel.ChannelPipeline}.
+     * @return          this instance.
      */
     public QuicServerCodecBuilder handler(ChannelHandler handler) {
         this.handler = ObjectUtil.checkNotNull(handler, "handler");
@@ -72,6 +89,11 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link QuicStreamChannel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
+     *
+     * @param option    the {@link ChannelOption} to apply to the {@link QuicStreamChannel}s.
+     * @param value     the value of the option.
+     * @param <T>       the type of the value.
+     * @return          this instance.
      */
     public <T> QuicServerCodecBuilder streamOption(ChannelOption<T> option, T value) {
         Quic.updateOptions(streamOptions, option, value);
@@ -81,6 +103,11 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Allow to specify an initial attribute of the newly created {@link QuicStreamChannel}. If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
+     *
+     * @param key       the {@link AttributeKey} to apply to the {@link QuicStreamChannel}s.
+     * @param value     the value of the attribute.
+     * @param <T>       the type of the value.
+     * @return          this instance.
      */
     public <T> QuicServerCodecBuilder streamAttr(AttributeKey<T> key, T value) {
         Quic.updateAttributes(streamAttrs, key, value);
@@ -90,6 +117,10 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Set the {@link ChannelHandler} that is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} once created.
+     *
+     * @param streamHandler     the {@link ChannelHandler} that is added to the {@link QuicStreamChannel}s
+     *                          {@link io.netty.channel.ChannelPipeline}.
+     * @return                  this instance.
      */
     public QuicServerCodecBuilder streamHandler(ChannelHandler streamHandler) {
         this.streamHandler = ObjectUtil.checkNotNull(streamHandler, "streamHandler");
@@ -98,6 +129,9 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
 
     /**
      * Sets the {@link QuicConnectionIdGenerator} to use.
+     *
+     * @param connectionIdAddressGenerator  the {@link QuicConnectionIdGenerator} to use.
+     * @return                              this instance.
      */
     public QuicServerCodecBuilder connectionIdAddressGenerator(
             QuicConnectionIdGenerator connectionIdAddressGenerator) {
@@ -107,6 +141,9 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
 
     /**
      * Set the {@link QuicTokenHandler} that is used to generate and validate tokens.
+     *
+     * @param tokenHandler  the {@link QuicTokenHandler} to use.
+     * @return              this instance.
      */
     public QuicServerCodecBuilder tokenHandler(QuicTokenHandler tokenHandler) {
         this.tokenHandler = ObjectUtil.checkNotNull(tokenHandler, "tokenHandler");

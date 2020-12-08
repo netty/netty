@@ -38,16 +38,22 @@ public interface QuicStreamChannel extends DuplexChannel {
 
     /**
      * Returns {@code true} if the stream was created locally.
+     *
+     * @return {@code true} if created locally, {@code false} otherwise.
      */
     boolean isLocalCreated();
 
     /**
      * Returns the {@link QuicStreamType} of the stream.
+     *
+     * @return {@link QuicStreamType} of this stream.
      */
     QuicStreamType type();
 
     /**
      * The id of the stream.
+     *
+     * @return the stream id of this {@link QuicStreamChannel}.
      */
     long streamId();
 

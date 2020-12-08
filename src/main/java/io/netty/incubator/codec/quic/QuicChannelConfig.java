@@ -62,6 +62,8 @@ public interface QuicChannelConfig extends ChannelConfig {
 
     /**
      * Return the server name parameter used to verify peer's certificate.
+     *
+     * @return the server name parameter.
      */
     String getPeerCertServerName();
 
@@ -70,6 +72,9 @@ public interface QuicChannelConfig extends ChannelConfig {
      *
      * <strong>Be aware this config setting can only be adjusted before the
      * connection is established.</strong>
+     *
+     * @param peerCertServerName    the server name parameter.
+     * @return                      the instance itself.
      */
     QuicChannelConfig setPeerCertServerName(String peerCertServerName);
 }

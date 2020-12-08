@@ -440,6 +440,7 @@
         <version>false</version>
         <author>false</author>
         <keywords>true</keywords>
+        <source>8</source>
       </configuration>
     </plugin>
     <plugin>

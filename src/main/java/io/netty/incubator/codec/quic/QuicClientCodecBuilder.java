@@ -23,6 +23,11 @@ import io.netty.channel.ChannelHandler;
  */
 public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCodecBuilder> {
 
+    /**
+     * Creates a new instance.
+     */
+    public QuicClientCodecBuilder() { }
+
     @Override
     protected ChannelHandler build(QuicheConfig config, int localConnIdLength) {
         return new QuicheQuicClientCodec(config, localConnIdLength);
