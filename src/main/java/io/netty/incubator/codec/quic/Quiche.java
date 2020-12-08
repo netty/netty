@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -50,19 +49,14 @@ final class Quiche {
 
     private static void loadNativeLibrary() {
         // This needs to be kept in sync with what is defined in netty_quic_quiche.c
-        String staticLibName = "netty_quiche";
-        String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
+        String libName = "netty_quiche" + '_' + PlatformDependent.normalizedOs()
+                + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Quiche.class);
         try {
-            NativeLibraryLoader.load(sharedLibName, cl);
-        } catch (UnsatisfiedLinkError e1) {
-            try {
-                NativeLibraryLoader.load(staticLibName, cl);
-                logger.debug("Failed to load {}", sharedLibName, e1);
-            } catch (UnsatisfiedLinkError e2) {
-                ThrowableUtil.addSuppressed(e1, e2);
-                throw e1;
-            }
+            NativeLibraryLoader.load(libName, cl);
+        } catch (UnsatisfiedLinkError e) {
+            logger.debug("Failed to load {}", libName, e);
+            throw e;
         }
     }
 

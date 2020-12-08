@@ -73,6 +73,7 @@
     <netty.version>4.1.54.Final</netty.version>
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
+    <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
     <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
@@ -481,7 +482,7 @@
           <execution>
             <id>build-native-lib</id>
             <configuration>
-              <name>netty_quiche_${os.detected.arch}</name>
+              <name>${jniLibName}</name>
               <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
               <libDirectory>${project.build.outputDirectory}</libDirectory>
               <!-- We use Maven's artifact classifier instead.
