@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 
@@ -28,9 +30,7 @@ final class SecureRandomQuicConnectionIdGenerator implements QuicConnectionIdGen
 
     @Override
     public ByteBuffer newId(int length) {
-        if (length > maxConnectionIdLength()) {
-            throw new IllegalArgumentException();
-        }
+        ObjectUtil.checkInRange(length, 0, maxConnectionIdLength(), "length");
         byte[] bytes = new byte[length];
         RANDOM.nextBytes(bytes);
         return ByteBuffer.wrap(bytes);
