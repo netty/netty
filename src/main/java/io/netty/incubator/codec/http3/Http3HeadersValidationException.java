@@ -19,10 +19,22 @@ package io.netty.incubator.codec.http3;
  * Thrown if {@link Http3Headers} validation fails for some reason.
  */
 public final class Http3HeadersValidationException extends RuntimeException {
+
+    /**
+     * Create a new instance.
+     *
+     * @param message   the message.
+     */
     public Http3HeadersValidationException(String message) {
         super(message);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param message   the message.
+     * @param cause     the wrapped {@link Throwable}.
+     */
     public Http3HeadersValidationException(String message, Throwable cause) {
         super(message, cause);
     }

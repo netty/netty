@@ -32,8 +32,8 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     }
 
     @Override
-    public void put(long key, Long value) {
-        settings.put(key, value);
+    public Long put(long key, Long value) {
+        return settings.put(key, value);
     }
 
     @Override

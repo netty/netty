@@ -16,12 +16,14 @@
 package io.netty.incubator.codec.http3;
 
 /**
- * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6>GOAWAY</a>.
+ * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6">GOAWAY</a>.
  */
 public interface Http3GoAwayFrame extends Http3ControlStreamFrame {
 
     /**
      * Returns the id.
+     *
+     * @return the id.
      */
     long id();
 }

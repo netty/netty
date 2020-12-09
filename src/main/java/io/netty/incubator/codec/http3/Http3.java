@@ -33,6 +33,11 @@ public final class Http3 {
             0x05, 'h', '3', '-', '3', '2'
     };
 
+    /**
+     * Returns the supported protocols for H3.
+     *
+     * @return the supported protocols.
+     */
     public static byte[] supportedApplicationProtocols() {
         return H3_PROTOS.clone();
     }
@@ -52,6 +57,8 @@ public final class Http3 {
 
     /**
      * Returns a new {@link QuicServerCodecBuilder} that has preconfigured for HTTP3.
+     *
+     * @return a pre-configured builder for HTTP3.
      */
     public static QuicServerCodecBuilder newQuicServerCodecBuilder() {
         return configure(new QuicServerCodecBuilder());
@@ -59,6 +66,8 @@ public final class Http3 {
 
     /**
      * Returns a new {@link QuicClientCodecBuilder} that has preconfigured for HTTP3.
+     *
+     * @return a pre-configured builder for HTTP3.
      */
     public static QuicClientCodecBuilder newQuicClientCodecBuilder() {
         return configure(new QuicClientCodecBuilder());

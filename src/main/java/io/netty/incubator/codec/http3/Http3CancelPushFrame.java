@@ -16,12 +16,14 @@
 package io.netty.incubator.codec.http3;
 
 /**
- * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3>CANCEL_PUSH</a>.
+ * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3">CANCEL_PUSH</a>.
  */
 public interface Http3CancelPushFrame extends Http3ControlStreamFrame {
 
     /**
      * Returns the push id that identifies the server push that is being cancelled.
+     *
+     * @return the id.
      */
     long id();
 }

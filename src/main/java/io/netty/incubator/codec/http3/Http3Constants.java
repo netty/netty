@@ -20,13 +20,13 @@ public final class Http3Constants {
     private Http3Constants() { }
 
     /**
-     * See <a href=https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
+     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
      *     SETTINGS_QPACK_MAX_TABLE_CAPACITY</a>.
      */
     public static final long SETTINGS_QPACK_MAX_TABLE_CAPACITY = 0x1;
 
     /**
-     * See <a href=https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
+     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
      *     SETTINGS_QPACK_BLOCKED_STREAMS</a>.
      */
     public static final long SETTINGS_QPACK_BLOCKED_STREAMS = 0x7;

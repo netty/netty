@@ -23,11 +23,24 @@ import io.netty.util.internal.ObjectUtil;
 public final class Http3Exception extends Exception {
     private final Http3ErrorCode errorCode;
 
+    /**
+     * Create a new instance.
+     *
+     * @param errorCode the {@link Http3ErrorCode} that caused this exception.
+     * @param message   the message to include.
+     */
     public Http3Exception(Http3ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param errorCode the {@link Http3ErrorCode} that caused this exception.
+     * @param message   the message to include.
+     * @param cause     the {@link Throwable} to wrap.
+     */
     public Http3Exception(Http3ErrorCode errorCode, String message, Throwable cause) {
         super(message, cause);
         this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
@@ -35,6 +48,8 @@ public final class Http3Exception extends Exception {
 
     /**
      * Returns the related {@link Http3ErrorCode}.
+     *
+     * @return the {@link Http3ErrorCode}.
      */
     public Http3ErrorCode errorCode() {
         return errorCode;

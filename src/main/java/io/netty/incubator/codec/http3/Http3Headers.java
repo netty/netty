@@ -78,7 +78,8 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
         /**
          * Indicates whether the specified header follows the pseudo-header format (begins with ':' character)
          *
-         * @return {@code true} if the header follow the pseudo-header format
+         * @param headerName    the header name to check.
+         * @return              {@code true} if the header follow the pseudo-header format
          */
         public static boolean hasPseudoHeaderFormat(CharSequence headerName) {
             if (headerName instanceof AsciiString) {
@@ -90,19 +91,23 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
         }
 
         /**
-         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         * Indicates whether the given header name is a valid HTTP/3 pseudo header.
+         *
+         * @param name  the header name.
+         * @return      {@code true} if the given header name is a valid HTTP/3 pseudo header, {@code false} otherwise.
          */
-        public static boolean isPseudoHeader(CharSequence header) {
-            return PSEUDO_HEADERS.contains(header);
+        public static boolean isPseudoHeader(CharSequence name) {
+            return PSEUDO_HEADERS.contains(name);
         }
 
         /**
          * Returns the {@link PseudoHeaderName} corresponding to the specified header name.
          *
+         * @param name  the header name.
          * @return corresponding {@link PseudoHeaderName} if any, {@code null} otherwise.
          */
-        public static PseudoHeaderName getPseudoHeader(CharSequence header) {
-            return PSEUDO_HEADERS.get(header);
+        public static PseudoHeaderName getPseudoHeader(CharSequence name) {
+            return PSEUDO_HEADERS.get(name);
         }
 
         /**
@@ -132,51 +137,76 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
 
     /**
      * Sets the {@link PseudoHeaderName#METHOD} header
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
      */
     Http3Headers method(CharSequence value);
 
     /**
      * Sets the {@link PseudoHeaderName#SCHEME} header
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
      */
     Http3Headers scheme(CharSequence value);
 
     /**
      * Sets the {@link PseudoHeaderName#AUTHORITY} header
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
      */
     Http3Headers authority(CharSequence value);
 
     /**
      * Sets the {@link PseudoHeaderName#PATH} header
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
      */
     Http3Headers path(CharSequence value);
 
     /**
      * Sets the {@link PseudoHeaderName#STATUS} header
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
      */
     Http3Headers status(CharSequence value);
 
     /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
+     *
+     * @return the value of the header.
      */
     CharSequence method();
 
     /**
      * Gets the {@link PseudoHeaderName#SCHEME} header or {@code null} if there is no such header
+     *
+     * @return the value of the header.
      */
     CharSequence scheme();
 
     /**
      * Gets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
+     *
+     * @return the value of the header.
      */
     CharSequence authority();
 
     /**
      * Gets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
+     *
+     * @return the value of the header.
      */
     CharSequence path();
 
     /**
      * Gets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
+     *
+     * @return the value of the header.
      */
     CharSequence status();
 
@@ -185,10 +215,11 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
      * <p>
      * If {@code caseInsensitive} is {@code true} then a case insensitive compare is done on the value.
      *
-     * @param name the name of the header to find
-     * @param value the value of the header to find
-     * @param caseInsensitive {@code true} then a case insensitive compare is run to compare values.
+     * @param name              the name of the header to find
+     * @param value             the value of the header to find
+     * @param caseInsensitive   {@code true} then a case insensitive compare is run to compare values.
      * otherwise a case sensitive compare is run to compare values.
+     * @return                  {@code true} if its contained, {@code false} otherwise.
      */
     boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive);
 }

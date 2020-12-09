@@ -16,11 +16,13 @@
 package io.netty.incubator.codec.http3;
 
 /**
- * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2>HEADERS</a>.
+ * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2">HEADERS</a>.
  */
 public interface Http3HeadersFrame extends Http3RequestStreamFrame, Http3PushStreamFrame {
     /**
      * Returns the carried headers.
+     *
+     * @return the carried headers.
      */
     Http3Headers headers();
 }
