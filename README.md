@@ -12,7 +12,7 @@ As an example this is how you would include the dependency in maven:
 <dependency>
     <groupId>io.netty.incubator</groupId>
     <artifactId>netty-incubator-codec-quic</artifactId>
-    <version>0.0.1.Final-SNAPSHOT</version>
+    <version>0.0.1.Final</version>
     <classifier>linux-x86_64</classifier>
 </dependency>
 ```
@@ -23,7 +23,7 @@ For macOS / OSX:
 <dependency>
     <groupId>io.netty.incubator</groupId>
     <artifactId>netty-incubator-codec-quic</artifactId>
-    <version>0.0.1.Final-SNAPSHOT</version>
+    <version>0.0.1.Final</version>
     <classifier>osx-x86_64</classifier>
 </dependency>
 ```
