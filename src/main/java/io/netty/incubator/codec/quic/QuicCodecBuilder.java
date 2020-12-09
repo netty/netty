@@ -69,6 +69,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Sets the congestion control algorithm to use.
      *
+     * The default is {@link QuicCongestionControlAlgorithm#CUBIC}.
+     *
      * @param congestionControlAlgorithm    the {@link QuicCongestionControlAlgorithm} to use.
      * @return                              the instance itself.
      */
@@ -102,6 +104,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Set if the remote peer should be verified or not.
      *
+     * The default value is {@code true} for client connections, and {@code false} for server connections.
+     *
      * @param verify    {@code true} if verification should be done.
      * @return          the instance itself.
      */
@@ -113,6 +117,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Set if <a href="https://tools.ietf.org/html/draft-thomson-quic-bit-grease-00">greasing</a> should be enabled
      * or not.
+     *
+     * The default value is {@code true}.
      *
      * @param enable    {@code true} if enabled, {@code false} otherwise.
      * @return          the instance itself.
@@ -151,6 +157,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_idle_timeout">
      *     set_max_idle_timeout</a>.
      *
+     * The default value is infinite, that is, no timeout is used.
+     *
      * @param amount    the maximum idle timeout.
      * @param unit      the {@link TimeUnit}.
      * @return          the instance itself.
@@ -164,6 +172,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_udp_payload_size">
      *     set_max_udp_payload_size</a>.
      *
+     * The default value is 65527.
+     *
      * @param size    the maximum payload size that is advertised to the remote peer.
      * @return        the instance itself.
      */
@@ -175,6 +185,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_data">
      *     set_initial_max_data</a>.
+     *
+     * The default value is 0.
      *
      * @param value   the initial maximum data limit.
      * @return        the instance itself.
@@ -189,6 +201,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_stream_data_bidi_local">
      *     set_initial_max_stream_data_bidi_local</a>.
      *
+     * The default value is 0.
+     *
      * @param value   the initial maximum data limit for local bidirectional streams.
      * @return        the instance itself.
      */
@@ -201,6 +215,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_stream_data_bidi_remote">
      *     set_initial_max_stream_data_bidi_remote</a>.
+     *
+     * The default value is 0.
      *
      * @param value   the initial maximum data limit for remote bidirectional streams.
      * @return        the instance itself.
@@ -215,6 +231,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_uni">
      *     set_initial_max_streams_uni</a>.
      *
+     * The default value is 0.
+     *
      * @param value   the initial maximum data limit for unidirectional streams.
      * @return        the instance itself.
      */
@@ -227,6 +245,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_bidi">
      *     set_initial_max_streams_bidi</a>.
+     *
+     * The default value is 0.
      *
      * @param value   the initial maximum stream limit for bidirectional streams.
      * @return        the instance itself.
@@ -241,6 +261,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_uni">
      *     set_initial_max_streams_uni</a>.
      *
+     * The default value is 0.
+     *
      * @param value   the initial maximum stream limit for bidirectional streams.
      * @return        the instance itself.
      */
@@ -254,6 +276,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_ack_delay_exponent">
      *     set_ack_delay_exponent</a>.
      *
+     * The default value is 3.
+     *
      * @param value   the delay exponent used for ACKs.
      * @return        the instance itself.
      */
@@ -266,6 +290,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_ack_delay">
      *     set_max_ack_delay</a>.
+     *
+     * The default value is 25 milliseconds.
      *
      * @param amount    the max ack delay.
      * @param unit      the {@link TimeUnit}.
@@ -281,6 +307,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_disable_active_migration">
      *     set_disable_active_migration</a>.
      *
+     * The default value is {@code true}.
+     *
      * @param enable  {@code true} if migration should be enabled, {@code false} otherwise.
      * @return        the instance itself.
      */
@@ -294,6 +322,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.enable_hystart">
      *     enable_hystart</a>.
      *
+     * The default value is {@code true}.
+     *
      * @param enable  {@code true} if Hystart should be enabled.
      * @return        the instance itself.
      */
@@ -304,6 +334,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
 
     /**
      * Sets the local connection id length that is used.
+     *
+     * The default is 20, which is also the maximum that is supported.
      *
      * @param value   {@code true} the length of local generated connections ids.
      * @return        the instance itself.
