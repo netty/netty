@@ -18,6 +18,9 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
@@ -137,6 +140,28 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     public final B earlyData(boolean enable) {
         earlyData = enable;
         return self();
+    }
+
+    /**
+     * Set the application protocols to use. These are converted to wire-format.
+     *
+     * @see {@link #applicationProtocols(byte[])}.
+     *
+     * @param protocols the application protocols.
+     * @return          the instance itself.
+     */
+    public final B applicationProtocols(String... protocols) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            for (String p : protocols) {
+                out.write(p.length());
+                byte[] bytes = p.getBytes(StandardCharsets.US_ASCII);
+                out.write(bytes);
+            }
+            this.protos = out.toByteArray();
+            return self();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
