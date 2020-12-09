@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.incubator.codec.quic;
+package io.netty.incubator.codec.quic.example;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -22,8 +22,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,17 +37,15 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-public final class QuicExample {
+public final class QuicServerExample {
 
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicExample.class);
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicServerExample.class);
 
-    private QuicExample() { }
+    private QuicServerExample() { }
 
     public static void main(String[] args) throws Exception {
+        // We just want to support HTTP 0.9 as application protocol
         byte[] proto = new byte[] {
-                0x05, 'h', 'q', '-', '2', '9',
-                0x05, 'h', 'q', '-', '2', '8',
-                0x05, 'h', 'q', '-', '2', '7',
                 0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
         };
 
@@ -51,14 +55,15 @@ public final class QuicExample {
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
-                .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
+                // Configure some limits for the maximal number of streams (and the data) that we want to handle.
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
-                .activeMigration(false)
-                .earlyData(true)
+
+                // Setup a token handler. In a production system you would want to implement and provide your custom
+                // one.
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                 // ChannelHandler that is added into QuicChannel pipeline.
                 .handler(new ChannelInboundHandlerAdapter() {
@@ -69,8 +74,11 @@ public final class QuicExample {
                     }
 
                     public void channelInactive(ChannelHandlerContext ctx) {
-                        LOGGER.info("Connection closed: {}",
-                                ((QuicChannel) ctx.channel()).collectStats().getNow());
+                        ((QuicChannel) ctx.channel()).collectStats().addListener(f -> {
+                            if (f.isSuccess()) {
+                                LOGGER.info("Connection closed: {}", f.getNow());
+                            }
+                        });
                     }
 
                     @Override
@@ -78,26 +86,27 @@ public final class QuicExample {
                         return true;
                     }
                 })
-                .streamHandler(new ChannelInboundHandlerAdapter() {
+                .streamHandler(new ChannelInitializer<QuicStreamChannel>() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        ByteBuf byteBuf = (ByteBuf) msg;
-                        try {
-                            if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
-                                ByteBuf buffer = ctx.alloc().directBuffer();
-                                buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
-
-                                // Write the buffer and close the stream once the write completes.
-                                ctx.writeAndFlush(buffer).addListener(ChannelFutureListener.CLOSE);
+                    protected void initChannel(QuicStreamChannel ch)  {
+                        // Add a LineBasedFrameDecoder here as we just want to do some simple HTTP 0.9 handling.
+                        ch.pipeline().addLast(new LineBasedFrameDecoder(1024))
+                                .addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ByteBuf byteBuf = (ByteBuf) msg;
+                                try {
+                                    if (byteBuf.toString(CharsetUtil.US_ASCII).trim().equals("GET /")) {
+                                        ByteBuf buffer = ctx.alloc().directBuffer();
+                                        buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
+                                        // Write the buffer and shutdown the output by writing a FIN.
+                                        ctx.writeAndFlush(buffer).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                    }
+                                } finally {
+                                    byteBuf.release();
+                                }
                             }
-                        } finally {
-                            byteBuf.release();
-                        }
-                    }
-
-                    @Override
-                    public boolean isSharable() {
-                        return true;
+                        });
                     }
                 }).build();
         try {

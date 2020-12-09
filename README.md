@@ -27,3 +27,9 @@ For macOS / OSX:
     <classifier>osx-x86_64</classifier>
 </dependency>
 ```
+
+## How to use this codec ?
+
+For some examples please check our 
+[example package](https://github.com/netty/netty-incubator-codec-quic/tree/main/src/test/java/io/netty/incubator/codec/quic).
+This contains a server and a client that can speak some limited HTTP/0.9 with each other.

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.incubator.codec.quic;
+package io.netty.incubator.codec.quic.example;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -23,7 +23,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
@@ -35,28 +40,21 @@ public final class QuicClientExample {
     private QuicClientExample() { }
 
     public static void main(String[] args) throws Exception {
+        // We just want to support HTTP 0.9 as application protocol
         byte[] proto = new byte[] {
-                0x05, 'h', 'q', '-', '2', '9',
-                0x05, 'h', 'q', '-', '2', '8',
-                0x05, 'h', 'q', '-', '2', '7',
                 0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
         };
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
             ChannelHandler codec = new QuicClientCodecBuilder()
-                    .certificateChain("./src/test/resources/cert.crt")
-                    .privateKey("./src/test/resources/cert.key")
                     .applicationProtocols(proto)
                     .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
-                    .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
                     .initialMaxData(10000000)
+                    // As we don't want to support remote initiated streams just setup the limit for local initiated
+                    // streams in this example.
                     .initialMaxStreamDataBidirectionalLocal(1000000)
-                    .initialMaxStreamDataBidirectionalRemote(1000000)
-                    .initialMaxStreamsBidirectional(100)
-                    .initialMaxStreamsUnidirectional(100)
-                    .activeMigration(false)
-                    .earlyData(true).build();
+                    .build();
 
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)
@@ -68,8 +66,9 @@ public final class QuicClientExample {
                     .streamHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
-                            // We don't want to handle streams created by the server side, just close the
-                            // stream and so send a fin.
+                            // As we did not allow any remote initiated streams we will never see this method called.
+                            // That said just let us keep it here to demonstrate that this handle would be called
+                            // for each remote initiated stream.
                             ctx.close();
                         }
                     })
@@ -87,19 +86,21 @@ public final class QuicClientExample {
                         }
 
                         @Override
-                        public void channelInactive(ChannelHandlerContext ctx) {
-                            // Close the connection once the remote peer did close this stream.
-                            ((QuicChannel) ctx.channel().parent()).close(true, 0,
-                                    ctx.alloc().directBuffer(16)
-                                            .writeBytes(new byte[] {'k', 't', 'h', 'x', 'b', 'y', 'e'}));
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                // Close the connection once the remote peer did send the FIN for this stream.
+                                ((QuicChannel) ctx.channel().parent()).close(true, 0,
+                                        ctx.alloc().directBuffer(16)
+                                                .writeBytes(new byte[]{'k', 't', 'h', 'x', 'b', 'y', 'e'}));
+                            }
                         }
                     }).sync().getNow();
-            ByteBuf buffer = Unpooled.directBuffer();
-            buffer.writeCharSequence("GET /\r\n", CharsetUtil.US_ASCII);
-            streamChannel.writeAndFlush(buffer);
+            // Write the data and send the FIN. After this its not possible anymore to write any more data.
+            streamChannel.writeAndFlush(Unpooled.copiedBuffer("GET /\r\n", CharsetUtil.US_ASCII))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
 
-            // Wait for the stream channel and quic channel to be closed. After this is done we will
-            // close the underlying datagram channel.
+            // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
+            // After this is done we will close the underlying datagram channel.
             streamChannel.closeFuture().sync();
             quicChannel.closeFuture().sync();
             channel.close().sync();
