@@ -14,8 +14,7 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.sonatype.oss</groupId>
@@ -25,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-quic</artifactId>
-  <version>0.0.1.Final-SNAPSHOT</version>
+  <version>0.0.1.Final</version>
   <name>Netty/Incubator/Codec/Quic</name>
   <packaging>jar</packaging>
   <url>https://netty.io/</url>
@@ -52,7 +51,7 @@
     <url>https://github.com/netty/netty-incubator-codec-quic</url>
     <connection>scm:git:git://github.com/netty/netty-incubator-codec-quic.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty-incubator-codec-quic.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-incubator-codec-quic-0.0.1.Final</tag>
   </scm>
 
   <developers>
@@ -82,8 +81,8 @@
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
     <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
-    <extraLdflags></extraLdflags>
-    <extraConfigureArg></extraConfigureArg>
+    <extraLdflags />
+    <extraConfigureArg />
     <!-- We need 10.12 as minimum to compile quiche and use it.
          Anything below will fail when trying to load quiche with:
          Symbol not found: ___isPlatformVersionAtLeast
@@ -230,9 +229,9 @@
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
                         <arg value="--release" />
-                        <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}"/>
-                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
-                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
+                        <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
+                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
+                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
                       </exec>
 
                       <!-- delete the shared library as otherwise we may link against it and not against the static
@@ -246,8 +245,8 @@
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
                         <arg value="--release" />
-                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC"/>
-                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer"/>
+                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
+                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
                       </exec>
 
                       <!-- delete the shared library as otherwise we may link against it and not against the static
