@@ -28,6 +28,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public final class QuicClientExample {
 
@@ -47,7 +48,7 @@ public final class QuicClientExample {
                     .certificateChain("./src/test/resources/cert.crt")
                     .privateKey("./src/test/resources/cert.key")
                     .applicationProtocols(proto)
-                    .maxIdleTimeout(5000)
+                    .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                     .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
                     .initialMaxData(10000000)
                     .initialMaxStreamDataBidirectionalLocal(1000000)

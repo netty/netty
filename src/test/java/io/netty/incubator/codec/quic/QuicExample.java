@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public final class QuicExample {
 
@@ -49,7 +50,7 @@ public final class QuicExample {
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(proto)
-                .maxIdleTimeout(5000)
+                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)

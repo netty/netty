@@ -18,6 +18,8 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 
 
+import java.util.concurrent.TimeUnit;
+
 import static io.netty.util.internal.ObjectUtil.checkInRange;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -148,13 +150,15 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_idle_timeout">
      *     set_max_idle_timeout</a>.
      *
-     * @param millis    the maximum idle timeout.
+     * @param amount    the maximum idle timeout.
+     * @param unit      the {@link TimeUnit}.
      * @return          the instance itself.
      */
-    public final B maxIdleTimeout(long millis) {
-        this.maxIdleTimeout = checkPositiveOrZero(millis, "value");
+    public final B maxIdleTimeout(long amount, TimeUnit unit) {
+        this.maxIdleTimeout = unit.toMillis(checkPositiveOrZero(amount, "amount"));
         return self();
     }
+
     /**
      * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_udp_payload_size">
      *     set_max_udp_payload_size</a>.
@@ -262,11 +266,12 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_ack_delay">
      *     set_max_ack_delay</a>.
      *
-     * @param value   the max ack delay.
-     * @return        the instance itself.
+     * @param amount    the max ack delay.
+     * @param unit      the {@link TimeUnit}.
+     * @return          the instance itself.
      */
-    public final B maxAckDelay(long value) {
-        this.maxAckDelay = checkPositiveOrZero(value, "value");
+    public final B maxAckDelay(long amount, TimeUnit unit) {
+        this.maxAckDelay = unit.toMillis(checkPositiveOrZero(amount, "amount"));
         return self();
     }
 

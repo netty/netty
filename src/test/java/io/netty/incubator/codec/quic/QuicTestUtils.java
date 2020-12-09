@@ -24,6 +24,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 final class QuicTestUtils {
 
@@ -63,7 +64,7 @@ final class QuicTestUtils {
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(PROTOS)
-                .maxIdleTimeout(5000)
+                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
@@ -80,7 +81,7 @@ final class QuicTestUtils {
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
                 .applicationProtocols(PROTOS)
-                .maxIdleTimeout(5000)
+                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .maxUdpPayloadSize(Quic.MAX_DATAGRAM_SIZE)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
