@@ -57,8 +57,8 @@ public final class QuicExample {
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
-                .disableActiveMigration(true)
-                .enableEarlyData()
+                .activeMigration(false)
+                .earlyData(true)
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                 // ChannelHandler that is added into QuicChannel pipeline.
                 .handler(new ChannelInboundHandlerAdapter() {

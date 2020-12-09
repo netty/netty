@@ -125,10 +125,11 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Enable the support of early data.
      *
+     * @param enable {@code true} if enabled, {@code false} otherwise
      * @return the instance itself.
      */
-    public final B enableEarlyData() {
-        earlyData = true;
+    public final B earlyData(boolean enable) {
+        earlyData = enable;
         return self();
     }
 
@@ -280,11 +281,11 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_disable_active_migration">
      *     set_disable_active_migration</a>.
      *
-     * @param value   {@code true} if migration should be disabled.
+     * @param enable  {@code true} if migration should be enabled, {@code false} otherwise.
      * @return        the instance itself.
      */
-    public final B disableActiveMigration(boolean value) {
-        this.disableActiveMigration = value;
+    public final B activeMigration(boolean enable) {
+        this.disableActiveMigration = !enable;
         return self();
     }
 
@@ -293,11 +294,11 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.enable_hystart">
      *     enable_hystart</a>.
      *
-     * @param value   {@code true} if Hystart should be enabled.
+     * @param enable  {@code true} if Hystart should be enabled.
      * @return        the instance itself.
      */
-    public final B enableHystart(boolean value) {
-        this.enableHystart = value;
+    public final B hystart(boolean enable) {
+        this.enableHystart = enable;
         return self();
     }
 

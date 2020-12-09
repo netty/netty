@@ -72,8 +72,8 @@ final class QuicTestUtils {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .initialMaxStreamDataUnidirectional(1000000)
-                .disableActiveMigration(true)
-                .enableEarlyData();
+                .activeMigration(false)
+                .earlyData(true);
     }
 
     static QuicServerCodecBuilder newQuicServerBuilder() {
@@ -89,7 +89,7 @@ final class QuicTestUtils {
                 .initialMaxStreamDataUnidirectional(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
-                .disableActiveMigration(true);
+                .activeMigration(false);
     }
 
     private static Bootstrap newServerBootstrap(QuicServerCodecBuilder serverBuilder,
