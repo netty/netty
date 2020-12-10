@@ -48,7 +48,8 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                         SocketAddress localAddress, ChannelPromise promise) {
         final QuicheQuicChannel channel;
         try {
-            channel = QuicheQuicChannel.handleConnect(remoteAddress, nativeConfig, localConnIdLength);
+            channel = QuicheQuicChannel.handleConnect(remoteAddress, nativeConfig, localConnIdLength,
+                    config.isDatagramSupported());
         } catch (Exception e) {
             promise.setFailure(e);
             return;

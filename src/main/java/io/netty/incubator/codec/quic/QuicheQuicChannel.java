@@ -32,12 +32,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -106,6 +108,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
+    private static final int MAX_DATAGRAM_BUFFER_SIZE = 64 * 1024;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
@@ -130,6 +133,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ByteBuffer key;
     private CloseData closeData;
     private QuicConnectionStats statsAtClose;
+    private boolean supportsDatagram;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -138,7 +142,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile String traceId;
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
-                      InetSocketAddress remote, ChannelHandler streamHandler,
+                      InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(parent);
@@ -148,6 +152,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.key = key;
         state = OPEN;
 
+        this.supportsDatagram = supportsDatagram;
         this.remote = remote;
         this.connAddr = connAddr;
         this.traceId = traceId;
@@ -160,20 +165,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null,
-                -1, null, remote, streamHandler,
+                -1, null, remote, false, streamHandler,
                 streamOptionsArray, streamAttrsArray);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key,
                                        long connAddr, String traceId, InetSocketAddress remote,
-                                       ChannelHandler streamHandler,
+                                       boolean supportsDatagram, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote,
+        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
-    private void connect(long configAddr, int localConnIdLength) throws Exception {
+    private void connect(long configAddr, int localConnIdLength, boolean supportsDatagram) throws Exception {
         assert this.connAddr == -1;
         assert this.traceId == null;
         assert this.key == null;
@@ -198,7 +203,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             this.traceId = Quiche.traceId(connection, idBuffer);
             this.connAddr = connection;
-
+            this.supportsDatagram = supportsDatagram;
             connectionSendNeeded = true;
             key = connectId;
         } finally {
@@ -265,9 +270,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return new DefaultChannelPipeline(this) {
             @Override
             protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
-                QuicStreamChannel channel = (QuicStreamChannel) msg;
-                Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
-                ctx.channel().eventLoop().register(channel);
+                if (msg instanceof QuicStreamChannel) {
+                    QuicStreamChannel channel = (QuicStreamChannel) msg;
+                    Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
+                    ctx.channel().eventLoop().register(channel);
+                } else {
+                    super.onUnhandledInboundMessage(ctx, msg);
+                }
             }
         };
     }
@@ -375,6 +384,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             reason = closeData.reason;
             closeData = null;
         }
+
+        if (connectionSendNeeded) {
+            // Call connectionSend() so we ensure we send all that is queued before we close the channel
+            connectionSend();
+        }
+
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
                 Quiche.memoryAddress(reason) + reason.readerIndex(), reason.readableBytes()));
 
@@ -391,8 +406,108 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) {
-        throw new UnsupportedOperationException();
+    protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof ByteBuf) {
+            return msg;
+        }
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            if (remote == null) {
+                if (packet.recipient() == null) {
+                    return extractBuffer(packet);
+                }
+            } else if (remote.equals(packet.recipient())) {
+                return extractBuffer(packet);
+            }
+            throw new UnsupportedOperationException("DatagramPacket recipient is not valid");
+        }
+        throw new UnsupportedOperationException("Unsupported message type: " + StringUtil.simpleClassName(msg));
+    }
+
+    private static ByteBuf extractBuffer(DatagramPacket packet) {
+        ByteBuf content = packet.content().retain();
+        packet.release();
+        return content;
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
+        if (!supportsDatagram) {
+            throw new UnsupportedOperationException("Datagram extension is not supported");
+        }
+        boolean sendSomething = false;
+        boolean retry = false;
+        try {
+            for (;;) {
+                ByteBuf buffer = (ByteBuf) channelOutboundBuffer.current();
+                if (buffer == null) {
+                    break;
+                }
+
+                int readable = buffer.readableBytes();
+                if (readable == 0) {
+                    // Skip empty buffers.
+                    channelOutboundBuffer.remove();
+                    continue;
+                }
+
+                final int res;
+                if (!buffer.isDirect() || buffer.nioBufferCount() > 1) {
+                    ByteBuf tmpBuffer = alloc().directBuffer(readable);
+                    try {
+                        tmpBuffer.writeBytes(buffer, buffer.readerIndex(), readable);
+                        res = sendDatagram(tmpBuffer);
+                    } finally {
+                        tmpBuffer.release();
+                    }
+                } else {
+                    res = sendDatagram(buffer);
+                }
+                if (res >= 0) {
+                    connectionSendNeeded = true;
+                    channelOutboundBuffer.remove();
+                    sendSomething = true;
+                    retry = false;
+                } else {
+                    if (res == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
+                        retry = false;
+                        channelOutboundBuffer.remove(Quiche.newException(res));
+                    } else if (res == Quiche.QUICHE_ERR_INVALID_STATE) {
+                        throw new UnsupportedOperationException("Remote peer does not support Datagram extension",
+                                Quiche.newException(res));
+                    } else if (Quiche.throwIfError(res)) {
+                        if (retry) {
+                            // We already retried and it didn't work. Let's drop the datagrams on the floor.
+                            for (;;) {
+                                if (!channelOutboundBuffer.remove()) {
+                                    // The buffer is empty now.
+                                    return;
+                                }
+                            }
+                        }
+                        // Set sendSomething to false a we will call connectionSend() now.
+                        sendSomething = false;
+                        // If this returned DONE we couldn't write anymore. This happens if the internal queue
+                        // is full. In this case we should call quiche_conn_send(...) and so make space again.
+                        connectionSendNeeded = true;
+                        if (connectionSend()) {
+                            flushParent();
+                        }
+                        // Let's try again to write the message.
+                        retry = true;
+                    }
+                }
+            }
+        } finally {
+            if (sendSomething) {
+                tryConnectionSend();
+            }
+        }
+    }
+
+    private int sendDatagram(ByteBuf buf) throws ClosedChannelException {
+        return Quiche.quiche_conn_dgram_send(connectionAddressChecked(),
+                Quiche.memoryAddress(buf) + buf.readerIndex(), buf.readableBytes());
     }
 
     @Override
@@ -913,6 +1028,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
 
                     if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                        if (supportsDatagram) {
+                            recvDatagram();
+                        }
                         long readableIterator = Quiche.quiche_conn_readable(connAddr);
                         if (readableIterator != -1) {
                             try {
@@ -957,25 +1075,77 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
+        private void recvDatagram() {
+            @SuppressWarnings("deprecation")
+            RecvByteBufAllocator.Handle recvHandle = recvBufAllocHandle();
+            recvHandle.reset(config());
+
+            // TODO: respect AUTO_READ via recvHandle.continueReading()?
+            for (;;) {
+                ByteBuf datagramBuffer = recvHandle.allocate(alloc());
+                int writerIndex = datagramBuffer.writerIndex();
+                int written = Quiche.quiche_conn_dgram_recv(connAddr, datagramBuffer.memoryAddress() + writerIndex,
+                        datagramBuffer.writableBytes());
+                if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
+                    // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
+                    // will fit into a QUIC packet.
+                    // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
+                    datagramBuffer.capacity(alloc().calculateNewCapacity(
+                            Math.min((int) (datagramBuffer.writableBytes() * 1.5), MAX_DATAGRAM_BUFFER_SIZE),
+                            MAX_DATAGRAM_BUFFER_SIZE));
+                    continue;
+                }
+                try {
+                    if (Quiche.throwIfError(written)) {
+                        datagramBuffer.release();
+                        break;
+                    }
+                } catch (Exception e) {
+                    datagramBuffer.release();
+                    pipeline().fireExceptionCaught(e);
+                }
+                recvHandle.lastBytesRead(written);
+                recvHandle.incMessagesRead(1);
+
+                datagramBuffer.writerIndex(writerIndex + written);
+
+                pipeline().fireChannelRead(datagramBuffer);
+                fireChannelReadCompletePending = true;
+            }
+            recvHandle.readComplete();
+        }
+
         private boolean handlePendingChannelActive() {
             if (server) {
                 if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
+
                     // We didnt notify before about channelActive... Update state and fire the event.
                     state = ACTIVE;
                     pipeline().fireChannelActive();
+                    fireDatagramExtensionEvent();
                 }
             } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
                 ChannelPromise promise = connectPromise;
                 connectPromise = null;
                 state = ACTIVE;
+
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
+                fireDatagramExtensionEvent();
                 if (!promiseSet) {
                     this.close(this.voidPromise());
                     return true;
                 }
             }
             return false;
+        }
+
+        private void fireDatagramExtensionEvent() {
+            int len = Quiche.quiche_conn_dgram_max_writable_len(connAddr);
+            // QUICHE_ERR_DONE means the remote peer does not support the extension.
+            if (len != Quiche.QUICHE_ERR_DONE) {
+                pipeline().fireUserEventTriggered(new QuicDatagramExtensionEvent(len));
+            }
         }
 
         private QuicheQuicStreamChannel addNewStreamChannel(long streamId) {
@@ -998,11 +1168,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     // TODO: Come up with something better.
-    static QuicheQuicChannel handleConnect(SocketAddress address, long config, int localConnIdLength) throws Exception {
+    static QuicheQuicChannel handleConnect(SocketAddress address, long config, int localConnIdLength,
+                                           boolean supportsDatagram) throws Exception {
         if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
             QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
             QuicheQuicChannel channel = addr.channel;
-            channel.connect(config, localConnIdLength);
+            channel.connect(config, localConnIdLength, supportsDatagram);
             return channel;
         }
         return null;

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -370,13 +371,32 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return self();
     }
 
+    private Integer recvQueueLen;
+    private Integer sendQueueLen;
+
+    /**
+     * If configured this will enable <a href="https://tools.ietf.org/html/draft-ietf-quic-datagram-01">
+     *     Datagram support.</a>
+     * @param recvQueueLen  the RECV queue length.
+     * @param sendQueueLen  the SEND queue length.
+     * @return              the instance itself.
+     */
+    public final B datagram(int recvQueueLen, int sendQueueLen) {
+        checkPositive(recvQueueLen, "recvQueueLen");
+        checkPositive(sendQueueLen, "sendQueueLen");
+
+        this.recvQueueLen = recvQueueLen;
+        this.sendQueueLen = sendQueueLen;
+        return self();
+    }
+
     private QuicheConfig createConfig() {
         return new QuicheConfig(certPath, keyPath, verifyPeer, grease, earlyData,
                 protos, maxIdleTimeout, maxUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
-                congestionControlAlgorithm);
+                congestionControlAlgorithm, recvQueueLen, sendQueueLen);
     }
 
     /**

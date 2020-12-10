@@ -303,14 +303,25 @@ static jint netty_quiche_stream_iter_next(JNIEnv* env, jclass clazz, jlong iter,
     return i;
 }
 
-
 static jint netty_quiche_conn_dgram_max_writable_len(JNIEnv* env, jclass clazz, jlong conn) {
     return (jint) quiche_conn_dgram_max_writable_len((quiche_conn *) conn);
+}
+
+static jint netty_quiche_conn_dgram_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
+    return (jint) quiche_conn_dgram_recv((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
+}
+
+static jint netty_quiche_conn_dgram_send(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
+    return (jint) quiche_conn_dgram_send((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
 }
 
 static jlong netty_quiche_config_new(JNIEnv* env, jclass clazz, jint version) {
     quiche_config* config = quiche_config_new((uint32_t) version);
     return config == NULL ? -1 : (jlong) config;
+}
+
+static void netty_quiche_config_enable_dgram(JNIEnv* env, jclass clazz, jlong config, jboolean enabled, jint recv_queue_len, jint send_queue_len) {
+    quiche_config_enable_dgram((quiche_config*) config, enabled == JNI_TRUE ? true : false, (size_t) recv_queue_len, (size_t) send_queue_len);
 }
 
 static jint netty_quiche_config_load_cert_chain_from_pem_file(JNIEnv* env, jclass clazz, jlong config, jstring path) {
@@ -498,7 +509,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_stream_iter_free", "(J)V", (void *) netty_quiche_stream_iter_free },
   { "quiche_stream_iter_next", "(J[J)I", (void *) netty_quiche_stream_iter_next },
   { "quiche_conn_dgram_max_writable_len", "(J)I", (void* ) netty_quiche_conn_dgram_max_writable_len },
+  { "quiche_conn_dgram_recv", "(JJI)I", (void* ) netty_quiche_conn_dgram_recv },
+  { "quiche_conn_dgram_send", "(JJI)I", (void* ) netty_quiche_conn_dgram_send },
   { "quiche_config_new", "(I)J", (void *) netty_quiche_config_new },
+  { "quiche_config_enable_dgram", "(JZII)V", (void *) netty_quiche_config_enable_dgram },
   { "quiche_config_load_cert_chain_from_pem_file", "(JLjava/lang/String;)I", (void *) netty_quiche_config_load_cert_chain_from_pem_file },
   { "quiche_config_load_priv_key_from_pem_file", "(JLjava/lang/String;)I", (void *) netty_quiche_config_load_priv_key_from_pem_file },
   { "quiche_config_verify_peer", "(JZ)V", (void *) netty_quiche_config_verify_peer },

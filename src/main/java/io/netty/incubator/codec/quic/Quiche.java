@@ -344,6 +344,20 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L361">
+     *     quiche_conn_dgram_recv</a>.
+     */
+    static native int quiche_conn_dgram_recv(long connAddr, long buf, int size);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L3651">
+     *     quiche_conn_dgram_send</a>.
+     */
+    static native int quiche_conn_dgram_send(long connAddr, long buf, int size);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L115">quiche_config_new</a>.
      */
     static native long quiche_config_new(int version);
@@ -480,6 +494,14 @@ final class Quiche {
      *     quiche_config_enable_hystart</a>.
      */
     static native void quiche_config_enable_hystart(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L187">
+     *     quiche_config_enable_dgram</a>.
+     */
+    static native void quiche_config_enable_dgram(long configAddr, boolean enable,
+                                                  int recv_queue_len, int send_queue_len);
 
     /**
      * See

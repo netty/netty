@@ -35,13 +35,16 @@ final class QuicheConfig {
     private final Boolean disableActiveMigration;
     private final Boolean enableHystart;
     private final QuicCongestionControlAlgorithm congestionControlAlgorithm;
+    private final Integer recvQueueLen;
+    private final Integer sendQueueLen;
 
     QuicheConfig(String certPath, String keyPath, Boolean verifyPeer, Boolean grease, boolean earlyData,
                         byte[] protos, Long maxIdleTimeout, Long maxUdpPayloadSize, Long initialMaxData,
                         Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
-                        QuicCongestionControlAlgorithm congestionControlAlgorithm) {
+                        QuicCongestionControlAlgorithm congestionControlAlgorithm,
+                 Integer recvQueueLen, Integer sendQueueLen) {
         this.certPath = certPath;
         this.keyPath = keyPath;
         this.verifyPeer = verifyPeer;
@@ -61,6 +64,12 @@ final class QuicheConfig {
         this.disableActiveMigration = disableActiveMigration;
         this.enableHystart = enableHystart;
         this.congestionControlAlgorithm = congestionControlAlgorithm;
+        this.recvQueueLen = recvQueueLen;
+        this.sendQueueLen = sendQueueLen;
+    }
+
+    boolean isDatagramSupported() {
+        return recvQueueLen != null && sendQueueLen != null;
     }
 
     /**
@@ -135,6 +144,9 @@ final class QuicheConfig {
                         throw new IllegalArgumentException(
                                 "Unknown congestionControlAlgorithm: " + congestionControlAlgorithm);
                 }
+            }
+            if (isDatagramSupported()) {
+                Quiche.quiche_config_enable_dgram(config, true, recvQueueLen, sendQueueLen);
             }
             return config;
         } catch (Throwable cause) {
