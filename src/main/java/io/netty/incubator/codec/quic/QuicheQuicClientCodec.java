@@ -37,7 +37,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     @Override
     protected QuicheQuicChannel quicPacketRead(
             ChannelHandlerContext ctx, InetSocketAddress sender, InetSocketAddress recipient,
-            byte type, int version, ByteBuf scid, ByteBuf dcid,
+            QuicPacketType type, int version, ByteBuf scid, ByteBuf dcid,
             ByteBuf token) {
         ByteBuffer key = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
         return getChannel(key);

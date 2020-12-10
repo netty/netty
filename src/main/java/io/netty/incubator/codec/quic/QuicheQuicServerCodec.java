@@ -25,10 +25,11 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
+
+import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 
 /**
  * {@link QuicheQuicCodec} for QUIC servers.
@@ -71,7 +72,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         super.handlerAdded(ctx);
-        connIdBuffer = allocateNativeOrder(localConnIdLength);
+        connIdBuffer = Quiche.allocateNativeOrder(localConnIdLength);
         mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
     }
 
@@ -84,7 +85,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
     @Override
     protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
-                                               InetSocketAddress recipient, byte type, int version,
+                                               InetSocketAddress recipient, QuicPacketType type, int version,
                                                ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
         ByteBuffer dcidByteBuffer = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
         QuicheQuicChannel channel = getChannel(dcidByteBuffer);
@@ -96,7 +97,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     }
 
     private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
-                                 @SuppressWarnings("unused") byte type, int version,
+                                 @SuppressWarnings("unused") QuicPacketType type, int version,
                                  ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
         if (!Quiche.quiche_version_is_supported(version)) {
             // Version is not supported, try to negotiate it.

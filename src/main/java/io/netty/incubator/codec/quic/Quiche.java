@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -26,6 +27,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
@@ -530,6 +532,16 @@ final class Quiche {
     static long memoryAddress(ByteBuffer buf) {
         assert buf.isDirect();
         return buffer_memory_address(buf);
+    }
+
+    @SuppressWarnings("deprecation")
+    static ByteBuf allocateNativeOrder(int capacity) {
+        // Just use Unpooled as the life-time of these buffers is long.
+        ByteBuf buffer = Unpooled.directBuffer(capacity);
+
+        // As we use the buffers as pointers to int etc we need to ensure we use the right oder so we will
+        // see the right value when we read primitive values.
+        return PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? buffer : buffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
     static String errorAsString(int err) {
