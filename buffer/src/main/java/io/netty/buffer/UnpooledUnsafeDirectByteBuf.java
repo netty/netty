@@ -47,9 +47,9 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
     protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
-        // We never try to free the buffer if it was provided by the end-user as we not know if this is an duplicate or
-        // an slice. This is done to prevent an IllegalArgumentException when using Java9 as Unsafe.invokeCleaner(...)
-        // will check if the given buffer is either an duplicate or slice and in this case throw an
+        // We never try to free the buffer if it was provided by the end-user as we don't know if this is a duplicate or
+        // a slice. This is done to prevent an IllegalArgumentException when using Java9 as Unsafe.invokeCleaner(...)
+        // will check if the given buffer is either a duplicate or slice and in this case throw an
         // IllegalArgumentException.
         //
         // See https://hg.openjdk.java.net/jdk9/hs-demo/jdk/file/0d2ab72ba600/src/jdk.unsupported/share/classes/
