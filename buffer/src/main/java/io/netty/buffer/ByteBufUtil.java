@@ -1316,13 +1316,12 @@ public final class ByteBufUtil {
                     NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
                     NEWLINE + "+--------+-------------------------------------------------+----------------+");
 
-            final int startIndex = offset;
             final int fullRows = length >>> 4;
             final int remainder = length & 0xF;
 
             // Dump the rows which have 16 bytes.
             for (int row = 0; row < fullRows; row ++) {
-                int rowStartIndex = (row << 4) + startIndex;
+                int rowStartIndex = (row << 4) + offset;
 
                 // Per-row prefix.
                 appendHexDumpRowPrefix(dump, row, rowStartIndex);
@@ -1343,7 +1342,7 @@ public final class ByteBufUtil {
 
             // Dump the last row which has less than 16 bytes.
             if (remainder != 0) {
-                int rowStartIndex = (fullRows << 4) + startIndex;
+                int rowStartIndex = (fullRows << 4) + offset;
                 appendHexDumpRowPrefix(dump, fullRows, rowStartIndex);
 
                 // Hex dump
