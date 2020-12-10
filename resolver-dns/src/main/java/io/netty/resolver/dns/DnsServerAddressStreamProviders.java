@@ -21,7 +21,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +34,8 @@ public final class DnsServerAddressStreamProviders {
     private static final InternalLogger LOGGER =
             InternalLoggerFactory.getInstance(DnsServerAddressStreamProviders.class);
     private static final Constructor<? extends DnsServerAddressStreamProvider> STREAM_PROVIDER_CONSTRUCTOR;
+    private static final String MACOS_PROVIDER_CLASS_NAME =
+            "io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider";
 
     static {
         Constructor<? extends DnsServerAddressStreamProvider> constructor = null;
@@ -47,7 +48,7 @@ public final class DnsServerAddressStreamProviders {
                     public Object run() {
                         try {
                             return Class.forName(
-                                    "io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider",
+                                    MACOS_PROVIDER_CLASS_NAME,
                                     true,
                                     DnsServerAddressStreamProviders.class.getClassLoader());
                         } catch (Throwable cause) {
@@ -59,16 +60,16 @@ public final class DnsServerAddressStreamProviders {
                     @SuppressWarnings("unchecked")
                     Class<? extends DnsServerAddressStreamProvider> providerClass =
                             (Class<? extends DnsServerAddressStreamProvider>) maybeProvider;
-                    Method method = providerClass.getMethod("ensureAvailability");
-                    method.invoke(null);
                     constructor = providerClass.getConstructor();
-                    constructor.newInstance();
-                } else if (!(maybeProvider instanceof ClassNotFoundException)) {
+                    constructor.newInstance();  // ctor ensures availability
+                    LOGGER.debug("{}: available", MACOS_PROVIDER_CLASS_NAME);
+                } else {
                     throw (Throwable) maybeProvider;
                 }
             } catch (Throwable cause) {
-                LOGGER.debug(
-                        "Unable to use MacOSDnsServerAddressStreamProvider, fallback to system defaults", cause);
+                LOGGER.warn(
+                        "Unable to load {}, fallback to system defaults. {}", MACOS_PROVIDER_CLASS_NAME,
+                        "This may result in incorrect DNS resolutions on MacOS.", cause);
                 constructor = null;
             }
         }
