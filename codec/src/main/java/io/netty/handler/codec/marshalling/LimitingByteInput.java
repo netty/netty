@@ -96,7 +96,7 @@ class LimitingByteInput implements ByteInput {
     }
 
     /**
-     * Exception that will get thrown if the {@link Object} is to big to unmarshall
+     * Exception that will get thrown if the {@link Object} is too big to unmarshall
      *
      */
     static final class TooBigObjectException extends IOException {
