@@ -938,4 +938,42 @@ public class HttpPostRequestDecoderTest {
             assertTrue(req.release());
         }
     }
+
+    @Test
+    public void testDecodeMultipartRequest() {
+        byte[] bodyBytes = ("--be38b42a9ad2713f\n" +
+                "content-disposition: form-data; name=\"title\"\n" +
+                "content-length: 10\n" +
+                "content-type: text/plain; charset=UTF-8\n" +
+                "\n" +
+                "bar-stream\n" +
+                "--be38b42a9ad2713f\n" +
+                "content-disposition: form-data; name=\"data\"; filename=\"data.json\"\n" +
+                "content-length: 16\n" +
+                "content-type: application/json; charset=UTF-8\n" +
+                "\n" +
+                "{\"title\":\"Test\"}\n" +
+                "--be38b42a9ad2713f--").getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        req.headers().add("Content-Type", "multipart/form-data;boundary=be38b42a9ad2713f");
+
+        try {
+            HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+            InterfaceHttpData data = decoder.getBodyHttpData("title");
+            assertTrue(data instanceof MemoryAttribute);
+            assertEquals("bar-stream", ((MemoryAttribute) data).getString());
+            assertTrue(data.release());
+            data = decoder.getBodyHttpData("data");
+            assertTrue(data instanceof MemoryFileUpload);
+            assertEquals("{\"title\":\"Test\"}", ((MemoryFileUpload) data).getString());
+            assertTrue(data.release());
+            decoder.destroy();
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            fail("Was not expecting an exception");
+        } finally {
+            assertTrue(req.release());
+        }
+    }
 }

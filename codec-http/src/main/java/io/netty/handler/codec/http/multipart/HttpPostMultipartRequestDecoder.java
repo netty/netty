@@ -1117,7 +1117,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 newOffset = toRead;
                 return -newOffset;
             }
-            newOffset = posFirstChar + offset;
+            newOffset = posFirstChar + newOffset;
             if (newOffset + delimeterLength > toRead) {
                 return -newOffset;
             }
