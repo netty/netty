@@ -65,7 +65,14 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             if (in.readableBytes() < typeLen) {
                 return;
             }
-            type = readVariableLengthInteger(in, typeLen);
+            long type = readVariableLengthInteger(in, typeLen);
+            if (Http3CodecUtils.isReservedHttp2(type)) {
+                    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+                    Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                            "Reserved type for HTTP/2 received.", true);
+                    return;
+            }
+            this.type = type;
             if (!in.isReadable()) {
                 return;
             }
@@ -88,6 +95,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
         this.payLoadLength = -1;
         try {
             if (type <= Integer.MAX_VALUE) {
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
                 switch ((int) type) {
                     case 0x0:
                         // DATA
@@ -136,8 +144,10 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                         break;
                     default:
+                        // TODO: Should we do validation here ?
                         // Handling reserved frame types
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+                        out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
                         break;
                 }
             }

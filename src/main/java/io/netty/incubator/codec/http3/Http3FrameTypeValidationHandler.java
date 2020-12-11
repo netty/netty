@@ -34,9 +34,13 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
         return (T) msg;
     }
 
+    private boolean isValid(Object msg) {
+        return frameType.isInstance(msg);
+    }
+
     @Override
     public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (frameType.isInstance(msg)) {
+        if (isValid(msg)) {
             write(ctx, cast(msg), promise);
         } else {
             frameTypeUnexpected(promise, msg);
@@ -49,7 +53,7 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
 
     @Override
     public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (frameType.isInstance(msg)) {
+        if (isValid(msg)) {
             channelRead(ctx, cast(msg));
         } else {
             frameTypeUnexpected(ctx, msg);

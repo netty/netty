@@ -20,11 +20,37 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 final class Http3CodecUtils {
     static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
 
+    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+    static final long MIN_RESERVED_FRAME_TYPE = 0x1f * 1 + 0x21;
+    static final long MAX_RESERVED_FRAME_TYPE = 0x1f * (long) Integer.MAX_VALUE + 0x21;
+
     private Http3CodecUtils() { }
+
+    static long checkIsReservedFrameType(long type) {
+        return ObjectUtil.checkInRange(type, MIN_RESERVED_FRAME_TYPE, MAX_RESERVED_FRAME_TYPE, "type");
+    }
+
+    static boolean isReservedFrameType(long type) {
+        return type >= MIN_RESERVED_FRAME_TYPE && type <= MAX_RESERVED_FRAME_TYPE;
+    }
+
+    static boolean isReservedHttp2(long type) {
+        switch ((int) type) {
+            // Reserved types that were used in HTTP/2
+            case 0x2:
+            case 0x6:
+            case 0x8:
+            case 0x9:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     /**
      * Returns the number of bytes needed to encode the variable length integer.

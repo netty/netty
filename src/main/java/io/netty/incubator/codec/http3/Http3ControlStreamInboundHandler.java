@@ -85,10 +85,10 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             }
         } else if (frame instanceof Http3CancelPushFrame) {
             // TODO: implement me
-        } else {
-            // TODO: Do we need to do something to handle unknown frames
         }
 
+        // We don't need to do any special handling for Http3UnknownFrames as we either pass these to the next handler
+        // or release these directly.
         if (forwardControlFrames) {
             // The user did specify ChannelHandler that should be notified about control stream frames.
             // Let's forward the frame so the user can do something with it.

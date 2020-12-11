@@ -42,7 +42,8 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Override
     protected List<Http3RequestStreamFrame> newValidFrames() {
-        return Arrays.asList(new DefaultHttp3HeadersFrame(), new DefaultHttp3DataFrame(Unpooled.directBuffer()));
+        return Arrays.asList(new DefaultHttp3HeadersFrame(), new DefaultHttp3DataFrame(Unpooled.directBuffer()),
+                new DefaultHttp3UnknownFrame(Http3CodecUtils.MAX_RESERVED_FRAME_TYPE, Unpooled.buffer()));
     }
 
     @Test

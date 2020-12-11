@@ -45,7 +45,9 @@ final class Http3ControlStreamFrameDispatcher extends ChannelOutboundHandlerAdap
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         // Check if we are already on the local control frame or not.
-        if (ctx.channel() != localControlStream && msg instanceof Http3ControlStreamFrame) {
+        if (ctx.channel() != localControlStream && msg instanceof Http3ControlStreamFrame &&
+                // We can not make any smart decision for unknown frames as there are allowed on all stream types.
+                !(msg instanceof Http3UnknownFrame)) {
             // write and flush as otherwise we may never flush the control stream for the write.
             localControlStream.writeAndFlush(msg).addListener(new ChannelPromiseNotifier(promise));
             return;

@@ -53,6 +53,8 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
                 writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, promise);
             } else if (msg instanceof Http3MaxPushIdFrame) {
                 writeMaxPushIdFrame(ctx, (Http3MaxPushIdFrame) msg, promise);
+            } else if (msg instanceof Http3UnknownFrame) {
+                writeUnknownFrame(ctx, (Http3UnknownFrame) msg, promise);
             } else {
                 unsupported(promise);
             }
@@ -143,6 +145,30 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         writeVariableLengthInteger(out, numBytesForVariableLengthInteger(id));
         writeVariableLengthInteger(out, id);
         ctx.write(out, promise);
+    }
+
+    private static void writeUnknownFrame(
+            ChannelHandlerContext ctx, Http3UnknownFrame frame, ChannelPromise promise) {
+        long type = frame.type();
+        if (Http3CodecUtils.isReservedHttp2(type)) {
+            Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                    "Reserved type for HTTP/2 send.");
+            promise.setFailure(exception);
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+            Http3CodecUtils.connectionError(ctx, exception, false);
+            return;
+        }
+        if (!Http3CodecUtils.isReservedFrameType(type)) {
+            Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                    "Non reserved type for HTTP/3 send.");
+            promise.setFailure(exception);
+            return;
+        }
+        ByteBuf out = ctx.alloc().directBuffer();
+        writeVariableLengthInteger(out, type);
+        writeVariableLengthInteger(out, frame.content().readableBytes());
+        ByteBuf content = frame.content().retain();
+        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
     }
 
     private static void unsupported(ChannelPromise promise) {

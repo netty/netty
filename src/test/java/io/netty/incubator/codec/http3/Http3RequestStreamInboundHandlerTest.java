@@ -65,8 +65,15 @@ public class Http3RequestStreamInboundHandlerTest {
     }
 
     private static final class TestHttp3RequestStreamInboundHandler extends Http3RequestStreamInboundHandler {
+
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, boolean isLast) {
+        public void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame, boolean isLast) {
+            ctx.fireChannelRead(frame);
+            ctx.fireChannelRead(isLast);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame, boolean isLast) {
             ctx.fireChannelRead(frame);
             ctx.fireChannelRead(isLast);
         }

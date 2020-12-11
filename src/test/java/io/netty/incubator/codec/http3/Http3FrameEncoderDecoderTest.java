@@ -20,16 +20,26 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
+import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
+import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(Parameterized.class)
 public class Http3FrameEncoderDecoderTest {
@@ -132,10 +142,94 @@ public class Http3FrameEncoderDecoderTest {
     }
 
     @Test
-    public void testHttpPushPromiseFrame() {
+    public void testHttp3PushPromiseFrame() {
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testFrameEncodedAndDecoded(pushPromiseFrame);
+    }
+
+    @Test
+    public void testHttp3UnknownFrame() {
+        testFrameEncodedAndDecoded(new DefaultHttp3UnknownFrame(Http3CodecUtils.MIN_RESERVED_FRAME_TYPE,
+                Unpooled.buffer().writeLong(8)));
+    }
+
+    // Reserved types that were used in HTTP/2 and should close the connection with an error
+    @Test
+    public void testDecodeReserved0x2() {
+        testDecodeReserved(0x2);
+    }
+
+    @Test
+    public void testDecodeReserved0x6() {
+        testDecodeReserved(0x6);
+    }
+
+    @Test
+    public void testDecodeReserved0x8() {
+        testDecodeReserved(0x8);
+    }
+
+    @Test
+    public void testDecodeReserved0x9() {
+        testDecodeReserved(0x9);
+    }
+
+    private void testDecodeReserved(long type) {
+        QuicChannel parent = mockParent();
+
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, newDecoder());
+        ByteBuf buffer = Unpooled.buffer();
+        Http3CodecUtils.writeVariableLengthInteger(buffer, type);
+
+        try {
+            decoderChannel.writeInbound(buffer);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
+        }
+        verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        assertFalse(decoderChannel.finish());
+    }
+
+    @Test
+    public void testEncodeReserved0x2() {
+        testEncodeReserved(0x2);
+    }
+
+    @Test
+    public void testEncodeReserved0x6() {
+        testEncodeReserved(0x6);
+    }
+
+    @Test
+    public void testEncodeReserved0x8() {
+        testEncodeReserved(0x8);
+    }
+
+    @Test
+    public void testEncodeReserved0x9() {
+        testEncodeReserved(0x9);
+    }
+
+    private void testEncodeReserved(long type) {
+        QuicChannel parent = mockParent();
+
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, newEncoder());
+        Http3UnknownFrame frame = mock(Http3UnknownFrame.class);
+        when(frame.type()).thenReturn(type);
+        when(frame.touch()).thenReturn(frame);
+        when(frame.touch(any())).thenReturn(frame);
+        try {
+            encoderChannel.writeOutbound(frame);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
+        }
+        // should have released the frame as well
+        verify(frame, times(1)).release();
+        verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        assertFalse(encoderChannel.finish());
     }
 
     private static void addRequestHeaders(Http3Headers headers) {
