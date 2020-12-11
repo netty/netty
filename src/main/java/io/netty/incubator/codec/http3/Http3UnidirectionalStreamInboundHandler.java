@@ -117,9 +117,12 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                     "Server received push stream.", false);
         } else {
+            // Replace this handler with a handler that validates the frames on the stream.
+            ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
+
             // TODO: Handle push streams correctly
-            // Replace this handler with a handler that just drops bytes on the floor.
-            ctx.pipeline().replace(this, null, ReleaseHandler.INSTANCE);
+            // For now add a handler that will just release the frames so we dont leak.
+            ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
         }
     }
 
