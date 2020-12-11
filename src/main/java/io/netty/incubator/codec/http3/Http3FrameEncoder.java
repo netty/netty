@@ -24,7 +24,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
@@ -74,7 +74,10 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private void writeHeadersFrame(
             ChannelHandlerContext ctx, Http3HeadersFrame frame, ChannelPromise promise) {
-        writeDynamicFrame(ctx, 0x1, frame, (f, out) -> qpackEncoder.encodeHeaders(out, f.headers()), promise);
+        writeDynamicFrame(ctx, 0x1, frame, (f, out) -> {
+            qpackEncoder.encodeHeaders(out, f.headers());
+            return true;
+        }, promise);
     }
 
     private static void writeCancelPushFrame(
@@ -87,37 +90,51 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
         writeDynamicFrame(ctx, 0x4, frame, (f, out) -> {
             for (Map.Entry<Long, Long> e : f) {
                 Long key = e.getKey();
+                if (Http3CodecUtils.isReservedHttp2Setting(key)) {
+                    Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_SETTINGS_ERROR,
+                            "Received a settings key that is reserved for HTTP/2.");
+                    promise.setFailure(exception);
+                    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+                    Http3CodecUtils.connectionError(ctx, exception, false);
+                    return false;
+                }
                 Long value = e.getValue();
                 int keyLen = numBytesForVariableLengthInteger(key);
                 int valueLen = numBytesForVariableLengthInteger(value);
                 writeVariableLengthInteger(out, key, keyLen);
                 writeVariableLengthInteger(out, value, valueLen);
             }
+            return true;
         }, promise);
     }
 
     private static <T extends Http3Frame> void writeDynamicFrame(ChannelHandlerContext ctx, long type, T frame,
-                                                          BiConsumer<T, ByteBuf> writer, ChannelPromise promise) {
+                                                                 BiFunction<T, ByteBuf, Boolean> writer,
+                                                                 ChannelPromise promise) {
         ByteBuf out = ctx.alloc().directBuffer();
         int initialWriterIndex = out.writerIndex();
         // Move 16 bytes forward as this is the maximum amount we could ever need for the type + payload length.
         int payloadStartIndex = initialWriterIndex + 16;
         out.writerIndex(payloadStartIndex);
 
-        writer.accept(frame, out);
-        int finalWriterIndex = out.writerIndex();
-        int payloadLength = finalWriterIndex - payloadStartIndex;
-        int len = numBytesForVariableLengthInteger(payloadLength);
-        out.writerIndex(payloadStartIndex - len);
-        writeVariableLengthInteger(out, payloadLength, len);
+        if (writer.apply(frame, out)) {
+            int finalWriterIndex = out.writerIndex();
+            int payloadLength = finalWriterIndex - payloadStartIndex;
+            int len = numBytesForVariableLengthInteger(payloadLength);
+            out.writerIndex(payloadStartIndex - len);
+            writeVariableLengthInteger(out, payloadLength, len);
 
-        int typeLength = numBytesForVariableLengthInteger(type);
-        int startIndex = payloadStartIndex - len - typeLength;
-        out.writerIndex(startIndex);
-        writeVariableLengthInteger(out, type, typeLength);
+            int typeLength = numBytesForVariableLengthInteger(type);
+            int startIndex = payloadStartIndex - len - typeLength;
+            out.writerIndex(startIndex);
+            writeVariableLengthInteger(out, type, typeLength);
 
-        out.setIndex(startIndex, finalWriterIndex);
-        ctx.write(out, promise);
+            out.setIndex(startIndex, finalWriterIndex);
+            ctx.write(out, promise);
+        } else {
+            // We failed to encode, lets release the buffer so we dont leak.
+            out.release();
+        }
     }
 
     private void writePushPromiseFrame(
@@ -126,6 +143,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
             long id = f.id();
             writeVariableLengthInteger(out, id);
             qpackEncoder.encodeHeaders(out, f.headers());
+            return true;
         }, promise);
     }
 
@@ -150,7 +168,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     private static void writeUnknownFrame(
             ChannelHandlerContext ctx, Http3UnknownFrame frame, ChannelPromise promise) {
         long type = frame.type();
-        if (Http3CodecUtils.isReservedHttp2(type)) {
+        if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
             Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Reserved type for HTTP/2 send.");
             promise.setFailure(exception);

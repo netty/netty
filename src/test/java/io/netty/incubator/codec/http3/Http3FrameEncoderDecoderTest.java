@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
@@ -156,26 +157,26 @@ public class Http3FrameEncoderDecoderTest {
 
     // Reserved types that were used in HTTP/2 and should close the connection with an error
     @Test
-    public void testDecodeReserved0x2() {
-        testDecodeReserved(0x2);
+    public void testDecodeReservedFrameType0x2() {
+        testDecodeReservedFrameType(0x2);
     }
 
     @Test
-    public void testDecodeReserved0x6() {
-        testDecodeReserved(0x6);
+    public void testDecodeReservedFrameType0x6() {
+        testDecodeReservedFrameType(0x6);
     }
 
     @Test
-    public void testDecodeReserved0x8() {
-        testDecodeReserved(0x8);
+    public void testDecodeReservedFrameType0x8() {
+        testDecodeReservedFrameType(0x8);
     }
 
     @Test
-    public void testDecodeReserved0x9() {
-        testDecodeReserved(0x9);
+    public void testDecodeReservedFrameType0x9() {
+        testDecodeReservedFrameType(0x9);
     }
 
-    private void testDecodeReserved(long type) {
+    private void testDecodeReservedFrameType(long type) {
         QuicChannel parent = mockParent();
 
         EmbeddedChannel decoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
@@ -190,29 +191,30 @@ public class Http3FrameEncoderDecoderTest {
         }
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertFalse(decoderChannel.finish());
+        assertEquals(0, buffer.refCnt());
     }
 
     @Test
-    public void testEncodeReserved0x2() {
-        testEncodeReserved(0x2);
+    public void testEncodeReservedFrameType0x2() {
+        testEncodeReservedFrameType(0x2);
     }
 
     @Test
-    public void testEncodeReserved0x6() {
-        testEncodeReserved(0x6);
+    public void testEncodeReservedFrameType0x6() {
+        testEncodeReservedFrameType(0x6);
     }
 
     @Test
-    public void testEncodeReserved0x8() {
-        testEncodeReserved(0x8);
+    public void testEncodeReservedFrameType0x8() {
+        testEncodeReservedFrameType(0x8);
     }
 
     @Test
-    public void testEncodeReserved0x9() {
-        testEncodeReserved(0x9);
+    public void testEncodeReservedFrameType0x9() {
+        testEncodeReservedFrameType(0x9);
     }
 
-    private void testEncodeReserved(long type) {
+    private void testEncodeReservedFrameType(long type) {
         QuicChannel parent = mockParent();
 
         EmbeddedChannel encoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
@@ -229,6 +231,102 @@ public class Http3FrameEncoderDecoderTest {
         // should have released the frame as well
         verify(frame, times(1)).release();
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        assertFalse(encoderChannel.finish());
+    }
+
+    // Reserved types that were used in HTTP/2 and should close the connection with an error
+    @Test
+    public void testDecodeReservedSettingsKey0x2() {
+        testDecodeReservedSettingsKey(0x2);
+    }
+
+    @Test
+    public void testDecodeReservedSettingsKey0x3() {
+        testDecodeReservedSettingsKey(0x3);
+    }
+
+    @Test
+    public void testDecodeReservedSettingsKey0x4() {
+        testDecodeReservedSettingsKey(0x4);
+    }
+
+    @Test
+    public void testDecodeReservedSettingsKey0x5() {
+        testDecodeReservedSettingsKey(0x5);
+    }
+
+    private void testDecodeReservedSettingsKey(long key) {
+        ByteBuf buffer = Unpooled.buffer();
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x4);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
+        // Write the key and some random value... Both should be only 1 byte long each.
+        Http3CodecUtils.writeVariableLengthInteger(buffer, key);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
+        testDecodeInvalidSettings(buffer);
+    }
+
+    @Test
+    public void testDecodeSettingsWithSameKey() {
+        ByteBuf buffer = Unpooled.buffer();
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x4);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
+        // Write the key and some random value... Both should be only 1 byte long each.
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
+
+        testDecodeInvalidSettings(buffer);
+    }
+
+    private void testDecodeInvalidSettings(ByteBuf buffer) {
+        QuicChannel parent = mockParent();
+
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, newDecoder());
+        try {
+            decoderChannel.writeInbound(buffer);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
+        }
+        verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
+        assertFalse(decoderChannel.finish());
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testEncodeReservedSettingsKey0x2() {
+        testEncodeReservedSettingsKey(0x2);
+    }
+
+    @Test
+    public void testEncodeReservedSettingsKey0x3() {
+        testEncodeReservedSettingsKey(0x3);
+    }
+
+    @Test
+    public void testEncodeReservedSettingsKey0x4() {
+        testEncodeReservedSettingsKey(0x4);
+    }
+
+    @Test
+    public void testEncodeReservedSettingsKey0x5() {
+        testEncodeReservedSettingsKey(0x5);
+    }
+
+    private void testEncodeReservedSettingsKey(long key) {
+        QuicChannel parent = mockParent();
+
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, newEncoder());
+        Http3SettingsFrame frame = mock(Http3SettingsFrame.class);
+        when(frame.iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
+        try {
+            encoderChannel.writeOutbound(frame);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
+        }
+        verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
         assertFalse(encoderChannel.finish());
     }
 

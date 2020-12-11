@@ -66,7 +66,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                 return;
             }
             long type = readVariableLengthInteger(in, typeLen);
-            if (Http3CodecUtils.isReservedHttp2(type)) {
+            if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
                     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                     Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
                             "Reserved type for HTTP/2 received.", true);
@@ -119,7 +119,12 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                     case 0x4:
                         // SETTINGS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
-                        out.add(decodeSettings(in, payLoadLength));
+                        Http3SettingsFrame settingsFrame = decodeSettings(ctx, in, payLoadLength);
+                        if (settingsFrame == null) {
+                            // Decoding failed
+                            return;
+                        }
+                        out.add(settingsFrame);
                         break;
                     case 0x5:
                         // PUSH_PROMISE
@@ -144,7 +149,6 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                         break;
                     default:
-                        // TODO: Should we do validation here ?
                         // Handling reserved frame types
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                         out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
@@ -156,17 +160,30 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private static Http3SettingsFrame decodeSettings(ByteBuf in, int payLoadLength) {
+    private static Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long key = readVariableLengthInteger(in, keyLen);
+            if (Http3CodecUtils.isReservedHttp2Setting(key)) {
+                // This must be treated as a connection error
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4.1
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
+                        "Received a settings key that is reserved for HTTP/2.", true);
+                return null;
+            }
             payLoadLength -= keyLen;
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
 
-            settingsFrame.put(key, value);
+            if (settingsFrame.put(key, value) != null) {
+                // This must be treated as a connection error
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
+                        "Received a duplicate settings key.", true);
+                return null;
+            }
         }
         return settingsFrame;
     }

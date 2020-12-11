@@ -39,13 +39,28 @@ final class Http3CodecUtils {
         return type >= MIN_RESERVED_FRAME_TYPE && type <= MAX_RESERVED_FRAME_TYPE;
     }
 
-    static boolean isReservedHttp2(long type) {
+    static boolean isReservedHttp2FrameType(long type) {
         switch ((int) type) {
             // Reserved types that were used in HTTP/2
+            // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
             case 0x2:
             case 0x6:
             case 0x8:
             case 0x9:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    static boolean isReservedHttp2Setting(long key) {
+        switch ((int) key) {
+            // Reserved types that were used in HTTP/2
+            // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.2
+            case 0x2:
+            case 0x3:
+            case 0x4:
+            case 0x5:
                 return true;
             default:
                 return false;
