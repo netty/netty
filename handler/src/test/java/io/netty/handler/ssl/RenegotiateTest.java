@@ -46,7 +46,10 @@ public abstract class RenegotiateTest {
         EventLoopGroup group = new LocalEventLoopGroup();
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(serverSslProvider()).build();
+                    .sslProvider(serverSslProvider())
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
+
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -95,7 +98,10 @@ public abstract class RenegotiateTest {
             Channel channel = sb.bind(new LocalAddress("test")).syncUninterruptibly().channel();
 
             final SslContext clientContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE).sslProvider(SslProvider.JDK).build();
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .sslProvider(SslProvider.JDK)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
