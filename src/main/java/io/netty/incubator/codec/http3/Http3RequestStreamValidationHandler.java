@@ -33,29 +33,35 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
         this.server = server;
     }
 
+    private static State checkState(State state, Http3RequestStreamFrame frame) {
+        switch (state) {
+            case Initial:
+                if (!(frame instanceof Http3HeadersFrame)) {
+                    return null;
+                }
+                return State.Started;
+            case Started:
+                if (frame instanceof Http3HeadersFrame) {
+                    // trailers
+                    return State.End;
+                }
+                return state;
+            case End:
+                return null;
+            default:
+                throw new Error();
+        }
+    }
+
     @Override
     public void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, ChannelPromise promise) {
         if (!(frame instanceof Http3PushPromiseFrame)) {
-            switch (writeState) {
-                case Initial:
-                    if (!(frame instanceof Http3HeadersFrame)) {
-                        frameTypeUnexpected(promise, frame);
-                        return;
-                    }
-                    writeState = State.Started;
-                    break;
-                case Started:
-                    if (frame instanceof Http3HeadersFrame) {
-                        // trailers
-                        writeState = State.End;
-                    }
-                    break;
-                case End:
-                    frameTypeUnexpected(promise, frame);
-                    return;
-                default:
-                    throw new Error();
+            State newState = checkState(writeState, frame);
+            if (newState == null) {
+                frameTypeUnexpected(promise, frame);
+                return;
             }
+            writeState = newState;
         } else if (!server) {
             // Only supported on the server.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
@@ -69,26 +75,12 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     @Override
     public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame) {
         if (!(frame instanceof Http3PushPromiseFrame)) {
-            switch (readState) {
-                case Initial:
-                    if (!(frame instanceof Http3HeadersFrame)) {
-                        frameTypeUnexpected(ctx, frame);
-                        return;
-                    }
-                    readState = State.Started;
-                    break;
-                case Started:
-                    if (frame instanceof Http3HeadersFrame) {
-                        // trailers
-                        readState = State.End;
-                    }
-                    break;
-                case End:
-                    frameTypeUnexpected(ctx, frame);
-                    return;
-                default:
-                    throw new Error();
+            State newState = checkState(readState, frame);
+            if (newState == null) {
+                frameTypeUnexpected(ctx, frame);
+                return;
             }
+            readState = newState;
         } else if (!server) {
             // Only supported on the server.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
