@@ -19,6 +19,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuplexHandler {
@@ -26,7 +27,7 @@ class Http3FrameTypeValidationHandler<T extends Http3Frame> extends ChannelDuple
     private final Class<T> frameType;
 
     Http3FrameTypeValidationHandler(Class<T> frameType) {
-        this.frameType = frameType;
+        this.frameType = ObjectUtil.checkNotNull(frameType, "frameType");
     }
 
     @SuppressWarnings("unchecked")

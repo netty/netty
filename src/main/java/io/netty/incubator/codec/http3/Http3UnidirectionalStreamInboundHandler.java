@@ -26,7 +26,6 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
@@ -96,7 +95,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
                 initQpackDecoderStream(ctx);
                 break;
             default:
-                initUnknownStream(ctx, type, in);
+                initUnknownStream(ctx, type);
                 break;
         }
     }
@@ -128,6 +127,10 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         }
     }
 
+    private boolean ensureStreamNotExistsYet(ChannelHandlerContext ctx, AttributeKey<Boolean> key) {
+        return ctx.channel().parent().attr(key).setIfAbsent(true) == null;
+    }
+
     /**
      * Called if the current {@link Channel} is a
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.2">push stream</a>.
@@ -137,12 +140,12 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                     "Server received push stream.", false);
         } else {
-            // Replace this handler with a handler that validates the frames on the stream.
-            ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
-
             // TODO: Handle push streams correctly
             // For now add a handler that will just release the frames so we dont leak.
             ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
+
+            // Replace this handler with a handler that validates the frames on the stream.
+            ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
         }
     }
 
@@ -152,7 +155,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      *     QPACK encoder stream</a>.
      */
     private void initQpackEncoderStream(ChannelHandlerContext ctx) {
-        if (ctx.channel().parent().attr(QPACK_ENCODER_STREAM).setIfAbsent(true) == null) {
+        if (ensureStreamNotExistsYet(ctx, QPACK_ENCODER_STREAM)) {
             // Just drop stuff on the floor as we dont support dynamic table atm.
             ctx.pipeline().replace(this, null, QpackStreamHandler.INSTANCE);
         } else {
@@ -168,7 +171,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      *     QPACK decoder stream</a>.
      */
     private void initQpackDecoderStream(ChannelHandlerContext ctx) {
-        if (ctx.channel().parent().attr(QPACK_DECODER_STREAM).setIfAbsent(true) == null) {
+        if (ensureStreamNotExistsYet(ctx, QPACK_DECODER_STREAM)) {
             // Just drop stuff on the floor as we dont support dynamic table atm.
             ctx.pipeline().replace(this, null, QpackStreamHandler.INSTANCE);
         } else {
@@ -183,9 +186,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * Called if we couldn't detect the stream type of the current {@link Channel}. Let's release everything that
      * we receive on this stream.
      */
-    private void initUnknownStream(ChannelHandlerContext ctx,
-                                     @SuppressWarnings("unused") long streamType,
-                                     @SuppressWarnings("unused") ByteBuf in) {
+    private void initUnknownStream(ChannelHandlerContext ctx, long streamType) {
         ctx.pipeline().replace(this, null, unknownStreamHandlerFactory.apply(streamType));
     }
 

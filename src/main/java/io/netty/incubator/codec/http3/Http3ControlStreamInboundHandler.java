@@ -45,58 +45,77 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
                     "Missing settings frame.", forwardControlFrames);
             ReferenceCountUtil.release(frame);
             return;
-        } else if (frame instanceof Http3SettingsFrame) {
-            // TODO: handle this.
-            Http3SettingsFrame settingsFrame = (Http3SettingsFrame) frame;
-            // As we not support dynamic table yet we dont create QPACK encoder / decoder streams.
-            // Once we support dynamic table this should be done here as well.
-            // TODO: Add QPACK stream creation.
+        }
+
+        final boolean valid;
+        if (frame instanceof Http3SettingsFrame) {
+            valid = handleHttp3SettingsFrame(ctx, (Http3SettingsFrame) frame);
         } else if (frame instanceof Http3GoAwayFrame) {
-            Http3GoAwayFrame goAwayFrame = (Http3GoAwayFrame) frame;
-            long id = goAwayFrame.id();
-            if (!server && id % 4 != 0) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                        "GOAWAY received with ID of non-request stream.", forwardControlFrames);
-                ReferenceCountUtil.release(frame);
-                return;
-            } else if (receivedGoawayId != null && id > receivedGoawayId) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                        "GOAWAY received with ID larger than previously received.", forwardControlFrames);
-                ReferenceCountUtil.release(frame);
-                return;
-            } else {
-                receivedGoawayId = id;
-            }
+            valid = handleHttp3GoAwayFrame(ctx, (Http3GoAwayFrame) frame);
         } else if (frame instanceof Http3MaxPushIdFrame) {
-            long id = ((Http3MaxPushIdFrame) frame).id();
-
-            if (!server) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                        "MAX_PUSH_ID received by client.", forwardControlFrames);
-                ReferenceCountUtil.release(frame);
-                return;
-            } else if (receivedMaxPushId != null && id < receivedMaxPushId) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                        "MAX_PUSH_ID reduced limit.", forwardControlFrames);
-                ReferenceCountUtil.release(frame);
-                return;
-            } else {
-                receivedMaxPushId = id;
-            }
+            valid = handleHttp3MaxPushIdFrame(ctx, (Http3MaxPushIdFrame) frame);
         } else if (frame instanceof Http3CancelPushFrame) {
-            // TODO: implement me
+            valid = handleHttp3CancelPushFrame(ctx, (Http3CancelPushFrame) frame);
+        } else {
+            // We don't need to do any special handling for Http3UnknownFrames as we either pass these to the next#
+            // handler or release these directly.
+            assert frame instanceof Http3UnknownFrame;
+            valid = true;
         }
 
-        // We don't need to do any special handling for Http3UnknownFrames as we either pass these to the next handler
-        // or release these directly.
-        if (forwardControlFrames) {
-            // The user did specify ChannelHandler that should be notified about control stream frames.
-            // Let's forward the frame so the user can do something with it.
-            ctx.fireChannelRead(frame);
-        } else {
-            // We handled the frame, release it.
+        if (!valid || !forwardControlFrames) {
             ReferenceCountUtil.release(frame);
+            return;
         }
+
+        // The user did specify ChannelHandler that should be notified about control stream frames.
+        // Let's forward the frame so the user can do something with it.
+        ctx.fireChannelRead(frame);
+    }
+
+    private boolean handleHttp3SettingsFrame(ChannelHandlerContext ctx, Http3SettingsFrame settingsFrame) {
+        // TODO: handle this.
+        // As we not support dynamic table yet we dont create QPACK encoder / decoder streams.
+        // Once we support dynamic table this should be done here as well.
+        // TODO: Add QPACK stream creation.
+        return true;
+    }
+
+    private boolean handleHttp3GoAwayFrame(ChannelHandlerContext ctx, Http3GoAwayFrame goAwayFrame) {
+        long id = goAwayFrame.id();
+        if (!server && id % 4 != 0) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                    "GOAWAY received with ID of non-request stream.", forwardControlFrames);
+            return false;
+        }
+        if (receivedGoawayId != null && id > receivedGoawayId) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                    "GOAWAY received with ID larger than previously received.", forwardControlFrames);
+            return false;
+        }
+        receivedGoawayId = id;
+        return true;
+    }
+
+    private boolean handleHttp3MaxPushIdFrame(ChannelHandlerContext ctx, Http3MaxPushIdFrame frame) {
+        long id = frame.id();
+        if (!server) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                    "MAX_PUSH_ID received by client.", forwardControlFrames);
+            return false;
+        }
+        if (receivedMaxPushId != null && id < receivedMaxPushId) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                    "MAX_PUSH_ID reduced limit.", forwardControlFrames);
+            return false;
+        }
+        receivedMaxPushId = id;
+        return true;
+    }
+
+    private boolean handleHttp3CancelPushFrame(ChannelHandlerContext ctx, Http3CancelPushFrame cancelPushFrame) {
+        // TODO: handle this.
+        return true;
     }
 
     @Override

@@ -33,14 +33,6 @@ public interface Http3UnknownFrame extends
         Http3RequestStreamFrame, Http3PushStreamFrame, Http3ControlStreamFrame, ByteBufHolder {
 
     /**
-     * Return the type of the frame.
-     *
-     * @return the type.
-     */
-
-    long type();
-
-    /**
      * Return the payload length of the frame.
      *
      * @return the length.

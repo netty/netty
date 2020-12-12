@@ -17,7 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-class QpackHeaderField {
+final class QpackHeaderField {
 
     /**
      * Section 3.2.1 Dynamic Table Size
@@ -41,13 +41,8 @@ class QpackHeaderField {
         this.value = checkNotNull(value, "value");
     }
 
-    final long size() {
+    long size() {
         return sizeOf(name, value);
-    }
-
-    public final boolean equalsForTest(QpackHeaderField other) {
-        return QpackUtil.equalsVariableTime(name, other.name) &&
-            QpackUtil.equalsVariableTime(value, other.value);
     }
 
     @Override

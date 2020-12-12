@@ -41,10 +41,11 @@ final class Http3ControlStreamOutboundHandler
         // We need to write 0x00 into the stream before doing anything else.
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
         // Just allocate 8 bytes which would be the max needed.
-        ByteBuf buffer = ctx.alloc().directBuffer(8);
+        ByteBuf buffer = ctx.alloc().buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE);
         ctx.write(buffer);
-        // Add the encoder and decoder in the pipeline so we can handle Http3Frames
+        // Add the encoder and decoder in the pipeline so we can handle Http3Frames. This needs to happen after
+        // we did write the type via a ByteBuf.
         ctx.pipeline().addFirst(codecSupplier.get());
         // If writing of the local settings fails let's just teardown the connection.
         ctx.writeAndFlush(localSettings).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
