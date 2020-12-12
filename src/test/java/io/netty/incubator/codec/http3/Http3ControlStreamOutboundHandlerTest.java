@@ -78,7 +78,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
         ByteBuf buffer = channel.readOutbound();
         // Verify that we did write the control stream prefix
         int len = Http3CodecUtils.numBytesForVariableLengthInteger(buffer.getByte(0));
-        assertEquals(0x00, Http3CodecUtils.readVariableLengthInteger(buffer, len));
+        assertEquals(Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE, Http3CodecUtils.readVariableLengthInteger(buffer, len));
         assertFalse(buffer.isReadable());
         buffer.release();
 

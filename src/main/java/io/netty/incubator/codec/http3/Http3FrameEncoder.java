@@ -26,6 +26,13 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_DATA_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 
@@ -66,7 +73,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
     private static void writeDataFrame(
             ChannelHandlerContext ctx, Http3DataFrame frame, ChannelPromise promise) {
         ByteBuf out = ctx.alloc().directBuffer();
-        writeVariableLengthInteger(out, 0x0);
+        writeVariableLengthInteger(out, HTTP3_DATA_FRAME_TYPE);
         writeVariableLengthInteger(out, frame.content().readableBytes());
         ByteBuf content = frame.content().retain();
         ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
@@ -74,7 +81,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private void writeHeadersFrame(
             ChannelHandlerContext ctx, Http3HeadersFrame frame, ChannelPromise promise) {
-        writeDynamicFrame(ctx, 0x1, frame, (f, out) -> {
+        writeDynamicFrame(ctx, HTTP3_HEADERS_FRAME_TYPE, frame, (f, out) -> {
             qpackEncoder.encodeHeaders(out, f.headers());
             return true;
         }, promise);
@@ -82,12 +89,12 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private static void writeCancelPushFrame(
             ChannelHandlerContext ctx, Http3CancelPushFrame frame, ChannelPromise promise) {
-        writeFrameWithId(ctx, 0x3, frame.id(), promise);
+        writeFrameWithId(ctx, HTTP3_CANCEL_PUSH_FRAME_TYPE, frame.id(), promise);
     }
 
     private static void writeSettingsFrame(
             ChannelHandlerContext ctx, Http3SettingsFrame frame, ChannelPromise promise) {
-        writeDynamicFrame(ctx, 0x4, frame, (f, out) -> {
+        writeDynamicFrame(ctx, HTTP3_SETTINGS_FRAME_TYPE, frame, (f, out) -> {
             for (Map.Entry<Long, Long> e : f) {
                 Long key = e.getKey();
                 if (Http3CodecUtils.isReservedHttp2Setting(key)) {
@@ -139,7 +146,7 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private void writePushPromiseFrame(
             ChannelHandlerContext ctx, Http3PushPromiseFrame frame, ChannelPromise promise) {
-        writeDynamicFrame(ctx, 0x5, frame, (f, out) -> {
+        writeDynamicFrame(ctx, HTTP3_PUSH_PROMISE_FRAME_TYPE, frame, (f, out) -> {
             long id = f.id();
             writeVariableLengthInteger(out, id);
             qpackEncoder.encodeHeaders(out, f.headers());
@@ -149,12 +156,12 @@ final class Http3FrameEncoder extends ChannelOutboundHandlerAdapter {
 
     private static void writeGoAwayFrame(
             ChannelHandlerContext ctx, Http3GoAwayFrame frame, ChannelPromise promise) {
-        writeFrameWithId(ctx, 0x7, frame.id(), promise);
+        writeFrameWithId(ctx, HTTP3_GO_AWAY_FRAME_TYPE, frame.id(), promise);
     }
 
     private static void writeMaxPushIdFrame(
             ChannelHandlerContext ctx, Http3MaxPushIdFrame frame, ChannelPromise promise) {
-        writeFrameWithId(ctx, 0xd, frame.id(), promise);
+        writeFrameWithId(ctx, HTTP3_MAX_PUSH_ID_FRAME_TYPE, frame.id(), promise);
     }
 
     private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id, ChannelPromise promise) {

@@ -22,12 +22,29 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthInteger;
+
 final class Http3CodecUtils {
     static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
 
     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
     static final long MIN_RESERVED_FRAME_TYPE = 0x1f * 1 + 0x21;
     static final long MAX_RESERVED_FRAME_TYPE = 0x1f * (long) Integer.MAX_VALUE + 0x21;
+
+    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2
+    static final int HTTP3_DATA_FRAME_TYPE = 0x0;
+    static final int HTTP3_HEADERS_FRAME_TYPE = 0x1;
+    static final int HTTP3_CANCEL_PUSH_FRAME_TYPE = 0x3;
+    static final int HTTP3_SETTINGS_FRAME_TYPE = 0x4;
+    static final int HTTP3_PUSH_PROMISE_FRAME_TYPE = 0x5;
+    static final int HTTP3_GO_AWAY_FRAME_TYPE = 0x7;
+    static final int HTTP3_MAX_PUSH_ID_FRAME_TYPE = 0xd;
+
+    static final int HTTP3_CONTROL_STREAM_TYPE = 0x00;
+    static final int HTTP3_PUSH_STREAM_TYPE = 0x01;
+    static final int HTTP3_QPACK_ENCODER_STREAM_TYPE = 0x02;
+    static final int HTTP3_QPACK_DECODER_STREAM_TYPE = 0x03;
 
     private Http3CodecUtils() { }
 

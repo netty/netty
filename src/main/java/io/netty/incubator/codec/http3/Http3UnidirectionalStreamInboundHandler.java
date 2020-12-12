@@ -28,6 +28,11 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_DECODER_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_ENCODER_STREAM_TYPE;
+
 /**
  * {@link ByteToMessageDecoder} which helps to detect the type of unidirectional stream.
  */
@@ -61,23 +66,29 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             return;
         }
         long type = Http3CodecUtils.readVariableLengthInteger(in, len);
-        if (type == 0x00) {
-            initControlStream(ctx);
-        } else if (type == 0x01) {
-            int pushIdLen = Http3CodecUtils.numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
-            if (in.readableBytes() < pushIdLen) {
-                return;
-            }
-            long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
-            initPushStream(ctx, pushId);
-        } else if (type == 0x02) {
-            // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
-            initQpackEncoderStream(ctx);
-        } else if (type == 0x03) {
-            // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
-            initQpackDecoderStream(ctx);
-        } else {
-            initUnknownStream(ctx, type, in);
+        switch ((int) type) {
+            case HTTP3_CONTROL_STREAM_TYPE:
+                initControlStream(ctx);
+                break;
+            case HTTP3_PUSH_STREAM_TYPE:
+                int pushIdLen = Http3CodecUtils.numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (in.readableBytes() < pushIdLen) {
+                    return;
+                }
+                long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
+                initPushStream(ctx, pushId);
+                break;
+            case HTTP3_QPACK_ENCODER_STREAM_TYPE:
+                // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
+                initQpackEncoderStream(ctx);
+                break;
+            case HTTP3_QPACK_DECODER_STREAM_TYPE:
+                // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#enc-dec-stream-def
+                initQpackDecoderStream(ctx);
+                break;
+            default:
+                initUnknownStream(ctx, type, in);
+                break;
         }
     }
 

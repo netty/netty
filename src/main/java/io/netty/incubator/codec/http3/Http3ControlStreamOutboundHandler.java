@@ -42,7 +42,7 @@ final class Http3ControlStreamOutboundHandler
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
         // Just allocate 8 bytes which would be the max needed.
         ByteBuf buffer = ctx.alloc().directBuffer(8);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x00);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE);
         ctx.write(buffer);
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
         ctx.pipeline().addFirst(codecSupplier.get());

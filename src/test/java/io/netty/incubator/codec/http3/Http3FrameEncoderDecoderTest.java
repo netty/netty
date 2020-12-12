@@ -257,7 +257,7 @@ public class Http3FrameEncoderDecoderTest {
 
     private void testDecodeReservedSettingsKey(long key) {
         ByteBuf buffer = Unpooled.buffer();
-        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x4);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
         // Write the key and some random value... Both should be only 1 byte long each.
         Http3CodecUtils.writeVariableLengthInteger(buffer, key);
@@ -268,7 +268,7 @@ public class Http3FrameEncoderDecoderTest {
     @Test
     public void testDecodeSettingsWithSameKey() {
         ByteBuf buffer = Unpooled.buffer();
-        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x4);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
         // Write the key and some random value... Both should be only 1 byte long each.
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);

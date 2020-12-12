@@ -35,6 +35,11 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_DECODER_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_ENCODER_STREAM_TYPE;
+
 @RunWith(Parameterized.class)
 public class Http3UnidirectionalStreamInboundHandlerTest {
 
@@ -65,7 +70,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     public void testPushStream() {
         EmbeddedChannel channel = newChannel();
         ByteBuf buffer = Unpooled.buffer(8);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, 0x01);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, HTTP3_PUSH_STREAM_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
@@ -81,17 +86,17 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     @Test
     public void testControlStream() {
-        testStreamSetup(0x00, Http3ControlStreamInboundHandler.class, true);
+        testStreamSetup(HTTP3_CONTROL_STREAM_TYPE, Http3ControlStreamInboundHandler.class, true);
     }
 
     @Test
     public void testQpackEncoderStream() {
-        testStreamSetup(0x02, QpackStreamHandler.class, false);
+        testStreamSetup(HTTP3_QPACK_ENCODER_STREAM_TYPE, QpackStreamHandler.class, false);
     }
 
     @Test
     public void testQpackDecoderStream() {
-        testStreamSetup(0x03, QpackStreamHandler.class, false);
+        testStreamSetup(HTTP3_QPACK_DECODER_STREAM_TYPE, QpackStreamHandler.class, false);
     }
 
     private void testStreamSetup(long type, Class<? extends ChannelHandler> clazz, boolean hasCodec) {

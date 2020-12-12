@@ -23,6 +23,13 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_DATA_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthInteger;
 
@@ -97,12 +104,12 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             if (type <= Integer.MAX_VALUE) {
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
                 switch ((int) type) {
-                    case 0x0:
+                    case HTTP3_DATA_FRAME_TYPE:
                         // DATA
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.1
                         out.add(new DefaultHttp3DataFrame(in.readRetainedSlice(payLoadLength)));
                         break;
-                    case 0x1:
+                    case HTTP3_HEADERS_FRAME_TYPE:
                         // HEADERS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
                         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -110,13 +117,13 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                             out.add(headersFrame);
                         }
                         break;
-                    case 0x3:
+                    case HTTP3_CANCEL_PUSH_FRAME_TYPE:
                         // CANCEL_PUSH
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
                         int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
                         out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
                         break;
-                    case 0x4:
+                    case HTTP3_SETTINGS_FRAME_TYPE:
                         // SETTINGS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
                         Http3SettingsFrame settingsFrame = decodeSettings(ctx, in, payLoadLength);
@@ -126,7 +133,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         }
                         out.add(settingsFrame);
                         break;
-                    case 0x5:
+                    case HTTP3_PUSH_PROMISE_FRAME_TYPE:
                         // PUSH_PROMISE
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
                         int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -136,13 +143,13 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                             out.add(pushPromiseFrame);
                         }
                         break;
-                    case 0x7:
+                    case HTTP3_GO_AWAY_FRAME_TYPE:
                         // GO_AWAY
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
                         int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
                         out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
                         break;
-                    case 0xd:
+                    case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
                         // MAX_PUSH_ID
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
                         int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
