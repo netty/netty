@@ -96,10 +96,10 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         QuicStreamChannel channel = (QuicStreamChannel) msg;
         switch (channel.type()) {
             case BIDIRECTIONAL:
-                initBidirectionalStream(channel, codecSupplier, controlStreamFrameDispatcher);
+                initBidirectionalStream(ctx, codecSupplier, controlStreamFrameDispatcher);
                 break;
             case UNIDIRECTIONAL:
-                channel.pipeline().addLast(
+                ctx.pipeline().addLast(
                         new Http3UnidirectionalStreamInboundHandler(server, codecSupplier,
                                 inboundControlStreamHandler, unknownInboundStreamHandlerFactory));
                 break;
@@ -109,7 +109,15 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         ctx.fireChannelRead(msg);
     }
 
-    abstract void initBidirectionalStream(QuicStreamChannel channel, Supplier<Http3FrameCodec> codecSupplier,
+    /**
+     * Called when an bidirectional stream is opened from the remote-peer.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} of the {@link QuicStreamChannel}.
+     * @param codecSupplier the {@link Supplier} that can be used to get a new instance of the codec for
+     *                      {@link Http3Frame}s
+     * @param dispatcher    the {@link Http3ControlStreamFrameDispatcher} that can be used.
+     */
+    abstract void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier,
                                           Http3ControlStreamFrameDispatcher dispatcher);
 
     /**

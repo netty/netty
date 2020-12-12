@@ -17,34 +17,22 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
-
-/**
- * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> for the server-side.
- */
-public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
-    private final ChannelHandler requestStreamHandler;
+public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
 
     /**
      * Create a new instance.
-     *
-     * @param requestStreamHandler  the {@link ChannelHandler} that is used for each new request stream.
-     *                              This handler will receive {@link Http3HeadersFrame} and {@link Http3DataFrame}s.
      */
-    public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler) {
-        this(requestStreamHandler, null, null, null);
+    public Http3ClientConnectionHandler() {
+        this(null, null, null);
     }
 
     /**
      * Create a new instance.
-     * @param requestStreamHandler                  the {@link ChannelHandler} that is used for each new request stream.
-     *                                              This handler will receive {@link Http3HeadersFrame} and
-     *                                              {@link Http3DataFrame}s.
+     *
      * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
      *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
      *                                              interested in these.
@@ -54,23 +42,17 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
      *                                             remote peer or {@code null} if the default settings should be used.
      */
-    public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler,
-                                        ChannelHandler inboundControlStreamHandler,
+    public Http3ClientConnectionHandler(ChannelHandler inboundControlStreamHandler,
                                         LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                                         Http3SettingsFrame localSettings) {
-        super(true, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings);
-        this.requestStreamHandler = ObjectUtil.checkNotNull(requestStreamHandler, "requestStreamHandler");
+        super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings);
     }
 
     @Override
     void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier,
                                  Http3ControlStreamFrameDispatcher dispatcher) {
-        ChannelPipeline pipeline = ctx.pipeline();
-        // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-        pipeline.addLast(codecSupplier.get());
-        pipeline.addLast(new Http3RequestStreamValidationHandler(true));
-        // dispatch Http3ControlStreamFrames to the local control stream.
-        pipeline.addLast(dispatcher);
-        pipeline.addLast(requestStreamHandler);
+        // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.1
+        Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
+                "Server initiated bidirectional streams are not allowed", true);
     }
 }
