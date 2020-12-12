@@ -33,6 +33,9 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
     @Override
     public Long put(long key, Long value) {
+        if (Http3CodecUtils.isReservedHttp2Setting(key)) {
+            throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
+        }
         return settings.put(key, value);
     }
 
@@ -63,6 +66,12 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         return StringUtil.simpleClassName(this) + "(settings=" + settings + ')';
     }
 
+    /**
+     * Creates a new {@link DefaultHttp3SettingsFrame} which is a copy of the given settings.
+     *
+     * @param settingsFrame the frame to copy.
+     * @return              the newly created copy.
+     */
     public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
         DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
