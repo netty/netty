@@ -59,14 +59,14 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         } else {
             localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
         }
-        Long maxFieldSectionSize = localSettings.get(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Long maxFieldSectionSize = localSettings.get(Http3Constants.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         if (maxFieldSectionSize == null) {
             maxFieldSectionSize = Http3CodecUtils.DEFAULT_MAX_HEADER_LIST_SIZE;
-            localSettings.put(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE, maxFieldSectionSize);
+            localSettings.put(Http3Constants.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, maxFieldSectionSize);
         }
         // As we not support the dynamic table at the moment lets override whatever the user specified and set
         // the capacity to 0.
-        localSettings.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
+        localSettings.put(Http3Constants.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
         this.localSettings = localSettings;
         codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
     }

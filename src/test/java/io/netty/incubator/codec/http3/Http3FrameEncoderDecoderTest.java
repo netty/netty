@@ -124,9 +124,9 @@ public class Http3FrameEncoderDecoderTest {
     @Test
     public void testHttp3SettingsFrame() {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
-        settingsFrame.put(Http3Constants.SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
-        settingsFrame.put(Http3Constants.SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
-        settingsFrame.put(Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        settingsFrame.put(Http3Constants.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
+        settingsFrame.put(Http3Constants.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
+        settingsFrame.put(Http3Constants.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
         // Ensure we can encode and decode all sizes correctly.
         settingsFrame.put(63, 63L);
         settingsFrame.put(16383, 16383L);
@@ -271,9 +271,9 @@ public class Http3FrameEncoderDecoderTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
         // Write the key and some random value... Both should be only 1 byte long each.
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Constants.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
 
         testDecodeInvalidSettings(buffer);
