@@ -30,6 +30,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public final class Http3ServerExample {
     private static final byte[] CONTENT = "Hello World!\r\n".getBytes(CharsetUtil.US_ASCII);
@@ -40,14 +41,11 @@ public final class Http3ServerExample {
         ChannelHandler codec = Http3.newQuicServerCodecBuilder()
                 .certificateChain("./src/test/resources/cert.crt")
                 .privateKey("./src/test/resources/cert.key")
-                .maxIdleTimeout(5000)
-                .maxUdpPayloadSize(1350)
+                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
-                .disableActiveMigration(true)
-                .enableEarlyData()
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                 .handler(new ChannelInitializer<QuicChannel>() {
                     @Override

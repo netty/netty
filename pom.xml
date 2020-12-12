@@ -71,7 +71,7 @@
     <skipTests>false</skipTests>
     <netty.version>4.1.55.Final</netty.version>
     <netty.build.version>28</netty.build.version>
-    <netty.quic.version>0.0.1.Final-SNAPSHOT</netty.quic.version>
+    <netty.quic.version>0.0.1.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
   </properties>
 
