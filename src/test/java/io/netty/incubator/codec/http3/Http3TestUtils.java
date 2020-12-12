@@ -70,6 +70,15 @@ final class Http3TestUtils {
         }
     }
 
+    static void assertBufferEquals(ByteBuf expected, ByteBuf actual) {
+        try {
+            assertEquals(expected, actual);
+        } finally {
+            ReferenceCountUtil.release(expected);
+            ReferenceCountUtil.release(actual);
+        }
+    }
+
     static void assertFrameEquals(Http3Frame expected, Http3Frame actual) {
         try {
             assertEquals(expected, actual);

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
 
@@ -36,24 +37,28 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      *                              This handler will receive {@link Http3HeadersFrame} and {@link Http3DataFrame}s.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler) {
-        this(requestStreamHandler, null, null);
+        this(requestStreamHandler, null, null, null);
     }
 
     /**
      * Create a new instance.
-     * @param requestStreamHandler          the {@link ChannelHandler} that is used for each new request stream.
-     *                                      This handler will receive {@link Http3HeadersFrame} and
-     *                                      {@link Http3DataFrame}s.
-     * @param inboundControlStreamHandler   the {@link ChannelHandler} which will be notified about
-     *                                      {@link Http3RequestStreamFrame}s or {@code null} if the user is not
-     *                                      interested in these.
-     * @param localSettings                 the local {@link Http3SettingsFrame} that should be sent to the remote peer
-     *                                      or {@code null} if the default settings should be used.
+     * @param requestStreamHandler                  the {@link ChannelHandler} that is used for each new request stream.
+     *                                              This handler will receive {@link Http3HeadersFrame} and
+     *                                              {@link Http3DataFrame}s.
+     * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
+     *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
+     *                                              interested in these.
+     * @param unknownInboundStreamHandlerFactory    the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for unknown inbound stream types or
+     *                                              {@code null} if no special handling should be done.
+     * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
+     *                                             remote peer or {@code null} if the default settings should be used.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler,
                                         ChannelHandler inboundControlStreamHandler,
+                                        LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                                         Http3SettingsFrame localSettings) {
-        super(true, inboundControlStreamHandler, localSettings);
+        super(true, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings);
         this.requestStreamHandler = ObjectUtil.checkNotNull(requestStreamHandler, "requestStreamHandler");
     }
 

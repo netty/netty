@@ -26,6 +26,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
@@ -44,12 +46,19 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     private final Supplier<? extends ChannelHandler> codecSupplier;
     private final boolean server;
     private final ChannelHandler controlStreamHandler;
+    private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
     Http3UnidirectionalStreamInboundHandler(boolean server, Supplier<? extends ChannelHandler> codecSupplier,
-                                            ChannelHandler controlStreamHandler) {
+                                            ChannelHandler controlStreamHandler,
+                                            LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
         this.server = server;
         this.codecSupplier = codecSupplier;
         this.controlStreamHandler = controlStreamHandler;
+        if (unknownStreamHandlerFactory == null) {
+            // If the user did not specify an own factory just drop all bytes on the floor.
+            unknownStreamHandlerFactory = type -> ReleaseHandler.INSTANCE;
+        }
+        this.unknownStreamHandlerFactory = unknownStreamHandlerFactory;
     }
 
     private boolean isForwardingEvents() {
@@ -177,7 +186,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     private void initUnknownStream(ChannelHandlerContext ctx,
                                      @SuppressWarnings("unused") long streamType,
                                      @SuppressWarnings("unused") ByteBuf in) {
-        ctx.pipeline().replace(this, null, ReleaseHandler.INSTANCE);
+        ctx.pipeline().replace(this, null, unknownStreamHandlerFactory.apply(streamType));
     }
 
     private static final class ReleaseHandler extends ChannelInboundHandlerAdapter {

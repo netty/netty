@@ -22,6 +22,7 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
 /**
@@ -32,22 +33,27 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     private final boolean server;
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler inboundControlStreamHandler;
-
+    private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
     private Http3ControlStreamFrameDispatcher controlStreamFrameDispatcher;
 
     /**
      * Create a new instance.
-     * @parma server                        {@code true} if server-side, {@code false} otherwise.
-     * @param inboundControlStreamHandler   the {@link ChannelHandler} which will be notified about
-     *                                      {@link Http3RequestStreamFrame}s or {@code null} if the user is not
-     *                                      interested in these.
-     * @param localSettings                 the local {@link Http3SettingsFrame} that should be sent to the remote peer
-     *                                      or {@code null} if the default settings should be used.
+     * @parma server                                {@code true} if server-side, {@code false} otherwise.
+     * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
+     *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
+     *                                              interested in these.
+     * @param unknownInboundStreamHandlerFactory    the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for unknown inbound stream types or
+     *                                              {@code null} if no special handling should be done.
+     * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
+     *                                              remote peer or {@code null} if the default settings should be used.
      */
     Http3ConnectionHandler(boolean server, ChannelHandler inboundControlStreamHandler,
+                           LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                            Http3SettingsFrame localSettings) {
         this.server = server;
         this.inboundControlStreamHandler = inboundControlStreamHandler;
+        this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
         if (localSettings == null) {
             localSettings = new DefaultHttp3SettingsFrame();
         } else {
@@ -94,8 +100,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                 break;
             case UNIDIRECTIONAL:
                 channel.pipeline().addLast(
-                        new Http3UnidirectionalStreamInboundHandler(
-                                server, codecSupplier, inboundControlStreamHandler));
+                        new Http3UnidirectionalStreamInboundHandler(server, codecSupplier,
+                                inboundControlStreamHandler, unknownInboundStreamHandlerFactory));
                 break;
             default:
                 throw new Error();

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
@@ -27,6 +28,8 @@ import io.netty.util.DefaultAttributeMap;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.util.function.LongFunction;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -70,6 +73,30 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.writeInbound(someBuffer));
         assertEquals(0, someBuffer.refCnt());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testUnknownStreamWithCustomHandler() {
+        long streamType = 0x06;
+        EmbeddedChannel channel = newChannel(v -> {
+            assertEquals(streamType, v);
+            // Add an handler that will just forward the received bytes.
+            return new ChannelInboundHandlerAdapter();
+        });
+        ByteBuf buffer = Unpooled.buffer(8);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, streamType);
+        assertFalse(channel.writeInbound(buffer));
+        assertEquals(0, buffer.refCnt());
+        assertNull(channel.pipeline().context(Http3UnidirectionalStreamInboundHandler.class));
+        assertTrue(channel.isActive());
+
+        // Write some buffer to the stream. This should be just released.
+        ByteBuf someBuffer = Unpooled.buffer().writeLong(9);
+        assertTrue(channel.writeInbound(someBuffer.retainedDuplicate()));
+        assertTrue(channel.finish());
+
+        Http3TestUtils.assertBufferEquals(someBuffer, channel.readInbound());
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -122,7 +149,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
         channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
                 true, false, new Http3UnidirectionalStreamInboundHandler(server,
-                CodecHandler::new, null));
+                CodecHandler::new, null, null));
 
         // Try to create the stream a second time, this should fail
         buffer = Unpooled.buffer(8);
@@ -134,11 +161,15 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     private EmbeddedChannel newChannel() {
+        return newChannel(null);
+    }
+
+    private EmbeddedChannel newChannel(LongFunction<ChannelHandler> factory) {
         QuicChannel parent = Http3TestUtils.mockParent();
         AttributeMap map = new DefaultAttributeMap();
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(true,
-                CodecHandler::new, null);
+                CodecHandler::new, null, factory);
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
                 true, false, handler);
     }
