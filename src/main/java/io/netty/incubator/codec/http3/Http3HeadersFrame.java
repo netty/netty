@@ -19,6 +19,12 @@ package io.netty.incubator.codec.http3;
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2">HEADERS</a>.
  */
 public interface Http3HeadersFrame extends Http3RequestStreamFrame, Http3PushStreamFrame {
+
+    @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE;
+    }
+
     /**
      * Returns the carried headers.
      *

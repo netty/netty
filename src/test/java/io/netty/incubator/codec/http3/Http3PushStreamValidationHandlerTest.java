@@ -34,6 +34,6 @@ public class Http3PushStreamValidationHandlerTest extends
 
     @Override
     protected List<Http3Frame> newInvalidFrames() {
-        return Arrays.asList(new Http3RequestStreamFrame() { }, new Http3ControlStreamFrame() { });
+        return Arrays.asList(Http3TestUtils.newHttp3RequestStreamFrame(), Http3TestUtils.newHttp3ControlStreamFrame());
     }
 }

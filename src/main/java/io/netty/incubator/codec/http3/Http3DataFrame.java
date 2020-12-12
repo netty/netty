@@ -24,6 +24,11 @@ import io.netty.buffer.ByteBufHolder;
 public interface Http3DataFrame extends ByteBufHolder, Http3RequestStreamFrame, Http3PushStreamFrame {
 
     @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_DATA_FRAME_TYPE;
+    }
+
+    @Override
     Http3DataFrame copy();
 
     @Override

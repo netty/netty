@@ -18,4 +18,11 @@ package io.netty.incubator.codec.http3;
 /**
  * Marker interface that is implemented by all HTTP3 frames.
  */
-public interface Http3Frame { }
+public interface Http3Frame {
+    /**
+     * The type of the frame.
+     *
+     * @return the type.
+     */
+    long type();
+}

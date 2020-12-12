@@ -29,11 +29,11 @@ public class Http3FrameTypeValidationHandlerTest extends
 
     @Override
     protected List<Http3RequestStreamFrame> newValidFrames() {
-        return Collections.singletonList(new Http3RequestStreamFrame() { });
+        return Collections.singletonList(Http3TestUtils.newHttp3RequestStreamFrame());
     }
 
     @Override
     protected List<Http3Frame> newInvalidFrames() {
-        return Arrays.asList(new Http3ControlStreamFrame() { }, new Http3PushStreamFrame() { });
+        return Arrays.asList(Http3TestUtils.newHttp3ControlStreamFrame(), Http3TestUtils.newHttp3PushStreamFrame());
     }
 }

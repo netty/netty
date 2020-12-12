@@ -20,6 +20,11 @@ package io.netty.incubator.codec.http3;
  */
 public interface Http3MaxPushIdFrame extends Http3ControlStreamFrame {
 
+    @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_TYPE;
+    }
+
     /**
      * Returns the maximum value for a Push ID that the server can use.
      *

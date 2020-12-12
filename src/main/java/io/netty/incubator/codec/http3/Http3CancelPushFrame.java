@@ -20,6 +20,11 @@ package io.netty.incubator.codec.http3;
  */
 public interface Http3CancelPushFrame extends Http3ControlStreamFrame {
 
+    @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
+    }
+
     /**
      * Returns the push id that identifies the server push that is being cancelled.
      *

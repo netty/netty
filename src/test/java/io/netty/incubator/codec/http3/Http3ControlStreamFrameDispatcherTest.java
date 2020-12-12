@@ -27,9 +27,9 @@ public class Http3ControlStreamFrameDispatcherTest {
     public void testOnlyDispatchControlFrame() {
         EmbeddedChannel controlChannel = new EmbeddedChannel();
         EmbeddedChannel channel = new EmbeddedChannel(new Http3ControlStreamFrameDispatcher(controlChannel));
-        Http3Frame frame = new Http3Frame() { };
-        Http3RequestStreamFrame requestStreamFrame = new Http3RequestStreamFrame() { };
-        Http3PushStreamFrame pushStreamFrame = new Http3PushStreamFrame() { };
+        Http3Frame frame = Http3TestUtils.newHttp3Frame();
+        Http3RequestStreamFrame requestStreamFrame = Http3TestUtils.newHttp3RequestStreamFrame();
+        Http3PushStreamFrame pushStreamFrame = Http3TestUtils.newHttp3PushStreamFrame();
 
         assertTrue(channel.writeOutbound(frame));
         assertTrue(channel.writeOutbound(requestStreamFrame));
@@ -45,7 +45,7 @@ public class Http3ControlStreamFrameDispatcherTest {
     public void testDispatchControlFrame() {
         EmbeddedChannel controlChannel = new EmbeddedChannel();
         EmbeddedChannel channel = new EmbeddedChannel(new Http3ControlStreamFrameDispatcher(controlChannel));
-        Http3ControlStreamFrame frame = new Http3ControlStreamFrame() { };
+        Http3ControlStreamFrame frame = Http3TestUtils.newHttp3ControlStreamFrame();
 
         assertFalse(channel.writeOutbound(frame));
         assertFalse(channel.finish());

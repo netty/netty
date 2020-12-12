@@ -102,4 +102,20 @@ final class Http3TestUtils {
             assertEquals(0, ((ReferenceCounted) frame).refCnt());
         }
     }
+
+    static Http3Frame newHttp3Frame() {
+        return ()  -> 0;
+    }
+
+    static Http3PushStreamFrame newHttp3PushStreamFrame() {
+        return ()  -> 0;
+    }
+
+    static Http3RequestStreamFrame newHttp3RequestStreamFrame() {
+        return ()  -> 0;
+    }
+
+    static Http3ControlStreamFrame newHttp3ControlStreamFrame() {
+        return ()  -> 0;
+    }
 }

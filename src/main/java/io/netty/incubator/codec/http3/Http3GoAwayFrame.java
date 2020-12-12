@@ -20,6 +20,11 @@ package io.netty.incubator.codec.http3;
  */
 public interface Http3GoAwayFrame extends Http3ControlStreamFrame {
 
+    @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_GO_AWAY_FRAME_TYPE;
+    }
+
     /**
      * Returns the id.
      *

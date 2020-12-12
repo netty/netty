@@ -72,7 +72,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Override
     protected List<Http3Frame> newInvalidFrames() {
-        return Arrays.asList(new Http3RequestStreamFrame() { }, new Http3PushStreamFrame() { });
+        return Arrays.asList(Http3TestUtils.newHttp3RequestStreamFrame(), Http3TestUtils.newHttp3PushStreamFrame());
     }
 
     @Test

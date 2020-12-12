@@ -19,6 +19,12 @@ package io.netty.incubator.codec.http3;
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5">PUSH_PROMISE</a>.
  */
 public interface Http3PushPromiseFrame extends Http3RequestStreamFrame {
+
+    @Override
+    default long type() {
+        return Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE;
+    }
+
     /**
      * Returns the push id.
      *
