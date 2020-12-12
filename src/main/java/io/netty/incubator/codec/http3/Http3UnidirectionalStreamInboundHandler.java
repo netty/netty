@@ -57,7 +57,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (!in.isReadable()) {
             return;
         }
@@ -171,12 +171,13 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     }
 
     /**
-     * Called if we couldn't detect the stream type of the current {@link Channel}.
+     * Called if we couldn't detect the stream type of the current {@link Channel}. Let's release everything that
+     * we receive on this stream.
      */
-    protected void initUnknownStream(ChannelHandlerContext ctx,
+    private void initUnknownStream(ChannelHandlerContext ctx,
                                      @SuppressWarnings("unused") long streamType,
-                                     @SuppressWarnings("unused") ByteBuf in) throws Exception {
-        ctx.close();
+                                     @SuppressWarnings("unused") ByteBuf in) {
+        ctx.pipeline().replace(this, null, ReleaseHandler.INSTANCE);
     }
 
     private static final class ReleaseHandler extends ChannelInboundHandlerAdapter {

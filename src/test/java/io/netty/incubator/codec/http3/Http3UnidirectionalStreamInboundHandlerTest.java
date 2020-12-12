@@ -32,6 +32,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +63,12 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
         assertNull(channel.pipeline().context(Http3UnidirectionalStreamInboundHandler.class));
-        assertFalse(channel.isActive());
+        assertTrue(channel.isActive());
+
+        // Write some buffer to the stream. This should be just released.
+        ByteBuf someBuffer = Unpooled.buffer();
+        assertFalse(channel.writeInbound(someBuffer));
+        assertEquals(0, someBuffer.refCnt());
         assertFalse(channel.finish());
     }
 
