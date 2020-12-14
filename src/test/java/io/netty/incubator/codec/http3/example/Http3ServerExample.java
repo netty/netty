@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.incubator.codec.http3;
+package io.netty.incubator.codec.http3.example;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -23,6 +23,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.incubator.codec.http3.DefaultHttp3DataFrame;
+import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame;
+import io.netty.incubator.codec.http3.Http3;
+import io.netty.incubator.codec.http3.Http3DataFrame;
+import io.netty.incubator.codec.http3.Http3HeadersFrame;
+import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
+import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;

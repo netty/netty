@@ -16,11 +16,18 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import io.netty.incubator.codec.quic.QuicCodecBuilder;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.quic.QuicStreamChannelBootstrap;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+
+import java.util.function.Supplier;
 
 /**
  * Contains utility methods that help to bootstrap server / clients with HTTP3 support.
@@ -40,7 +47,7 @@ public final class Http3 {
             AttributeKey.valueOf(Http3.class, "HTTP3ControlStream");
 
     /**
-     * Return the local initiated control stream for the HTTP/3 connection.
+     * Returns the local initiated control stream for the HTTP/3 connection.
      * @param channel   the channel for the HTTP/3 connection.
      * @return          the control stream.
      */
@@ -50,6 +57,77 @@ public final class Http3 {
 
     static void setLocalControlStream(Channel channel, QuicStreamChannel controlStreamChannel) {
         channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
+    }
+
+    private static final AttributeKey<Supplier<? extends ChannelHandler>> HTTP3_CODEC_SUPPLIER =
+            AttributeKey.valueOf(Http3.class, "HTTP3CodecSupplier");
+
+    /**
+     * Returns the {@link Supplier} that should be used to obtain a HTTP/3 codec for the underlying connection.
+     *
+     * As an end-user in most cases you just want to use {@link Http3RequestStreamInitializer} directly.
+     *
+     * @param channel   the channel for the HTTP/3 connection.
+     * @return          the codec supplier.
+     */
+    public static Supplier<? extends ChannelHandler> getCodecSupplier(Channel channel) {
+        return channel.attr(HTTP3_CODEC_SUPPLIER).get();
+    }
+
+    static void setCodecSupplier(Channel channel, Supplier<? extends ChannelHandler> codecSupplier) {
+        channel.attr(HTTP3_CODEC_SUPPLIER).set(codecSupplier);
+    }
+
+    /**
+     * Returns a new HTTP/3 request-stream that will use the given {@link ChannelHandler}
+     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 is automatically added to the
+     * pipeline as well.
+     *
+     * If you need more control you can also use the {@link Http3RequestStreamInitializer} directly.
+     *
+     * @param channel   the {@link QuicChannel} for which we create the request-stream.
+     * @param handler   the {@link ChannelHandler} to add.
+     * @return          the {@link Future} that will be notified once the request-stream was opened.
+     */
+    public static Future<QuicStreamChannel> newRequestStream(QuicChannel channel, ChannelHandler handler) {
+        final Http3RequestStreamInitializer initializer;
+        if (handler instanceof Http3RequestStreamInitializer) {
+            initializer = (Http3RequestStreamInitializer) handler;
+        } else {
+            initializer = new Http3RequestStreamInitializer() {
+                @Override
+                protected void initRequestStream(QuicStreamChannel ch) {
+                    ch.pipeline().addLast(handler);
+                }
+            };
+        }
+        return channel.createStream(QuicStreamType.BIDIRECTIONAL, initializer);
+    }
+
+    /**
+     * Returns a new HTTP/3 request-stream bootstrap that will use the given {@link ChannelHandler}
+     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 is automatically added to the
+     * pipeline as well.
+     *
+     * If you need more control you can also use the {@link Http3RequestStreamInitializer} directly.
+     *
+     * @param channel   the {@link QuicChannel} for which we create the request-stream.
+     * @param handler   the {@link ChannelHandler} to add.
+     * @return          the {@link QuicStreamChannelBootstrap} that should be used.
+     */
+    public static QuicStreamChannelBootstrap newRequestStreamBootstrap(QuicChannel channel, ChannelHandler handler) {
+        final Http3RequestStreamInitializer initializer;
+        if (handler instanceof Http3RequestStreamInitializer) {
+            initializer = (Http3RequestStreamInitializer) handler;
+        } else {
+            initializer = new Http3RequestStreamInitializer() {
+                @Override
+                protected void initRequestStream(QuicStreamChannel ch) {
+                    ch.pipeline().addLast(handler);
+                }
+            };
+        }
+        return channel.newStreamBootstrap().handler(initializer).type(QuicStreamType.BIDIRECTIONAL);
     }
 
     /**

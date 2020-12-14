@@ -93,6 +93,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        Http3.setCodecSupplier(ctx.channel(), codecSupplier);
         if (ctx.channel().isActive()) {
             createControlStreamIfNeeded(ctx);
         }
