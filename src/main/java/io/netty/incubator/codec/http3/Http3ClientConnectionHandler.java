@@ -49,8 +49,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier,
-                                 Http3ControlStreamFrameDispatcher dispatcher) {
+    void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier) {
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.1
         Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                 "Server initiated bidirectional streams are not allowed", true);

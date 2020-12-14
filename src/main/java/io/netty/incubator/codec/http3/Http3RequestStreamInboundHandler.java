@@ -108,4 +108,15 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
     protected void channelRead(@SuppressWarnings("unused") ChannelHandlerContext ctx, Http3UnknownFrame frame) {
         frame.release();
     }
+
+    /**
+     * Return the local control stream for this HTTP/3 connection. This can be used to send
+     * {@link Http3ControlStreamFrame}s to the remote peer.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} of this handler.
+     * @return              the control stream.
+     */
+    protected final QuicStreamChannel controlStream(ChannelHandlerContext ctx) {
+        return Http3.getLocalControlStream(ctx.channel().parent());
+    }
 }

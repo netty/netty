@@ -15,9 +15,12 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.channel.Channel;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import io.netty.incubator.codec.quic.QuicCodecBuilder;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.AttributeKey;
 
 /**
  * Contains utility methods that help to bootstrap server / clients with HTTP3 support.
@@ -32,6 +35,22 @@ public final class Http3 {
             0x05, 'h', '3', '-', '3', '1',
             0x05, 'h', '3', '-', '3', '2'
     };
+
+    private static final AttributeKey<QuicStreamChannel> HTTP3_CONTROL_STREAM_KEY =
+            AttributeKey.valueOf(Http3.class, "HTTP3ControlStream");
+
+    /**
+     * Return the local initiated control stream for the HTTP/3 connection.
+     * @param channel   the channel for the HTTP/3 connection.
+     * @return          the control stream.
+     */
+    public static QuicStreamChannel getLocalControlStream(Channel channel) {
+        return channel.attr(HTTP3_CONTROL_STREAM_KEY).get();
+    }
+
+    static void setLocalControlStream(Channel channel, QuicStreamChannel controlStreamChannel) {
+        channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
+    }
 
     /**
      * Returns the supported protocols for H3.

@@ -34,11 +34,10 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler inboundControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
-    private Http3ControlStreamFrameDispatcher controlStreamFrameDispatcher;
 
     /**
      * Create a new instance.
-     * @parma server                                {@code true} if server-side, {@code false} otherwise.
+     * @param server                                {@code true} if server-side, {@code false} otherwise.
      * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
      *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
      *                                              interested in these.
@@ -84,7 +83,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                 // TODO: Handle me the right way.
                 ctx.close();
             } else {
-                controlStreamFrameDispatcher = new Http3ControlStreamFrameDispatcher((QuicStreamChannel) f.get());
+                Http3.setLocalControlStream(channel, (QuicStreamChannel) f.getNow());
             }
         });
 
@@ -96,7 +95,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         QuicStreamChannel channel = (QuicStreamChannel) msg;
         switch (channel.type()) {
             case BIDIRECTIONAL:
-                initBidirectionalStream(ctx, codecSupplier, controlStreamFrameDispatcher);
+                initBidirectionalStream(ctx, codecSupplier);
                 break;
             case UNIDIRECTIONAL:
                 ctx.pipeline().addLast(
@@ -115,10 +114,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @param ctx           the {@link ChannelHandlerContext} of the {@link QuicStreamChannel}.
      * @param codecSupplier the {@link Supplier} that can be used to get a new instance of the codec for
      *                      {@link Http3Frame}s
-     * @param dispatcher    the {@link Http3ControlStreamFrameDispatcher} that can be used.
      */
-    abstract void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier,
-                                          Http3ControlStreamFrameDispatcher dispatcher);
+    abstract void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier);
 
     /**
      * Always returns {@code false} as it keeps state.
