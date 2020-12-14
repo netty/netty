@@ -1808,7 +1808,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // ensure we only notify once in this case.
         //
         // This is safe as TLSv1.3 does not support renegotiation and so we should never see two handshake events.
-        if (notified || engineType == SslEngineType.JDK && !SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
+        if (notified || !SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
