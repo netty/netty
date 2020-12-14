@@ -27,6 +27,9 @@ final class QpackDecoder {
     private static final QpackException NAME_ILLEGAL_INDEX_VALUE =
             QpackException.newStatic(QpackDecoder.class, "getIndexedName(...)", "QPACK - illegal index value");
 
+    private static final QpackException UNKNOWN_TYPE =
+            QpackException.newStatic(QpackDecoder.class, "decode(...)", "QPACK - unknown type");
+
     private final QpackHuffmanDecoder huffmanDecoder = new QpackHuffmanDecoder();
 
     /**
@@ -53,6 +56,8 @@ final class QpackDecoder {
             } else if ((b & 0xe0) == 0x20) {
                 // 001xxxxx
                 decodeLiteral(in, sink);
+            } else {
+                throw UNKNOWN_TYPE;
             }
         }
     }

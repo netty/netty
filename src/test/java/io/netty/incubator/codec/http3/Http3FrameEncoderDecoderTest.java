@@ -365,4 +365,47 @@ public class Http3FrameEncoderDecoderTest {
         }
         return frame;
     }
+
+    @Test
+    public void testMultipleFramesEncodedAndDecodedInOneBufferHeaders() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        addRequestHeaders(headersFrame.headers());
+        testMultipleFramesEncodedAndDecodedInOneBuffer(headersFrame,
+                new DefaultHttp3DataFrame(Unpooled.buffer().writeLong(1)));
+    }
+
+    @Test
+    public void testMultipleFramesEncodedAndDecodedInOneBufferPushPromise() {
+        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
+        addRequestHeaders(pushPromiseFrame.headers());
+        testMultipleFramesEncodedAndDecodedInOneBuffer(pushPromiseFrame,
+                new DefaultHttp3DataFrame(Unpooled.buffer().writeLong(1)));
+    }
+
+    private void testMultipleFramesEncodedAndDecodedInOneBuffer(Http3Frame first, Http3Frame second) {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(newEncoder());
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(newDecoder());
+
+        assertTrue(encoderChannel.writeOutbound(retainAndDuplicate(first)));
+        assertTrue(encoderChannel.writeOutbound(retainAndDuplicate(second)));
+
+        ByteBuf mergedBuffer = Unpooled.buffer();
+        for (;;) {
+            ByteBuf buffer = encoderChannel.readOutbound();
+            if (buffer == null) {
+                break;
+            }
+            mergedBuffer.writeBytes(buffer);
+            buffer.release();
+        }
+        assertTrue(decoderChannel.writeInbound(mergedBuffer));
+
+        Http3Frame readFrame = decoderChannel.readInbound();
+        Http3TestUtils.assertFrameEquals(first, readFrame);
+        readFrame = decoderChannel.readInbound();
+        Http3TestUtils.assertFrameEquals(second, readFrame);
+
+        assertFalse(encoderChannel.finish());
+        assertFalse(decoderChannel.finish());
+    }
 }

@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -50,6 +51,31 @@ public class QpackEncoderDecoderTest {
         assertEquals(new AsciiString("417"), decHeaders.status());
         assertEquals(new AsciiString("19"), decHeaders.get("x-qpack-draft"));
 
+        out.release();
+    }
+
+    @Test
+    public void testDecoderThrowsOnInvalidInput() {
+        final QpackEncoder encoder = new QpackEncoder();
+        final QpackDecoder decoder = new QpackDecoder();
+
+        final ByteBuf out = Unpooled.buffer();
+
+        final Http3Headers encHeaders = new DefaultHttp3Headers();
+        encHeaders.add(":authority", "netty.quic"); // name only
+
+        final Http3Headers decHeaders = new DefaultHttp3Headers();
+
+        encoder.encodeHeaders(out, encHeaders);
+        // Add empty byte to the end of the buffer. This should trigger an exception in the decoder.
+        out.writeByte(0);
+
+        try {
+            decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false));
+            fail();
+        } catch (QpackException exception) {
+            // expected
+        }
         out.release();
     }
 }

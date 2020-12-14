@@ -113,7 +113,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         // HEADERS
                         // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
                         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                        if (decodeHeaders(ctx, headersFrame.headers(), in)) {
+                        if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength))) {
                             out.add(headersFrame);
                         }
                         break;
@@ -139,7 +139,8 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                         int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
                         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                                 readVariableLengthInteger(in, pushPromiseIdLen));
-                        if (decodeHeaders(ctx, pushPromiseFrame.headers(), in)) {
+                        if (decodeHeaders(ctx, pushPromiseFrame.headers(),
+                                in.readSlice(payLoadLength - pushPromiseIdLen))) {
                             out.add(pushPromiseFrame);
                         }
                         break;
