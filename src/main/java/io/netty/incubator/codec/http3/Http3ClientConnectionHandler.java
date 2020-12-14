@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
@@ -49,7 +50,8 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier) {
+    void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel channel,
+                                 Supplier<Http3FrameCodec> codecSupplier) {
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.1
         Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                 "Server initiated bidirectional streams are not allowed", true);

@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.CharsetUtil;
@@ -225,16 +226,23 @@ final class Http3CodecUtils {
     }
 
     private static void connectionError(ChannelHandlerContext ctx, Http3ErrorCode errorCode, String msg) {
-        QuicChannel parent = (QuicChannel) ctx.channel().parent();
+        final QuicChannel quicChannel;
+
+        Channel channel = ctx.channel();
+        if (channel instanceof QuicChannel) {
+            quicChannel = (QuicChannel) channel;
+        } else {
+            quicChannel = (QuicChannel) channel.parent();
+        }
         final ByteBuf buffer;
         if (msg != null) {
             // As we call an operation on the parent we should also use the parents allocator to allocate the buffer.
-            buffer = parent.alloc().buffer();
+            buffer = quicChannel.alloc().buffer();
             buffer.writeCharSequence(msg, CharsetUtil.US_ASCII);
         } else {
             buffer = Unpooled.EMPTY_BUFFER;
         }
-        parent.close(true, errorCode.code, buffer);
+        quicChannel.close(true, errorCode.code, buffer);
     }
 
     static void readIfNoAutoRead(ChannelHandlerContext ctx) {

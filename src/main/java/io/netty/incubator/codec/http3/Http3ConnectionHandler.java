@@ -34,6 +34,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler inboundControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
+    private boolean controlStreamCreationInProgress;
 
     /**
      * Create a new instance.
@@ -70,40 +71,56 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
     }
 
+    private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
+        if (!controlStreamCreationInProgress && Http3.getLocalControlStream(ctx.channel()) == null) {
+            controlStreamCreationInProgress = true;
+            QuicChannel channel = (QuicChannel) ctx.channel();
+            // Once the channel became active we need to create an unidirectional stream and write the
+            // Http3SettingsFrame to it. This needs to be the first frame on this stream.
+            // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
+            channel.createStream(QuicStreamType.UNIDIRECTIONAL,
+                    new Http3ControlStreamOutboundHandler(localSettings, codecSupplier))
+                    .addListener(f -> {
+                        if (!f.isSuccess()) {
+                            // TODO: Handle me the right way.
+                            ctx.close();
+                        } else {
+                            Http3.setLocalControlStream(channel, (QuicStreamChannel) f.getNow());
+                        }
+                    });
+        }
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) {
+        if (ctx.channel().isActive()) {
+            createControlStreamIfNeeded(ctx);
+        }
+    }
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        QuicChannel channel = (QuicChannel) ctx.channel();
-        // Once the channel became active we need to create an unidirectional stream and write the Http3SettingsFrame
-        // to it. This needs to be the first frame on this stream.
-        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
-        channel.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new Http3ControlStreamOutboundHandler(localSettings, codecSupplier))
-                .addListener(f -> {
-            if (!f.isSuccess()) {
-                // TODO: Handle me the right way.
-                ctx.close();
-            } else {
-                Http3.setLocalControlStream(channel, (QuicStreamChannel) f.getNow());
-            }
-        });
+        createControlStreamIfNeeded(ctx);
 
         ctx.fireChannelActive();
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        QuicStreamChannel channel = (QuicStreamChannel) msg;
-        switch (channel.type()) {
-            case BIDIRECTIONAL:
-                initBidirectionalStream(ctx, codecSupplier);
-                break;
-            case UNIDIRECTIONAL:
-                ctx.pipeline().addLast(
-                        new Http3UnidirectionalStreamInboundHandler(server, codecSupplier,
-                                inboundControlStreamHandler, unknownInboundStreamHandlerFactory));
-                break;
-            default:
-                throw new Error();
+        if (msg instanceof QuicStreamChannel) {
+            QuicStreamChannel channel = (QuicStreamChannel) msg;
+            switch (channel.type()) {
+                case BIDIRECTIONAL:
+                    initBidirectionalStream(ctx, channel, codecSupplier);
+                    break;
+                case UNIDIRECTIONAL:
+                    channel.pipeline().addLast(
+                            new Http3UnidirectionalStreamInboundHandler(server, codecSupplier,
+                                    inboundControlStreamHandler, unknownInboundStreamHandlerFactory));
+                    break;
+                default:
+                    throw new Error();
+            }
         }
         ctx.fireChannelRead(msg);
     }
@@ -111,11 +128,13 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     /**
      * Called when an bidirectional stream is opened from the remote-peer.
      *
-     * @param ctx           the {@link ChannelHandlerContext} of the {@link QuicStreamChannel}.
+     * @param ctx           the {@link ChannelHandlerContext} of the parent {@link QuicChannel}.
+     * @param streamChannel the {@link QuicStreamChannel}.
      * @param codecSupplier the {@link Supplier} that can be used to get a new instance of the codec for
      *                      {@link Http3Frame}s
      */
-    abstract void initBidirectionalStream(ChannelHandlerContext ctx, Supplier<Http3FrameCodec> codecSupplier);
+    abstract void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel,
+                                          Supplier<Http3FrameCodec> codecSupplier);
 
     /**
      * Always returns {@code false} as it keeps state.
