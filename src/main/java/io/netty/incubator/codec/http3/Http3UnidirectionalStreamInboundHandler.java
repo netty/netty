@@ -44,13 +44,16 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
 
     private final Supplier<? extends ChannelHandler> codecSupplier;
     private final Http3ControlStreamInboundHandler localControlStreamHandler;
+    private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
     Http3UnidirectionalStreamInboundHandler(Supplier<? extends ChannelHandler> codecSupplier,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
+                                            Http3ControlStreamOutboundHandler remoteControlStreamHandler,
                                             LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
         this.codecSupplier = codecSupplier;
         this.localControlStreamHandler = localControlStreamHandler;
+        this.remoteControlStreamHandler = remoteControlStreamHandler;
         if (unknownStreamHandlerFactory == null) {
             // If the user did not specify an own factory just drop all bytes on the floor.
             unknownStreamHandlerFactory = type -> ReleaseHandler.INSTANCE;
@@ -129,12 +132,22 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                     "Server received push stream.", false);
         } else {
-            // TODO: Handle push streams correctly
-            // For now add a handler that will just release the frames so we dont leak.
-            ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
+            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.4
+            Long maxPushId = remoteControlStreamHandler.sentMaxPushId();
+            if (maxPushId == null) {
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                        "Received push stream before send MAX_PUSH_ID frame.", false);
+            } else if (maxPushId < id) {
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+                        "Received push stream with id " + id + " while the max push id is " + maxPushId + '.', false);
+            } else {
+                // TODO: Handle push streams correctly
+                // For now add a handler that will just release the frames so we dont leak.
+                ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
 
-            // Replace this handler with a handler that validates the frames on the stream.
-            ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
+                // Replace this handler with a handler that validates the frames on the stream.
+                ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
+            }
         }
     }
 

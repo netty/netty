@@ -25,6 +25,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -118,6 +119,65 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
+    public void testPushStreamNoMaxPushIdFrameSent() {
+        testPushStream(false);
+    }
+
+    @Test
+    public void testPushStreamMaxPushIdFrameSentWithSmallerId() {
+        testPushStream(true);
+    }
+
+    private void testPushStream(boolean sendPushId) {
+        QuicChannel parent = Http3TestUtils.mockParent();
+        AttributeMap map = new DefaultAttributeMap();
+        when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
+
+        Http3ControlStreamOutboundHandler outboundControlHandler = new Http3ControlStreamOutboundHandler(
+                new DefaultHttp3SettingsFrame(), CodecHandler::new);
+
+        EmbeddedChannel outboundControlChannel = new EmbeddedChannel(
+                parent, DefaultChannelId.newInstance(), true, false, outboundControlHandler);
+        // Let's drain everything that was written while channelActive(...) was called.
+        for (;;) {
+            Object written = outboundControlChannel.readOutbound();
+            if (written == null) {
+                break;
+            }
+            ReferenceCountUtil.release(written);
+        }
+
+        if (sendPushId) {
+            assertTrue(outboundControlChannel.writeOutbound(new DefaultHttp3MaxPushIdFrame(0)));
+            Object push = outboundControlChannel.readOutbound();
+            ReferenceCountUtil.release(push);
+        }
+
+        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
+                CodecHandler::new, new Http3ControlStreamInboundHandler(server, null),
+                outboundControlHandler, null);
+        EmbeddedChannel channel =  new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, handler);
+
+        ByteBuf buffer = Unpooled.buffer(8);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, HTTP3_PUSH_STREAM_TYPE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
+
+        assertFalse(channel.writeInbound(buffer));
+        assertEquals(0, buffer.refCnt());
+        if (server) {
+            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
+        } else {
+            ByteBuf b = Unpooled.buffer();
+            assertFalse(channel.writeInbound(b));
+            assertEquals(0, b.refCnt());
+            Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, (QuicChannel) channel.parent());
+        }
+        assertFalse(channel.finish());
+        assertFalse(outboundControlChannel.finish());
+    }
+
+    @Test
     public void testControlStream() {
         testStreamSetup(HTTP3_CONTROL_STREAM_TYPE, Http3ControlStreamInboundHandler.class, true);
     }
@@ -149,7 +209,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
         channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
                 true, false, new Http3UnidirectionalStreamInboundHandler(
-                CodecHandler::new, new Http3ControlStreamInboundHandler(server, null), null));
+                CodecHandler::new, new Http3ControlStreamInboundHandler(server, null),
+                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), CodecHandler::new), null));
 
         // Try to create the stream a second time, this should fail
         buffer = Unpooled.buffer(8);
@@ -169,7 +230,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         AttributeMap map = new DefaultAttributeMap();
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                CodecHandler::new, new Http3ControlStreamInboundHandler(true, null), factory);
+                CodecHandler::new, new Http3ControlStreamInboundHandler(true, null),
+                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), CodecHandler::new), factory);
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
                 true, false, handler);
     }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.ObjectUtil;
 
@@ -28,12 +29,22 @@ final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
     private final Http3SettingsFrame localSettings;
     private final Supplier<? extends ChannelHandler> codecSupplier;
+    private Long sentMaxPushId;
 
     Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings,
                                       Supplier<? extends ChannelHandler> codecSupplier) {
         super(Http3ControlStreamFrame.class);
         this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
         this.codecSupplier = ObjectUtil.checkNotNull(codecSupplier, "codecSupplier");
+    }
+
+    /**
+     * Returns the last id that was sent in a MAX_PUSH_ID frame or {@code null} if none was sent yet.
+     *
+     * @return the id.
+     */
+    Long sentMaxPushId() {
+        return sentMaxPushId;
     }
 
     @Override
@@ -67,5 +78,18 @@ final class Http3ControlStreamOutboundHandler
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
         Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Http3MaxPushIdFrame) {
+            long id = ((Http3MaxPushIdFrame) msg).id();
+            promise.addListener(future -> {
+                if (future.isSuccess()) {
+                    sentMaxPushId = id;
+                }
+            });
+        }
+        super.write(ctx, msg, promise);
     }
 }

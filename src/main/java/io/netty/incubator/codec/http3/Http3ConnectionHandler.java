@@ -30,9 +30,9 @@ import java.util.function.Supplier;
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
     private final Supplier<Http3FrameCodec> codecSupplier;
-    private final Http3SettingsFrame localSettings;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
-    private final Http3ControlStreamInboundHandler localControlStreamHandler;;
+    private final Http3ControlStreamInboundHandler localControlStreamHandler;
+    private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     private boolean controlStreamCreationInProgress;
 
     /**
@@ -50,7 +50,6 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     Http3ConnectionHandler(boolean server, ChannelHandler inboundControlStreamHandler,
                            LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                            Http3SettingsFrame localSettings) {
-        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
         this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
         if (localSettings == null) {
             localSettings = new DefaultHttp3SettingsFrame();
@@ -65,8 +64,9 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         // As we not support the dynamic table at the moment lets override whatever the user specified and set
         // the capacity to 0.
         localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
-        this.localSettings = localSettings;
         codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
+        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
+        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(localSettings, codecSupplier);
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
@@ -76,8 +76,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             // Once the channel became active we need to create an unidirectional stream and write the
             // Http3SettingsFrame to it. This needs to be the first frame on this stream.
             // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
-            channel.createStream(QuicStreamType.UNIDIRECTIONAL,
-                    new Http3ControlStreamOutboundHandler(localSettings, codecSupplier))
+            channel.createStream(QuicStreamType.UNIDIRECTIONAL, remoteControlStreamHandler)
                     .addListener(f -> {
                         if (!f.isSuccess()) {
                             ctx.fireExceptionCaught(new Http3Exception(Http3ErrorCode.H3_STREAM_CREATION_ERROR,
@@ -132,7 +131,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                 case UNIDIRECTIONAL:
                     channel.pipeline().addLast(
                             new Http3UnidirectionalStreamInboundHandler(codecSupplier,
-                                    localControlStreamHandler, unknownInboundStreamHandlerFactory));
+                                    localControlStreamHandler, remoteControlStreamHandler,
+                                    unknownInboundStreamHandlerFactory));
                     break;
                 default:
                     throw new Error();
