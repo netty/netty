@@ -148,8 +148,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.finish());
 
         channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
-                true, false, new Http3UnidirectionalStreamInboundHandler(server,
-                CodecHandler::new, null, null));
+                true, false, new Http3UnidirectionalStreamInboundHandler(
+                CodecHandler::new, new Http3ControlStreamInboundHandler(server, null), null));
 
         // Try to create the stream a second time, this should fail
         buffer = Unpooled.buffer(8);
@@ -168,8 +168,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         QuicChannel parent = Http3TestUtils.mockParent();
         AttributeMap map = new DefaultAttributeMap();
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
-        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(true,
-                CodecHandler::new, null, factory);
+        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
+                CodecHandler::new, new Http3ControlStreamInboundHandler(true, null), factory);
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
                 true, false, handler);
     }

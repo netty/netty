@@ -15,20 +15,42 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 
 final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
-    private final boolean server;
-    private final boolean forwardControlFrames;
+    final boolean server;
+    private final ChannelHandler controlFrameHandler;
     private boolean firstFrameRead;
     private Long receivedGoawayId;
     private Long receivedMaxPushId;
 
-    Http3ControlStreamInboundHandler(boolean server, boolean forwardControlFrames) {
+    Http3ControlStreamInboundHandler(boolean server, ChannelHandler controlFrameHandler) {
         super(Http3ControlStreamFrame.class);
         this.server = server;
-        this.forwardControlFrames = forwardControlFrames;
+        this.controlFrameHandler = controlFrameHandler;
+    }
+
+    boolean isServer() {
+        return server;
+    }
+
+    boolean isGoAwayReceived() {
+        return receivedGoawayId != null;
+    }
+
+    private boolean forwardControlFrames() {
+        return controlFrameHandler != null;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        // The user want's to be notified about control frames, add the handler to the pipeline.
+        if (controlFrameHandler != null) {
+            ctx.pipeline().addLast(controlFrameHandler);
+        }
     }
 
     @Override
@@ -42,7 +64,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
         }
         if (firstFrame && !(frame instanceof Http3SettingsFrame)) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
-                    "Missing settings frame.", forwardControlFrames);
+                    "Missing settings frame.", forwardControlFrames());
             ReferenceCountUtil.release(frame);
             return;
         }
@@ -63,7 +85,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
             valid = true;
         }
 
-        if (!valid || !forwardControlFrames) {
+        if (!valid || controlFrameHandler == null) {
             ReferenceCountUtil.release(frame);
             return;
         }
@@ -85,12 +107,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
         long id = goAwayFrame.id();
         if (!server && id % 4 != 0) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                    "GOAWAY received with ID of non-request stream.", forwardControlFrames);
+                    "GOAWAY received with ID of non-request stream.", forwardControlFrames());
             return false;
         }
         if (receivedGoawayId != null && id > receivedGoawayId) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                    "GOAWAY received with ID larger than previously received.", forwardControlFrames);
+                    "GOAWAY received with ID larger than previously received.", forwardControlFrames());
             return false;
         }
         receivedGoawayId = id;
@@ -101,12 +123,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
         long id = frame.id();
         if (!server) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                    "MAX_PUSH_ID received by client.", forwardControlFrames);
+                    "MAX_PUSH_ID received by client.", forwardControlFrames());
             return false;
         }
         if (receivedMaxPushId != null && id < receivedMaxPushId) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                    "MAX_PUSH_ID reduced limit.", forwardControlFrames);
+                    "MAX_PUSH_ID reduced limit.", forwardControlFrames());
             return false;
         }
         receivedMaxPushId = id;

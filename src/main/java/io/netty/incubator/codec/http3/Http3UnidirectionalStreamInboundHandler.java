@@ -43,25 +43,19 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     private static final AttributeKey<Boolean> QPACK_ENCODER_STREAM = AttributeKey.valueOf("H3_QPACK_ENCODER_STREAM");
 
     private final Supplier<? extends ChannelHandler> codecSupplier;
-    private final boolean server;
-    private final ChannelHandler controlStreamHandler;
+    private final Http3ControlStreamInboundHandler localControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
-    Http3UnidirectionalStreamInboundHandler(boolean server, Supplier<? extends ChannelHandler> codecSupplier,
-                                            ChannelHandler controlStreamHandler,
+    Http3UnidirectionalStreamInboundHandler(Supplier<? extends ChannelHandler> codecSupplier,
+                                            Http3ControlStreamInboundHandler localControlStreamHandler,
                                             LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
-        this.server = server;
         this.codecSupplier = codecSupplier;
-        this.controlStreamHandler = controlStreamHandler;
+        this.localControlStreamHandler = localControlStreamHandler;
         if (unknownStreamHandlerFactory == null) {
             // If the user did not specify an own factory just drop all bytes on the floor.
             unknownStreamHandlerFactory = type -> ReleaseHandler.INSTANCE;
         }
         this.unknownStreamHandlerFactory = unknownStreamHandlerFactory;
-    }
-
-    private boolean isForwardingEvents() {
-        return controlStreamHandler != null;
     }
 
     @Override
@@ -111,12 +105,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      */
     private void initControlStream(ChannelHandlerContext ctx) {
         if (ctx.channel().parent().attr(REMOTE_CONTROL_STREAM).setIfAbsent(true) == null) {
-            boolean forwardControlStreamFrames = isForwardingEvents();
-            ctx.pipeline().addLast(new Http3ControlStreamInboundHandler(server, forwardControlStreamFrames));
-            if (forwardControlStreamFrames) {
-                // The user want's to be notified about control frames, add the handler to the pipeline.
-                ctx.pipeline().addLast(controlStreamHandler);
-            }
+            ctx.pipeline().addLast(localControlStreamHandler);
             // Replace this handler with the codec now.
             replaceThisWithCodec(ctx.pipeline());
         } else {
@@ -136,7 +125,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.2">push stream</a>.
      */
     private void initPushStream(ChannelHandlerContext ctx, long id) {
-        if (server) {
+        if (localControlStreamHandler.isServer()) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
                     "Server received push stream.", false);
         } else {

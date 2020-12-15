@@ -30,10 +30,9 @@ import java.util.function.Supplier;
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
     private final Supplier<Http3FrameCodec> codecSupplier;
-    private final boolean server;
     private final Http3SettingsFrame localSettings;
-    private final ChannelHandler inboundControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
+    private final Http3ControlStreamInboundHandler localControlStreamHandler;;
     private boolean controlStreamCreationInProgress;
 
     /**
@@ -51,8 +50,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     Http3ConnectionHandler(boolean server, ChannelHandler inboundControlStreamHandler,
                            LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                            Http3SettingsFrame localSettings) {
-        this.server = server;
-        this.inboundControlStreamHandler = inboundControlStreamHandler;
+        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
         this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
         if (localSettings == null) {
             localSettings = new DefaultHttp3SettingsFrame();
@@ -116,8 +114,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                     break;
                 case UNIDIRECTIONAL:
                     channel.pipeline().addLast(
-                            new Http3UnidirectionalStreamInboundHandler(server, codecSupplier,
-                                    inboundControlStreamHandler, unknownInboundStreamHandlerFactory));
+                            new Http3UnidirectionalStreamInboundHandler(codecSupplier,
+                                    localControlStreamHandler, unknownInboundStreamHandlerFactory));
                     break;
                 default:
                     throw new Error();

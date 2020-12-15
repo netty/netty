@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
@@ -61,7 +62,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Override
     protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
-        return new Http3ControlStreamInboundHandler(true, true);
+        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter());
     }
 
     @Override
@@ -93,7 +94,8 @@ public class Http3ControlStreamInboundHandlerTest extends
     private void testInvalidFirstFrame(Http3ControlStreamFrame controlStreamFrame) {
         QuicChannel parent = mockParent();
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new Http3ControlStreamInboundHandler(server, forwardControlFrames));
+                new Http3ControlStreamInboundHandler(
+                        server, forwardControlFrames ? new ChannelInboundHandlerAdapter() : null));
 
         writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, controlStreamFrame);
         verifyClose(Http3ErrorCode.H3_MISSING_SETTINGS, parent);
@@ -162,7 +164,8 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     private EmbeddedChannel newInitChannel(QuicChannel parent) {
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new Http3ControlStreamInboundHandler(server, forwardControlFrames));
+                new Http3ControlStreamInboundHandler(server,
+                        forwardControlFrames ? new ChannelInboundHandlerAdapter() : null));
 
         // We always need to start with a settings frame.
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
