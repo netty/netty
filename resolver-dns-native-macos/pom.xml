@@ -105,7 +105,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX, processor=${os.detected.arch}</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
