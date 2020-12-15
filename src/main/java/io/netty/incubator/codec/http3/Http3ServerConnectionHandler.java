@@ -22,7 +22,6 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.function.LongFunction;
-import java.util.function.Supplier;
 
 
 /**
@@ -64,12 +63,11 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel,
-                                 Supplier<Http3FrameCodec> codecSupplier) {
+    void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         ChannelPipeline pipeline = streamChannel.pipeline();
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-        pipeline.addLast(codecSupplier.get());
-        pipeline.addLast(new Http3RequestStreamValidationHandler(true));
+        pipeline.addLast(newCodec());
+        pipeline.addLast(Http3RequestStreamValidationHandler.newServerValidator());
         pipeline.addLast(requestStreamHandler);
     }
 }

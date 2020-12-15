@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
@@ -37,7 +38,7 @@ import static org.junit.Assert.fail;
 public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValidationHandlerTest {
     @Override
     protected Http3FrameTypeValidationHandler<Http3RequestStreamFrame> newHandler() {
-        return new Http3RequestStreamValidationHandler(true);
+        return Http3RequestStreamValidationHandler.newServerValidator();
     }
 
     @Override
@@ -139,6 +140,42 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertFrameEquals(dataFrame, channel.readOutbound());
         assertFrameEquals(dataFrame2, channel.readOutbound());
         assertFrameEquals(trailersFrame, channel.readOutbound());
+        assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void testGoawayReceivedBeforeWritingHeaders() {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newClientValidator(() -> true));
+
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        try {
+            channel.writeOutbound(headersFrame);
+            fail();
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
+        }
+        // We should have closed the channel.
+        assertFalse(channel.isActive());
+        assertFalse(channel.finish());
+        assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void testGoawayReceivedAfterWritingHeaders() {
+        AtomicBoolean goAway = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newClientValidator(goAway::get));
+
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
+        assertTrue(channel.writeOutbound(headersFrame));
+        goAway.set(true);
+        assertTrue(channel.writeOutbound(dataFrame.retainedDuplicate()));
+        assertTrue(channel.finish());
+        assertFrameEquals(headersFrame, channel.readOutbound());
+        assertFrameEquals(dataFrame, channel.readOutbound());
+
         assertNull(channel.readOutbound());
     }
 }

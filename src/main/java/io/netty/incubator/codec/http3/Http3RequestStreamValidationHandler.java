@@ -17,6 +17,10 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.StringUtil;
+
+import java.util.function.BooleanSupplier;
 
 final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidationHandler<Http3RequestStreamFrame> {
     private enum State {
@@ -27,13 +31,23 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     private State readState = State.Initial;
     private State writeState = State.Initial;
     private final boolean server;
+    private final BooleanSupplier goAwayReceivedSupplier;
 
-    Http3RequestStreamValidationHandler(boolean server) {
-        super(Http3RequestStreamFrame.class);
-        this.server = server;
+    static Http3RequestStreamValidationHandler newServerValidator() {
+        return new Http3RequestStreamValidationHandler(true, () -> false);
     }
 
-    private static State checkState(State state, Http3RequestStreamFrame frame) {
+    static Http3RequestStreamValidationHandler newClientValidator(BooleanSupplier goAwayReceivedSupplier) {
+        return new Http3RequestStreamValidationHandler(false, goAwayReceivedSupplier);
+    }
+
+    private Http3RequestStreamValidationHandler(boolean server, BooleanSupplier goAwayReceivedSupplier) {
+        super(Http3RequestStreamFrame.class);
+        this.server = server;
+        this.goAwayReceivedSupplier = goAwayReceivedSupplier;
+    }
+
+    private State checkState(State state, Http3RequestStreamFrame frame) {
         switch (state) {
             case Initial:
                 if (!(frame instanceof Http3HeadersFrame)) {
@@ -56,6 +70,14 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     @Override
     public void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, ChannelPromise promise) {
         if (!(frame instanceof Http3PushPromiseFrame)) {
+            if (!server && writeState == State.Initial && goAwayReceivedSupplier.getAsBoolean()) {
+                String type = StringUtil.simpleClassName(frame);
+                ReferenceCountUtil.release(frame);
+                promise.setFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                        "Frame of type " + type + " unexpected as we received a GOAWAY already."));
+                ctx.close();
+                return;
+            }
             State newState = checkState(writeState, frame);
             if (newState == null) {
                 frameTypeUnexpected(promise, frame);

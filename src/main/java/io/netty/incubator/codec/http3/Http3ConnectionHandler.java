@@ -89,9 +89,25 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         }
     }
 
+    /**
+     * Returns {@code true} if we received a GOAWAY frame from the remote peer.
+     * @return {@code true} if we received the frame, {@code false} otherwise.
+     */
+    public final boolean isGoAwayReceived() {
+        return localControlStreamHandler.isGoAwayReceived();
+    }
+
+    /**
+     * Returns a new codec that will encode and decode {@link Http3Frame}s for this HTTP/3 connection.
+     *
+     * @return a new codec.
+     */
+    public final ChannelHandler newCodec() {
+        return codecSupplier.get();
+    }
+
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        Http3.setCodecSupplier(ctx.channel(), codecSupplier);
         if (ctx.channel().isActive()) {
             createControlStreamIfNeeded(ctx);
         }
@@ -110,7 +126,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             QuicStreamChannel channel = (QuicStreamChannel) msg;
             switch (channel.type()) {
                 case BIDIRECTIONAL:
-                    initBidirectionalStream(ctx, channel, codecSupplier);
+                    initBidirectionalStream(ctx, channel);
                     break;
                 case UNIDIRECTIONAL:
                     channel.pipeline().addLast(
@@ -129,11 +145,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      *
      * @param ctx           the {@link ChannelHandlerContext} of the parent {@link QuicChannel}.
      * @param streamChannel the {@link QuicStreamChannel}.
-     * @param codecSupplier the {@link Supplier} that can be used to get a new instance of the codec for
-     *                      {@link Http3Frame}s
      */
-    abstract void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel,
-                                          Supplier<Http3FrameCodec> codecSupplier);
+    abstract void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel);
 
     /**
      * Always returns {@code false} as it keeps state.

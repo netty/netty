@@ -59,25 +59,6 @@ public final class Http3 {
         channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
     }
 
-    private static final AttributeKey<Supplier<? extends ChannelHandler>> HTTP3_CODEC_SUPPLIER =
-            AttributeKey.valueOf(Http3.class, "HTTP3CodecSupplier");
-
-    /**
-     * Returns the {@link Supplier} that should be used to obtain a HTTP/3 codec for the underlying connection.
-     *
-     * As an end-user in most cases you just want to use {@link Http3RequestStreamInitializer} directly.
-     *
-     * @param channel   the channel for the HTTP/3 connection.
-     * @return          the codec supplier.
-     */
-    public static Supplier<? extends ChannelHandler> getCodecSupplier(Channel channel) {
-        return channel.attr(HTTP3_CODEC_SUPPLIER).get();
-    }
-
-    static void setCodecSupplier(Channel channel, Supplier<? extends ChannelHandler> codecSupplier) {
-        channel.attr(HTTP3_CODEC_SUPPLIER).set(codecSupplier);
-    }
-
     /**
      * Returns a new HTTP/3 request-stream that will use the given {@link ChannelHandler}
      * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 is automatically added to the

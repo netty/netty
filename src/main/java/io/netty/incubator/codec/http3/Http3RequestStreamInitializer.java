@@ -15,12 +15,10 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
-
-import java.util.function.Supplier;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Abstract base class that users can extend to init HTTP/3 request-streams. This initializer
@@ -31,14 +29,15 @@ public abstract class Http3RequestStreamInitializer extends ChannelInitializer<Q
     @Override
     protected final void initChannel(QuicStreamChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        Supplier<? extends ChannelHandler> supplier = Http3.getCodecSupplier(ch.parent());
-        if (supplier == null) {
-            throw new IllegalStateException("Couldn't obtain the codec Supplier");
+        Http3ConnectionHandler connectionHandler = ch.parent().pipeline().get(Http3ConnectionHandler.class);
+        if (connectionHandler == null) {
+            throw new IllegalStateException("Couldn't obtain the " +
+                    StringUtil.simpleClassName(Http3ConnectionHandler.class) + " of the parent Channel");
         }
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-        pipeline.addLast(supplier.get());
+        pipeline.addLast(connectionHandler.newCodec());
         // Add the handler that will validate what we write and receive on this stream.
-        //pipeline.addLast(new Http3RequestStreamValidationHandler(false));
+        pipeline.addLast(Http3RequestStreamValidationHandler.newClientValidator(connectionHandler::isGoAwayReceived));
         initRequestStream(ch);
     }
 
