@@ -65,6 +65,7 @@ public abstract class InternalLoggerFactory {
         } catch (LinkageError ignore) {
             return null;
         } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
             return null;
         }
     }
@@ -77,6 +78,7 @@ public abstract class InternalLoggerFactory {
         } catch (LinkageError ignore) {
             return null;
         } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
             return null;
         }
     }
@@ -89,6 +91,7 @@ public abstract class InternalLoggerFactory {
         } catch (LinkageError ignore) {
             return null;
         } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
             return null;
         }
     }
