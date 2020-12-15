@@ -51,32 +51,32 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void lookupNoNameMatch() {
-        HpackStaticTable.getIndexInsensitive(X_CONTENT_ENCODING, X_GZIP);
+    public int lookupNoNameMatch() {
+        return HpackStaticTable.getIndexInsensitive(X_CONTENT_ENCODING, X_GZIP);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void lookupNameAndValueMatchFirst() {
-        HpackStaticTable.getIndexInsensitive(STATUS, STATUS_200);
+    public int lookupNameAndValueMatchFirst() {
+        return HpackStaticTable.getIndexInsensitive(STATUS, STATUS_200);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void lookupNameAndValueMatchLast() {
-        HpackStaticTable.getIndexInsensitive(STATUS, STATUS_500);
+    public int lookupNameAndValueMatchLast() {
+        return HpackStaticTable.getIndexInsensitive(STATUS, STATUS_500);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void lookupNameOnlyMatchBeginTable() {
-        HpackStaticTable.getIndexInsensitive(AUTHORITY, AUTHORITY_NETTY);
+    public int lookupNameOnlyMatchBeginTable() {
+        return HpackStaticTable.getIndexInsensitive(AUTHORITY, AUTHORITY_NETTY);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void lookupNameOnlyMatchEndTable() {
-        HpackStaticTable.getIndexInsensitive(USER_AGENT, USER_AGENT_CURL);
+    public int lookupNameOnlyMatchEndTable() {
+        return HpackStaticTable.getIndexInsensitive(USER_AGENT, USER_AGENT_CURL);
     }
 
 }
