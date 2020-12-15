@@ -68,6 +68,7 @@ public abstract class InternalLoggerFactory {
             return null;
         }
     }
+
     private static InternalLoggerFactory useLog4J2LoggerFactory(String name) {
         try {
             InternalLoggerFactory f = Log4J2LoggerFactory.INSTANCE;
