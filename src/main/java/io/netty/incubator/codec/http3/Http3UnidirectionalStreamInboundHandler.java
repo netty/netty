@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -97,11 +96,6 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         }
     }
 
-    private void replaceThisWithCodec(ChannelPipeline pipeline) {
-        // Replace this handler with the codec now.
-       pipeline.replace(this, null, codecSupplier.get());
-    }
-
     /**
      * Called if the current {@link Channel} is a
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1">control stream</a>.
@@ -110,7 +104,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         if (ctx.channel().parent().attr(REMOTE_CONTROL_STREAM).setIfAbsent(true) == null) {
             ctx.pipeline().addLast(localControlStreamHandler);
             // Replace this handler with the codec now.
-            replaceThisWithCodec(ctx.pipeline());
+            ctx.pipeline().replace(this, null, codecSupplier.get());
         } else {
             // Only one control stream is allowed.
             // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1

@@ -148,4 +148,10 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
         // configuration and AUTO_READ.
         Http3CodecUtils.readIfNoAutoRead(ctx);
     }
+
+    @Override
+    public boolean isSharable() {
+        // Not sharable as it keeps state.
+        return false;
+    }
 }

@@ -23,19 +23,16 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.function.Supplier;
-
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
     private final Http3SettingsFrame localSettings;
-    private final Supplier<? extends ChannelHandler> codecSupplier;
+    private final ChannelHandler codec;
     private Long sentMaxPushId;
 
-    Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings,
-                                      Supplier<? extends ChannelHandler> codecSupplier) {
+    Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings, ChannelHandler codec) {
         super(Http3ControlStreamFrame.class);
         this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
-        this.codecSupplier = ObjectUtil.checkNotNull(codecSupplier, "codecSupplier");
+        this.codec = ObjectUtil.checkNotNull(codec, "codec");
     }
 
     /**
@@ -57,7 +54,7 @@ final class Http3ControlStreamOutboundHandler
         ctx.write(buffer);
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames. This needs to happen after
         // we did write the type via a ByteBuf.
-        ctx.pipeline().addFirst(codecSupplier.get());
+        ctx.pipeline().addFirst(codec);
         // If writing of the local settings fails let's just teardown the connection.
         ctx.writeAndFlush(localSettings).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
@@ -91,5 +88,11 @@ final class Http3ControlStreamOutboundHandler
             });
         }
         super.write(ctx, msg, promise);
+    }
+
+    @Override
+    public boolean isSharable() {
+        // This handle keeps state so we cant reuse it.
+        return false;
     }
 }

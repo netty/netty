@@ -111,4 +111,10 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
         }
         ctx.fireChannelRead(frame);
     }
+
+    @Override
+    public boolean isSharable() {
+        // This handle keeps state so we can't share it.
+        return false;
+    }
 }

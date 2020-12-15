@@ -66,7 +66,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
         codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
-        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(localSettings, codecSupplier);
+        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(localSettings, codecSupplier.get());
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
@@ -104,6 +104,13 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      */
     public final ChannelHandler newCodec() {
         return codecSupplier.get();
+    }
+
+    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler() {
+        if (localControlStreamHandler.isServer()) {
+            return Http3RequestStreamValidationHandler.newServerValidator();
+        }
+        return Http3RequestStreamValidationHandler.newClientValidator(localControlStreamHandler::isGoAwayReceived);
     }
 
     @Override

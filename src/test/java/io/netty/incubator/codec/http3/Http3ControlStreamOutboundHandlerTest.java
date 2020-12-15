@@ -39,7 +39,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Override
     protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
-        return new Http3ControlStreamOutboundHandler(settingsFrame, ChannelInboundHandlerAdapter::new);
+        return new Http3ControlStreamOutboundHandler(settingsFrame, new ChannelInboundHandlerAdapter());
     }
 
     @Override

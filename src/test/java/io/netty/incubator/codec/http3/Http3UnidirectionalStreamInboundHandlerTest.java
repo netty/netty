@@ -134,7 +134,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
 
         Http3ControlStreamOutboundHandler outboundControlHandler = new Http3ControlStreamOutboundHandler(
-                new DefaultHttp3SettingsFrame(), CodecHandler::new);
+                new DefaultHttp3SettingsFrame(), new CodecHandler());
 
         EmbeddedChannel outboundControlChannel = new EmbeddedChannel(
                 parent, DefaultChannelId.newInstance(), true, false, outboundControlHandler);
@@ -210,7 +210,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
                 true, false, new Http3UnidirectionalStreamInboundHandler(
                 CodecHandler::new, new Http3ControlStreamInboundHandler(server, null),
-                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), CodecHandler::new), null));
+                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), new CodecHandler()), null));
 
         // Try to create the stream a second time, this should fail
         buffer = Unpooled.buffer(8);
@@ -231,7 +231,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
                 CodecHandler::new, new Http3ControlStreamInboundHandler(true, null),
-                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), CodecHandler::new), factory);
+                new Http3ControlStreamOutboundHandler(new DefaultHttp3SettingsFrame(), new CodecHandler()), factory);
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
                 true, false, handler);
     }
