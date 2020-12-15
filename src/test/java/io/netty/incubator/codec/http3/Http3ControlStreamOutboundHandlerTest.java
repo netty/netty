@@ -20,18 +20,23 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class Http3ControlStreamOutboundHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3ControlStreamFrame> {
@@ -39,7 +44,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Override
     protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
-        return new Http3ControlStreamOutboundHandler(settingsFrame, new ChannelInboundHandlerAdapter());
+        return new Http3ControlStreamOutboundHandler(false, settingsFrame, new ChannelInboundHandlerAdapter());
     }
 
     @Override
@@ -59,6 +64,49 @@ public class Http3ControlStreamOutboundHandlerTest extends
         EmbeddedChannel channel = newChannel(parent, newHandler(), true);
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
+    }
+
+    @Test
+    public void testGoAwayIdDecreaseWorks() {
+        QuicChannel parent = mockParent();
+        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(8)));
+        ReferenceCountUtil.release(channel.readOutbound());
+        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
+        ReferenceCountUtil.release(channel.readOutbound());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testGoAwayIdIncreaseFails() {
+        QuicChannel parent = mockParent();
+        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
+        ReferenceCountUtil.release(channel.readOutbound());
+
+        try {
+            channel.writeOutbound(new DefaultHttp3GoAwayFrame(8));
+            fail();
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_ID_ERROR, e);
+        }
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testGoAwayIdUseInvalidId() {
+        QuicChannel parent = mockParent();
+        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+        try {
+            channel.writeOutbound(new DefaultHttp3GoAwayFrame(2));
+            fail();
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_ID_ERROR, e);
+        }
+        assertFalse(channel.finish());
     }
 
     @Override

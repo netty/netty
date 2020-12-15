@@ -21,16 +21,20 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
+    private final boolean server;
     private final Http3SettingsFrame localSettings;
     private final ChannelHandler codec;
     private Long sentMaxPushId;
+    private Long sendGoAwayId;
 
-    Http3ControlStreamOutboundHandler(Http3SettingsFrame localSettings, ChannelHandler codec) {
+    Http3ControlStreamOutboundHandler(boolean server, Http3SettingsFrame localSettings, ChannelHandler codec) {
         super(Http3ControlStreamFrame.class);
+        this.server = server;
         this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
         this.codec = ObjectUtil.checkNotNull(codec, "codec");
     }
@@ -80,14 +84,31 @@ final class Http3ControlStreamOutboundHandler
     @Override
     public void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, ChannelPromise promise) throws Exception {
         if (msg instanceof Http3MaxPushIdFrame) {
-            long id = ((Http3MaxPushIdFrame) msg).id();
-            promise.addListener(future -> {
-                if (future.isSuccess()) {
-                    sentMaxPushId = id;
-                }
-            });
+            sentMaxPushId = ((Http3MaxPushIdFrame) msg).id();
         }
-        super.write(ctx, msg, promise);
+        if (msg instanceof Http3GoAwayFrame) {
+            Http3GoAwayFrame goAwayFrame = (Http3GoAwayFrame) msg;
+            if (server) {
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2
+                long id = goAwayFrame.id();
+                if (id % 4 != 0) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+                            "GOAWAY id not valid : " + id));
+                    return;
+                }
+                if (sendGoAwayId != null && id > sendGoAwayId) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+                            "GOAWAY id is bigger then the last sent: " + id + " > " + sendGoAwayId));
+                    return;
+                }
+                sendGoAwayId = id;
+            } else {
+                // TODO: Add logic for the client side as well.
+            }
+        }
+        ctx.write(msg, promise);
     }
 
     @Override
