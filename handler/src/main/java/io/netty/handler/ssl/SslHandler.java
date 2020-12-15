@@ -1800,17 +1800,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
-        handshakePromise.trySuccess(ctx.channel());
+        boolean notified = handshakePromise.trySuccess(ctx.channel());
+        SSLSession session = engine.getSession();
 
-        if (logger.isDebugEnabled()) {
-            SSLSession session = engine.getSession();
-            logger.debug(
-              "{} HANDSHAKEN: protocol:{} cipher suite:{}",
-              ctx.channel(),
-              session.getProtocol(),
-              session.getCipherSuite());
+        // There seems to be a bug in the SSLEngineImpl that is part of the OpenJDK that results in returning
+        // HandshakeStatus.FINISHED multiple times which is not expected. This only happens in TLSv1.3 so lets
+        // ensure we only notify once in this case.
+        //
+        // This is safe as TLSv1.3 does not support renegotiation and so we should never see two handshake events.
+        if (notified || !SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "{} HANDSHAKEN: protocol:{} cipher suite:{}",
+                        ctx.channel(),
+                        session.getProtocol(),
+                        session.getCipherSuite());
+            }
+            ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         }
-        ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
 
         if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
             readDuringHandshake = false;

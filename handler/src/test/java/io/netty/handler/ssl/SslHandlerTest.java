@@ -1482,4 +1482,117 @@ public class SslHandlerTest {
         }
     }
 
+    @Test
+    public void testHandshakeEventsTls12JDK() throws Exception {
+        testHandshakeEvents(SslProvider.JDK, SslUtils.PROTOCOL_TLS_V1_2);
+    }
+
+    @Test
+    public void testHandshakeEventsTls12Openssl() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2);
+    }
+
+    @Test
+    public void testHandshakeEventsTls13JDK() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
+        testHandshakeEvents(SslProvider.JDK, SslUtils.PROTOCOL_TLS_V1_3);
+    }
+
+    @Test
+    public void testHandshakeEventsTls13Openssl() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3);
+    }
+
+    private void testHandshakeEvents(SslProvider provider, String protocol) throws Exception {
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .protocols(protocol)
+                .sslProvider(provider).build();
+
+        final SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .protocols(protocol)
+                .sslProvider(provider).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+
+        final LinkedBlockingQueue<SslHandshakeCompletionEvent> serverCompletionEvents =
+                new LinkedBlockingQueue<SslHandshakeCompletionEvent>();
+
+        final LinkedBlockingQueue<SslHandshakeCompletionEvent> clientCompletionEvents =
+                new LinkedBlockingQueue<SslHandshakeCompletionEvent>();
+        try {
+            Channel sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT));
+                            ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(serverCompletionEvents));
+                        }
+                    })
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            Bootstrap bs = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(
+                                    UnpooledByteBufAllocator.DEFAULT, "netty.io", 9999));
+                            ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(clientCompletionEvents));
+                        }
+                    })
+                    .remoteAddress(sc.localAddress());
+
+            Channel cc1 = bs.connect().sync().channel();
+            Channel cc2 = bs.connect().sync().channel();
+
+            // We expect 4 events as we have 2 connections and for each connection there should be one event
+            // on the server-side and one on the client-side.
+            for (int i = 0; i < 2; i++) {
+                SslHandshakeCompletionEvent event = clientCompletionEvents.take();
+                assertTrue(event.isSuccess());
+            }
+            for (int i = 0; i < 2; i++) {
+                SslHandshakeCompletionEvent event = serverCompletionEvents.take();
+                assertTrue(event.isSuccess());
+            }
+
+            cc1.close().sync();
+            cc2.close().sync();
+            sc.close().sync();
+            assertEquals(0, clientCompletionEvents.size());
+            assertEquals(0, serverCompletionEvents.size());
+        } finally {
+            group.shutdownGracefully();
+            ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
+        }
+    }
+
+    private static class SslHandshakeCompletionEventHandler extends ChannelInboundHandlerAdapter {
+        private final Queue<SslHandshakeCompletionEvent> completionEvents;
+
+        SslHandshakeCompletionEventHandler(Queue<SslHandshakeCompletionEvent> completionEvents) {
+            this.completionEvents = completionEvents;
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if (evt instanceof SslHandshakeCompletionEvent) {
+                completionEvents.add((SslHandshakeCompletionEvent) evt);
+            }
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    };
 }
