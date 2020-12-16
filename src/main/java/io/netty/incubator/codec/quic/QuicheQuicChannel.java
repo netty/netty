@@ -1083,17 +1083,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // TODO: respect AUTO_READ via recvHandle.continueReading()?
             for (;;) {
                 ByteBuf datagramBuffer = recvHandle.allocate(alloc());
-                int writerIndex = datagramBuffer.writerIndex();
-                int written = Quiche.quiche_conn_dgram_recv(connAddr, datagramBuffer.memoryAddress() + writerIndex,
-                        datagramBuffer.writableBytes());
-                if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
-                    // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
-                    // will fit into a QUIC packet.
-                    // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
-                    datagramBuffer.capacity(alloc().calculateNewCapacity(
-                            Math.min((int) (datagramBuffer.writableBytes() * 1.5), MAX_DATAGRAM_BUFFER_SIZE),
-                            MAX_DATAGRAM_BUFFER_SIZE));
-                    continue;
+                int written;
+                int writerIndex;
+
+                for (;;) {
+                    writerIndex = datagramBuffer.writerIndex();
+                    written = Quiche.quiche_conn_dgram_recv(connAddr, datagramBuffer.memoryAddress() + writerIndex,
+                            datagramBuffer.writableBytes());
+                    if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
+                        // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
+                        // will fit into a QUIC packet.
+                        // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
+                        int newCapacity = (int) (datagramBuffer.writableBytes() * 1.5);
+                        datagramBuffer.capacity(alloc().calculateNewCapacity(
+                                Math.min(newCapacity, MAX_DATAGRAM_BUFFER_SIZE), MAX_DATAGRAM_BUFFER_SIZE));
+                    } else {
+                        // the buffer was big enough.
+                        break;
+                    }
                 }
                 try {
                     if (Quiche.throwIfError(written)) {
