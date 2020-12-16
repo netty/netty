@@ -133,7 +133,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ByteBuffer key;
     private CloseData closeData;
     private QuicConnectionStats statsAtClose;
+
     private boolean supportsDatagram;
+    private boolean recvDatagramPending;
+    private boolean datagramReadable;
+
+    private boolean recvStreamPending;
+    private boolean streamReadable;
+    private boolean inRecv;
+    private boolean didRecv;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -402,7 +410,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected void doBeginRead() {
-        // TODO: handle this
+        recvDatagramPending = true;
+        recvStreamPending = true;
+        if (datagramReadable || streamReadable) {
+            ((QuicChannelUnsafe) unsafe()).recv();
+        }
     }
 
     @Override
@@ -764,7 +776,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private void tryConnectionSend() {
         connectionSendNeeded = true;
-        if (!fireChannelReadCompletePending) {
+        if (!didRecv) {
             if (connectionSend()) {
                 flushParent();
             }
@@ -849,18 +861,24 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (isConnDestroyed()) {
             return false;
         }
-        if (fireChannelReadCompletePending) {
-            fireChannelReadCompletePending = false;
-            pipeline().fireChannelReadComplete();
+        fireChannelReadCompleteIfNeeded();
+
+        if (didRecv) {
             // If we had called recv we need to ensure we call send as well.
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
             connectionSendNeeded = true;
         }
-
         // Try flush more streams that had some flushes pending.
         handleWritableStreams();
 
         return connectionSend();
+    }
+
+    private void fireChannelReadCompleteIfNeeded() {
+        if (fireChannelReadCompletePending) {
+            fireChannelReadCompletePending = false;
+            pipeline().fireChannelReadComplete();
+        }
     }
 
     private boolean isConnDestroyed() {
@@ -993,140 +1011,188 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (isConnDestroyed()) {
                 return;
             }
-
-            ByteBuf tmpBuffer = null;
-            // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
-            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
-            if (buffer.isReadOnly()) {
-                tmpBuffer = alloc().directBuffer(buffer.readableBytes());
-                tmpBuffer.writeBytes(buffer);
-                buffer = tmpBuffer;
-            }
-            int bufferReadable = buffer.readableBytes();
-            int bufferReaderIndex = buffer.readerIndex();
-            long memoryAddress = Quiche.memoryAddress(buffer) + bufferReaderIndex;
-
-            // We need to call quiche_conn_send(...),
-            // see https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-            connectionSendNeeded = true;
+            inRecv = true;
             try {
-                do  {
-                    // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
-                    int res = Quiche.quiche_conn_recv(connAddr, memoryAddress, bufferReadable);
-                    boolean done;
-                    try {
-                        done = Quiche.throwIfError(res);
-                    } catch (Exception e) {
-                        pipeline().fireExceptionCaught(e);
-                        done = true;
-                    }
+                ByteBuf tmpBuffer = null;
+                // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
+                // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
+                if (buffer.isReadOnly()) {
+                    tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                    tmpBuffer.writeBytes(buffer);
+                    buffer = tmpBuffer;
+                }
+                int bufferReadable = buffer.readableBytes();
+                int bufferReaderIndex = buffer.readerIndex();
+                long memoryAddress = Quiche.memoryAddress(buffer) + bufferReaderIndex;
 
-                    // Handle pending channelActive if needed.
-                    if (handlePendingChannelActive()) {
-                        // Connection was closed right away.
-                        return;
-                    }
-
-                    if (Quiche.quiche_conn_is_established(connAddr) || Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                        if (supportsDatagram) {
-                            recvDatagram();
+                // We need to call quiche_conn_send(...),
+                // see https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
+                connectionSendNeeded = true;
+                try {
+                    do  {
+                        // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
+                        int res = Quiche.quiche_conn_recv(connAddr, memoryAddress, bufferReadable);
+                        boolean done;
+                        try {
+                            done = Quiche.throwIfError(res);
+                            didRecv = true;
+                        } catch (Exception e) {
+                            pipeline().fireExceptionCaught(e);
+                            done = true;
                         }
-                        long readableIterator = Quiche.quiche_conn_readable(connAddr);
-                        if (readableIterator != -1) {
-                            try {
-                                for (;;) {
-                                    int readable = Quiche.quiche_stream_iter_next(readableIterator, readableStreams);
-                                    for (int i = 0; i < readable; i++) {
-                                        long streamId = readableStreams[i];
-                                        QuicheQuicStreamChannel streamChannel = streams.get(streamId);
-                                        if (streamChannel == null) {
-                                            // We create a new channel and fire it through the pipeline which
-                                            // means we also need to ensure we call fireChannelReadCompletePending.
-                                            fireChannelReadCompletePending = true;
-                                            streamChannel = addNewStreamChannel(streamId);
-                                            streamChannel.readable();
-                                            pipeline().fireChannelRead(streamChannel);
-                                        } else {
-                                            streamChannel.readable();
-                                        }
-                                    }
-                                    if (readable < readableStreams.length) {
-                                        break;
-                                    }
+
+                        // Handle pending channelActive if needed.
+                        if (handlePendingChannelActive()) {
+                            // Connection was closed right away.
+                            return;
+                        }
+
+                        if (Quiche.quiche_conn_is_established(connAddr) ||
+                                Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                            datagramReadable = true;
+                            streamReadable = true;
+                            recvDatagram();
+                            recvStream();
+                        }
+
+                        if (done) {
+                            break;
+                        } else {
+                            memoryAddress += res;
+                            bufferReadable -= res;
+                        }
+                    } while (bufferReadable > 0);
+                } finally {
+                    buffer.skipBytes((int) (memoryAddress - Quiche.memoryAddress(buffer)));
+                    if (tmpBuffer != null) {
+                        tmpBuffer.release();
+                    }
+                }
+            } finally {
+                inRecv = false;
+            }
+        }
+
+        void recv() {
+            if (inRecv || isConnDestroyed()) {
+                return;
+            }
+
+            // Check if we can read anything yet.
+            if (!Quiche.quiche_conn_is_established(connAddr) &&
+                    !Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                return;
+            }
+
+            inRecv = true;
+            try {
+                recvDatagram();
+                recvStream();
+            } finally {
+                fireChannelReadCompleteIfNeeded();
+                inRecv = false;
+            }
+        }
+
+        private void recvStream() {
+                long readableIterator = Quiche.quiche_conn_readable(connAddr);
+            if (readableIterator != -1) {
+                try {
+                    // For streams we always process all streams when at least on read was requested.
+                    if (recvStreamPending && streamReadable) {
+                        for (;;) {
+                            int readable = Quiche.quiche_stream_iter_next(
+                                    readableIterator, readableStreams);
+                            for (int i = 0; i < readable; i++) {
+                                long streamId = readableStreams[i];
+                                QuicheQuicStreamChannel streamChannel = streams.get(streamId);
+                                if (streamChannel == null) {
+                                    recvStreamPending = false;
+                                    fireChannelReadCompletePending = true;
+                                    streamChannel = addNewStreamChannel(streamId);
+                                    streamChannel.readable();
+                                    pipeline().fireChannelRead(streamChannel);
+                                } else {
+                                    streamChannel.readable();
                                 }
-                            } finally {
-                                Quiche.quiche_stream_iter_free(readableIterator);
+                            }
+                            if (readable < readableStreams.length) {
+                                // We did consome all readable streams.
+                                streamReadable = false;
+                                break;
                             }
                         }
                     }
-
-                    if (done) {
-                        break;
-                    } else {
-                        memoryAddress += res;
-                        bufferReadable -= res;
-                    }
-                } while (bufferReadable > 0);
-            } finally {
-                buffer.skipBytes((int) (memoryAddress - Quiche.memoryAddress(buffer)));
-                if (tmpBuffer != null) {
-                    tmpBuffer.release();
+                } finally {
+                    Quiche.quiche_stream_iter_free(readableIterator);
                 }
             }
         }
 
         private void recvDatagram() {
-            @SuppressWarnings("deprecation")
-            RecvByteBufAllocator.Handle recvHandle = recvBufAllocHandle();
-            recvHandle.reset(config());
-
-            // TODO: respect AUTO_READ via recvHandle.continueReading()?
-            for (;;) {
-                ByteBuf datagramBuffer = recvHandle.allocate(alloc());
-                int written;
-                int writerIndex;
-
-                for (;;) {
-                    writerIndex = datagramBuffer.writerIndex();
-                    written = Quiche.quiche_conn_dgram_recv(connAddr, datagramBuffer.memoryAddress() + writerIndex,
-                            datagramBuffer.writableBytes());
-                    if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
-                        // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
-                        // will fit into a QUIC packet.
-                        // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
-                        int newCapacity = (int) (datagramBuffer.writableBytes() * 1.5);
-                        datagramBuffer.capacity(alloc().calculateNewCapacity(
-                                Math.min(newCapacity, MAX_DATAGRAM_BUFFER_SIZE), MAX_DATAGRAM_BUFFER_SIZE));
-                    } else {
-                        // the buffer was big enough.
-                        break;
-                    }
-                }
-                try {
-                    if (Quiche.throwIfError(written)) {
-                        datagramBuffer.release();
-                        break;
-                    }
-                } catch (Exception e) {
-                    datagramBuffer.release();
-                    pipeline().fireExceptionCaught(e);
-                }
-                recvHandle.lastBytesRead(written);
-                recvHandle.incMessagesRead(1);
-
-                datagramBuffer.writerIndex(writerIndex + written);
-
-                pipeline().fireChannelRead(datagramBuffer);
-                fireChannelReadCompletePending = true;
+            if (!supportsDatagram) {
+                return;
             }
-            recvHandle.readComplete();
+            while (recvDatagramPending && datagramReadable) {
+                @SuppressWarnings("deprecation")
+                RecvByteBufAllocator.Handle recvHandle = recvBufAllocHandle();
+                recvHandle.reset(config());
+
+                int numMessagesRead = 0;
+                do {
+                    ByteBuf datagramBuffer = recvHandle.allocate(alloc());
+                    int written;
+                    int writerIndex;
+
+                    for (;;) {
+                        writerIndex = datagramBuffer.writerIndex();
+                        written = Quiche.quiche_conn_dgram_recv(connAddr,
+                                datagramBuffer.memoryAddress() + writerIndex, datagramBuffer.writableBytes());
+                        if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
+                            // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
+                            // will fit into a QUIC packet.
+                            // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
+                            int newCapacity = (int) (datagramBuffer.writableBytes() * 1.5);
+                            datagramBuffer.capacity(alloc().calculateNewCapacity(
+                                    Math.min(newCapacity, MAX_DATAGRAM_BUFFER_SIZE), MAX_DATAGRAM_BUFFER_SIZE));
+                        } else {
+                            // the buffer was big enough.
+                            break;
+                        }
+                    }
+                    try {
+                        if (Quiche.throwIfError(written)) {
+                            datagramBuffer.release();
+                            // We did consume all datagram packets.
+                            datagramReadable = false;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        datagramBuffer.release();
+                        pipeline().fireExceptionCaught(e);
+                    }
+                    recvHandle.lastBytesRead(written);
+                    recvHandle.incMessagesRead(1);
+                    numMessagesRead++;
+                    datagramBuffer.writerIndex(writerIndex + written);
+                    recvDatagramPending = false;
+                    fireChannelReadCompletePending = true;
+
+                    pipeline().fireChannelRead(datagramBuffer);
+                } while (recvHandle.continueReading());
+                recvHandle.readComplete();
+
+                // Check if we produced any messages.
+                if (numMessagesRead > 0) {
+                    fireChannelReadCompleteIfNeeded();
+                }
+            }
         }
 
         private boolean handlePendingChannelActive() {
             if (server) {
                 if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
-
-                    // We didnt notify before about channelActive... Update state and fire the event.
+                    // We didn't notify before about channelActive... Update state and fire the event.
                     state = ACTIVE;
                     pipeline().fireChannelActive();
                     fireDatagramExtensionEvent();

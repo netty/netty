@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.ReferenceCountUtil;
@@ -89,6 +88,7 @@ public class QuicStreamHalfClosureTest {
 
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
         private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
+
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
             queue.add(0);
@@ -96,7 +96,7 @@ public class QuicStreamHalfClosureTest {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            queue.add(4);
+            queue.add(5);
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
         }
@@ -113,27 +113,31 @@ public class QuicStreamHalfClosureTest {
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt == ChannelInputShutdownEvent.INSTANCE) {
                 addIsShutdown(ctx);
-                queue.add(2);
-            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
                 queue.add(3);
+            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                queue.add(4);
                 ctx.close();
             }
         }
 
         private void addIsShutdown(ChannelHandlerContext ctx) {
             if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
-                if (!Integer.valueOf(1).equals(queue.peek())) {
-                    queue.add(1);
-                }
+                queue.add(2);
             }
         }
 
         void assertSequence() throws Exception {
             assertEquals(0, (int) queue.take());
-            assertEquals(1, (int) queue.take());
-            assertEquals(2, (int) queue.take());
+            int value = queue.take();
+            if (value == 1) {
+                // If we did see the value of 1 it should be followed by 2 directly.
+                assertEquals(2, (int) queue.take());
+            } else {
+                assertEquals(2, value);
+            }
             assertEquals(3, (int) queue.take());
             assertEquals(4, (int) queue.take());
+            assertEquals(5, (int) queue.take());
             assertTrue(queue.isEmpty());
         }
     }

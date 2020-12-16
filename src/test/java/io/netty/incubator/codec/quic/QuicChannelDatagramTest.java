@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -30,6 +31,7 @@ import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
@@ -67,7 +69,8 @@ public class QuicChannelDatagramTest {
     private void testDatagram(boolean flushInReadComplete, boolean writeDatagramPacket) throws Throwable {
         AtomicReference<QuicDatagramExtensionEvent> serverEventRef = new AtomicReference<>();
 
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder().datagram(10, 10),
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+                        .datagram(10, 10),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
 
             @Override
@@ -109,7 +112,8 @@ public class QuicChannelDatagramTest {
 
         Promise<ByteBuf> receivedBuffer = ImmediateEventExecutor.INSTANCE.newPromise();
         AtomicReference<QuicDatagramExtensionEvent> clientEventRef = new AtomicReference<>();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().datagram(10, 10));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .datagram(10, 10));
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
@@ -145,6 +149,134 @@ public class QuicChannelDatagramTest {
 
             assertNotEquals(0, serverEventRef.get().maxLength());
             assertNotEquals(0, clientEventRef.get().maxLength());
+
+            quicChannel.close().sync();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testDatagramNoAutoReadMaxMessagesPerRead1() throws Throwable {
+        testDatagramNoAutoRead(1, false);
+    }
+
+    @Test
+    public void testDatagramNoAutoReadMaxMessagesPerRead3() throws Throwable {
+        testDatagramNoAutoRead(3, false);
+    }
+
+    @Test
+    public void testDatagramNoAutoReadMaxMessagesPerRead1OutSideEventLoop() throws Throwable {
+        testDatagramNoAutoRead(1, true);
+    }
+
+    @Test
+    public void testDatagramNoAutoReadMaxMessagesPerRead3OutSideEventLoop() throws Throwable {
+        testDatagramNoAutoRead(3, true);
+    }
+
+    private void testDatagramNoAutoRead(int maxMessagesPerRead, boolean readLater) throws Throwable {
+        Promise<Void> serverPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<ByteBuf> clientPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+
+        int numDatagrams = 5;
+        CountDownLatch latch  = new CountDownLatch(numDatagrams);
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+                        .option(ChannelOption.AUTO_READ, false)
+                        .option(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
+                        .datagram(10, 10),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    private int readCount;
+                    private int readPerLoop;
+
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) {
+                        ctx.read();
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (msg instanceof ByteBuf) {
+                            readCount++;
+                            readPerLoop++;
+
+                            ctx.writeAndFlush(msg).addListener(future -> {
+                                if (future.isSuccess()) {
+                                    latch.countDown();
+                                }
+                            });
+                            if (readCount == numDatagrams) {
+                                serverPromise.trySuccess(null);
+                            }
+                        } else {
+                            ctx.fireChannelRead(msg);
+                        }
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        if (readPerLoop > maxMessagesPerRead) {
+                            ctx.close();
+                            serverPromise.tryFailure(new AssertionError(
+                                    "Read more then " + maxMessagesPerRead +  " time per read loop"));
+                            return;
+                        }
+                        readPerLoop = 0;
+                        if (readCount < numDatagrams) {
+                            if (readLater) {
+                                ctx.executor().execute(ctx::read);
+                            } else {
+                                ctx.read();
+                            }
+                        }
+                    }
+                }, new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .datagram(10, 10));
+        try {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        int received;
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof ByteBuf) {
+                                received++;
+                                if (received == numDatagrams) {
+                                    if (!clientPromise.trySuccess((ByteBuf) msg)) {
+                                        ReferenceCountUtil.release(msg);
+                                    }
+                                } else {
+                                    ReferenceCountUtil.release(msg);
+                                }
+                            } else {
+                                ctx.fireChannelRead(msg);
+                            }
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            clientPromise.tryFailure(cause);
+                        }
+                    })
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            for (int i = 0; i < numDatagrams; i++) {
+                quicChannel.writeAndFlush(Unpooled.copiedBuffer(data)).sync();
+            }
+            serverPromise.sync();
+
+            ByteBuf buffer = clientPromise.get();
+            ByteBuf expected = Unpooled.wrappedBuffer(data);
+            assertEquals(expected, buffer);
+            buffer.release();
+            expected.release();
 
             quicChannel.close().sync();
         } finally {

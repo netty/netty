@@ -95,27 +95,54 @@ public class QuicChannelEchoTest {
         final EchoHandler ch = new EchoHandler(false, autoRead);
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelActive(ChannelHandlerContext ctx) {
-                        setAllocator(ctx.channel());
-                        ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
-                                .addListener((Future<QuicStreamChannel> future) -> {
-                                    QuicStreamChannel stream = future.getNow();
-                                    setAllocator(stream);
-                                    List<ChannelFuture> futures = writeAllData(stream);
-                                    writeFutures.set(futures);
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                setAllocator(ctx.channel());
+                ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
+                        .addListener((Future<QuicStreamChannel> future) -> {
+                            QuicStreamChannel stream = future.getNow();
+                            setAllocator(stream);
+                            List<ChannelFuture> futures = writeAllData(stream);
+                            writeFutures.set(futures);
                         });
-                    }
-                }, sh);
+
+                ctx.channel().config().setAutoRead(autoRead);
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
+        }, sh);
         setAllocator(server);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         QuicChannel quicChannel = null;
         try {
             quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            if (!autoRead) {
+                                ctx.read();
+                            }
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) {
+                            if (!autoRead) {
+                                ctx.read();
+                            }
+                        }
+                    })
                     .streamHandler(ch)
                     .remoteAddress(address)
+                    .option(ChannelOption.AUTO_READ, autoRead)
                     .option(ChannelOption.ALLOCATOR, allocator)
                     .connect()
                     .get();
@@ -165,6 +192,17 @@ public class QuicChannelEchoTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel());
+                ctx.channel().config().setAutoRead(autoRead);
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                if (!autoRead) {
+                    ctx.read();
+                }
             }
         }, sh);
         setAllocator(server);
@@ -173,9 +211,24 @@ public class QuicChannelEchoTest {
         QuicChannel quicChannel = null;
         try {
             quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            if (!autoRead) {
+                                ctx.read();
+                            }
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) {
+                            if (!autoRead) {
+                                ctx.read();
+                            }
+                        }
+                    })
                     .streamHandler(ch)
                     .remoteAddress(address)
+                    .option(ChannelOption.AUTO_READ, autoRead)
                     .option(ChannelOption.ALLOCATOR, allocator)
                     .connect()
                     .get();
