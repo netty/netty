@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -39,15 +40,20 @@ import io.netty.util.AsciiString;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
 
-    private static final CharSequence X_CONTENT_ENCODING = new AsciiString("x-content-encoding".getBytes(), false);
-    private static final CharSequence X_GZIP = new AsciiString("x-gzip".getBytes(), false);
-    private static final CharSequence STATUS = new AsciiString(":status".getBytes(), false);
-    private static final CharSequence STATUS_200 = new AsciiString("200".getBytes(), false);
-    private static final CharSequence STATUS_500 = new AsciiString("500".getBytes(), false);
-    private static final CharSequence AUTHORITY = new AsciiString(":authority".getBytes(), false);
-    private static final CharSequence AUTHORITY_NETTY = new AsciiString("netty.io".getBytes(), false);
-    private static final CharSequence USER_AGENT = new AsciiString("user-agent".getBytes(), false);
-    private static final CharSequence USER_AGENT_CURL = new AsciiString("curl/7.64.1".getBytes(), false);
+    private static final CharSequence X_CONTENT_ENCODING =
+            new AsciiString("x-content-encoding".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence X_GZIP = new AsciiString("x-gzip".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence STATUS = new AsciiString(":status".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence STATUS_200 = new AsciiString("200".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence STATUS_500 = new AsciiString("500".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence AUTHORITY =
+            new AsciiString(":authority".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence AUTHORITY_NETTY =
+            new AsciiString("netty.io".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence USER_AGENT =
+            new AsciiString("user-agent".getBytes(CharsetUtil.US_ASCII), false);
+    private static final CharSequence USER_AGENT_CURL =
+            new AsciiString("curl/7.64.1".getBytes(CharsetUtil.US_ASCII), false);
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
@@ -78,5 +84,4 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
     public int lookupNameOnlyMatchEndTable() {
         return HpackStaticTable.getIndexInsensitive(USER_AGENT, USER_AGENT_CURL);
     }
-
 }
