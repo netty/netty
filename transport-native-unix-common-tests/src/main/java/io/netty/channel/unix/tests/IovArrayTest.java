@@ -23,6 +23,7 @@ import io.netty.channel.unix.IovArray;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public abstract class IovArrayTest {
@@ -40,6 +41,7 @@ public abstract class IovArrayTest {
         assertEquals(16, array.size());
         assertTrue(buf.release());
         assertTrue(buf2.release());
+        assertNotEquals(-1, array.memoryAddress(0));
         array.release();
         assertEquals(0, buffer.refCnt());
     }
