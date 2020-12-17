@@ -641,6 +641,43 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testSubscribeMessageMqtt5EncodeAsMqtt3() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
+
+        //Set parameters only available in MQTT5 to see if they're dropped when encoding as MQTT3
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
+                .messageId((short) 1)
+                .properties(props)
+                .addSubscription("/topic", new MqttSubscriptionOption(AT_LEAST_ONCE,
+                        true,
+                        true,
+                        SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS))
+                .build();
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+        final MqttSubscribeMessage decodedMessage = (MqttSubscribeMessage) out.get(0);
+
+        final MqttSubscribeMessage expectedMessage = MqttMessageBuilders.subscribe()
+                .messageId((short) 1)
+                .addSubscription("/topic", MqttSubscriptionOption.onlyFromQos(AT_LEAST_ONCE))
+                .build();
+        validateFixedHeaders(expectedMessage.fixedHeader(), decodedMessage.fixedHeader());
+        final MqttMessageIdAndPropertiesVariableHeader expectedHeader =
+                (MqttMessageIdAndPropertiesVariableHeader) expectedMessage.variableHeader();
+        final MqttMessageIdAndPropertiesVariableHeader actualHeader =
+                (MqttMessageIdAndPropertiesVariableHeader) decodedMessage.variableHeader();
+        validatePacketIdAndPropertiesVariableHeader(expectedHeader, actualHeader);
+        validateSubscribePayload(expectedMessage.payload(), decodedMessage.payload());
+    }
+
+    @Test
     public void testUnsubAckMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
