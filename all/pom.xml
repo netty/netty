@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.56.Final</version>
+    <version>4.1.57.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
