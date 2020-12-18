@@ -146,7 +146,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Set the application protocols to use. These are converted to wire-format.
      *
-     * @see {@link #applicationProtocols(byte[])}.
+     * @see #applicationProtocols(byte[])
      *
      * @param protocols the application protocols.
      * @return          the instance itself.
