@@ -63,6 +63,27 @@
         <!-- As this is executed on either macOS or Linux we directly need to specify the classifier -->
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>linux-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-x86_64</classifier>
           <scope>compile</scope>
@@ -99,6 +120,27 @@
         <!-- As this is executed on either macOS or Linux we directly need to specify the classifier -->
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>linux-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-x86_64</classifier>
           <scope>compile</scope>
@@ -128,7 +170,7 @@
       </dependencies>
     </profile>
 
-    <!-- The linux profile will only include the native jar for epol to the all jar.
+    <!-- The linux profile will only include the native jar for epoll to the all jar.
          If you want to also include the native jar for kqueue use -Puber.
     -->
     <profile>
@@ -140,6 +182,14 @@
       </activation>
       <dependencies>
         <!-- All release modules -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
@@ -177,6 +227,14 @@
         <!-- All release modules -->
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
@@ -211,6 +269,14 @@
         <!-- All release modules -->
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
@@ -236,6 +302,14 @@
       </activation>
       <dependencies>
         <!-- All release modules -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>

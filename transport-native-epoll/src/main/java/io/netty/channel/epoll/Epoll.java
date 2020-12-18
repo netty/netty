@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Unix;
 import io.netty.util.internal.SystemPropertyUtil;
 
 /**
@@ -36,6 +37,7 @@ public final class Epoll {
             FileDescriptor epollFd = null;
             FileDescriptor eventFd = null;
             try {
+                Unix.ensureAvailability();
                 epollFd = Native.newEpollCreate();
                 eventFd = Native.newEventFd();
             } catch (Throwable t) {
