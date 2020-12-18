@@ -103,6 +103,7 @@ public class QuicWritableTest {
                             }
                             ByteBuf buffer = (ByteBuf) msg;
                             bytes += buffer.readableBytes();
+                            buffer.release();
                             if (bytes == bufferSize) {
                                 ctx.close();
                                 assertTrue(writePromise.isDone());
