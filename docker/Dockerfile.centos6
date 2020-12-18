@@ -1,13 +1,13 @@
-ARG centos_version=6
-FROM centos:$centos_version
-# needed to do again after FROM due to docker limitation
-ARG centos_version
+FROM centos:6.10
 
 ENV SOURCE_DIR /root/source
 ENV CMAKE_VERSION_BASE 3.8
 ENV CMAKE_VERSION $CMAKE_VERSION_BASE.2
 ENV NINJA_VERSION 1.7.2
 ENV GO_VERSION 1.9.3
+
+# Update as we need to use the vault now.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=http:\/\/vault.centos.org\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # We want to have git 2.x for the maven scm plugin
 RUN yum install -y http://opensource.wandisco.com/centos/6/git/x86_64/wandisco-git-release-6-1.noarch.rpm
