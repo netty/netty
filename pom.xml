@@ -354,7 +354,7 @@
         <runOrder>random</runOrder>
         <systemPropertyVariables>
           <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
-          <logLevel>debug</logLevel>
+          <logLevel>info</logLevel>
         </systemPropertyVariables>
         <properties>
           <property>
