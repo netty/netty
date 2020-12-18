@@ -63,6 +63,7 @@ public final class QuicHeaderParser implements AutoCloseable {
         if (!closed) {
             closed = true;
             versionBuffer.release();
+            typeBuffer.release();
             scidBuffer.release();
             scidLenBuffer.release();
             dcidBuffer.release();
