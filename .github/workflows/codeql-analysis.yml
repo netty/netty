@@ -64,7 +64,7 @@ jobs:
     #   make bootstrap
     #   make release
     - name: Install tools / libraries 
-      run: sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
+      run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
     - name: Build project
       run: ./mvnw clean package -DskipTests=true
