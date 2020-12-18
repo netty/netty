@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-public class QuicChannelDatagramTest {
+public class QuicChannelDatagramTest extends AbstractQuicTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[512];

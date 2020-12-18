@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-public class InsecureQuicTokenHandlerTest {
+public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
 
     @Test
     public void testMaxTokenLength() {

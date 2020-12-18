@@ -44,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class QuicChannelEchoTest {
+public class QuicChannelEchoTest extends AbstractQuicTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];

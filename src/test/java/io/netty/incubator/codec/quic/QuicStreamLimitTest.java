@@ -30,7 +30,7 @@ import java.net.InetSocketAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class QuicStreamLimitTest {
+public class QuicStreamLimitTest extends AbstractQuicTest {
 
     @Test
     public void testStreamLimitEnforcedWhenCreatingViaClientBidirectional() throws Throwable {

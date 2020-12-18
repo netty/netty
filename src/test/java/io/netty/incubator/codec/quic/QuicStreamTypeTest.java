@@ -31,7 +31,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class QuicStreamTypeTest {
+public class QuicStreamTypeTest extends AbstractQuicTest {
 
     @Test
     public void testUnidirectionalCreatedByClient() throws Exception {

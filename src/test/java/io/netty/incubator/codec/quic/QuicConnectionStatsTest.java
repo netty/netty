@@ -33,7 +33,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class QuicConnectionStatsTest {
+public class QuicConnectionStatsTest extends AbstractQuicTest {
 
     @Test
     public void testStatsAreCollected() throws Throwable {

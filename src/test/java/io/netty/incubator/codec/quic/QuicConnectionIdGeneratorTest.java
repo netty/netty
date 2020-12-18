@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-public class QuicConnectionIdGeneratorTest {
+public class QuicConnectionIdGeneratorTest extends AbstractQuicTest {
 
     @Test
     public void testRandomness() {

@@ -28,7 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class QuicReadableTest {
+public class QuicReadableTest extends AbstractQuicTest {
 
     @Test
     public void testCorrectlyHandleReadableStreams() throws Throwable  {

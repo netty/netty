@@ -25,7 +25,7 @@ import io.netty.util.ReferenceCountUtil;
 
 import org.junit.Test;
 
-public class QuicStreamChannelCloseTest {
+public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
     @Test
     public void testCloseFromServerWhileInActiveUnidirectional() throws Exception {

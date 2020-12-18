@@ -19,7 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QuicStreamIdGeneratorTest {
+public class QuicStreamIdGeneratorTest extends AbstractQuicTest {
 
     @Test
     public void testServerStreamIds() {

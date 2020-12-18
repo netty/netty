@@ -31,7 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class QuicStreamHalfClosureTest {
+public class QuicStreamHalfClosureTest extends AbstractQuicTest {
 
     @Test
     public void testCloseHalfClosureUnidirectional() throws Exception {

@@ -15,13 +15,21 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Test;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
-public class QuicTest extends AbstractQuicTest {
+public abstract class AbstractQuicTest {
 
-    @Test
-    public void test() {
-        Quic.ensureAvailability();
-        System.err.println(Quiche.quiche_version());
+    private static final int TEST_GLOBAL_TIMEOUT_VALUE = Integer.getInteger(
+            "io.netty.incubator.codec.quic.defaultTestTimeout", 10);
+
+    @Rule
+    public final Timeout globalTimeout = Timeout.seconds(TEST_GLOBAL_TIMEOUT_VALUE);
+
+    @BeforeClass
+    public static void assumeTrue() {
+       Assume.assumeTrue(Quic.isAvailable());
     }
 }

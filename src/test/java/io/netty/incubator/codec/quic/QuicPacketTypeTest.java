@@ -19,7 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QuicPacketTypeTest {
+public class QuicPacketTypeTest extends AbstractQuicTest {
 
     @Test
     public void testOfValidType() {

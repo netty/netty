@@ -29,7 +29,7 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class QuicStreamChannelCreationTest {
+public class QuicStreamChannelCreationTest extends AbstractQuicTest {
 
     private static final AttributeKey<String> ATTRIBUTE_KEY = AttributeKey.newInstance("testKey");
     private static final String ATTRIBUTE_VALUE = "Test";

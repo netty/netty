@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-public class QuicConnectionAddressTest {
+public class QuicConnectionAddressTest extends AbstractQuicTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullByteArray() {
