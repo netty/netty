@@ -19,7 +19,7 @@ services:
 
   build:
     <<: *common
-    command: /bin/bash -cl "mvn clean package -DquicheCheckoutDir=$HOME/source/quiche"
+    command: /bin/bash -cl "mvn clean package -DquicheCheckoutDir=/root/source/quiche"
 
   build-clean:
     <<: *common
