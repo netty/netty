@@ -73,8 +73,7 @@
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
-    <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
-    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
     <quicheBuildDir>${quicheCheckoutDir}/target/release</quicheBuildDir>
     <quiche.version>0.6.0</quiche.version>
@@ -143,27 +142,29 @@
           </execution>
         </executions>
       </plugin>
-    <plugin>
-      <artifactId>maven-scm-plugin</artifactId>
-      <version>1.11.2</version>
-      <executions>
-        <execution>
-          <id>get-netty-jni-util</id>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>checkout</goal>
-          </goals>
-          <configuration>
-            <checkoutDirectory>${jniUtilCheckoutDir}</checkoutDirectory>
-            <connectionType>developerConnection</connectionType>
-            <developerConnectionUrl>scm:git:https://github.com/netty/netty-jni-util.git</developerConnectionUrl>
-            <scmVersion>0.0.1</scmVersion>
-            <scmVersionType>tag</scmVersionType>
-            <skipCheckoutIfExists>true</skipCheckoutIfExists>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <!-- unpack netty-jni-util files -->
+          <execution>
+            <id>unpack</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>io.netty</includeGroupIds>
+              <includeArtifactIds>netty-jni-util</includeArtifactIds>
+              <classifier>sources</classifier>
+              <outputDirectory>${jniUtilIncludeDir}</outputDirectory>
+              <includes>**.h,**.c</includes>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     <plugin>
       <artifactId>maven-antrun-plugin</artifactId>
       <version>1.8</version>
@@ -541,6 +542,13 @@
   </build>
 
   <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-jni-util</artifactId>
+      <version>0.0.2.Final</version>
+      <classifier>sources</classifier>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
