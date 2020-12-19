@@ -52,13 +52,10 @@ run echo 'export C_INCLUDE_PATH="$HOME/.include/"' >>  ~/.bashrc
 # Needed to compile against old glibc
 run echo 'export LDFLAGS=-lrt' >>  ~/.bashrc
 
-RUN rm -rf $SOURCE_DIR
-
 ARG java_version=1.8
 ENV JAVA_VERSION $java_version
 # installing java with jabba
 RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install $JAVA_VERSION -o /jdk" bash
-
 
 RUN echo 'export JAVA_HOME="/jdk"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
@@ -66,3 +63,17 @@ RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 # install rust and setup PATH
 run curl https://sh.rustup.rs -sSf | sh -s -- -y
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
+
+WORKDIR /opt
+RUN curl https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz | tar -xz
+
+# Prepare our own build
+ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
+ENV JAVA_HOME /jdk/
+
+COPY ./pom.xml $SOURCE_DIR/pom.xml
+WORKDIR $SOURCE_DIR
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp'
+
+# Pre-build quiche
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-quiche -DquicheCheckoutDir=$SOURCE_DIR/quiche'

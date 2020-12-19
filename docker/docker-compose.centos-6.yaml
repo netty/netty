@@ -3,13 +3,13 @@ version: "3"
 services:
 
   runtime-setup:
-    image: netty-codec-quic-centos:default
+    image: netty-codec-quic-centos6:default
     build:
-      context: .
-      dockerfile: Dockerfile.centos6
+      context: ../
+      dockerfile: docker/Dockerfile.centos6
 
   common: &common
-    image: netty-codec-quic-centos:default
+    image: netty-codec-quic-centos6:default
     depends_on: [runtime-setup]
     volumes:
       - ~/.ssh:/root/.ssh:delegated
@@ -18,6 +18,10 @@ services:
     working_dir: /code
 
   build:
+    <<: *common
+    command: /bin/bash -cl "mvn clean package -DquicheCheckoutDir=$HOME/source/quiche"
+
+  build-clean:
     <<: *common
     command: /bin/bash -cl "./mvnw clean package"
 
