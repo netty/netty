@@ -453,6 +453,14 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-jni-util</artifactId>
+        <version>0.0.2.Final</version>
+        <classifier>sources</classifier>
+        <optional>true</optional>
+      </dependency>
+
+      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-dev-tools</artifactId>
         <version>${project.version}</version>

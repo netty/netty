@@ -37,8 +37,7 @@
     <exe.archiver>ar</exe.archiver>
     <nativeLibName>libnetty-unix-common</nativeLibName>
     <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
-    <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
-    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
     <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
@@ -53,29 +52,29 @@
 
   <build>
     <plugins>
-      <!-- Download the netty-jni-util source -->
       <plugin>
-        <artifactId>maven-scm-plugin</artifactId>
-        <version>1.11.2</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
+          <!-- unpack netty-jni-util files -->
           <execution>
-            <id>get-netty-jni-util</id>
+            <id>unpack</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>checkout</goal>
+              <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <checkoutDirectory>${jniUtilCheckoutDir}</checkoutDirectory>
-              <connectionType>developerConnection</connectionType>
-              <developerConnectionUrl>scm:git:https://github.com/netty/netty-jni-util.git</developerConnectionUrl>
-              <scmVersion>0.0.1</scmVersion>
-              <scmVersionType>tag</scmVersionType>
-              <skipCheckoutIfExists>true</skipCheckoutIfExists>
+              <includeGroupIds>io.netty</includeGroupIds>
+              <includeArtifactIds>netty-jni-util</includeArtifactIds>
+              <classifier>sources</classifier>
+              <outputDirectory>${jniUtilIncludeDir}</outputDirectory>
+              <includes>**.h,**.c</includes>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
 
       <!-- Also include c files in source jar -->
       <plugin>
@@ -289,6 +288,12 @@
   </profiles>
 
   <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-jni-util</artifactId>
+      <classifier>sources</classifier>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
