@@ -367,6 +367,13 @@
         <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
         <trimStackTrace>false</trimStackTrace>
       </configuration>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.maven.surefire</groupId>
+          <artifactId>surefire-junit4</artifactId>
+          <version>2.22.1</version>
+        </dependency>
+      </dependencies>
     </plugin>
     <!-- always produce osgi bundles -->
     <plugin>
@@ -591,6 +598,12 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>1.1.7</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.surefire</groupId>
+      <artifactId>surefire-junit4</artifactId>
+      <version>2.22.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
