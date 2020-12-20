@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty-codec-http3-centos8:centos-8-1.8
+    build:
+      args:
+        java_version : "adopt@1.8.0-272"
+
+  build:
+    image: netty-codec-http3-centos8:centos-8-1.8
+
+  shell:
+    image: netty-codec-http3-centos8:centos-8-1.8

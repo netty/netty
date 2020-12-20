@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty-codec-http3-centos8:default
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.centos8
+
+  common: &common
+    image: netty-codec-http3-centos8:default
+    depends_on: [runtime-setup]
+    volumes:
+      - ~/.ssh:/root/.ssh:delegated
+      - ~/.gnupg:/root/.gnupg:delegated
+      - ..:/code:delegated
+    working_dir: /code
+
+  build:
+    <<: *common
+    command: /bin/bash -cl "./mvnw clean package"
+
+  shell:
+    <<: *common
+    environment:
+      - SONATYPE_USER
+      - SONATYPE_PASSWORD
+    volumes:
+      - ~/.ssh:/root/.ssh:delegated
+      - ~/.gnupg:/root/.gnupg:delegated
+      - ~/.m2:/root/.m2:delegated
+      - ~/.gitconfig:/root/.gitconfig:delegated
+      - ~/.gitignore:/root/.gitignore:delegated
+      - ..:/code:delegated
+    entrypoint: /bin/bash

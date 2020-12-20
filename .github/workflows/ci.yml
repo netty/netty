@@ -1,0 +1,43 @@
+name: Build project
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  schedule:
+    - cron: '30 8 * * 1'  # At 07:30 on Monday, every Monday.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # http://man7.org/linux/man-pages/man1/date.1.html
+      - name: Create Cache Key
+        id: cache-key
+        run: |
+          echo "::set-output name=key::$(/bin/date -u "+%Y%U")"
+        shell: bash
+
+      - uses: actions/checkout@v2
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: docker-cache-${{ steps.cache-key.outputs.key }}-{hash}
+          restore-keys: |
+            docker-cache-${{ steps.cache-key.outputs.key }}-
+
+      - name: Run docker-compose
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: target/ # or path/to/artifact
