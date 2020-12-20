@@ -19,7 +19,7 @@ services:
 
   build:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean package"
+    command: /bin/bash -cl "mvn clean package"
 
   shell:
     <<: *common

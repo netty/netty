@@ -24,6 +24,7 @@ RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 
 WORKDIR /opt
 RUN curl https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz | tar -xz
+RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
 
 # Prepare our own build
 ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
