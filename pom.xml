@@ -170,6 +170,13 @@
           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit4</artifactId>
+            <version>2.22.1</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
@@ -340,6 +347,11 @@
       <artifactId>mockito-core</artifactId>
       <version>3.6.28</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.surefire</groupId>
+      <artifactId>surefire-junit4</artifactId>
+      <version>2.22.1</version>
     </dependency>
   </dependencies>
 </project>
