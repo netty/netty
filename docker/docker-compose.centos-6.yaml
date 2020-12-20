@@ -23,13 +23,13 @@ services:
 
   build-clean:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean package"
+    command: /bin/bash -cl "mvn clean package"
 
   shell:
     <<: *common
     environment:
-      - SANOTYPE_USER
-      - SANOTYPE_PASSWORD
+      - SONATYPE_USER
+      - SONATYPE_PASSWORD
     volumes:
       - ~/.ssh:/root/.ssh:delegated
       - ~/.gnupg:/root/.gnupg:delegated
