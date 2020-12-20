@@ -33,7 +33,10 @@ jobs:
           restore-keys: |
             docker-cache-${{ steps.cache-key.outputs.key }}-
 
-      - name: Run docker-compose
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
+
+      - name: Execute project build
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build
 
       - uses: actions/upload-artifact@v2
