@@ -14,5 +14,11 @@ services:
   build-clean:
     image: netty-codec-quic-centos6:centos-6-1.8
 
+  deploy:
+    image: netty-codec-quic-centos6:centos-6-1.8
+
+  deploy-clean:
+    image: netty-codec-quic-centos6:centos-6-1.8
+
   shell:
     image: netty-codec-quic-centos6:centos-6-1.8
