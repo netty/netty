@@ -28,6 +28,7 @@ services:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
       - ~/.m2/settings.xml:/root/.m2/settings.xml
+      - ..:/code
 
   shell:
     <<: *common
