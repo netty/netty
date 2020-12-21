@@ -82,7 +82,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
-        for (QuicheQuicChannel ch: connections.values()) {
+        // Use a copy of the array as closing the channel may cause an unwritable event that could also
+        // remove channels.
+        for (QuicheQuicChannel ch:  connections.values().toArray(new QuicheQuicChannel[0])) {
             ch.forceClose();
         }
         connections.clear();
