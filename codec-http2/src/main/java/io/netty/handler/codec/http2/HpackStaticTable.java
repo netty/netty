@@ -41,6 +41,8 @@ import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 
 final class HpackStaticTable {
 
+    static final int NOT_FOUND = -1;
+
     // Appendix A: Static Table
     // https://tools.ietf.org/html/rfc7541#appendix-A
     private static final List<HpackHeaderField> STATIC_TABLE = Arrays.asList(
@@ -117,6 +119,8 @@ final class HpackStaticTable {
 
     private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap();
 
+    private static final int MAX_SAME_NAME_FIELD_INDEX = maxSameNameFieldIndex();
+
     /**
      * The number of header fields in the static table.
      */
@@ -136,7 +140,7 @@ final class HpackStaticTable {
     static int getIndex(CharSequence name) {
         Integer index = STATIC_INDEX_BY_NAME.get(name);
         if (index == null) {
-            return -1;
+            return NOT_FOUND;
         }
         return index;
     }
@@ -147,20 +151,33 @@ final class HpackStaticTable {
      */
     static int getIndexInsensitive(CharSequence name, CharSequence value) {
         int index = getIndex(name);
-        if (index == -1) {
-            return -1;
+        if (index == NOT_FOUND) {
+            return NOT_FOUND;
+        }
+
+        // Compare values for the first name match
+        HpackHeaderField entry = getEntry(index);
+        if (equalsVariableTime(value, entry.value)) {
+            return index;
         }
 
         // Note this assumes all entries for a given header field are sequential.
-        while (index <= length) {
-            HpackHeaderField entry = getEntry(index);
-            if (equalsVariableTime(name, entry.name) && equalsVariableTime(value, entry.value)) {
+        index++;
+        while (index <= MAX_SAME_NAME_FIELD_INDEX) {
+            entry = getEntry(index);
+            if (!equalsVariableTime(name, entry.name)) {
+                // As far as fields with the same name are placed in the table sequentialy
+                // and INDEX_BY_NAME returns index of the fist position, - it's safe to
+                // exit immediatly.
+                return NOT_FOUND;
+            }
+            if (equalsVariableTime(value, entry.value)) {
                 return index;
             }
             index++;
         }
 
-        return -1;
+        return NOT_FOUND;
     }
 
     // create a map CharSequenceMap header name to index value to allow quick lookup
@@ -177,6 +194,26 @@ final class HpackStaticTable {
             ret.set(name, index);
         }
         return ret;
+    }
+
+    /**
+     * Returns the last position in the array that contains multiple
+     * fields with the same name. Starting from this position, all
+     * names are unique. Similary to {@link getIndexInsensitive} method
+     * assumes all entries for a given header field are sequential
+     */
+    private static int maxSameNameFieldIndex() {
+        final int length = STATIC_TABLE.size();
+        HpackHeaderField cursor = getEntry(length);
+        for (int index = length - 1; index > 0; index--) {
+            HpackHeaderField entry = getEntry(index);
+            if (equalsVariableTime(entry.name, cursor.name)) {
+                return index + 1;
+            } else {
+                cursor = entry;
+            }
+        }
+        return length;
     }
 
     // singleton
