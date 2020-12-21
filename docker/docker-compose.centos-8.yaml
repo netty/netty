@@ -21,6 +21,14 @@ services:
     <<: *common
     command: /bin/bash -cl "mvn clean package"
 
+  deploy:
+    <<: *common
+    command: /bin/bash -cl "mvn clean deploy -DskipTests=true"
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2/settings.xml:/root/.m2/settings.xml
+
   shell:
     <<: *common
     environment:
