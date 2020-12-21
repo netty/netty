@@ -21,6 +21,10 @@ services:
     <<: *common
     command: /bin/bash -cl "mvn clean package"
 
+  detect-leak:
+    <<: *common
+    command: /bin/bash -cl "mvn -Pleak clean package"
+
   deploy:
     <<: *common
     command: /bin/bash -cl "mvn clean deploy -DskipTests=true"

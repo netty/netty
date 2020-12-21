@@ -73,6 +73,7 @@
     <netty.build.version>28</netty.build.version>
     <netty.quic.version>0.0.2.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
+    <test.argLine>-D_</test.argLine>
   </properties>
 
   <build>
@@ -169,6 +170,7 @@
           </properties>
           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
+          <argLine>${test.argLine}</argLine>
         </configuration>
         <dependencies>
           <dependency>
@@ -286,6 +288,15 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>

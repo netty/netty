@@ -11,6 +11,9 @@ services:
   build:
     image: netty-codec-http3-centos8:centos-8-1.8
 
+  detect-leak:
+    image: netty-codec-http3-centos8:centos-8-1.8
+
   deploy:
     image: netty-codec-http3-centos8:centos-8-1.8
 
