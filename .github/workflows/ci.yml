@@ -50,7 +50,7 @@ jobs:
 
       # Deploy if this was a push to the main branch
       - name: Deploy to sonatype
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run deploy
 
       - uses: actions/upload-artifact@v2
