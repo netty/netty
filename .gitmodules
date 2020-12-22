@@ -1,0 +1,3 @@
+[submodule "netty-jni-util"]
+	path = netty-jni-util
+	url = git@github.com:netty/netty-jni-util.git
