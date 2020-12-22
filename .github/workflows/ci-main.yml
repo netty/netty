@@ -45,15 +45,15 @@ jobs:
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
 
-      - name: Execute project build without leak detection
+      - name: Build project without leak detection
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build
 
-      - name: Execute project build with leak detection
+      - name: Build project with leak detection
         if: ${{ github.event_name == 'pull_request' }}
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run detect-leak
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak
 
-      - name: Deploy to sonatype
+      - name: Deploy project snapshot to sonatype
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run deploy
 

@@ -21,7 +21,7 @@ services:
     <<: *common
     command: /bin/bash -cl "mvn clean package"
 
-  detect-leak:
+  build-leak:
     <<: *common
     command: /bin/bash -cl "mvn -Pleak clean package"
 
