@@ -10,10 +10,10 @@ cd /path/to/netty/
 docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run test
 ```
 
-## centos 7 with java 11
+## centos 6 with java 11
 
 ```
-docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run test
+docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run test
 ```
 
 ## aarch64 cross compile for transport-native-epoll on X86_64
