@@ -1,0 +1,46 @@
+name: Deploy project
+
+on:
+  push:
+    branches: [ main ]
+
+  schedule:
+    - cron: '30 8 * * 1'  # At 08:30 on Monday, every Monday.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+                "id": "sonatype-nexus-snapshots",
+                "username": "${{ secrets.SONATYPE_USERNAME }}",
+                "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - uses: actions/checkout@v2
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: deploy-docker-cache-{hash}
+          restore-keys: |
+            deploy-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
+
+      - name: Deploy project snapshot to sonatype
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run deploy
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: target/ # or path/to/artifact

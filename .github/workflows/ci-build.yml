@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
   schedule:
-    - cron: '30 8 * * 1'  # At 07:30 on Monday, every Monday.
+    - cron: '30 8 * * 1'  # At 08:30 on Monday, every Monday.
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -16,31 +16,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # http://man7.org/linux/man-pages/man1/date.1.html
-      - name: Create Cache Key
-        id: cache-key
-        run: |
-          echo "::set-output name=key::$(/bin/date -u "+%Y%U")"
-        shell: bash
-
-      - uses: s4u/maven-settings-action@v2.2.0
-        with:
-          servers: |
-            [{
-                "id": "sonatype-nexus-snapshots",
-                "username": "${{ secrets.SONATYPE_USERNAME }}",
-                "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
-
       - uses: actions/checkout@v2
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
         with:
-          key: docker-cache-${{ steps.cache-key.outputs.key }}-{hash}
+          key: build-docker-cache-{hash}
           restore-keys: |
-            docker-cache-${{ steps.cache-key.outputs.key }}-
+            build-docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
@@ -52,10 +36,6 @@ jobs:
       - name: Build project with leak detection
         if: ${{ github.event_name == 'pull_request' }}
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak
-
-      - name: Deploy project snapshot to sonatype
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run deploy
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
