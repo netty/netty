@@ -38,9 +38,3 @@ jobs:
 
       - name: Deploy project snapshot to sonatype
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run deploy
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ failure() }}
-        with:
-          name: target
-          path: target/ # or path/to/artifact
