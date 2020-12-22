@@ -1,6 +1,7 @@
 plugins {
   id 'com.android.library'
   id 'kotlin-android'
+  id 'maven-publish'
 }
 
 android {
@@ -31,3 +32,33 @@ android {
 dependencies {
   api 'io.netty:netty-transport-native-epoll:4.1.55.Final'
 }
+
+// `./gradlew publishToMavenLocal` to publish
+
+publishing {
+    publications {
+        transport_native_epoll(MavenPublication) {
+            artifact("$buildDir/outputs/aar/transport-native-epoll-release.aar") {
+              group 'io.netty'
+              artifactId 'netty-transport-native-epoll'
+              version = '4.1.55.Final'
+              classifier 'android'
+            }
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                // iterate over the compile dependencies (we don't want the test ones), adding a <dependency> node for each
+                configurations.api.allDependencies.each {
+                    if (it.group != null && (it.name != null || "unspecified".equals(it.name)) && it.version != null)
+                    {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+}
+
+publishToMavenLocal.dependsOn assemble
