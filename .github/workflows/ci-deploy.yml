@@ -46,3 +46,41 @@ jobs:
 
       - name: Deploy snapshots
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run deploy
+
+  deploy-linux-aarch64:
+    runs-on: ubuntu-latest
+    # We depend on the deploy of linux-x86_64 so we can download the dependencies
+    needs: deploy-linux-x86_64
+    steps:
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+                "id": "sonatype-nexus-snapshots",
+                "username": "${{ secrets.SONATYPE_USERNAME }}",
+                "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: deploy-linux-aarch64-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            deploy-linux-aarch64-${{ runner.os }}-maven-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: deploy-linux-aarch64-docker-cache-{hash}
+          restore-keys: |
+            deploy-linux-aarch64-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.yaml build
+
+      - name: Deploy snapshots
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.yaml run deploy
