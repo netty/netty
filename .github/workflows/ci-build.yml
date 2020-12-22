@@ -30,7 +30,7 @@ jobs:
             verify-${{ runner.os }}-maven-
 
       - name: Verify with Maven
-        run: mvn verify -B --file pom.xml
+        run: mvn verify -B --file pom.xml -DskipTests=true
 
   build-linux-x86_64-java8:
     runs-on: ubuntu-latest
