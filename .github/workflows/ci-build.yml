@@ -2,9 +2,9 @@ name: Build project
 
 on:
   push:
-    branches: [ "4.1", master ]
+    branches: [ "4.1"]
   pull_request:
-    branches: [ "4.1", master ]
+    branches: [ "4.1"]
 
   schedule:
     - cron: '30 1 * * 1'  # At 01:30 on Monday, every Monday.
@@ -58,7 +58,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build
 
       - name: Build project without leak detection
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/4.1') }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/4.1' }}
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build
 
       - name: Build project with leak detection
@@ -107,7 +107,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build
 
       - name: Build project without leak detection
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/4.1') }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/4.1' }}
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build
 
       - name: Build project with leak detection
@@ -156,7 +156,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml build
 
       - name: Build project without leak detection
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/4.1') }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/4.1' }}
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build
 
       - name: Build project with leak detection
