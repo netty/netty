@@ -6,7 +6,6 @@ services:
     image: netty:centos-6-1.11
     build:
       args:
-        centos_version : "6"
         java_version : "graalvm-ce-java11@20.1.0"
 
   test:

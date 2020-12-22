@@ -6,7 +6,7 @@ services:
     image: netty:default
     build:
       context: .
-      dockerfile: Dockerfile.centos
+      dockerfile: Dockerfile.centos6
 
   common: &common
     image: netty:default
@@ -16,6 +16,14 @@ services:
       - ~/.gnupg:/root/.gnupg:delegated
       - ..:/code:delegated
     working_dir: /code
+
+  build-leak:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io"
+
+  build:
+    <<: *common
+    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
 
   test-leak:
     <<: *common
@@ -31,43 +39,9 @@ services:
 
   shell:
     <<: *common
-    environment:
-      - SANOTYPE_USER
-      - SANOTYPE_PASSWORD
     volumes:
       - ~/.ssh:/root/.ssh:delegated
       - ~/.gnupg:/root/.gnupg:delegated
       - ..:/code:delegated
       - ~/.m2:/root/.m2:delegated
     entrypoint: /bin/bash
-
-  cross-compile-aarch64-runtime-setup:
-    image: netty:cross_compile_aarch64
-    build:
-      context: .
-      dockerfile: Dockerfile.cross_compile_aarch64
-      args:
-        gcc_version : "4.9-2016.02"
-
-  cross-compile-aarch64-shell:
-    image: netty:cross_compile_aarch64
-    depends_on: [cross-compile-aarch64-runtime-setup]
-    volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
-      - ~/.m2:/root/.m2:delegated
-    entrypoint: /bin/bash
-    working_dir: /code
-
-  cross-compile-aarch64-build:
-    image: netty:cross_compile_aarch64
-    depends_on: [cross-compile-aarch64-runtime-setup]
-    volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
-      - ~/.m2:/root/.m2:delegated
-    # Since we are cross compiling netty-transport-native-epoll as aarch64 which cannot be loaded on x86_64, we add `skipTests` here to skip the test.
-    command: /bin/bash -cl "pushd ./transport-native-unix-common && ../mvnw clean install -Plinux-aarch64 && popd && pushd ./transport-native-epoll && ../mvnw clean install -Plinux-aarch64 -DskipTests && popd"
-    working_dir: /code
