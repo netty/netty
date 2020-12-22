@@ -80,7 +80,7 @@ jobs:
             deploy-linux-aarch64-docker-cache-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.yaml build
+        run: docker-compose -f docker/docker-compose.centos-7.yaml build
 
       - name: Deploy snapshots
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.yaml run deploy
+        run: docker-compose -f docker/docker-compose.centos-7.yaml run deploy
