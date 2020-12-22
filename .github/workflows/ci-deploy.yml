@@ -2,7 +2,7 @@ name: Deploy project
 
 on:
   push:
-    branches: [ "4.1", master ]
+    branches: [ "4.1" ]
 
   schedule:
     - cron: '30 1 * * 1'  # At 01:30 on Monday, every Monday.
