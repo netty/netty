@@ -69,10 +69,8 @@ public class Http3ControlStreamOutboundHandlerTest extends
     public void testGoAwayIdDecreaseWorks() {
         QuicChannel parent = mockParent();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        Mockito.when(parent.isActive()).thenReturn(false);
-
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(8)));
         ReferenceCountUtil.release(channel.readOutbound());
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
@@ -85,10 +83,8 @@ public class Http3ControlStreamOutboundHandlerTest extends
     public void testGoAwayIdIncreaseFails() {
         QuicChannel parent = mockParent();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        Mockito.when(parent.isActive()).thenReturn(false);
-
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
         ReferenceCountUtil.release(channel.readOutbound());
 
@@ -105,10 +101,8 @@ public class Http3ControlStreamOutboundHandlerTest extends
     public void testGoAwayIdUseInvalidId() {
         QuicChannel parent = mockParent();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        Mockito.when(parent.isActive()).thenReturn(false);
-
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), true);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
         try {
             channel.writeOutbound(new DefaultHttp3GoAwayFrame(2));
             fail();

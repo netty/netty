@@ -35,7 +35,17 @@ jobs:
 
       - name: Execute project build with leak detection
         if: ${{ github.event_name == 'pull_request' }}
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak | tee build-leak.output
+
+      - name: Checking for detected leak
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          if grep -q 'LEAK:' build-leak.output ; then
+            echo "Leak detected, please inspect build log"
+            exit 1
+          else
+            echo "No Leak detected"
+          fi
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
