@@ -87,6 +87,7 @@
          Symbol not found: ___isPlatformVersionAtLeast
     -->
     <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
+    <test.argLine>-D_</test.argLine>
   </properties>
 
   <profiles>
@@ -113,7 +114,14 @@
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
       </properties>
     </profile>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
+      </properties>
+    </profile>
   </profiles>
+
   <build>
     <extensions>
       <extension>
@@ -366,6 +374,7 @@
         </properties>
         <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
         <trimStackTrace>false</trimStackTrace>
+        <argLine>${test.argLine}</argLine>
       </configuration>
       <dependencies>
         <dependency>

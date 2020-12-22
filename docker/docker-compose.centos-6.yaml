@@ -21,6 +21,12 @@ services:
     <<: *common
     command: /bin/bash -cl "mvn clean package -DquicheCheckoutDir=/root/source/quiche"
 
+
+  build-leak:
+    <<: *common
+    command: /bin/bash -cl "mvn -Pleak clean package -DquicheCheckoutDir=/root/source/quiche"
+
+
   build-clean:
     <<: *common
     command: /bin/bash -cl "mvn clean package"
