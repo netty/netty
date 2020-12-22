@@ -12,9 +12,10 @@ services:
     image: netty:default
     depends_on: [runtime-setup]
     volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ..:/code
     working_dir: /code
 
   build-leak:
@@ -27,11 +28,6 @@ services:
 
   deploy:
     <<: *common
-    volumes:
-      - ~/.ssh:/root/.ssh
-      - ~/.gnupg:/root/.gnupg
-      - ~/.m2/settings.xml:/root/.m2/settings.xml
-      - ..:/code
     command: /bin/bash -cl "./mvnw clean deploy -DskipTests=true"
 
   test-leak:
@@ -48,9 +44,4 @@ services:
 
   shell:
     <<: *common
-    volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
-      - ~/.m2:/root/.m2:delegated
     entrypoint: /bin/bash

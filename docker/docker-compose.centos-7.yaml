@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+
+
+  cross-compile-aarch64-runtime-setup:
+    image: netty:cross_compile_aarch64
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.cross_compile_aarch64
+      args:
+        gcc_version: "4.9-2016.02"
+        java_version: "adopt@1.8.0-272"
+
+  cross-compile-aarch64-common: &cross-compile-aarch64-common
+    depends_on: [ cross-compile-aarch64-runtime-setup ]
+    image: netty:cross_compile_aarch64
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ..:/code
+    working_dir: /code
+
+  cross-compile-aarch64-deploy:
+    <<: *cross-compile-aarch64-common
+    command: /bin/bash -cl "./mvnw -pl transport-native-unix-common,transport-native-epoll clean deploy -Plinux-aarch64 -DskipTests=true"
+
+  cross-compile-aarch64-shell:
+    <<: *cross-compile-aarch64-common
+    entrypoint: /bin/bash
+
+  cross-compile-aarch64-build:
+    <<: *cross-compile-aarch64-common
+    command: /bin/bash -cl "./mvnw -pl transport-native-unix-common,transport-native-epoll clean package -Plinux-aarch64 -DskipTests=true"
