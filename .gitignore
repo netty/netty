@@ -20,6 +20,9 @@
 # Build targets
 /target
 */target
+**/build
+**/.cxx
+.gradle
 
 # Report directories
 /reports
@@ -46,3 +49,6 @@ mainframer
 # exclude vscode files
 .vscode/
 *.factorypath
+
+# Android
+local.properties
