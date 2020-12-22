@@ -6,7 +6,7 @@ services:
     image: netty:default
     build:
       context: .
-      dockerfile: Dockerfile.centos
+      dockerfile: Dockerfile.centos6
 
   common: &common
     image: netty:default
