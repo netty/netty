@@ -25,6 +25,15 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
 
+  deploy:
+    <<: *common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2/settings.xml:/root/.m2/settings.xml
+      - ..:/code
+    command: /bin/bash -cl "./mvnw clean deploy -DskipTests=true"
+
   test-leak:
     <<: *common
     command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"

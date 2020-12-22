@@ -14,6 +14,9 @@ services:
   build-leak:
     image: netty:centos-6-1.8
 
+  deploy:
+    image: netty:centos-6-1.8
+
   test:
     image: netty:centos-6-1.8
 
