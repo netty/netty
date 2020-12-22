@@ -6,7 +6,6 @@ services:
     image: netty:centos-6-1.10
     build:
       args:
-        centos_version : "6"
         java_version : "zulu@1.10.0-2"
 
   test:
