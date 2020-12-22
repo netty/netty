@@ -1,9 +1,7 @@
-name: Build project
+name: Deploy project
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
   schedule:
@@ -13,16 +11,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  deploy-linux-x86_64:
     runs-on: ubuntu-latest
     steps:
-      # http://man7.org/linux/man-pages/man1/date.1.html
-      - name: Create Cache Key
-        id: cache-key
-        run: |
-          echo "::set-output name=key::$(/bin/date -u "+%Y%U")"
-        shell: bash
-
       - uses: s4u/maven-settings-action@v2.2.0
         with:
           servers: |
@@ -38,20 +29,14 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
         with:
-          key: docker-cache-${{ steps.cache-key.outputs.key }}-{hash}
+          key: deploy-linux-x86_64-docker-cache-{hash}
           restore-keys: |
-            docker-cache-${{ steps.cache-key.outputs.key }}-
+            deploy-linux-x86_64-docker-cache-
 
-      - name: Build project without leak detection
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run build
-
-      - name: Build project with leak detection
-        if: ${{ github.event_name == 'pull_request' }}
-        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml build
 
       - name: Deploy project snapshot to sonatype
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run deploy
 
       - uses: actions/upload-artifact@v2
