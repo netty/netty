@@ -48,5 +48,81 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
-          name: target_linux-x86_64-java8
-          path: target/ # or path/to/artifact
+          name: target
+          path: "**/target/"
+
+  build-linux-x86_64-java11:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: build-linux-x86_64-java11-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            build-linux-x86_64-java11-${{ runner.os }}-maven-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: build-linux-x86_64-java11-docker-cache-{hash}
+          restore-keys: |
+            build-linux-x86_64-java11-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build
+
+      - name: Build project without leak detection
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build
+
+      - name: Build project with leak detection
+        if: ${{ github.event_name == 'pull_request' }}
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: "**/target/"
+
+  build-linux-x86_64-java15:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: build-linux-x86_64-java15-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            build-linux-x86_64-java15-${{ runner.os }}-maven-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: build-linux-x86_64-java15-docker-cache-{hash}
+          restore-keys: |
+            build-linux-x86_64-java15-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml build
+
+      - name: Build project without leak detection
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build
+
+      - name: Build project with leak detection
+        if: ${{ github.event_name == 'pull_request' }}
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build-leak
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: "**/target/"
