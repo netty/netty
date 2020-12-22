@@ -40,9 +40,8 @@ publishing {
         transport_native_epoll(MavenPublication) {
             artifact("$buildDir/outputs/aar/transport-native-epoll-release.aar") {
               group 'io.netty'
-              artifactId 'netty-transport-native-epoll'
+              artifactId 'netty-transport-native-epoll-android'
               version = '4.1.55.Final'
-              classifier 'android'
             }
             pom.withXml {
                 def dependenciesNode = asNode().appendNode('dependencies')

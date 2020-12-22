@@ -27,7 +27,7 @@ set(EPOLL_PATH "src/main/c/")
 file(GLOB EPOLL_SOURCES "${EPOLL_PATH}/*.c")
 file(GLOB EPOLL_HEADERS "${EPOLL_PATH}/*.h")
 add_library(io_grpc_netty_shaded_netty_transport_native_epoll_aarch_64
-            STATIC
+            SHARED
             ${EPOLL_SOURCES}
             ${COMMON_HEADERS})
 target_include_directories(io_grpc_netty_shaded_netty_transport_native_epoll_aarch_64
