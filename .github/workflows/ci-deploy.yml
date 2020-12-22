@@ -83,4 +83,4 @@ jobs:
         run: docker-compose -f docker/docker-compose.centos-7.yaml build
 
       - name: Deploy snapshots
-        run: docker-compose -f docker/docker-compose.centos-7.yaml run deploy
+        run: docker-compose -f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-deploy
