@@ -12,9 +12,10 @@ services:
     image: netty:default
     depends_on: [runtime-setup]
     volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ..:/code
     working_dir: /code
 
   build-leak:
@@ -24,6 +25,10 @@ services:
   build:
     <<: *common
     command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
+
+  deploy:
+    <<: *common
+    command: /bin/bash -cl "./mvnw clean deploy -DskipTests=true"
 
   test-leak:
     <<: *common
@@ -39,9 +44,4 @@ services:
 
   shell:
     <<: *common
-    volumes:
-      - ~/.ssh:/root/.ssh:delegated
-      - ~/.gnupg:/root/.gnupg:delegated
-      - ..:/code:delegated
-      - ~/.m2:/root/.m2:delegated
     entrypoint: /bin/bash
