@@ -26,12 +26,16 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
+        env:
+          cache-name: cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: deploy-linux-x86_64-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            deploy-linux-x86_64-${{ runner.os }}-maven-
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
@@ -64,12 +68,16 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
+        env:
+          cache-name: cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: deploy-linux-aarch64-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            deploy-linux-aarch64-${{ runner.os }}-maven-
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
