@@ -19,13 +19,17 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 8
-      # Cache .m2/repository
-      - uses: actions/cache@v1
+    # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: verify-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-verify-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            verify-${{ runner.os }}-maven-
+            ${{ runner.os }}-verify-${{ env.cache-name }}-
+            ${{ runner.os }}-verify-
+            ${{ runner.os }}-
 
       - name: Verify with Maven
         run: mvn verify -B --file pom.xml -DskipTests=true
