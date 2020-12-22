@@ -9,6 +9,12 @@ services:
         centos_version : "6"
         java_version : "adopt@1.8.0-272"
 
+  build:
+    image: netty:centos-6-1.8
+
+  build-leak:
+    image: netty:centos-6-1.8
+
   test:
     image: netty:centos-6-1.8
 

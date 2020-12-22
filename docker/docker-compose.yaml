@@ -17,6 +17,14 @@ services:
       - ..:/code:delegated
     working_dir: /code
 
+  build-leak:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io"
+
+  build:
+    <<: *common
+    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
+
   test-leak:
     <<: *common
     command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"
