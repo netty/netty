@@ -398,8 +398,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         if (isStreamIdValid(headersFrame.stream().id())) {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
-        } else {
-            if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
+        } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
                 final int streamId = headersFrame.stream().id();
 
                 encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
@@ -420,7 +419,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 } else {
                     handleHeaderFuture(promise, streamId);
                 }
-            }
         }
     }
 
@@ -429,8 +427,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         if (isStreamIdValid(pushPromiseFrame.pushStream().id())) {
             encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), pushPromiseFrame.pushStream().id(),
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
-        } else {
-            if (initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise)) {
+        } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise)) {
                 final int streamId = pushPromiseFrame.stream().id();
 
                 encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
@@ -451,7 +448,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         }
                     });
                 }
-            }
         }
     }
 

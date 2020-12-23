@@ -62,6 +62,15 @@ public class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame {
     }
 
     @Override
+    public int promisedStreamId() {
+        if (pushStreamFrame != null) {
+            return pushStreamFrame.id();
+        } else {
+            return promisedStreamId;
+        }
+    }
+
+    @Override
     public Http2StreamFrame stream(Http2FrameStream stream) {
         streamFrame = stream;
         return this;
@@ -70,14 +79,6 @@ public class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame {
     @Override
     public Http2FrameStream stream() {
         return streamFrame;
-    }
-
-    public int getPromisedStreamId() {
-        if (pushStreamFrame != null) {
-            return pushStreamFrame.id();
-        } else {
-            return promisedStreamId;
-        }
     }
 
     @Override

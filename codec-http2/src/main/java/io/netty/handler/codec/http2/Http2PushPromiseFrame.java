@@ -40,4 +40,9 @@ public interface Http2PushPromiseFrame extends Http2StreamFrame {
      * Frame padding to use. Will be non-negative and less than 256.
      */
     int padding();
+
+    /**
+     * Promised Stream ID
+     */
+    int promisedStreamId();
 }
