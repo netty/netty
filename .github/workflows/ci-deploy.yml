@@ -56,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     # We depend on the deploy of linux-x86_64 so we can download the dependencies
     needs: deploy-linux-x86_64
+    # Skip for now until we figured out how to deploy SNAPSHOTS with the the same timestamps
+    if: ${{ false }}
     steps:
       - uses: s4u/maven-settings-action@v2.2.0
         with:
