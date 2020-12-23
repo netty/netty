@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -90,8 +91,17 @@ public class DefaultHttp2PushPromiseFrameTest {
     }
 
     @Test
-    public void send() throws InterruptedException {
-        connectionFuture.sync();
+    public void send() {
+        connectionFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                try {
+                    clientHandler.write();
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+            }
+        });
     }
 
     @After
@@ -160,8 +170,14 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     private static final class ClientHandler extends Http2ChannelDuplexHandler {
 
+        private ChannelHandlerContext ctx;
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws InterruptedException {
+            this.ctx = ctx;
+        }
+
+        void write() throws InterruptedException {
             Http2Headers http2Headers = new DefaultHttp2Headers();
             http2Headers.path("/")
                     .authority("localhost")
