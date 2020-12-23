@@ -22,14 +22,13 @@ jobs:
     # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: cache-m2-repository
+          cache-name: verify-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-verify-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-verify-${{ env.cache-name }}-
-            ${{ runner.os }}-verify-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
 
       - name: Verify with Maven
         run: mvn verify -B --file pom.xml -DskipTests=true
@@ -43,14 +42,13 @@ jobs:
       # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: cache-m2-repository
+          cache-name: build-linux-x86_64-java8-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
@@ -67,13 +65,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak | tee build-leak.output
 
       - name: Checking for detected leak
-        run: |
-          if grep -q 'LEAK:' build-leak.output ; then
-            echo "Leak detected, please inspect build log"
-            exit 1
-          else
-            echo "No Leak detected"
-          fi
+        run: ./.github/scripts/check_leak.sh build-leak.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
@@ -90,14 +82,13 @@ jobs:
       # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: cache-m2-repository
+          cache-name: build-linux-x86_64-java11-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
@@ -114,13 +105,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak | tee build-leak.output
 
       - name: Checking for detected leak
-        run: |
-          if grep -q 'LEAK:' build-leak.output ; then
-            echo "Leak detected, please inspect build log"
-            exit 1
-          else
-            echo "No Leak detected"
-          fi
+        run: ./.github/scripts/check_leak.sh build-leak.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
@@ -137,14 +122,13 @@ jobs:
       # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: cache-m2-repository
+          cache-name: build-linux-x86_64-java15-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
@@ -161,13 +145,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build-leak | tee build-leak.output
 
       - name: Checking for detected leak
-        run: |
-          if grep -q 'LEAK:' build-leak.output ; then
-            echo "Leak detected, please inspect build log"
-            exit 1
-          else
-            echo "No Leak detected"
-          fi
+        run: ./.github/scripts/check_leak.sh build-leak.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
