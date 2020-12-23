@@ -1,11 +1,8 @@
 name: Build project
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
-
-  schedule:
-    - cron: '30 7 * * 1'  # At 07:30 on Monday, every Monday.
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -20,15 +17,18 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
         with:
-          key: build-linux-x86_64-docker-cache-{hash}
+          key: pr-linux-x86_64-docker-cache-{hash}
           restore-keys: |
-            build-linux-x86_64-docker-cache-
+            pr-linux-x86_64-docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml build
 
-      - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run build
+      - name: Build project with leak detection
+        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak  | tee build-leak.output
+
+      - name: Checking for detected leak
+        run: ./.github/scripts/check_leak.sh build-leak.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
