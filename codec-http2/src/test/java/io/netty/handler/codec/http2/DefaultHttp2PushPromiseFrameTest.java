@@ -138,12 +138,12 @@ public class DefaultHttp2PushPromiseFrameTest {
                 http2Headers.add("push", "false");
                 Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
                 headersFrame.stream(receivedFrame.stream());
-                ctx.writeAndFlush(headersFrame).sync();
+                ctx.writeAndFlush(headersFrame);
 
                 // Write Data of actual request
                 Http2DataFrame dataFrame = new DefaultHttp2DataFrame(Unpooled.wrappedBuffer("Meow".getBytes()), true);
                 dataFrame.stream(receivedFrame.stream());
-                ctx.writeAndFlush(dataFrame).sync();
+                ctx.writeAndFlush(dataFrame);
             } else if (msg instanceof Http2PriorityFrame) {
                 Http2PriorityFrame priorityFrame = (Http2PriorityFrame) msg;
                 String content = contentMap.get(priorityFrame.stream().id());
@@ -158,12 +158,12 @@ public class DefaultHttp2PushPromiseFrameTest {
                 http2Headers.add("push", "true");
                 Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
                 headersFrame.stream(priorityFrame.stream());
-                ctx.writeAndFlush(headersFrame).sync();
+                ctx.writeAndFlush(headersFrame);
 
                 // Write Data of Priority request
                 Http2DataFrame dataFrame = new DefaultHttp2DataFrame(Unpooled.wrappedBuffer(content.getBytes()), true);
                 dataFrame.stream(priorityFrame.stream());
-                ctx.writeAndFlush(dataFrame).sync();
+                ctx.writeAndFlush(dataFrame);
             }
         }
     }
@@ -186,7 +186,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
             Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, true);
             headersFrame.stream(newStream());
-            ctx.writeAndFlush(headersFrame).sync();
+            ctx.writeAndFlush(headersFrame);
         }
 
         @Override
