@@ -1,4 +1,4 @@
-name: Build project
+name: Build PR
 
 on:
   pull_request:
@@ -31,6 +31,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: verify
     steps:
       - uses: actions/checkout@v2
 
