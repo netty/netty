@@ -17,6 +17,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType;
 import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
@@ -295,13 +296,18 @@ public final class MqttMessageBuilders {
         }
     }
 
+    public interface PropertiesInitializer<T> {
+        void apply(T builder);
+    }
+
     public static final class ConnAckBuilder {
 
         private MqttConnectReturnCode returnCode;
         private boolean sessionPresent;
         private MqttProperties properties = MqttProperties.NO_PROPERTIES;
+        private ConnAckPropertiesBuilder propsBuilder;
 
-        ConnAckBuilder() {
+        private ConnAckBuilder() {
         }
 
         public ConnAckBuilder returnCode(MqttConnectReturnCode returnCode) {
@@ -319,12 +325,200 @@ public final class MqttMessageBuilders {
             return this;
         }
 
+        public ConnAckBuilder properties(PropertiesInitializer<ConnAckPropertiesBuilder> consumer) {
+            if (propsBuilder == null) {
+                propsBuilder = new ConnAckPropertiesBuilder();
+            }
+            consumer.apply(propsBuilder);
+            return this;
+        }
+
         public MqttConnAckMessage build() {
+            if (propsBuilder != null) {
+                properties = propsBuilder.build();
+            }
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
             MqttConnAckVariableHeader mqttConnAckVariableHeader =
                     new MqttConnAckVariableHeader(returnCode, sessionPresent, properties);
             return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
+        }
+    }
+
+    public static final class ConnAckPropertiesBuilder {
+        private String clientId;
+        private Long sessionExpiryInterval;
+        private int receiveMaximum;
+        private Byte maximumQos;
+        private boolean retain;
+        private Long maximumPacketSize;
+        private int topicAliasMaximum;
+        private String reasonString;
+        private MqttProperties.UserProperties userProperties = new MqttProperties.UserProperties();
+        private Boolean wildcardSubscriptionAvailable;
+        private Boolean subscriptionIdentifiersAvailable;
+        private Boolean sharedSubscriptionAvailable;
+        private Integer serverKeepAlive;
+        private String responseInformation;
+        private String serverReference;
+        private String authenticationMethod;
+        private byte[] authenticationData;
+
+        public MqttProperties build() {
+            final MqttProperties props = new MqttProperties();
+            if (clientId != null) {
+                props.add(new MqttProperties.StringProperty(MqttPropertyType.ASSIGNED_CLIENT_IDENTIFIER.value(),
+                        clientId));
+            }
+            if (sessionExpiryInterval != null) {
+                props.add(new MqttProperties.IntegerProperty(
+                        MqttPropertyType.SESSION_EXPIRY_INTERVAL.value(), sessionExpiryInterval.intValue()));
+            }
+            if (receiveMaximum > 0) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RECEIVE_MAXIMUM.value(), receiveMaximum));
+            }
+            if (maximumQos != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_QOS.value(), receiveMaximum));
+            }
+            props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RETAIN_AVAILABLE.value(), retain ? 1 : 0));
+            if (maximumPacketSize != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_PACKET_SIZE.value(),
+                        maximumPacketSize.intValue()));
+            }
+            props.add(new MqttProperties.IntegerProperty(MqttPropertyType.TOPIC_ALIAS_MAXIMUM.value(),
+                    topicAliasMaximum));
+            if (reasonString != null) {
+                props.add(new MqttProperties.StringProperty(MqttPropertyType.REASON_STRING.value(), reasonString));
+            }
+            props.add(userProperties);
+            if (wildcardSubscriptionAvailable != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE.value(),
+                        wildcardSubscriptionAvailable ? 1 : 0));
+            }
+            if (subscriptionIdentifiersAvailable != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE.value(),
+                        subscriptionIdentifiersAvailable ? 1 : 0));
+            }
+            if (sharedSubscriptionAvailable != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SHARED_SUBSCRIPTION_AVAILABLE.value(),
+                        sharedSubscriptionAvailable ? 1 : 0));
+            }
+            if (serverKeepAlive != null) {
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SERVER_KEEP_ALIVE.value(),
+                        serverKeepAlive));
+            }
+            if (responseInformation != null) {
+                props.add(new MqttProperties.StringProperty(MqttPropertyType.RESPONSE_INFORMATION.value(),
+                        responseInformation));
+            }
+            if (serverReference != null) {
+                props.add(new MqttProperties.StringProperty(MqttPropertyType.SERVER_REFERENCE.value(),
+                        serverReference));
+            }
+            if (authenticationMethod != null) {
+                props.add(new MqttProperties.StringProperty(MqttPropertyType.AUTHENTICATION_METHOD.value(),
+                        authenticationMethod));
+            }
+            if (authenticationData != null) {
+                props.add(new MqttProperties.BinaryProperty(MqttPropertyType.AUTHENTICATION_DATA.value(),
+                        authenticationData));
+            }
+
+            return props;
+        }
+
+        public ConnAckPropertiesBuilder sessionExpiryInterval(long seconds) {
+            this.sessionExpiryInterval = seconds;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder receiveMaximum(int value) {
+            if (value <= 0) {
+                throw new IllegalArgumentException("receive maximum property must be > 0");
+            }
+            this.receiveMaximum = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder maximumQos(byte value) {
+            if (value != 0 && value != 1) {
+                throw new IllegalArgumentException("maximum QoS property could be 0 or 1");
+            }
+            this.maximumQos = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder retainAvailable(boolean retain) {
+            this.retain = retain;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder maximumPacketSize(long size) {
+            if (size <= 0) {
+                throw new IllegalArgumentException("maximum packet size property must be > 0");
+            }
+            this.maximumPacketSize = size;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder assignedClientId(String clientId) {
+            this.clientId = clientId;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder topicAliasMaximum(int value) {
+            this.topicAliasMaximum = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder reasonString(String reason) {
+            this.reasonString = reason;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder userProperty(String name, String value) {
+            userProperties.add(name, value);
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder wildcardSubscriptionAvailable(boolean value) {
+            this.wildcardSubscriptionAvailable = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder subscriptionIdentifiersAvailable(boolean value) {
+            this.subscriptionIdentifiersAvailable = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder sharedSubscriptionAvailable(boolean value) {
+            this.sharedSubscriptionAvailable = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder serverKeepAlive(int seconds) {
+            this.serverKeepAlive = seconds;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder responseInformation(String value) {
+            this.responseInformation = value;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder serverReference(String host) {
+            this.serverReference = host;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder authenticationMethod(String methodName) {
+            this.authenticationMethod = methodName;
+            return this;
+        }
+
+        public ConnAckPropertiesBuilder authenticationData(byte[] rawData) {
+            this.authenticationData = rawData.clone();
+            return this;
         }
     }
 
