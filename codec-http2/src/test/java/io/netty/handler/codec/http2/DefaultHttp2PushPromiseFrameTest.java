@@ -29,6 +29,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,11 +96,7 @@ public class DefaultHttp2PushPromiseFrameTest {
         connectionFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
-                try {
-                    clientHandler.write();
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
+                clientHandler.write();
             }
         });
     }
@@ -177,7 +174,7 @@ public class DefaultHttp2PushPromiseFrameTest {
             this.ctx = ctx;
         }
 
-        void write() throws InterruptedException {
+        void write() {
             Http2Headers http2Headers = new DefaultHttp2Headers();
             http2Headers.path("/")
                     .authority("localhost")
@@ -219,15 +216,16 @@ public class DefaultHttp2PushPromiseFrameTest {
             } else if (msg instanceof Http2DataFrame) {
                 Http2DataFrame dataFrame = (Http2DataFrame) msg;
 
-                if (dataFrame.stream().id() == 3) {
-                    assertEquals("Meow", dataFrame.content().toString(CharsetUtil.UTF_8));
-                    dataFrame.content().release();
-                } else if (dataFrame.stream().id() == 2) {
-                    assertEquals("Meow, I am Pushed via HTTP/2", dataFrame.content().toString(CharsetUtil.UTF_8));
-                    dataFrame.content().release();
-                } else {
-                    dataFrame.content().release();
-                    ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.REFUSED_STREAM));
+                try {
+                    if (dataFrame.stream().id() == 3) {
+                        assertEquals("Meow", dataFrame.content().toString(CharsetUtil.UTF_8));
+                    } else if (dataFrame.stream().id() == 2) {
+                        assertEquals("Meow, I am Pushed via HTTP/2", dataFrame.content().toString(CharsetUtil.UTF_8));
+                    } else {
+                        ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.REFUSED_STREAM));
+                    }
+                } finally {
+                    ReferenceCountUtil.release(dataFrame);
                 }
             }
         }

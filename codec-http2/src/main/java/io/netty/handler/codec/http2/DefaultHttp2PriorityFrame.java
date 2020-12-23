@@ -15,10 +15,13 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Default implementation of {@linkplain Http2PriorityFrame}
  */
-public class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
+@UnstableApi
+public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
 
     private final int streamDependency;
     private final short weight;
