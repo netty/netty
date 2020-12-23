@@ -26,20 +26,25 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
+        env:
+          cache-name: deploy-linux-x86_64-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: deploy-linux-x86_64-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            deploy-linux-x86_64-${{ runner.os }}-maven-
+            ${{ runner.os }}-deploy-${{ env.cache-name }}-
+            ${{ runner.os }}-deploy-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
+        env:
+          docker-cache-name: deploy-linux-x86_64-cache-docker
         continue-on-error: true
         with:
-          key: deploy-linux-x86_64-docker-cache-{hash}
+          key: ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-{hash}
           restore-keys: |
-            deploy-linux-x86_64-docker-cache-
+            ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build
@@ -64,20 +69,25 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
+        env:
+          cache-name: deploy-linux-aarch64-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: deploy-linux-aarch64-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            deploy-linux-aarch64-${{ runner.os }}-maven-
+            ${{ runner.os }}-deploy-${{ env.cache-name }}-
+            ${{ runner.os }}-deploy-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.8
+        env:
+          docker-cache-name: deploy-linux-aarch64-cache-docker
         continue-on-error: true
         with:
-          key: deploy-linux-aarch64-docker-cache-{hash}
+          key: ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-{hash}
           restore-keys: |
-            deploy-linux-aarch64-docker-cache-
+            ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-7.yaml build
