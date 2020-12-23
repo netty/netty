@@ -11,16 +11,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  
-  build-linux-x86_64-java8:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java8
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build"
+          - setup: linux-x86_64-java11
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build"
+          - setup: linux-x86_64-java15
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build"
+
+    name: ${{ matrix.setup }}
     steps:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: build-linux-x86_64-java8-cache-m2-repository
+          cache-name: build-${{ matrix.setup }}-cache-m2-repository
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
@@ -32,87 +45,15 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
         with:
-          key: build-linux-x86_64-java8-docker-cache-{hash}
+          key: build-${{ matrix.setup }}-docker-cache-{hash}
           restore-keys: |
-            build-linux-x86_64-java8-docker-cache-
+            build-${{ matrix.setup }}-docker-cache-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build
+        run: docker-compose ${{ matrix.docker-compose-build }}
 
       - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ failure() }}
-        with:
-          name: target
-          path: "**/target/"
-
-  build-linux-x86_64-java11:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: build-linux-x86_64-java11-cache-m2-repository
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.8
-        continue-on-error: true
-        with:
-          key: build-linux-x86_64-java11-docker-cache-{hash}
-          restore-keys: |
-            build-linux-x86_64-java11-docker-cache-
-
-      - name: Build docker image
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build
-
-      - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ failure() }}
-        with:
-          name: target
-          path: "**/target/"
-
-  build-linux-x86_64-java15:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: build-linux-x86_64-java15-cache-m2-repository
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.8
-        continue-on-error: true
-        with:
-          key: build-linux-x86_64-java15-docker-cache-{hash}
-          restore-keys: |
-            build-linux-x86_64-java15-docker-cache-
-
-      - name: Build docker image
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml build
-
-      - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build
+        run: docker-compose ${{ matrix.docker-compose-run }}
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
