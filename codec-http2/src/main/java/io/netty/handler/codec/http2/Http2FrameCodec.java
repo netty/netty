@@ -399,26 +399,28 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else {
-            initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise);
-            final int streamId = headersFrame.stream().id();
+            boolean init = initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise);
+            if (init) {
+                final int streamId = headersFrame.stream().id();
 
-            encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
-                    headersFrame.isEndStream(), promise);
+                encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
+                        headersFrame.isEndStream(), promise);
 
-            if (!promise.isDone()) {
-                numBufferedStreams++;
-                // Clean up the stream being initialized if writing the headers fails and also
-                // decrement the number of buffered streams.
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) {
-                        numBufferedStreams--;
+                if (!promise.isDone()) {
+                    numBufferedStreams++;
+                    // Clean up the stream being initialized if writing the headers fails and also
+                    // decrement the number of buffered streams.
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture channelFuture) {
+                            numBufferedStreams--;
 
-                        handleHeaderFuture(channelFuture, streamId);
-                    }
-                });
-            } else {
-                handleHeaderFuture(promise, streamId);
+                            handleHeaderFuture(channelFuture, streamId);
+                        }
+                    });
+                } else {
+                    handleHeaderFuture(promise, streamId);
+                }
             }
         }
     }
@@ -429,31 +431,33 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), pushPromiseFrame.pushStream().id(),
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
         } else {
-            initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise);
-            final int streamId = pushPromiseFrame.stream().id();
+            boolean init = initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise);
+            if (init) {
+                final int streamId = pushPromiseFrame.stream().id();
 
-            encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
-                    pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
+                encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
+                        pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
 
-            if (promise.isDone()) {
-                handleHeaderFuture(promise, streamId);
-            } else {
-                numBufferedStreams++;
-                // Clean up the stream being initialized if writing the headers fails and also
-                // decrement the number of buffered streams.
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) {
-                        numBufferedStreams--;
+                if (promise.isDone()) {
+                    handleHeaderFuture(promise, streamId);
+                } else {
+                    numBufferedStreams++;
+                    // Clean up the stream being initialized if writing the headers fails and also
+                    // decrement the number of buffered streams.
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture channelFuture) {
+                            numBufferedStreams--;
 
-                        handleHeaderFuture(channelFuture, streamId);
-                    }
-                });
+                            handleHeaderFuture(channelFuture, streamId);
+                        }
+                    });
+                }
             }
         }
     }
 
-    public void initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
+    public boolean initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
                                     ChannelPromise promise) {
         final Http2Connection connection = connection();
         final int streamId = connection.local().incrementAndGetNextStreamId();
@@ -465,6 +469,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
                     Integer.MAX_VALUE - 1, NO_ERROR.code(),
                     writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
+
+            return false;
         }
         http2FrameStream.id = streamId;
 
@@ -477,6 +483,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         // We should not re-use ids.
         assert old == null;
+        return true;
     }
 
     private void handleHeaderFuture(ChannelFuture channelFuture, int streamId) {
