@@ -43,6 +43,8 @@ public class DefaultHttp2PushPromiseFrameTest {
     private final ClientHandler clientHandler = new ClientHandler();
     private final Map<Integer, String> contentMap = new ConcurrentHashMap<Integer, String>();
 
+    private ChannelFuture connectionFuture;
+
     @Before
     public void setup() throws InterruptedException {
         ServerBootstrap serverBootstrap = new ServerBootstrap()
@@ -84,13 +86,12 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        bootstrap.connect(channelFuture.channel().localAddress()).sync();
+        connectionFuture = bootstrap.connect(channelFuture.channel().localAddress());
     }
 
     @Test
     public void send() throws InterruptedException {
-        Thread.sleep(100);
-        clientHandler.write();
+        connectionFuture.sync();
     }
 
     @After
@@ -159,14 +160,8 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     private static final class ClientHandler extends Http2ChannelDuplexHandler {
 
-        private ChannelHandlerContext ctx;
-
         @Override
-        public void channelActive(ChannelHandlerContext ctx) {
-            this.ctx = ctx;
-        }
-
-        private void write() throws InterruptedException {
+        public void channelActive(ChannelHandlerContext ctx) throws InterruptedException {
             Http2Headers http2Headers = new DefaultHttp2Headers();
             http2Headers.path("/")
                     .authority("localhost")

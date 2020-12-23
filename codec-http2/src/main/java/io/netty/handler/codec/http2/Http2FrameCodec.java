@@ -399,8 +399,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else {
-            boolean init = initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise);
-            if (init) {
+            if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
                 final int streamId = headersFrame.stream().id();
 
                 encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
@@ -431,8 +430,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), pushPromiseFrame.pushStream().id(),
                     pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
         } else {
-            boolean init = initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise);
-            if (init) {
+            if (initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise)) {
                 final int streamId = pushPromiseFrame.stream().id();
 
                 encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
