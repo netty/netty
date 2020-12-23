@@ -3,8 +3,6 @@ name: Build project
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
   schedule:
     - cron: '30 8 * * 1'  # At 08:30 on Monday, every Monday.
@@ -22,33 +20,19 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
         with:
-          key: build-docker-cache-{hash}
+          key: docker-cache-build-{hash}
           restore-keys: |
-            build-docker-cache-
+            docker-cache-build-
+            docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
 
       - name: Execute project build without leak detection
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build
-
-      - name: Execute project build with leak detection
-        if: ${{ github.event_name == 'pull_request' }}
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak | tee build-leak.output
-
-      - name: Checking for detected leak
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          if grep -q 'LEAK:' build-leak.output ; then
-            echo "Leak detected, please inspect build log"
-            exit 1
-          else
-            echo "No Leak detected"
-          fi
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/" # or path/to/artifact
+          path: "**/target/"

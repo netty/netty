@@ -1,0 +1,63 @@
+name: Build project
+
+on:
+  pull_request:
+    branches: [ main ]
+
+  schedule:
+    - cron: '30 8 * * 1'  # At 08:30 on Monday, every Monday.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: verify-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
+      - name: Verify with Maven
+        run: mvn verify -B --file pom.xml -DskipTests=true
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: docker-cache-pr-build-{hash}
+          restore-keys: |
+            docker-cache-pr-build-
+            docker-cache-pr-
+            docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
+
+      - name: Execute project build with leak detection
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build-leak | tee build-leak.output
+
+      - name: Checking for detected leak
+        run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: "**/target/"
