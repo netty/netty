@@ -152,3 +152,43 @@ jobs:
         with:
           name: target
           path: "**/target/"
+
+  build-linux-x86_64-java11-boringssl:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: build-linux-x86_64-java11-boringssl-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+        with:
+          key: build-linux-x86_64-java11-boringssl-docker-cache-{hash}
+          restore-keys: |
+            build-linux-x86_64-java11-boringssl-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build
+
+      - name: Build project with leak detection
+        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static | tee build-leak.output
+
+      - name: Checking for detected leak
+        run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: "**/target/"

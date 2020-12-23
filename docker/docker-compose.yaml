@@ -30,17 +30,13 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw clean deploy -DskipTests=true"
 
-  test-leak:
+  build-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"
+    command: /bin/bash -cl "./mvnw -P boringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
-  test:
+  build-leak-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io -Dmaven.wagon.http.pool=false"
-
-  test-boringssl-static:
-    <<: *common
-    command: /bin/bash -cl "./mvnw -P boringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dmaven.wagon.http.pool=false"
+    command: /bin/bash -cl "./mvnw -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
   shell:
     <<: *common

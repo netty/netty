@@ -8,13 +8,16 @@ services:
       args:
         java_version : "graalvm-ce-java11@20.1.0"
 
-  test:
+  build:
     image: netty:centos-6-1.11
 
-  test-leak:
+  build-leak:
     image: netty:centos-6-1.11
 
-  test-boringssl-static:
+  build-boringssl-static:
+    image: netty:centos-6-1.11
+
+  build-leak-boringssl-static:
     image: netty:centos-6-1.11
 
   shell:
