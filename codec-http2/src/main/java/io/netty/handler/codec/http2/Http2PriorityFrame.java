@@ -37,4 +37,10 @@ public interface Http2PriorityFrame extends Http2StreamFrame {
      * Set to {@code true} if this stream is exclusive else set to {@code false}
      */
     boolean exclusive();
+
+    @Override
+    Http2StreamFrame stream(Http2FrameStream stream);
+
+    @Override
+    Http2FrameStream stream();
 }
