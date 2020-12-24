@@ -20,6 +20,9 @@ services:
   build-leak-boringssl-static:
     image: netty:centos-6-1.8
 
+  stage-snapshot:
+    image: netty:centos-6-1.8
+
   deploy:
     image: netty:centos-6-1.8
 

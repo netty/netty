@@ -11,24 +11,75 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-linux-x86_64:
+  stage-snapshot:
     runs-on: ubuntu-latest
-    steps:
-      - uses: s4u/maven-settings-action@v2.2.0
-        with:
-          servers: |
-            [{
-                "id": "sonatype-nexus-snapshots",
-                "username": "${{ secrets.SONATYPE_USERNAME }}",
-                "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java8
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run stage-snapshot"
+          - setup: linux-aarch64
+            docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-snapshot"
 
+    name: stage-snapshot-${{ matrix.setup }}
+    steps:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
       - uses: actions/cache@v2
         env:
-          cache-name: deploy-linux-x86_64-cache-m2-repository
+          cache-name: staging-${{ matrix.setup }}-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-staging-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-staging-${{ env.cache-name }}-
+            ${{ runner.os }}-staging-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        env:
+          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
+        continue-on-error: true
+        with:
+          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
+          restore-keys: |
+            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - name: Build docker image
+        run: docker-compose ${{ matrix.docker-compose-build }}
+
+      - name: Stage snapshots to local staging directory
+        run: docker-compose ${{ matrix.docker-compose-run }}
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+
+  deploy-staged-snapshots:
+    runs-on: ubuntu-18.04
+    # Wait until we have staged everything
+    needs: stage-snapshot
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: deploy-staging-cache-m2-repository
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
@@ -36,63 +87,41 @@ jobs:
             ${{ runner.os }}-deploy-${{ env.cache-name }}-
             ${{ runner.os }}-deploy-
 
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.8
-        env:
-          docker-cache-name: deploy-linux-x86_64-cache-docker
-        continue-on-error: true
+      # Setup some env to re-use later.
+      - name: Prepare enviroment variables
+        run: |
+          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
+
+      # Hardcode the staging artifacts that need to be downloaded.
+      # These must match the matrix setups. There is currently no way to pull this out of the config.
+      - name: Download linux-aarch64 staging directory
+        uses: actions/download-artifact@v2
         with:
-          key: ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-
+          name: linux-aarch64-local-staging
+          path: ~/linux-aarch64-local-staging
 
-      - name: Build docker image
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build
+      - name: Download linux-x86_64-java8 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-java8-local-staging
+          path: ~/linux-x86_64-java8-local-staging
 
-      - name: Deploy snapshots
-        run: docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run deploy
+      - name: Merge staging repositories
+        run: |
+          mkdir -p ~/local-staging/deferred
+          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
 
-  deploy-linux-aarch64:
-    runs-on: ubuntu-latest
-    # We depend on the deploy of linux-x86_64 so we can download the dependencies
-    needs: deploy-linux-x86_64
-    # Skip for now until we figured out how to deploy SNAPSHOTS with the the same timestamps
-    if: ${{ false }}
-    steps:
       - uses: s4u/maven-settings-action@v2.2.0
         with:
           servers: |
             [{
-                "id": "sonatype-nexus-snapshots",
-                "username": "${{ secrets.SONATYPE_USERNAME }}",
-                "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "sonatype-nexus-snapshots",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
 
-      - uses: actions/checkout@v2
-
-      # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: deploy-linux-aarch64-cache-m2-repository
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-deploy-${{ env.cache-name }}-
-            ${{ runner.os }}-deploy-
-
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.8
-        env:
-          docker-cache-name: deploy-linux-aarch64-cache-docker
-        continue-on-error: true
-        with:
-          key: ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-deploy-${{ env.docker-cache-name }}-
-
-      - name: Build docker image
-        run: docker-compose -f docker/docker-compose.centos-7.yaml build
-
-      - name: Deploy snapshots
-        run: docker-compose -f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-deploy
+      - name: Deploy local staged artifacts
+        run: mvn -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
