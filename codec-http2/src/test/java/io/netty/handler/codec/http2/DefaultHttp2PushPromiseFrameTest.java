@@ -125,7 +125,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                 Http2PushPromiseFrame pushPromiseFrame = new DefaultHttp2PushPromiseFrame(pushRequestHeaders);
                 pushPromiseFrame.stream(receivedFrame.stream());
                 pushPromiseFrame.pushStream(newPushFrameStream);
-                ctx.writeAndFlush(pushPromiseFrame).sync();
+                ctx.writeAndFlush(pushPromiseFrame);
 
                 contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
 

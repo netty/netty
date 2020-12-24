@@ -41,6 +41,4 @@ public interface Http2PriorityFrame extends Http2StreamFrame {
     @Override
     Http2StreamFrame stream(Http2FrameStream stream);
 
-    @Override
-    Http2FrameStream stream();
 }

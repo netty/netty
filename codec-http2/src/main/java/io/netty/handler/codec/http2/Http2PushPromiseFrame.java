@@ -52,6 +52,4 @@ public interface Http2PushPromiseFrame extends Http2StreamFrame {
     @Override
     Http2StreamFrame stream(Http2FrameStream stream);
 
-    @Override
-    Http2FrameStream stream();
 }
