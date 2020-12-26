@@ -39,6 +39,6 @@ public interface Http2PriorityFrame extends Http2StreamFrame {
     boolean exclusive();
 
     @Override
-    Http2StreamFrame stream(Http2FrameStream stream);
+    Http2PriorityFrame stream(Http2FrameStream stream);
 
 }
