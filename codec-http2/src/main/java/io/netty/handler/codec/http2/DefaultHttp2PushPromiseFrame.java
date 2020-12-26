@@ -74,7 +74,7 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
     }
 
     @Override
-    public Http2StreamFrame stream(Http2FrameStream stream) {
+    public Http2PushPromiseFrame stream(Http2FrameStream stream) {
         streamFrame = stream;
         return this;
     }
@@ -86,7 +86,7 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
 
     @Override
     public String name() {
-        return "PUSH_PROMISE_READ_FRAME";
+        return "PUSH_PROMISE_FRAME";
     }
 
     @Override

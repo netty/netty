@@ -50,7 +50,7 @@ public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
     }
 
     @Override
-    public Http2StreamFrame stream(Http2FrameStream stream) {
+    public Http2PriorityFrame stream(Http2FrameStream stream) {
         http2FrameStream = stream;
         return this;
     }
