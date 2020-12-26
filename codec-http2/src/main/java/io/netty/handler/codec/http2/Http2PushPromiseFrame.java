@@ -50,6 +50,6 @@ public interface Http2PushPromiseFrame extends Http2StreamFrame {
     int promisedStreamId();
 
     @Override
-    Http2StreamFrame stream(Http2FrameStream stream);
+    Http2PushPromiseFrame stream(Http2FrameStream stream);
 
 }
