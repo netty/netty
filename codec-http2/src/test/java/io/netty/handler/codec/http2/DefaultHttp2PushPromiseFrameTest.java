@@ -138,7 +138,6 @@ public class DefaultHttp2PushPromiseFrameTest {
                         headersFrame.stream(receivedFrame.stream());
                         ChannelFuture channelFuture = ctx.writeAndFlush(headersFrame);
 
-
                         // Write Data of actual request
                         channelFuture.addListener(new ChannelFutureListener() {
                             @Override
