@@ -109,10 +109,10 @@ public class DefaultHttp2PushPromiseFrameTest {
     private final class ServerHandler extends Http2ChannelDuplexHandler {
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
 
             if (msg instanceof Http2HeadersFrame) {
-                Http2HeadersFrame receivedFrame = (Http2HeadersFrame) msg;
+                final Http2HeadersFrame receivedFrame = (Http2HeadersFrame) msg;
 
                 Http2Headers pushRequestHeaders = new DefaultHttp2Headers();
                 pushRequestHeaders.path("/meow")
@@ -121,26 +121,36 @@ public class DefaultHttp2PushPromiseFrameTest {
                         .authority("localhost:5555");
 
                 // Write PUSH_PROMISE request headers
-                Http2FrameStream newPushFrameStream = newStream();
+                final Http2FrameStream newPushFrameStream = newStream();
                 Http2PushPromiseFrame pushPromiseFrame = new DefaultHttp2PushPromiseFrame(pushRequestHeaders);
                 pushPromiseFrame.stream(receivedFrame.stream());
                 pushPromiseFrame.pushStream(newPushFrameStream);
-                ctx.writeAndFlush(pushPromiseFrame);
+                ctx.writeAndFlush(pushPromiseFrame).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) {
+                        contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
 
-                contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
+                        // Write headers for actual request
+                        Http2Headers http2Headers = new DefaultHttp2Headers();
+                        http2Headers.status("200");
+                        http2Headers.add("push", "false");
+                        Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
+                        headersFrame.stream(receivedFrame.stream());
+                        ChannelFuture channelFuture = ctx.writeAndFlush(headersFrame);
 
-                // Write headers for actual request
-                Http2Headers http2Headers = new DefaultHttp2Headers();
-                http2Headers.status("200");
-                http2Headers.add("push", "false");
-                Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
-                headersFrame.stream(receivedFrame.stream());
-                ctx.writeAndFlush(headersFrame);
 
-                // Write Data of actual request
-                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(Unpooled.wrappedBuffer("Meow".getBytes()), true);
-                dataFrame.stream(receivedFrame.stream());
-                ctx.writeAndFlush(dataFrame);
+                        // Write Data of actual request
+                        channelFuture.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
+                                        Unpooled.wrappedBuffer("Meow".getBytes()), true);
+                                dataFrame.stream(receivedFrame.stream());
+                                ctx.writeAndFlush(dataFrame);
+                            }
+                        });
+                    }
+                });
             } else if (msg instanceof Http2PriorityFrame) {
                 Http2PriorityFrame priorityFrame = (Http2PriorityFrame) msg;
                 String content = contentMap.get(priorityFrame.stream().id());
