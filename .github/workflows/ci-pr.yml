@@ -65,7 +65,7 @@ jobs:
             ${{ runner.os }}-pr-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.8
+      - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
         with:
           key: build-${{ matrix.setup }}-docker-cache-{hash}
