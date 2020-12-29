@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import org.junit.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
@@ -26,17 +27,20 @@ public class PoolSubpageReleaseTest {
     public PoolSubpageReleaseTest() {
     }
 
-    public static void main(String[] args) throws Exception {
-        // int elemSize = 1234;
-        // int elemSize = 4096;
+    @Test
+    public void testAbnormalPoolSubpageRelease() {
         int elemSize = 8192;
-        // int elemSize = 5000;
-        // int elemSize = 10000;
-        // int elemSize = 28672;
         run(elemSize);
     }
 
-    private static void run(int elemSize) {
+    @Test
+    public void testNormalPoolSubpageRelease() {
+        // 0 < eleSize <= 28672, != 8192
+        int elemSize = 1234;
+        run(elemSize);
+    }
+
+    private void run(int elemSize) {
         int oneLength = 128, fixLength = 256;
         ByteBuf[] ones = new ByteBuf[oneLength];
         ByteBuf[] fixByteBuf = new ByteBuf[fixLength];
