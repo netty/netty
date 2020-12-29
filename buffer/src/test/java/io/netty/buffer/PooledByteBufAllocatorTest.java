@@ -661,4 +661,62 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertEquals(3, allocator.metric().directArenas().get(0).numNormalAllocations());
         buffer.release();
     }
+
+    @Test
+    public void testAbnormalPoolSubpageRelease() {
+        // 7168 <= eleSize <= 8192
+        int elemSize = 8192;
+        run(elemSize, false);
+    }
+
+    @Test
+    public void testNormalPoolSubpageRelease() {
+        // 0 < eleSize <= 7168 and 8192 < elemSize <= 28672
+        int elemSize = 8193;
+        run(elemSize, false);
+    }
+
+    private void run(int elemSize, boolean preferDirect) {
+        int oneLength = 128, fixedLength = 256;
+        ByteBuf[] ones = new ByteBuf[oneLength];
+        ByteBuf[] fixedByteBuf = new ByteBuf[fixedLength];
+        PooledByteBufAllocator allocator = newAllocator(preferDirect);
+
+        //allocate
+        for (int i = 0; i < fixedLength; i++) {
+            fixedByteBuf[i] = allocator.buffer(elemSize, elemSize);
+        }
+        PoolSubpage[] subpages = ((PooledUnsafeHeapByteBuf) fixedByteBuf[0]).chunk.subpages;
+
+        // fixSubpagesCount ==  when ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
+        // the chunk.poolSubpages.size
+        int fixedSubpagesCount = countSubpages(subpages);
+
+        for (int i = 0; i < oneLength; i++) {
+            ones[i] = allocator.buffer(elemSize, elemSize);
+        }
+
+        //first release the 'fixByteBuf', in oder to filled of PoolThreadCache.MemoryRegionCache.queue
+        // ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
+        for (int i = 0; i < fixedLength; i++) {
+            fixedByteBuf[i].release();
+        }
+        // release the 'ones'
+        for (int i = 0; i < oneLength; i++) {
+            ones[i].release();
+        }
+        // after release all but in PoolThreadCache.MemoryRegionCache.queue
+        // chunk.poolSubpages.size == fixSubpagesCount + 1
+        assertEquals(countSubpages(subpages), fixedSubpagesCount + 1);
+    }
+
+    private static int countSubpages(PoolSubpage<Object>[] subpages) {
+        int num = 0;
+        for (final PoolSubpage<Object> subpage : subpages) {
+            if (null != subpage) {
+                num++;
+            }
+        }
+        return num;
+    }
 }

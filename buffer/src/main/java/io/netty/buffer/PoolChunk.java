@@ -158,7 +158,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * manage all subpages in this chunk
      */
-    private final PoolSubpage<T>[] subpages;
+    final PoolSubpage<T>[] subpages;
 
     private final int pageSize;
     private final int pageShifts;
