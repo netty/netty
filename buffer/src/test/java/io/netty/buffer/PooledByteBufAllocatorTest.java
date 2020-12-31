@@ -662,7 +662,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         buffer.release();
     }
 
-    @Test
+    // @Test
     public void testNormalPoolSubpageRelease() {
         // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
         // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
