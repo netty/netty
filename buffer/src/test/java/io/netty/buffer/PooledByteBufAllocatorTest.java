@@ -703,6 +703,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         // chunk.poolSubpages.size == fixSubpagesCount + 1
         assertEquals(countSubpages(subpages), fixedSubpagesCount + 1);
         allocator.trimCurrentThreadCache();
+        subpages[1] = null;
     }
 
     private static int countSubpages(PoolSubpage<Object>[] subpages) {
