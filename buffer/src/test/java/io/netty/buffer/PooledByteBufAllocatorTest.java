@@ -682,6 +682,9 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
 
         if (!PooledByteBuf.class.isAssignableFrom(fixedByteBuf[0].getClass())) {
+            for (int i = 0; i < fixedLength; i++) {
+                fixedByteBuf[i].release();
+            }
             return;
         }
         PoolSubpage[] subpages = ((PooledByteBuf) fixedByteBuf[0]).chunk.subpages;
