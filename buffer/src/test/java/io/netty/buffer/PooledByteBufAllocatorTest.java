@@ -663,21 +663,15 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    public void testAbnormalPoolSubpageRelease() {
-        // 7168 <= eleSize <= 8192
-        int elemSize = 7165;
-        run(elemSize, false);
-    }
-
-    @Test
     public void testNormalPoolSubpageRelease() {
-        // 0 < eleSize <= 7168 and 8192 < elemSize <= 28672
-        int elemSize = 1024;
+        // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
+        // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
+        int elemSize = 31;
         run(elemSize, false);
     }
 
     private void run(int elemSize, boolean preferDirect) {
-        int oneLength = 64, fixedLength = 256;
+        int oneLength = 16, fixedLength = 256;
         ByteBuf[] ones = new ByteBuf[oneLength];
         ByteBuf[] fixedByteBuf = new ByteBuf[fixedLength];
         PooledByteBufAllocator allocator = newAllocator(preferDirect);
