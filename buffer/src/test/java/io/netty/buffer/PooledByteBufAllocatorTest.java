@@ -665,7 +665,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @Test
     public void testAbnormalPoolSubpageRelease() {
         // 7168 <= eleSize <= 8192
-        int elemSize = 8192;
+        int elemSize = 7165;
         run(elemSize, false);
     }
 

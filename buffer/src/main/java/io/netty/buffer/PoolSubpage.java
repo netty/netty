@@ -16,10 +16,10 @@
 
 package io.netty.buffer;
 
+import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
+import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
 import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
 import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
-import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
-import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
 import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
 
 final class PoolSubpage<T> implements PoolSubpageMetric {
@@ -115,9 +115,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
         if (numAvail ++ == 0) {
             addToPool(head);
-            if (maxNumElems > 1) {
-                return true;
-            }
+            return true;
         }
 
         if (numAvail != maxNumElems) {
