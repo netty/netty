@@ -57,6 +57,6 @@
   <suppress message="http://maven.apache.org/POM/4.0.0" checks="NoHttp"/>
 
   <!-- These files are generated during the build and not under git -->
-  <suppress files="testsuite-shading/dependency-reduced-pom.xml" checks="NoHttp"/>
-  <suppress files="common/dependency-reduced-pom.xml" checks="NoHttp"/>
+  <suppress files="testsuite-shading[/\\]dependency-reduced-pom\.xml" checks="NoHttp"/>
+  <suppress files="common[/\\]dependency-reduced-pom\.xml" checks="NoHttp"/>
 </suppressions>
