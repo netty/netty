@@ -532,6 +532,13 @@ final class UnsafeByteBufUtil {
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, byte[] src, int srcIndex, int length) {
         buf.checkIndex(index, length);
+        // we need to check not null for src as it may cause the JVM crash
+        // See https://github.com/netty/netty/issues/10791
+        checkNotNull(src, "src");
+        if (isOutOfBounds(srcIndex, length, src.length)) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
         if (length != 0) {
             PlatformDependent.copyMemory(src, srcIndex, addr, length);
         }

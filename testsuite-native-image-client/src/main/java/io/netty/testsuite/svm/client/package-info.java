@@ -15,6 +15,6 @@
  */
 
 /**
- * A hello world server that should be compiled to native.
+ * A client that uses netty-dns and gets compiled to a native image.
  */
 package io.netty.testsuite.svm.client;

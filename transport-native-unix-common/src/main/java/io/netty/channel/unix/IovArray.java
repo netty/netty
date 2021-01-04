@@ -62,10 +62,11 @@ public final class IovArray implements MessageProcessor {
      */
     private static final int MAX_CAPACITY = IOV_MAX * IOV_SIZE;
 
+    private final long memoryAddress;
     private final ByteBuf memory;
     private int count;
     private long size;
-    private long maxBytes = SSIZE_MAX;
+    private long maxBytes;
 
     public IovArray() {
         this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)).setIndex(0, 0));
@@ -73,10 +74,18 @@ public final class IovArray implements MessageProcessor {
 
     @SuppressWarnings("deprecation")
     public IovArray(ByteBuf memory) {
+        Unix.ensureAvailability();
         assert memory.writerIndex() == 0;
         assert memory.readerIndex() == 0;
         this.memory = PlatformDependent.hasUnsafe() ? memory : memory.order(
                 PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        if (memory.hasMemoryAddress()) {
+            memoryAddress = memory.memoryAddress();
+        } else {
+            // Fallback to using JNI as we were not be able to access the address otherwise.
+            memoryAddress = Buffer.memoryAddress(memory.internalNioBuffer(0, memory.capacity()));
+        }
+        maxBytes = SSIZE_MAX;
     }
 
     public void clear() {
@@ -97,7 +106,6 @@ public final class IovArray implements MessageProcessor {
             // No more room!
             return false;
         }
-        long memoryAddress = memory.memoryAddress();
         if (buf.nioBufferCount() == 1) {
             if (len == 0) {
                 return true;
@@ -206,7 +214,7 @@ public final class IovArray implements MessageProcessor {
      * Returns the {@code memoryAddress} for the given {@code offset}.
      */
     public long memoryAddress(int offset) {
-        return memory.memoryAddress() + idx(offset);
+        return memoryAddress + idx(offset);
     }
 
     /**

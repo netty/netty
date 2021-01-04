@@ -1,0 +1,89 @@
+name: Build PR
+
+on:
+  pull_request:
+    branches: [ "4.1"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+    # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: verify-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
+
+      - name: Verify with Maven
+        run: mvn verify -B --file pom.xml -DskipTests=true
+
+  build-pr:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java8
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak"
+          - setup: linux-x86_64-java11
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak"
+          - setup: linux-x86_64-java15
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.115.yaml run build-leak"
+          - setup: linux-x86_64-java11-boringssl
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
+
+    name: ${{ matrix.setup }}
+    needs: verify
+    steps:
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: build-${{ matrix.setup }}-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: build-${{ matrix.setup }}-docker-cache-{hash}
+          restore-keys: |
+            build-${{ matrix.setup }}-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose ${{ matrix.docker-compose-build }}
+
+      - name: Build project with leak detection
+        run: docker-compose ${{ matrix.docker-compose-run }} | tee build-leak.output
+
+      - name: Checking for detected leak
+        run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: build-${{ matrix.setup }}-target
+          path: "**/target/"
+

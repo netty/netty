@@ -26,12 +26,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.Assert.assertEquals;
@@ -509,5 +511,31 @@ public class ByteToMessageDecoderTest {
         assertFalse(buffer5.isReadable());
         assertTrue(buffer5.release());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testDecodeLast() {
+        final AtomicBoolean removeHandler = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                if (removeHandler.get()) {
+                    ctx.pipeline().remove(this);
+                }
+            }
+        });
+        byte[] bytes = new byte[1024];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+        assertFalse(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
+        assertNull(channel.readInbound());
+        removeHandler.set(true);
+        // This should trigger channelInputClosed(...)
+        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+
+        assertTrue(channel.finish());
+        assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
+        assertNull(channel.readInbound());
     }
 }

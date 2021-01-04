@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.55.Final-SNAPSHOT</version>
+    <version>4.1.57.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-unix-common</artifactId>
 
@@ -37,40 +37,44 @@
     <exe.archiver>ar</exe.archiver>
     <nativeLibName>libnetty-unix-common</nativeLibName>
     <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
-    <jniUtilCheckoutDir>${project.build.directory}/netty-jni-util</jniUtilCheckoutDir>
-    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/src/c</jniUtilIncludeDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
     <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
     <nativeJarFile>${project.build.directory}/${project.build.finalName}-${jni.classifier}.jar</nativeJarFile>
+    <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
+    <cflags>-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${project.basedir}/src/main/c</cflags>
+    <ldflags>-Wl,--no-as-needed -lrt</ldflags>
+    <nativeLibArch>${os.detected.arch}</nativeLibArch>
+    <build.native>false</build.native>
   </properties>
 
   <build>
     <plugins>
-      <!-- Download the netty-jni-util source -->
       <plugin>
-        <artifactId>maven-scm-plugin</artifactId>
-        <version>1.11.2</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
+          <!-- unpack netty-jni-util files -->
           <execution>
-            <id>get-netty-jni-util</id>
+            <id>unpack</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>checkout</goal>
+              <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <checkoutDirectory>${jniUtilCheckoutDir}</checkoutDirectory>
-              <connectionType>developerConnection</connectionType>
-              <developerConnectionUrl>scm:git:https://github.com/netty/netty-jni-util.git</developerConnectionUrl>
-              <scmVersion>0.0.1</scmVersion>
-              <scmVersionType>tag</scmVersionType>
-              <skipCheckoutIfExists>true</skipCheckoutIfExists>
+              <includeGroupIds>io.netty</includeGroupIds>
+              <includeArtifactIds>netty-jni-util</includeArtifactIds>
+              <classifier>sources</classifier>
+              <outputDirectory>${jniUtilIncludeDir}</outputDirectory>
+              <includes>**.h,**.c</includes>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
 
       <!-- Also include c files in source jar -->
       <plugin>
@@ -102,73 +106,10 @@
         </os>
       </activation>
       <properties>
+        <build.native>true</build.native>
         <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <!-- Build the additional JAR that contains the native library. -->
-              <execution>
-                <id>native-jar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <copy todir="${nativeJarWorkdir}">
-                      <zipfileset src="${defaultJarFile}" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeLibOnlyDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${jniUtilIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
-                  </target>
-                </configuration>
-              </execution>
-              <!-- invoke the make file to build a static library -->
-              <execution>
-                <id>build-native-lib</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}" />
-                      <env key="AR" value="${exe.archiver}" />
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
-                      <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
-                      <env key="LIB_NAME" value="${nativeLibName}" />
-                      <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
-                           explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
-                           methods which are not expected to be present on MacOS (e.g. accept4). -->
-                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2" />
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>linux</id>
@@ -180,135 +121,17 @@
       <properties>
         <jni.platform>linux</jni.platform>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <!-- Build the additional JAR that contains the native library. -->
-              <execution>
-                <id>native-jar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <copy todir="${nativeJarWorkdir}">
-                      <zipfileset src="${defaultJarFile}" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeLibOnlyDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${jniUtilIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
-                  </target>
-                </configuration>
-              </execution>
-              <!-- invoke the make file to build a static library -->
-              <execution>
-                <id>build-native-lib</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}" />
-                      <env key="AR" value="${exe.archiver}" />
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
-                      <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
-                      <env key="LIB_NAME" value="${nativeLibName}" />
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>linux-aarch64</id>
       <properties>
-        <jni.classifier>${os.detected.name}-aarch64</jni.classifier>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <nativeLibArch>aarch_64</nativeLibArch>
+        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
         <jni.platform>linux</jni.platform>
         <exe.compiler>aarch64-linux-gnu-gcc</exe.compiler>
         <exe.archiver>aarch64-linux-gnu-ar</exe.archiver>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <!-- Build the additional JAR that contains the native library. -->
-              <execution>
-                <id>native-jar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <copy todir="${nativeJarWorkdir}">
-                      <zipfileset src="${defaultJarFile}" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeLibOnlyDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${jniUtilIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
-                  </target>
-                </configuration>
-              </execution>
-              <!-- invoke the make file to build a static library -->
-              <execution>
-                <id>build-native-lib</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}" />
-                      <env key="AR" value="${exe.archiver}" />
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
-                      <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
-                      <env key="LIB_NAME" value="${nativeLibName}" />
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>freebsd</id>
@@ -323,66 +146,6 @@
         <exe.make>gmake</exe.make>
         <jni.platform>freebsd</jni.platform>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <!-- Build the additional JAR that contains the native library. -->
-              <execution>
-                <id>native-jar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <copy todir="${nativeJarWorkdir}">
-                      <zipfileset src="${defaultJarFile}" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeLibOnlyDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                      <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                    </copy>
-                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
-                  </target>
-                </configuration>
-              </execution>
-              <!-- invoke the make file to build a static library -->
-              <execution>
-                <id>build-native-lib</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}" />
-                      <env key="AR" value="${exe.archiver}" />
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
-                      <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
-                      <env key="LIB_NAME" value="${nativeLibName}" />
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>openbsd</id>
@@ -397,6 +160,15 @@
         <exe.make>gmake</exe.make>
         <jni.platform>openbsd</jni.platform>
       </properties>
+    </profile>
+
+    <profile>
+      <id>build.native</id>
+      <activation>
+        <os>
+          <family>!windows</family>
+        </os>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -420,7 +192,8 @@
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
-                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                      <!-- Only one level as we don't want to include the internal headers-->
+                      <regexpmapper handledirsep="yes" from="^([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${jniUtilIncludeDir}" />
@@ -446,21 +219,81 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="CFLAGS" value="${cflags}" />
+                      <env key="LDFLAGS" value="${ldflags}" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
+                      <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
+                           explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
+                           methods which are not expected to be present on MacOS (e.g. accept4). -->
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2" />
                     </exec>
+                  </target>
+                </configuration>
+              </execution>
+
+              <execution>
+                <id>copy-src</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <!-- Copy all of the c code -->
+                    <delete dir="${generatedSourcesDir}" quiet="true" />
+                    <copy todir="${generatedSourcesDir}/c" verbose="true">
+                      <fileset dir="${project.basedir}/src/main/c" />
+                    </copy>
+
+                    <copy todir="${generatedSourcesDir}/c" verbose="true">
+                      <fileset dir="${jniUtilIncludeDir}" />
+                    </copy>
                   </target>
                 </configuration>
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <groupId>org.fusesource.hawtjni</groupId>
+            <artifactId>maven-hawtjni-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build-native-lib</id>
+                <configuration>
+                  <name>netty_transport_native_unix_${os.detected.name}_${nativeLibArch}</name>
+                  <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
+                  <libDirectory>${project.build.outputDirectory}</libDirectory>
+                  <!-- We use Maven's artifact classifier instead.
+                       This hack will make the hawtjni plugin to put the native library
+                       under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
+                  <platform>.</platform>
+                  <forceConfigure>true</forceConfigure>
+                  <forceAutogen>true</forceAutogen>
+                  <configureArgs>
+                    <arg>MACOSX_DEPLOYMENT_TARGET=10.2</arg>
+                    <arg>CFLAGS=${cflags}</arg>
+                  </configureArgs>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
         </plugins>
       </build>
     </profile>
   </profiles>
 
   <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-jni-util</artifactId>
+      <classifier>sources</classifier>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>

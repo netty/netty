@@ -56,6 +56,16 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "start"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "stop"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.util.HashedWheelTimer$Worker",
                     "waitForNextTick"
             );
@@ -88,6 +98,10 @@ class Hidden {
                     "takeTask");
 
             builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "addTask");
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
                     "verify");
 
@@ -96,6 +110,10 @@ class Hidden {
             builder.allowBlockingCallsInside(
                     "sun.security.ssl.SSLEngineImpl",
                     "unwrap");
+
+            builder.allowBlockingCallsInside(
+                    "sun.security.ssl.SSLEngineImpl",
+                    "wrap");
 
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override

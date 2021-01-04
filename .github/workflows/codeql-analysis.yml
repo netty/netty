@@ -7,10 +7,10 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [4.1, master]
+    branches: ["4.1", master]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [4.1, master]
+    branches: ["4.1", master]
   schedule:
     - cron: '0 13 * * 3'
 
@@ -35,6 +35,17 @@ jobs:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
+
+    # Cache .m2/repository
+    - uses: actions/cache@v2
+      env:
+        cache-name: verify-cache-m2-repository
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-pr-${{ env.cache-name }}-
+          ${{ runner.os }}-pr-
 
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.
