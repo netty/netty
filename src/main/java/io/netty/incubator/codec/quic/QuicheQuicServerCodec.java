@@ -79,8 +79,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
         super.handlerRemoved(ctx);
-        connIdBuffer.release();
-        mintTokenBuffer.release();
+        if (connIdBuffer != null) {
+            connIdBuffer.release();
+        }
+        if (mintTokenBuffer != null) {
+            mintTokenBuffer.release();
+        }
     }
 
     @Override

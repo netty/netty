@@ -91,7 +91,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
         needsFireChannelReadComplete.clear();
 
-        Quiche.quiche_config_free(nativeConfig);
+        if (nativeConfig != 0) {
+            Quiche.quiche_config_free(nativeConfig);
+        }
         if (headerParser != null) {
             headerParser.close();
             headerParser = null;
