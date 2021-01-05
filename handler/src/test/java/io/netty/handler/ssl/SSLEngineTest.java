@@ -485,6 +485,41 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testSetSupportedCiphers() throws Exception {
+        if (protocolCipherCombo != ProtocolCipherCombo.tlsv12()) {
+            return;
+        }
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        serverSslCtx = wrapContext(SslContextBuilder.forServer(cert.key(), cert.cert())
+            .protocols(protocols())
+            .ciphers(ciphers())
+            .sslProvider(sslServerProvider()).build());
+        final SSLEngine serverEngine =
+            wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        clientSslCtx = wrapContext(SslContextBuilder.forClient()
+            .trustManager(cert.certificate())
+            .protocols(protocols())
+            .ciphers(ciphers())
+            .sslProvider(sslClientProvider()).build());
+        final SSLEngine clientEngine =
+            wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        final String[] enabledCiphers = new String[]{ ciphers().get(0) };
+
+        try {
+            clientEngine.setEnabledCipherSuites(enabledCiphers);
+            serverEngine.setEnabledCipherSuites(enabledCiphers);
+
+            assertArrayEquals(enabledCiphers, clientEngine.getEnabledCipherSuites());
+            assertArrayEquals(enabledCiphers, serverEngine.getEnabledCipherSuites());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            cert.delete();
+        }
+    }
+
+    @Test
     public void testMutualAuthDiffCerts() throws Exception {
         File serverKeyFile =  ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
         File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");

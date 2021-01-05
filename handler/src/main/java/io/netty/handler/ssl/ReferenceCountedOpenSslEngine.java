@@ -1496,14 +1496,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final String[] getEnabledCipherSuites() {
         final String[] extraCiphers;
         final String[] enabled;
+        final boolean tls13Enabled;
         synchronized (this) {
             if (!isDestroyed()) {
                 enabled = SSL.getCiphers(ssl);
                 int opts = SSL.getOptions(ssl);
                 if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_3, PROTOCOL_TLS_V1_3)) {
                     extraCiphers = OpenSsl.EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
+                    tls13Enabled = true;
                 } else {
                     extraCiphers = EmptyArrays.EMPTY_STRINGS;
+                    tls13Enabled = false;
                 }
             } else {
                 return EmptyArrays.EMPTY_STRINGS;
@@ -1517,7 +1520,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 for (int i = 0; i < enabled.length; i++) {
                     String mapped = toJavaCipherSuite(enabled[i]);
                     final String cipher = mapped == null ? enabled[i] : mapped;
-                    if (!OpenSsl.isTlsv13Supported() && SslUtils.isTLSv13Cipher(cipher)) {
+                    if ((!tls13Enabled || !OpenSsl.isTlsv13Supported()) && SslUtils.isTLSv13Cipher(cipher)) {
                         continue;
                     }
                     enabledSet.add(cipher);
