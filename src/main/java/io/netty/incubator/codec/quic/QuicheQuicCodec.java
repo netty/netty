@@ -82,21 +82,23 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
-        // Use a copy of the array as closing the channel may cause an unwritable event that could also
-        // remove channels.
-        for (QuicheQuicChannel ch:  connections.values().toArray(new QuicheQuicChannel[0])) {
-            ch.forceClose();
-        }
-        connections.clear();
+        try {
+            // Use a copy of the array as closing the channel may cause an unwritable event that could also
+            // remove channels.
+            for (QuicheQuicChannel ch : connections.values().toArray(new QuicheQuicChannel[0])) {
+                ch.forceClose();
+            }
+            connections.clear();
 
-        needsFireChannelReadComplete.clear();
-
-        if (nativeConfig != 0) {
-            Quiche.quiche_config_free(nativeConfig);
-        }
-        if (headerParser != null) {
-            headerParser.close();
-            headerParser = null;
+            needsFireChannelReadComplete.clear();
+        } finally {
+            if (nativeConfig != 0) {
+                Quiche.quiche_config_free(nativeConfig);
+            }
+            if (headerParser != null) {
+                headerParser.close();
+                headerParser = null;
+            }
         }
     }
 

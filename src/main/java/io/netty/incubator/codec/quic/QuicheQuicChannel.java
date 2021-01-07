@@ -561,7 +561,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private void closeStreams() {
-        for (QuicheQuicStreamChannel stream: streams.values()) {
+        // Make a copy to ensure we not run into a situation when we change the underlying iterator from
+        // another method and so run in an assert error.
+        for (QuicheQuicStreamChannel stream: streams.values().toArray(new QuicheQuicStreamChannel[0])) {
             stream.unsafe().close(voidPromise());
         }
         streams.clear();
