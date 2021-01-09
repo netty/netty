@@ -606,7 +606,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setFailure0(Throwable cause) {
-        if (listeners == null) {
+        if (listeners == null && waiters == 0) {
             logger.error("cause:", cause);
         }
         return setValue0(new CauseHolder(checkNotNull(cause, "cause")));
