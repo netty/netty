@@ -412,7 +412,13 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final ChannelHandler build() {
         validate();
-        return build(createConfig(), localConnIdLength);
+        QuicheConfig config = createConfig();
+        try {
+            return build(config, localConnIdLength);
+        } catch (Throwable cause) {
+            config.free();
+            throw cause;
+        }
     }
 
     /**

@@ -170,10 +170,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                     dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
             connIdBuffer.writeBytes(key.duplicate());
             conn = Quiche.quiche_accept_no_token(
-                    Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex(), localConnIdLength, nativeConfig);
+                    Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex(), localConnIdLength,
+                    config.nativeAddress());
         } else {
             conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength,
-                    Quiche.memoryAddress(token) + offset, token.readableBytes() - offset, nativeConfig);
+                    Quiche.memoryAddress(token) + offset, token.readableBytes() - offset,
+                    config.nativeAddress());
 
             // Now create the key to store the channel in the map.
             byte[] bytes = new byte[localConnIdLength];

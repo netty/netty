@@ -47,7 +47,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     protected final QuicheConfig config;
     protected final int localConnIdLength;
-    protected long nativeConfig;
 
     QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength) {
         this.config = config;
@@ -77,7 +76,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 }
             }
         };
-        nativeConfig = config.createNativeConfig();
     }
 
     @Override
@@ -92,9 +90,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
             needsFireChannelReadComplete.clear();
         } finally {
-            if (nativeConfig != 0) {
-                Quiche.quiche_config_free(nativeConfig);
-            }
+            config.free();
             if (headerParser != null) {
                 headerParser.close();
                 headerParser = null;

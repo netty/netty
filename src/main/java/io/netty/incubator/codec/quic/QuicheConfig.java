@@ -16,27 +16,8 @@
 package io.netty.incubator.codec.quic;
 
 final class QuicheConfig {
-    private final String certPath;
-    private final String keyPath;
-    private final Boolean verifyPeer;
-    private final Boolean grease;
-    private final  boolean earlyData;
-    private final byte[] protos;
-    private final Long maxIdleTimeout;
-    private final Long maxUdpPayloadSize;
-    private final Long initialMaxData;
-    private final Long initialMaxStreamDataBidiLocal;
-    private final Long initialMaxStreamDataBidiRemote;
-    private final Long initialMaxStreamDataUni;
-    private final Long initialMaxStreamsBidi;
-    private final Long initialMaxStreamsUni;
-    private final Long ackDelayExponent;
-    private final Long maxAckDelay;
-    private final Boolean disableActiveMigration;
-    private final Boolean enableHystart;
-    private final QuicCongestionControlAlgorithm congestionControlAlgorithm;
-    private final Integer recvQueueLen;
-    private final Integer sendQueueLen;
+    private final boolean isDatagramSupported;
+    private final long config;
 
     QuicheConfig(String certPath, String keyPath, Boolean verifyPeer, Boolean grease, boolean earlyData,
                         byte[] protos, Long maxIdleTimeout, Long maxUdpPayloadSize, Long initialMaxData,
@@ -45,37 +26,7 @@ final class QuicheConfig {
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
                         QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  Integer recvQueueLen, Integer sendQueueLen) {
-        this.certPath = certPath;
-        this.keyPath = keyPath;
-        this.verifyPeer = verifyPeer;
-        this.grease = grease;
-        this.earlyData = earlyData;
-        this.protos = protos;
-        this.maxIdleTimeout = maxIdleTimeout;
-        this.maxUdpPayloadSize = maxUdpPayloadSize;
-        this.initialMaxData = initialMaxData;
-        this.initialMaxStreamDataBidiLocal = initialMaxStreamDataBidiLocal;
-        this.initialMaxStreamDataBidiRemote = initialMaxStreamDataBidiRemote;
-        this.initialMaxStreamDataUni = initialMaxStreamDataUni;
-        this.initialMaxStreamsBidi = initialMaxStreamsBidi;
-        this.initialMaxStreamsUni = initialMaxStreamsUni;
-        this.ackDelayExponent = ackDelayExponent;
-        this.maxAckDelay = maxAckDelay;
-        this.disableActiveMigration = disableActiveMigration;
-        this.enableHystart = enableHystart;
-        this.congestionControlAlgorithm = congestionControlAlgorithm;
-        this.recvQueueLen = recvQueueLen;
-        this.sendQueueLen = sendQueueLen;
-    }
 
-    boolean isDatagramSupported() {
-        return recvQueueLen != null && sendQueueLen != null;
-    }
-
-    /**
-     * Creates the native config object and return it.
-     */
-    long createNativeConfig() {
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
             if (certPath != null && Quiche.quiche_config_load_cert_chain_from_pem_file(config, certPath) != 0) {
@@ -145,13 +96,30 @@ final class QuicheConfig {
                                 "Unknown congestionControlAlgorithm: " + congestionControlAlgorithm);
                 }
             }
-            if (isDatagramSupported()) {
+            if (recvQueueLen != null && sendQueueLen != null) {
+                isDatagramSupported = true;
                 Quiche.quiche_config_enable_dgram(config, true, recvQueueLen, sendQueueLen);
+            } else {
+                isDatagramSupported = false;
             }
-            return config;
+            this.config = config;
         } catch (Throwable cause) {
             Quiche.quiche_config_free(config);
             throw cause;
+        }
+    }
+
+    boolean isDatagramSupported() {
+        return isDatagramSupported;
+    }
+
+    long nativeAddress() {
+        return config;
+    }
+
+    void free() {
+        if (config != 0) {
+            Quiche.quiche_config_free(config);
         }
     }
 }

@@ -218,13 +218,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testConnectWithoutBogusCertificate() throws Throwable {
-        Channel server = QuicTestUtils.newServer(
+        QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().certificateChain("cert-does-not-exist.pem"),
                 InsecureQuicTokenHandler.INSTANCE,
                 new ChannelInboundHandlerAdapter(), new ChannelInboundHandlerAdapter());
-        assertNull(server.pipeline().get(QuicheQuicCodec.class));
     }
 
     private static final class BytesCountingHandler extends ChannelInboundHandlerAdapter {
