@@ -632,8 +632,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @SuppressWarnings("unchecked")
-    private static PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
-        return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
+    private static <T> PooledByteBuf<T> unwrapIfNeeded(ByteBuf buf) {
+        return (PooledByteBuf<T>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
     }
 
     @Test
@@ -667,27 +667,17 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
         // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
         int elemSize = 32;
-        run(elemSize, false);
-    }
-
-    private void run(int elemSize, boolean preferDirect) {
-        int oneLength = 16, fixedLength = 256;
+        int oneLength = 16;
+        int fixedLength = 256;
         ByteBuf[] ones = new ByteBuf[oneLength];
         ByteBuf[] fixedByteBuf = new ByteBuf[fixedLength];
-        PooledByteBufAllocator allocator = newAllocator(preferDirect);
+        final PooledByteBufAllocator allocator = newAllocator(false);
 
-        //allocate
         for (int i = 0; i < fixedLength; i++) {
             fixedByteBuf[i] = allocator.heapBuffer(elemSize, elemSize);
         }
 
-        if (!PooledByteBuf.class.isAssignableFrom(fixedByteBuf[0].getClass())) {
-            for (int i = 0; i < fixedLength; i++) {
-                fixedByteBuf[i].release();
-            }
-            return;
-        }
-        PoolSubpage[] subpages = ((PooledByteBuf) fixedByteBuf[0]).chunk.subpages;
+        PoolSubpage<?>[] subpages = unwrapIfNeeded(fixedByteBuf[0]).chunk.subpages;
 
         // fixSubpagesCount ==  when ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
         // the chunk.poolSubpages.size
@@ -697,7 +687,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             ones[i] = allocator.heapBuffer(elemSize, elemSize);
         }
 
-        //first release the 'fixByteBuf', in oder to filled of PoolThreadCache.MemoryRegionCache.queue
+        // first release the 'fixedByteBuf', in oder to filled of PoolThreadCache.MemoryRegionCache.queue
         // ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
         for (int i = 0; i < fixedLength; i++) {
             fixedByteBuf[i].release();
@@ -711,10 +701,10 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertEquals(countSubpages(subpages), fixedSubpagesCount + 1);
     }
 
-    private static int countSubpages(PoolSubpage<Object>[] subpages) {
+    private static int countSubpages(PoolSubpage<?>[] subpages) {
         int num = 0;
-        for (final PoolSubpage<Object> subpage : subpages) {
-            if (null != subpage) {
+        for (final PoolSubpage<?> subpage : subpages) {
+            if (subpage != null) {
                 num++;
             }
         }
