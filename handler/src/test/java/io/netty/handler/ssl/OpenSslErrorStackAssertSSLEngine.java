@@ -435,6 +435,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     }
 
     private static void assertErrorStackEmpty() {
-        Assert.assertEquals("SSL error stack non-empty", 0, SSL.getLastErrorNumber());
+        long error = SSL.getLastErrorNumber();
+        Assert.assertEquals("SSL error stack non-empty: " + SSL.getErrorString(error), 0, error);
     }
 }
