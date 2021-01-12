@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.57.Final-SNAPSHOT</version>
+    <version>4.1.57.Final</version>
   </parent>
 
   <artifactId>netty-codec-http2</artifactId>
