@@ -27,8 +27,6 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#include "internal/netty_unix_filedescriptor_internal.h"
-
 #define FILEDESCRIPTOR_CLASSNAME "io/netty/channel/unix/FileDescriptor"
 
 static jmethodID posId = NULL;
@@ -280,13 +278,11 @@ static const JNINativeMethod method_table[] = {
 static const jint method_table_size = sizeof(method_table) / sizeof(method_table[0]);
 // JNI Method Registration Table End
 
-static jint netty_unix_filedescriptor_JNI_OnLoad0(JNIEnv* env, const char* packagePrefix, int registerNative) {
+jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     void* mem = NULL;
-    if (registerNative) {
-        if (netty_jni_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
-            goto done;
-        }
+    if (netty_jni_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
+        goto done;
     }
     if ((mem = malloc(1)) == NULL) {
         goto done;
@@ -320,24 +316,6 @@ done:
     return ret;
 }
 
-static void netty_unix_filedescriptor_JNI_OnUnLoad0(JNIEnv* env, const char* packagePrefix, int unregisterNative) {
-    if (unregisterNative) {
-        netty_jni_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
-    }
-}
-
-jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_filedescriptor_JNI_OnLoad0(env, packagePrefix, 0);
-}
-
 void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_filedescriptor_JNI_OnUnLoad0(env, packagePrefix, 0);
-}
-
-jint netty_unix_filedescriptor_internal_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_filedescriptor_JNI_OnLoad0(env, packagePrefix, 1);
-}
-
-void netty_unix_filedescriptor_internal_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_filedescriptor_JNI_OnUnLoad0(env, packagePrefix, 1);
+    netty_jni_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
 }
