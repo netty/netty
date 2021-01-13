@@ -30,7 +30,7 @@ public final class UnixTestUtils {
                 if (!file.delete()) {
                     throw new IOException("failed to delete: " + file);
                 }
-            } while (file.getAbsolutePath().length() > Socket.UDS_SUN_PATH_SIZE);
+            } while (file.getAbsolutePath().length() > 128);
             return new DomainSocketAddress(file);
         } catch (IOException e) {
             throw new IllegalStateException(e);
