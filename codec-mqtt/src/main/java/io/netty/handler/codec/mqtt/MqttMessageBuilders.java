@@ -524,7 +524,7 @@ public final class MqttMessageBuilders {
 
     public static final class PubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private byte reasonCode;
         private MqttProperties properties;
 
@@ -536,7 +536,7 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public PubAckBuilder packetId(short packetId) {
+        public PubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
         }
@@ -546,25 +546,25 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public MqttMessage build() {
+        public MqttPubAckMessage build() {
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
             MqttPubReplyMessageVariableHeader mqttPubAckVariableHeader =
                     new MqttPubReplyMessageVariableHeader(packetId, reasonCode, properties);
-            return new MqttMessage(mqttFixedHeader, mqttPubAckVariableHeader);
+            return new MqttPubAckMessage(mqttFixedHeader, mqttPubAckVariableHeader);
         }
     }
 
     public static final class SubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private MqttProperties properties;
         private final List<MqttQoS> grantedQoses = new ArrayList<MqttQoS>();
 
         SubAckBuilder() {
         }
 
-        public SubAckBuilder packetId(short packetId) {
+        public SubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
         }
@@ -604,14 +604,14 @@ public final class MqttMessageBuilders {
 
     public static final class UnsubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private MqttProperties properties;
         private final List<Short> reasonCodes = new ArrayList<Short>();
 
         UnsubAckBuilder() {
         }
 
-        public UnsubAckBuilder packetId(short packetId) {
+        public UnsubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
         }
