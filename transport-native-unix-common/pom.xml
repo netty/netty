@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.58.Final-SNAPSHOT</version>
+    <version>4.1.58.Final</version>
   </parent>
   <artifactId>netty-transport-native-unix-common</artifactId>
 
