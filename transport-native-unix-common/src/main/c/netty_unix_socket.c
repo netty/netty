@@ -32,8 +32,6 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#include "internal/netty_unix_socket_internal.h"
-
 #define SOCKET_CLASSNAME "io/netty/channel/unix/Socket"
 // Define SO_REUSEPORT if not found to fix build issues.
 // See https://github.com/netty/netty/issues/2558
@@ -1055,23 +1053,20 @@ error:
 
 // JNI Method Registration Table End
 
-static jint netty_unix_socket_JNI_OnLoad0(JNIEnv* env, const char* packagePrefix, int registerNative) {
+jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
     void* mem = NULL;
-    JNINativeMethod* dynamicMethods = NULL;
-    if (registerNative) {
-        dynamicMethods = createDynamicMethodsTable(packagePrefix);
-        if (dynamicMethods == NULL) {
-            goto done;
-        }
-        if (netty_jni_util_register_natives(env,
-                packagePrefix,
-                SOCKET_CLASSNAME,
-                dynamicMethods,
-                dynamicMethodsTableSize()) != 0) {
-            goto done;
-        }
+    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        goto done;
+    }
+    if (netty_jni_util_register_natives(env,
+            packagePrefix,
+            SOCKET_CLASSNAME,
+            dynamicMethods,
+            dynamicMethodsTableSize()) != 0) {
+        goto done;
     }
   
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress", nettyClassName, done);
@@ -1100,36 +1095,15 @@ static jint netty_unix_socket_JNI_OnLoad0(JNIEnv* env, const char* packagePrefix
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
-    if (registerNative) {
-        netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
-    }
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
     free(mem);
     return ret;
 }
 
-static void netty_unix_socket_JNI_OnUnLoad0(JNIEnv* env, const char* packagePrefix, int unregisterNative) {
+void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, datagramSocketAddressClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, inetSocketAddressClass);
 
-    if (unregisterNative) {
-        netty_jni_util_unregister_natives(env, packagePrefix, SOCKET_CLASSNAME);
-    }
-}
-
-jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_socket_JNI_OnLoad0(env, packagePrefix, 0);
-}
-
-void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    netty_unix_socket_JNI_OnUnLoad0(env, packagePrefix, 0);
-}
-
-
-jint netty_unix_socket_internal_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    return netty_unix_socket_JNI_OnLoad0(env, packagePrefix, 1);
-}
-
-void netty_unix_socket_internal_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    netty_unix_socket_JNI_OnUnLoad0(env, packagePrefix, 1);
+    netty_jni_util_unregister_natives(env, packagePrefix, SOCKET_CLASSNAME);
 }

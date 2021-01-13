@@ -15,23 +15,14 @@
  */
 package io.netty.channel.unix;
 
-import io.netty.util.internal.NativeLibraryLoader;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
 import java.io.IOException;
 import java.nio.channels.Selector;
-import java.util.Locale;
 
 /**
  * Tells if <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-unix}</a> is
  * supported.
  */
 public final class Unix {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Unix.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
@@ -51,9 +42,6 @@ public final class Unix {
                 // First, try calling a side-effect free JNI method to see if the library was already
                 // loaded by the application.
                 LimitsStaticallyReferencedJniMethods.udsSunPathSize();
-            } catch (UnsatisfiedLinkError ignore) {
-                // The library was not previously loaded, load it now.
-                loadNativeLibrary();
             } finally {
                 try {
                     if (selector != null) {
@@ -63,35 +51,12 @@ public final class Unix {
                     // Just ignore
                 }
             }
-            Socket.initialize();
         } catch (Throwable error) {
             cause = error;
         }
         UNAVAILABILITY_CAUSE = cause;
     }
 
-    private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("linux") && !name.startsWith("osx") && !name.startsWith("mac")
-                && !name.endsWith("bsd")) {
-            throw new IllegalStateException("Only supported on Linux/MacOS/BSD");
-        }
-        String staticLibName = "netty_transport_native_unix";
-        String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedOs() +
-                '_' + PlatformDependent.normalizedArch();
-        ClassLoader cl = PlatformDependent.getClassLoader(Unix.class);
-        try {
-            NativeLibraryLoader.load(sharedLibName, cl);
-        } catch (UnsatisfiedLinkError e1) {
-            try {
-                NativeLibraryLoader.load(staticLibName, cl);
-                logger.debug("Failed to load {}", sharedLibName, e1);
-            } catch (UnsatisfiedLinkError e2) {
-                ThrowableUtil.addSuppressed(e1, e2);
-                throw e1;
-            }
-        }
-    }
     /**
      * Returns {@code true} if and only if the <a href="https://netty.io/wiki/native-transports.html">{@code
      * netty_transport_native_unix}</a> is available.

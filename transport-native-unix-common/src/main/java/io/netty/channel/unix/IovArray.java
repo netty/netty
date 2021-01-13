@@ -66,7 +66,7 @@ public final class IovArray implements MessageProcessor {
     private final ByteBuf memory;
     private int count;
     private long size;
-    private long maxBytes;
+    private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
         this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)).setIndex(0, 0));
@@ -74,7 +74,6 @@ public final class IovArray implements MessageProcessor {
 
     @SuppressWarnings("deprecation")
     public IovArray(ByteBuf memory) {
-        Unix.ensureAvailability();
         assert memory.writerIndex() == 0;
         assert memory.readerIndex() == 0;
         this.memory = PlatformDependent.hasUnsafe() ? memory : memory.order(
@@ -85,7 +84,6 @@ public final class IovArray implements MessageProcessor {
             // Fallback to using JNI as we were not be able to access the address otherwise.
             memoryAddress = Buffer.memoryAddress(memory.internalNioBuffer(0, memory.capacity()));
         }
-        maxBytes = SSIZE_MAX;
     }
 
     public void clear() {

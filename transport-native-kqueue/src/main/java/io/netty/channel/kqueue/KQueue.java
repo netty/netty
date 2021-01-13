@@ -16,7 +16,6 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Unix;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -35,7 +34,6 @@ public final class KQueue {
         } else {
             FileDescriptor kqueueFd = null;
             try {
-                Unix.ensureAvailability();
                 kqueueFd = Native.newKQueue();
             } catch (Throwable t) {
                 cause = t;
