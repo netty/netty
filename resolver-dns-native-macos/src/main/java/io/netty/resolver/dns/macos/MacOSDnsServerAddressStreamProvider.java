@@ -15,7 +15,6 @@
  */
 package io.netty.resolver.dns.macos;
 
-import io.netty.channel.unix.Unix;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
@@ -54,7 +53,6 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     static {
         Throwable cause = null;
         try {
-            Unix.ensureAvailability();
             loadNativeLibrary();
         } catch (Throwable error) {
             cause = error;

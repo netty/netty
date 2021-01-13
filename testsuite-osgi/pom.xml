@@ -241,7 +241,6 @@
               <dependencySet>
                 <scope>test</scope>
               </dependencySet>
-              <separator>${line.separator}</separator>
             </configuration>
           </execution>
         </executions>
