@@ -30,6 +30,7 @@ jobs:
         run: mvn verify -B --file pom.xml -DskipTests=true
 
   build-pr-aarch64:
+    name: linux-aarch64-verify-native
     # The host should always be Linux
     runs-on: ubuntu-20.04
     needs: verify-pr
