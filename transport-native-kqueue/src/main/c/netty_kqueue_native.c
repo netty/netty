@@ -35,6 +35,7 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+#include "netty_unix.h"
 
 // Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
 #ifdef NETTY_BUILD_STATIC
@@ -75,6 +76,8 @@
 #endif /* __APPLE__ */
 
 static clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
+static const char* staticPackagePrefix = NULL;
+static int register_unix_called = 0;
 
 static jint netty_kqueue_native_kqueueCreate(JNIEnv* env, jclass clazz) {
     jint kq = kqueue();
@@ -157,6 +160,11 @@ static jint netty_kqueue_native_keventWait(JNIEnv* env, jclass clazz, jint kqueu
         // When kevent() call fails with EINTR error, all changes in the changelist have been applied.
         changeListLength = 0;
     }
+}
+
+static jint netty_kqueue_native_registerUnix(JNIEnv* env, jclass clazz) {
+    register_unix_called = 1;
+    return netty_unix_register(env, staticPackagePrefix);
 }
 
 static jint netty_kqueue_native_sizeofKEvent(JNIEnv* env, jclass clazz) {
@@ -267,7 +275,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "offsetofKEventFlags", "()I", (void *) netty_kqueue_native_offsetofKEventFlags },
   { "offsetofKEventFFlags", "()I", (void *) netty_kqueue_native_offsetofKEventFFlags },
   { "offsetofKEventFilter", "()I", (void *) netty_kqueue_native_offsetofKEventFilter },
-  { "offsetofKeventData", "()I", (void *) netty_kqueue_native_offsetofKeventData }
+  { "offsetofKeventData", "()I", (void *) netty_kqueue_native_offsetofKeventData },
+  { "registerUnix", "()I", (void *) netty_kqueue_native_registerUnix }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 // JNI Method Registration Table End
@@ -275,11 +284,6 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
-    int limitsOnLoadCalled = 0;
-    int errorsOnLoadCalled = 0;
-    int filedescriptorOnLoadCalled = 0;
-    int socketOnLoadCalled = 0;
-    int bufferOnLoadCalled = 0;
     int bsdsocketOnLoadCalled = 0;
     int eventarrayOnLoadCalled = 0;
 
@@ -298,31 +302,6 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
         goto error;
     }
     nativeRegistered = 1;
-    // Load all c modules that we depend upon
-    if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    limitsOnLoadCalled = 1;
-
-    if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    errorsOnLoadCalled = 1;
-
-    if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    filedescriptorOnLoadCalled = 1;
-
-    if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    socketOnLoadCalled = 1;
-
-    if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    bufferOnLoadCalled = 1;
 
     if (netty_kqueue_bsdsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto error;
@@ -342,6 +321,9 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
         goto error;
     }
 
+    if (packagePrefix != NULL) {
+        staticPackagePrefix = strdup(packagePrefix);
+    }
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
    if (staticallyRegistered == 1) {
@@ -349,21 +331,6 @@ error:
    }
    if (nativeRegistered == 1) {
         netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
-   }
-   if (limitsOnLoadCalled == 1) {
-       netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
-   }
-   if (errorsOnLoadCalled == 1) {
-       netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
-   }
-   if (filedescriptorOnLoadCalled == 1) {
-       netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
-   }
-   if (socketOnLoadCalled == 1) {
-       netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
-   }
-   if (bufferOnLoadCalled == 1) {
-      netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
    }
    if (bsdsocketOnLoadCalled == 1) {
        netty_kqueue_bsdsocket_JNI_OnUnLoad(env, packagePrefix);
@@ -375,13 +342,17 @@ error:
 }
 
 static void netty_kqueue_native_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
     netty_kqueue_bsdsocket_JNI_OnUnLoad(env, packagePrefix);
     netty_kqueue_eventarray_JNI_OnUnLoad(env, packagePrefix);
+
+    if (register_unix_called == 1) {
+        register_unix_called = 0;
+        netty_unix_unregister(env, staticPackagePrefix);
+    }
+    if (staticPackagePrefix != NULL) {
+        free((void *) staticPackagePrefix);
+        staticPackagePrefix = NULL;
+    }
 
     netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
