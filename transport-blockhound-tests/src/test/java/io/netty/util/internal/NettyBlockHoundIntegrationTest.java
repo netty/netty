@@ -333,20 +333,24 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     }
                 };
-        CountDownLatch latch = new CountDownLatch(1);
-        List<DnsServerAddressStreamProvider> result = new ArrayList<>();
-        List<Throwable> error = new ArrayList<>();
-        executor.execute(() -> {
-            try {
-                result.add(DnsServerAddressStreamProviders.unixDefault());
-            } catch (Throwable t) {
-                error.add(t);
-            }
-            latch.countDown();
-        });
-        latch.await();
-        assertEquals(0, error.size());
-        assertEquals(1, result.size());
+        try {
+            CountDownLatch latch = new CountDownLatch(1);
+            List<DnsServerAddressStreamProvider> result = new ArrayList<>();
+            List<Throwable> error = new ArrayList<>();
+            executor.execute(() -> {
+                try {
+                    result.add(DnsServerAddressStreamProviders.unixDefault());
+                } catch (Throwable t) {
+                    error.add(t);
+                }
+                latch.countDown();
+            });
+            latch.await();
+            assertEquals(0, error.size());
+            assertEquals(1, result.size());
+        } finally {
+            executor.shutdownGracefully();
+        }
     }
 
     private static void testTrustManagerVerify(String tlsVersion) throws Exception {
