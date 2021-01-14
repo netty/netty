@@ -540,9 +540,7 @@ static const JNINativeMethod fixed_method_table[] = {
   // "sendmmsg0" has a dynamic signature
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
   { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
-  { "registerUnix", "()I", (void *) netty_epoll_native_registerUnix },
-
->>>>>>> 5b41f3d25b... Ensure native methods for unix-native-common are only registered once. (#10932)
+  { "registerUnix", "()I", (void *) netty_epoll_native_registerUnix }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
