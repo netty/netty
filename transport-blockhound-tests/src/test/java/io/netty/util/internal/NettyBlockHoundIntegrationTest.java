@@ -322,7 +322,7 @@ public class NettyBlockHoundIntegrationTest {
     @Test(timeout = 5000L)
     public void testParseEtcResolverFilesAllowsBlockingCalls() throws InterruptedException {
         SingleThreadEventExecutor executor =
-                new SingleThreadEventExecutor(null, new DefaultThreadFactory("test"), true) {
+                new SingleThreadEventExecutor(new DefaultThreadFactory("test")) {
                     @Override
                     protected void run() {
                         while (!confirmShutdown()) {
