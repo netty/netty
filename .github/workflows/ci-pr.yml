@@ -58,10 +58,11 @@ jobs:
           # a GitHub package registry.
           githubToken: ${{ github.token }}
 
-          # Mount the artifacts directory as /artifacts in the container
+          # Mount the .m2/repository
           dockerRunArgs: |
             --volume "/home/runner/.m2/repository/:/root/.m2/repository"
 
+          # Install dependencies
           install: |
             apt-get update -q -y
             apt-get install -q -y openjdk-11-jdk autoconf automake libtool make tar maven git
