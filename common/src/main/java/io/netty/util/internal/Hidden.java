@@ -109,6 +109,10 @@ class Hidden {
                     "sun.security.ssl.SSLEngineImpl",
                     "wrap");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider",
+                    "parse");
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }
