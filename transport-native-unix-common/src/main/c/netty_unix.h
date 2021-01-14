@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,8 +18,8 @@
 
 #include <jni.h>
 
-// JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
+// JNI initialization hooks.
 jint netty_unix_register(JNIEnv* env, const char* packagePrefix);
 void netty_unix_unregister(JNIEnv* env, const char* packagePrefix);
 
-#endif /* NETTY_UNIX_SOCKET_H_ */
+#endif /* NETTY_UNIX_H_ */
