@@ -15,54 +15,37 @@
  */
 package io.netty.channel.unix;
 
-import java.io.IOException;
-import java.nio.channels.Selector;
+import io.netty.util.internal.UnstableApi;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tells if <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-unix}</a> is
  * supported.
  */
 public final class Unix {
-    private static final Throwable UNAVAILABILITY_CAUSE;
+    private static final AtomicBoolean registered = new AtomicBoolean();
 
-    static {
-        Throwable cause = null;
-        Selector selector = null;
-        try {
-            // We call Selector.open() as this will under the hood cause IOUtil to be loaded.
-            // This is a workaround for a possible classloader deadlock that could happen otherwise:
-            //
-            // See https://github.com/netty/netty/issues/10187
-            selector = Selector.open();
-        } catch (IOException ignore) {
-            // Just ignore
+    /**
+     * Internal method... Should never be called from the user.
+     *
+     * @param registerTask
+     */
+    @UnstableApi
+    public static void registerInternal(Runnable registerTask) {
+        if (registered.compareAndSet(false, true)) {
+            registerTask.run();
+            Socket.initialize();
         }
-        try {
-            try {
-                // First, try calling a side-effect free JNI method to see if the library was already
-                // loaded by the application.
-                LimitsStaticallyReferencedJniMethods.udsSunPathSize();
-            } finally {
-                try {
-                    if (selector != null) {
-                        selector.close();
-                    }
-                } catch (IOException ignore) {
-                    // Just ignore
-                }
-            }
-        } catch (Throwable error) {
-            cause = error;
-        }
-        UNAVAILABILITY_CAUSE = cause;
     }
 
     /**
      * Returns {@code true} if and only if the <a href="https://netty.io/wiki/native-transports.html">{@code
      * netty_transport_native_unix}</a> is available.
      */
+    @Deprecated
     public static boolean isAvailable() {
-        return UNAVAILABILITY_CAUSE == null;
+        return false;
     }
 
     /**
@@ -71,11 +54,9 @@ public final class Unix {
      *
      * @throws UnsatisfiedLinkError if unavailable
      */
+    @Deprecated
     public static void ensureAvailability() {
-        if (UNAVAILABILITY_CAUSE != null) {
-            throw (Error) new UnsatisfiedLinkError(
-                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
-        }
+       throw new UnsupportedOperationException();
     }
 
     /**
@@ -84,8 +65,9 @@ public final class Unix {
      *
      * @return the cause if unavailable. {@code null} if available.
      */
+    @Deprecated
     public static Throwable unavailabilityCause() {
-        return UNAVAILABILITY_CAUSE;
+        return new UnsupportedOperationException();
     }
 
     private Unix() {

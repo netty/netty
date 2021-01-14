@@ -48,6 +48,7 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+#include "netty_unix.h"
 
 // Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
 #ifdef NETTY_BUILD_STATIC
@@ -106,6 +107,9 @@ static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
 static jfieldID packetCountFieldId = NULL;
+
+static const char* staticPackagePrefix = NULL;
+static int register_unix_called = 0;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -523,6 +527,12 @@ static jint netty_epoll_native_tcpMd5SigMaxKeyLen(JNIEnv* env, jclass clazz) {
 
     return TCP_MD5SIG_MAXKEYLEN;
 }
+
+static jint netty_epoll_native_registerUnix(JNIEnv* env, jclass clazz) {
+    register_unix_called = 1;
+    return netty_unix_register(env, staticPackagePrefix);
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -556,7 +566,9 @@ static const JNINativeMethod fixed_method_table[] = {
   // "sendmmsg0" has a dynamic signature
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
   { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
-  { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 }
+  { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 },
+  { "registerUnix", "()I", (void *) netty_epoll_native_registerUnix },
+
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
@@ -601,11 +613,6 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     int ret = JNI_ERR;
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
-    int limitsOnLoadCalled = 0;
-    int errorsOnLoadCalled = 0;
-    int filedescriptorOnLoadCalled = 0;
-    int socketOnLoadCalled = 0;
-    int bufferOnLoadCalled = 0;
     int linuxsocketOnLoadCalled = 0;
     char* nettyClassName = NULL;
     jclass nativeDatagramPacketCls = NULL;
@@ -636,32 +643,6 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     }
     nativeRegistered = 1;
 
-    // Load all c modules that we depend upon
-    if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto done;
-    }
-    limitsOnLoadCalled = 1;
-
-    if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto done;
-    }
-    errorsOnLoadCalled = 1;
-
-    if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto done;
-    }
-    filedescriptorOnLoadCalled = 1;
-
-    if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto done;
-    }
-    socketOnLoadCalled = 1;
-
-    if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto done;
-    }
-    bufferOnLoadCalled = 1;
-
     if (netty_epoll_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
     }
@@ -680,6 +661,10 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetCountFieldId, "count", "I", done);
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
+
+    if (packagePrefix != NULL) {
+        staticPackagePrefix = strdup(packagePrefix);
+    }
 done:
 
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
@@ -691,21 +676,6 @@ done:
         }
         if (nativeRegistered == 1) {
             netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
-        }
-        if (limitsOnLoadCalled == 1) {
-            netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
-        }
-        if (errorsOnLoadCalled == 1) {
-            netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
-        }
-        if (filedescriptorOnLoadCalled == 1) {
-            netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
-        }
-        if (socketOnLoadCalled == 1) {
-            netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
-        }
-        if (bufferOnLoadCalled == 1) {
-            netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
         }
         if (linuxsocketOnLoadCalled == 1) {
             netty_epoll_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
@@ -721,12 +691,16 @@ done:
 }
 
 static void netty_epoll_native_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
-    netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
     netty_epoll_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
+
+    if (register_unix_called == 1) {
+        register_unix_called = 0;
+        netty_unix_unregister(env, staticPackagePrefix);
+    }
+    if (staticPackagePrefix != NULL) {
+        free((void *) staticPackagePrefix);
+        staticPackagePrefix = NULL;
+    }
 
     packetAddrFieldId = NULL;
     packetAddrLenFieldId = NULL;
