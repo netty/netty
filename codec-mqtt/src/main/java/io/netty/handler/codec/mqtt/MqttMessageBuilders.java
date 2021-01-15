@@ -536,8 +536,8 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public PubAckBuilder packetId(int packetId) {
-            this.packetId = packetId;
+        public PubAckBuilder packetId(short packetId) {
+            this.packetId = packetId & 0xFFFF;
             return this;
         }
 
@@ -546,12 +546,12 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public MqttPubAckMessage build() {
+        public MqttMessage build() {
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
             MqttPubReplyMessageVariableHeader mqttPubAckVariableHeader =
                     new MqttPubReplyMessageVariableHeader(packetId, reasonCode, properties);
-            return new MqttPubAckMessage(mqttFixedHeader, mqttPubAckVariableHeader);
+            return new MqttMessage(mqttFixedHeader, mqttPubAckVariableHeader);
         }
     }
 
@@ -564,8 +564,8 @@ public final class MqttMessageBuilders {
         SubAckBuilder() {
         }
 
-        public SubAckBuilder packetId(int packetId) {
-            this.packetId = packetId;
+        public SubAckBuilder packetId(short packetId) {
+            this.packetId = packetId & 0xFFFF;
             return this;
         }
 
@@ -611,8 +611,8 @@ public final class MqttMessageBuilders {
         UnsubAckBuilder() {
         }
 
-        public UnsubAckBuilder packetId(int packetId) {
-            this.packetId = packetId;
+        public UnsubAckBuilder packetId(short packetId) {
+            this.packetId = packetId & 0xFFFF;
             return this;
         }
 
