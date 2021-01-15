@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 if [ "$#" -ne 1 ]; then
     echo "Expected build log as argument"
