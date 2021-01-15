@@ -657,6 +657,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
                                    short weight, boolean exclusive) {
+
+            Http2Stream stream = connection().stream(streamId);
+            if (stream == null) {
+                // The stream was not opened yet, let's just ignore this for now.
+                return;
+            }
             onHttp2Frame(ctx, new DefaultHttp2PriorityFrame(streamDependency, weight, exclusive)
                     .stream(requireStream(streamId)));
         }
