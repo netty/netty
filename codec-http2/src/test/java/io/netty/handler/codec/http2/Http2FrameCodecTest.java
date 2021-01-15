@@ -909,11 +909,7 @@ public class Http2FrameCodecTest {
         writeHeaderAndAssert(3);
         frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
 
-        Http2StreamFrame inboundFrame = inboundHandler.readInbound();
-        Http2FrameStream stream2 = inboundFrame.stream();
-        assertNotNull(stream2);
-        assertEquals(3, stream2.id());
-        assertEquals(inboundFrame, new DefaultHttp2PriorityFrame(1, (short) 31, true).stream(stream2));
+        assertInboundStreamFrame(3, new DefaultHttp2PriorityFrame(1, (short) 31, true));
     }
 
     private void writeHeaderAndAssert(int streamId) {
@@ -923,13 +919,16 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertEquals(State.OPEN, stream.state());
 
+        assertInboundStreamFrame(streamId, new DefaultHttp2HeadersFrame(request, false, 31));
+    }
+
+    private void assertInboundStreamFrame(int expectedId, Http2StreamFrame streamFrame) {
         Http2StreamFrame inboundFrame = inboundHandler.readInbound();
         Http2FrameStream stream2 = inboundFrame.stream();
         assertNotNull(stream2);
-        assertEquals(streamId, stream2.id());
-        assertEquals(inboundFrame, new DefaultHttp2HeadersFrame(request, false, 31).stream(stream2));
+        assertEquals(expectedId, stream2.id());
+        assertEquals(inboundFrame, streamFrame.stream(stream2));
     }
-
     private ChannelHandlerContext eqFrameCodecCtx() {
         return eq(frameCodec.ctx);
     }
