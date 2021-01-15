@@ -929,6 +929,7 @@ public class Http2FrameCodecTest {
         assertEquals(expectedId, stream2.id());
         assertEquals(inboundFrame, streamFrame.stream(stream2));
     }
+
     private ChannelHandlerContext eqFrameCodecCtx() {
         return eq(frameCodec.ctx);
     }
