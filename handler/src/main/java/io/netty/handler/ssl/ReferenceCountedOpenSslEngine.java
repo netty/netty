@@ -1547,15 +1547,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             if (!isDestroyed()) {
-                // TODO: Should we also adjust the protocols based on if there are any ciphers left that can be used
-                //       for TLSv1.3 or for previor SSL/TLS versions ?
                 try {
                     // Set non TLSv1.3 ciphers.
                     SSL.setCipherSuites(ssl, cipherSuiteSpec, false);
 
                     if (OpenSsl.isTlsv13Supported()) {
-                        // Set TLSv1.3 ciphers.
-                        SSL.setCipherSuites(ssl, cipherSuiteSpecTLSv13, true);
+                        if (cipherSuiteSpecTLSv13.isEmpty()) {
+                            // There were no TLSv1.3 ciphers, ensure we disable TLSv1.3 as BoringSSL does not allow
+                            // to disable TLSv1.3 ciphers explicit
+                            SSL.setOptions(ssl, SSL.getOptions(ssl) | SSL.SSL_OP_NO_TLSv1_3);
+                        } else {
+                            // Set TLSv1.3 ciphers.
+                            SSL.setCipherSuites(ssl, cipherSuiteSpecTLSv13, true);
+                        }
                     }
 
                 } catch (Exception e) {

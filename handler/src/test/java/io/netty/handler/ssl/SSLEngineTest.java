@@ -129,6 +129,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
@@ -516,6 +517,46 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
             cert.delete();
+        }
+    }
+
+    @Test(expected = SSLHandshakeException.class)
+    public void testIncompatibleCiphers() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(sslClientProvider()));
+
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
+        // due to no shared/supported cipher.
+        clientSslCtx = wrapContext(SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .protocols(PROTOCOL_TLS_V1_3, PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(clientSslContextProvider())
+                .sslProvider(sslClientProvider())
+                .build());
+
+        serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .protocols(PROTOCOL_TLS_V1_3, PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(serverSslContextProvider())
+                .sslProvider(sslServerProvider())
+                .build());
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            // Set the server to only support a single TLSv1.2 cipher
+            final String serverCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+            serverEngine.setEnabledCipherSuites(new String[] { serverCipher });
+
+            // Set the client to only support a single TLSv1.3 cipher
+            final String clientCipher = "TLS_AES_256_GCM_SHA384";
+            clientEngine.setEnabledCipherSuites(new String[] { clientCipher });
+            handshake(clientEngine, serverEngine);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
@@ -1273,7 +1314,7 @@ public abstract class SSLEngineTest {
     @Test(timeout = 30000)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 11);
+        assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
