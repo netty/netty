@@ -51,7 +51,6 @@ public class FileDescriptor {
     final int fd;
 
     public FileDescriptor(int fd) {
-        Unix.ensureAvailability();
         checkPositiveOrZero(fd, "fd");
         this.fd = fd;
     }

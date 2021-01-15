@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.57.Final-SNAPSHOT</version>
+  <version>4.1.59.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -381,7 +381,7 @@
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.35.Final</tcnative.version>
+    <tcnative.version>2.0.36.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -442,6 +442,7 @@
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
+    <module>testsuite-native</module>
     <module>testsuite-native-image</module>
     <module>testsuite-native-image-client</module>
     <module>testsuite-native-image-client-runtime-init</module>
@@ -1317,33 +1318,6 @@
 
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>flatten-maven-plugin</artifactId>
-          <version>1.2.2</version>
-          <executions>
-            <!-- enable flattening -->
-            <execution>
-              <id>flatten</id>
-              <phase>process-resources</phase>
-              <goals>
-                <goal>flatten</goal>
-              </goals>
-            </execution>
-            <!-- ensure proper cleanup -->
-            <execution>
-              <id>flatten.clean</id>
-              <phase>clean</phase>
-              <goals>
-                <goal>clean</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <flattenMode>oss</flattenMode>
-            <outputDirectory>${project.build.directory}</outputDirectory>
-          </configuration>
-        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

@@ -16,7 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.Unix;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -59,8 +59,15 @@ final class Native {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
         }
-        Socket.initialize();
+        Unix.registerInternal(new Runnable() {
+            @Override
+            public void run() {
+                registerUnix();
+            }
+        });
     }
+
+    private static native int registerUnix();
 
     static final short EV_ADD = evAdd();
     static final short EV_ENABLE = evEnable();

@@ -562,7 +562,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     /**
      * Write encrypted data to the OpenSSL network BIO.
      */
-    private ByteBuf writeEncryptedData(final ByteBuffer src, int len) {
+    private ByteBuf writeEncryptedData(final ByteBuffer src, int len) throws SSLException {
         final int pos = src.position();
         if (src.isDirect()) {
             SSL.bioSetByteBuffer(networkBIO, bufferAddress(src) + pos, len, false);
@@ -589,7 +589,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     /**
      * Read plaintext data from the OpenSSL internal BIO
      */
-    private int readPlaintextData(final ByteBuffer dst) {
+    private int readPlaintextData(final ByteBuffer dst) throws SSLException {
         final int sslRead;
         final int pos = dst.position();
         if (dst.isDirect()) {
@@ -1037,6 +1037,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return exception;
     }
 
+    private SSLEngineResult handleUnwrapException(int bytesConsumed, int bytesProduced, SSLException e)
+            throws SSLException {
+        int lastError = SSL.getLastErrorNumber();
+        if (lastError != 0) {
+            return sslReadErrorResult(SSL.SSL_ERROR_SSL, lastError, bytesConsumed,
+                    bytesProduced);
+        }
+        throw e;
+    }
+
     public final SSLEngineResult unwrap(
             final ByteBuffer[] srcs, int srcsOffset, final int srcsLength,
             final ByteBuffer[] dsts, int dstsOffset, final int dstsLength) throws SSLException {
@@ -1187,7 +1197,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                         // stated in the SSLEngine javadocs.
                         pendingEncryptedBytes = min(packetLength, remaining);
-                        bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
+                        try {
+                            bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
+                        } catch (SSLException e) {
+                            // Ensure we correctly handle the error stack.
+                            return handleUnwrapException(bytesConsumed, bytesProduced, e);
+                        }
                     }
                     try {
                         for (;;) {
@@ -1200,7 +1215,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 continue;
                             }
 
-                            int bytesRead = readPlaintextData(dst);
+                            int bytesRead;
+                            try {
+                                bytesRead = readPlaintextData(dst);
+                            } catch (SSLException e) {
+                                // Ensure we correctly handle the error stack.
+                                return handleUnwrapException(bytesConsumed, bytesProduced, e);
+                            }
                             // We are directly using the ByteBuffer memory for the write, and so we only know what has
                             // been consumed after we let SSL decrypt the data. At this point we should update the
                             // number of bytes consumed, update the ByteBuffer position, and release temp ByteBuf.
@@ -1220,7 +1241,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                         return sslPending > 0 ?
                                                 newResult(BUFFER_OVERFLOW, status, bytesConsumed, bytesProduced) :
                                                 newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
-                                                                            bytesConsumed, bytesProduced);
+                                                        bytesConsumed, bytesProduced);
                                     }
                                 } else if (packetLength == 0 || jdkCompatibilityMode) {
                                     // We either consumed all data or we are in jdkCompatibilityMode and have consumed
@@ -1247,7 +1268,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                             NEED_TASK, bytesConsumed, bytesProduced);
                                 } else {
                                     return sslReadErrorResult(sslError, SSL.getLastErrorNumber(), bytesConsumed,
-                                                              bytesProduced);
+                                            bytesProduced);
                                 }
                             }
                         }

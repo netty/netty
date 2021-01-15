@@ -46,7 +46,8 @@ import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
  */
 public class Socket extends FileDescriptor {
 
-    public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
+    @Deprecated
+    public static final int UDS_SUN_PATH_SIZE = 100;
 
     protected final boolean ipv6;
 

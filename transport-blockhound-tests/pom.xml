@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.57.Final-SNAPSHOT</version>
+    <version>4.1.59.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
@@ -87,6 +87,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-resolver-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
