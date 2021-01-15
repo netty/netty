@@ -96,10 +96,11 @@ public final class NativeLibraryLoader {
                 load(name, loader);
                 return;
             } catch (Throwable t) {
+                logger.debug("Unable to load the library '{}', trying next name...", name);
                 suppressed.add(t);
-                logger.debug("Unable to load the library '{}', trying next name...", name, t);
             }
         }
+
         IllegalArgumentException iae =
                 new IllegalArgumentException("Failed to load any of the given libraries: " + Arrays.toString(names));
         ThrowableUtil.addSuppressedAndClear(iae, suppressed);
@@ -140,7 +141,7 @@ public final class NativeLibraryLoader {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} cannot be loaded from java.library.path, "
-                                + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
+                                + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR);
             }
         }
 
@@ -343,10 +344,10 @@ public final class NativeLibraryLoader {
                 return;
             } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
+                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name);
             } catch (Exception e) {
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
+                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name);
             }
             NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
             logger.debug("Successfully loaded the library {}", name);
