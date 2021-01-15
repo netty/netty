@@ -231,7 +231,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         AttributeMap map = new DefaultAttributeMap();
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                CodecHandler::new, new Http3ControlStreamInboundHandler(true, null),
+                CodecHandler::new, new Http3ControlStreamInboundHandler(server, null),
                 new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                         new CodecHandler()), factory);
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
