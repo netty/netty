@@ -97,9 +97,9 @@ public final class NativeLibraryLoader {
                 return;
             } catch (Throwable t) {
                 suppressed.add(t);
-                logger.debug("Unable to load the library '{}', trying next name...", name, t);
             }
         }
+
         IllegalArgumentException iae =
                 new IllegalArgumentException("Failed to load any of the given libraries: " + Arrays.toString(names));
         ThrowableUtil.addSuppressedAndClear(iae, suppressed);
@@ -137,11 +137,6 @@ public final class NativeLibraryLoader {
             return;
         } catch (Throwable ex) {
             suppressed.add(ex);
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "{} cannot be loaded from java.library.path, "
-                                + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
-            }
         }
 
         String libname = System.mapLibraryName(name);
@@ -343,10 +338,8 @@ public final class NativeLibraryLoader {
                 return;
             } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             } catch (Exception e) {
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             }
             NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
             logger.debug("Successfully loaded the library {}", name);
