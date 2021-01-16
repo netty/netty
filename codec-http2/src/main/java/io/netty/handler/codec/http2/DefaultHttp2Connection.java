@@ -889,7 +889,10 @@ public class DefaultHttp2Connection implements Http2Connection {
                         streamId, nextStreamIdToCreate);
             }
             if (nextStreamIdToCreate <= 0) {
-                throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
+                // We exhausted the stream id space that we  can use. Let's signal this back but also signal that
+                // we still may want to process active streams.
+                throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
+                        Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
             }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
             if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {

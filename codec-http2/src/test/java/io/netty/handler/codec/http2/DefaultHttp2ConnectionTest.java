@@ -370,6 +370,18 @@ public class DefaultHttp2ConnectionTest {
         incrementAndGetStreamShouldRespectOverflow(client.local(), MAX_VALUE);
     }
 
+    @Test
+    public void clientLocalCreateStreamExhaustedSpace() throws Http2Exception {
+        client.local().createStream(MAX_VALUE, true);
+        try {
+            client.local().createStream(MAX_VALUE, true);
+            fail();
+        } catch (Http2Exception expected) {
+            assertEquals(Http2Error.REFUSED_STREAM, expected.error());
+            assertEquals(Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN, expected.shutdownHint());
+        }
+    }
+
     @Test(expected = Http2Exception.class)
     public void newStreamBehindExpectedShouldThrow() throws Http2Exception {
         server.local().createStream(0, true);
