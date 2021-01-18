@@ -208,7 +208,7 @@ public class FastThreadLocal<V> {
     }
 
     /**
-     * @return see {@link InternalThreadLocalMap#setIndexedVariable(int, Object)}.
+     * @see InternalThreadLocalMap#setIndexedVariable(int, Object).
      */
     private void setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
         if (threadLocalMap.setIndexedVariable(index, value)) {
@@ -231,15 +231,16 @@ public class FastThreadLocal<V> {
         return threadLocalMap != null && threadLocalMap.isIndexedVariableSet(index);
     }
     /**
-     * Sets the value to uninitialized; a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      */
     public final void remove() {
         remove(InternalThreadLocalMap.getIfSet());
     }
 
     /**
-     * Sets the value to uninitialized for the specified thread local map;
-     * a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      * The specified thread local map must be for the current thread.
      */
     @SuppressWarnings("unchecked")
