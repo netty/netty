@@ -666,48 +666,25 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     public void testNormalPoolSubpageRelease() {
         // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
         // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
-        int elemSize = 2048;
-        int oneLength = 16;
-        int fixedLength = 256;
-        ByteBuf[] ones = new ByteBuf[oneLength];
-        ByteBuf[] fixedByteBuf = new ByteBuf[fixedLength];
+        int elemSize = 1024;
+        int length = 1024;
+        ByteBuf[] byteBufs = new ByteBuf[length];
         final PooledByteBufAllocator allocator = newAllocator(false);
 
-        for (int i = 0; i < fixedLength; i++) {
-            fixedByteBuf[i] = allocator.heapBuffer(elemSize, elemSize);
+        for (int i = 0; i < length; i++) {
+            byteBufs[i] = allocator.heapBuffer(elemSize, elemSize);
         }
+        PooledByteBuf<Object> pooledByteBuf = unwrapIfNeeded(byteBufs[0]);
+        // disable PoolThreadCache
+        pooledByteBuf.cache = null;
+        PoolChunk<Object> chunk = pooledByteBuf.chunk;
 
-        PoolSubpage<?>[] subpages = unwrapIfNeeded(fixedByteBuf[0]).chunk.subpages;
-
-        // fixSubpagesCount ==  when ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
-        // the chunk.poolSubpages.size
-        int fixedSubpagesCount = countSubpages(subpages);
-
-        for (int i = 0; i < oneLength; i++) {
-            ones[i] = allocator.heapBuffer(elemSize, elemSize);
+        int beforeFreeBytes = chunk.freeBytes();
+        for (int i = 0; i < length; i++) {
+            byteBufs[i].release();
         }
+        int AfterFreeBytes = chunk.freeBytes();
 
-        // first release the 'fixedByteBuf', in order to fill PoolThreadCache.MemoryRegionCache.queue
-        // ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
-        for (int i = 0; i < fixedLength; i++) {
-            fixedByteBuf[i].release();
-        }
-        // release the 'ones'
-        for (int i = 0; i < oneLength; i++) {
-            ones[i].release();
-        }
-        // after release all but in PoolThreadCache.MemoryRegionCache.queue
-        // chunk.poolSubpages.size == fixSubpagesCount + 1
-        assertEquals(countSubpages(subpages), fixedSubpagesCount + 1);
-    }
-
-    private static int countSubpages(PoolSubpage<?>[] subpages) {
-        int num = 0;
-        for (final PoolSubpage<?> subpage : subpages) {
-            if (subpage != null) {
-                num++;
-            }
-        }
-        return num;
+        assertTrue(beforeFreeBytes < AfterFreeBytes);
     }
 }
