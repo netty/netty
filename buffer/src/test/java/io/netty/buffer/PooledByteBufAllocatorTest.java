@@ -666,7 +666,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     public void testNormalPoolSubpageRelease() {
         // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
         // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
-        int elemSize = 32;
+        int elemSize = 2048;
         int oneLength = 16;
         int fixedLength = 256;
         ByteBuf[] ones = new ByteBuf[oneLength];
@@ -687,7 +687,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             ones[i] = allocator.heapBuffer(elemSize, elemSize);
         }
 
-        // first release the 'fixedByteBuf', in oder to filled of PoolThreadCache.MemoryRegionCache.queue
+        // first release the 'fixedByteBuf', in order to fill PoolThreadCache.MemoryRegionCache.queue
         // ( PoolThreadCache.MemoryRegionCache.queue.offer(entry) == false )
         for (int i = 0; i < fixedLength; i++) {
             fixedByteBuf[i].release();
