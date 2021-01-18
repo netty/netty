@@ -42,7 +42,7 @@ public class MqttMessageBuildersPacketIdTest {
     }
 
     @Test
-    public void testUnsubAckMessageId() {
+    public void testUnsubAckMessageIdAsShort() {
         final MqttUnsubAckMessage msg = MqttMessageBuilders.unsubAck()
                 .packetId(id.shortValue())
                 .build();
@@ -54,7 +54,7 @@ public class MqttMessageBuildersPacketIdTest {
     }
 
     @Test
-    public void testSubAckMessageId() {
+    public void testSubAckMessageIdAsShort() {
         final MqttSubAckMessage msg = MqttMessageBuilders.subAck()
                 .packetId(id.shortValue())
                 .build();
@@ -66,9 +66,45 @@ public class MqttMessageBuildersPacketIdTest {
     }
 
     @Test
-    public void testPubAckMessageId() {
+    public void testPubAckMessageIdAsShort() {
         final MqttMessage msg = MqttMessageBuilders.pubAck()
                 .packetId(id.shortValue())
+                .build();
+
+        assertEquals(
+                id.intValue(),
+                ((MqttMessageIdVariableHeader) msg.variableHeader()).messageId()
+        );
+    }
+
+    @Test
+    public void testUnsubAckMessageIdAsInt() {
+        final MqttUnsubAckMessage msg = MqttMessageBuilders.unsubAck()
+                .packetId(id)
+                .build();
+
+        assertEquals(
+                id.intValue(),
+                msg.variableHeader().messageId()
+        );
+    }
+
+    @Test
+    public void testSubAckMessageIdAsInt() {
+        final MqttSubAckMessage msg = MqttMessageBuilders.subAck()
+                .packetId(id)
+                .build();
+
+        assertEquals(
+                id.intValue(),
+                msg.variableHeader().messageId()
+        );
+    }
+
+    @Test
+    public void testPubAckMessageIdAsInt() {
+        final MqttMessage msg = MqttMessageBuilders.pubAck()
+                .packetId(id)
                 .build();
 
         assertEquals(
