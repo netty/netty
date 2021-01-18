@@ -21,12 +21,11 @@ import io.netty.util.internal.UnstableApi;
  * Default implementation of {@linkplain Http2PriorityFrame}
  */
 @UnstableApi
-public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
+public final class DefaultHttp2PriorityFrame extends AbstractHttp2StreamFrame implements Http2PriorityFrame {
 
     private final int streamDependency;
     private final short weight;
     private final boolean exclusive;
-    private Http2FrameStream http2FrameStream;
 
     public DefaultHttp2PriorityFrame(int streamDependency, short weight, boolean exclusive) {
         this.streamDependency = streamDependency;
@@ -50,14 +49,9 @@ public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
     }
 
     @Override
-    public Http2PriorityFrame stream(Http2FrameStream stream) {
-        http2FrameStream = stream;
+    public DefaultHttp2PriorityFrame stream(Http2FrameStream stream) {
+        super.stream(stream);
         return this;
-    }
-
-    @Override
-    public Http2FrameStream stream() {
-        return http2FrameStream;
     }
 
     @Override
@@ -66,9 +60,29 @@ public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttp2PriorityFrame)) {
+            return false;
+        }
+        DefaultHttp2PriorityFrame other = (DefaultHttp2PriorityFrame) o;
+        boolean same = super.equals(other);
+        return same && streamDependency == other.streamDependency
+                && weight == other.weight && exclusive == other.exclusive;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = super.hashCode();
+        hash = hash * 31 + streamDependency;
+        hash = hash * 31 + weight;
+        hash = hash * 31 + (exclusive ? 1 : 0);
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "DefaultHttp2PriorityFrame(" +
-                "stream=" + http2FrameStream +
+                "stream=" + stream() +
                 ", streamDependency=" + streamDependency +
                 ", weight=" + weight +
                 ", exclusive=" + exclusive +
