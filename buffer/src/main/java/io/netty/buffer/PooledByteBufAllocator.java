@@ -201,7 +201,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     @SuppressWarnings("deprecation")
     public PooledByteBufAllocator(boolean preferDirect, boolean useCacheForAllThreads) {
         this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER, 0,
-                DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE, useCacheForAllThreads, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
+                DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE, useCacheForAllThreads,
+                DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
     @SuppressWarnings("deprecation")
