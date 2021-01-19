@@ -53,6 +53,10 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         return new PooledByteBufAllocator(0, 0, 8192, 1);
     }
 
+    protected PooledByteBufAllocator newAllocator(boolean preferDirect, boolean useCacheForAllThreads) {
+        return new PooledByteBufAllocator(preferDirect, useCacheForAllThreads);
+    }
+
     @Override
     protected long expectedUsedMemory(PooledByteBufAllocator allocator, int capacity) {
         return allocator.metric().chunkSize();
@@ -669,22 +673,19 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         int elemSize = 1024;
         int length = 1024;
         ByteBuf[] byteBufs = new ByteBuf[length];
-        final PooledByteBufAllocator allocator = newAllocator(false);
+        final PooledByteBufAllocator allocator = newAllocator(false, false);
 
         for (int i = 0; i < length; i++) {
             byteBufs[i] = allocator.heapBuffer(elemSize, elemSize);
         }
-        PooledByteBuf<Object> pooledByteBuf = unwrapIfNeeded(byteBufs[0]);
-        // disable PoolThreadCache
-        pooledByteBuf.cache = null;
-        PoolChunk<Object> chunk = pooledByteBuf.chunk;
+        PoolChunk<Object> chunk = unwrapIfNeeded(byteBufs[0]).chunk;
 
         int beforeFreeBytes = chunk.freeBytes();
         for (int i = 0; i < length; i++) {
             byteBufs[i].release();
         }
-        int AfterFreeBytes = chunk.freeBytes();
+        int afterFreeBytes = chunk.freeBytes();
 
-        assertTrue(beforeFreeBytes < AfterFreeBytes);
+        assertTrue(beforeFreeBytes < afterFreeBytes);
     }
 }
