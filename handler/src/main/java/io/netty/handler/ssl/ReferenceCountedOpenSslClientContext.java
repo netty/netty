@@ -49,8 +49,7 @@ import javax.security.auth.x500.X500Principal;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public final class ReferenceCountedOpenSslClientContext extends ReferenceCountedOpenSslContext {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(ReferenceCountedOpenSslClientContext.class);
+
     private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<String>(
             Arrays.asList(OpenSslKeyMaterialManager.KEY_TYPE_RSA,
                           OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,

@@ -14,19 +14,18 @@
  * under the License.
  */
 
-package io.netty.handler.ssl;
+package io.netty.handler.ssl.util;
 
-import io.netty.handler.ssl.util.SimpleKeyManagerFactory;
 import io.netty.util.internal.ObjectUtil;
 
 import java.security.KeyStore;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.ManagerFactoryParameters;
 
-final class KeyManagerFactoryWrapper extends SimpleKeyManagerFactory {
+public final class KeyManagerFactoryWrapper extends SimpleKeyManagerFactory {
     private final KeyManager km;
 
-    KeyManagerFactoryWrapper(KeyManager km) {
+    public KeyManagerFactoryWrapper(KeyManager km) {
         this.km = ObjectUtil.checkNotNull(km, "km");
     }
 

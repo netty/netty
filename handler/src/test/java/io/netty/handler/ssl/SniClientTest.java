@@ -113,7 +113,8 @@ public class SniClientTest {
                 KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
                         SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
                         SslContext.buildKeyManagerFactory(
-                                new X509Certificate[] { cert.cert() }, cert.key(), null, null, null);
+                                new X509Certificate[] { cert.cert() }, null,
+                                cert.key(), null, null, null);
 
                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)
