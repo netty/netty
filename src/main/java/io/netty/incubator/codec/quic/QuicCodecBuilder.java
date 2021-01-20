@@ -254,8 +254,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
 
     /**
      * See
-     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_streams_uni">
-     *     set_initial_max_streams_uni</a>.
+     * <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_initial_max_stream_data_uni">
+     *     set_initial_max_stream_data_uni</a>.
      *
      * The default value is 0.
      *
@@ -289,7 +289,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *
      * The default value is 0.
      *
-     * @param value   the initial maximum stream limit for bidirectional streams.
+     * @param value   the initial maximum stream limit for unidirectional streams.
      * @return        the instance itself.
      */
     public final B initialMaxStreamsUnidirectional(long value) {
@@ -363,7 +363,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *
      * The default is 20, which is also the maximum that is supported.
      *
-     * @param value   {@code true} the length of local generated connections ids.
+     * @param value   the length of local generated connections ids.
      * @return        the instance itself.
      */
     public final B localConnectionIdLength(int value) {
