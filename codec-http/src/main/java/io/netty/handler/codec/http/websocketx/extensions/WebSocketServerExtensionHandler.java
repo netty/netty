@@ -124,13 +124,13 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
             if (validExtensions != null) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-                List<WebSocketExtensionData> extraExtensions =
-                  new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
+
                 for (WebSocketServerExtension extension : validExtensions) {
-                    extraExtensions.add(extension.newReponseData());
+                    WebSocketExtensionData extensionData = extension.newReponseData();
+                    headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
+                        extensionData.name(),
+                        extensionData.parameters());
                 }
-                String newHeaderValue = WebSocketExtensionUtil
-                  .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
                 promise.addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) {
@@ -148,7 +148,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 });
 
                 if (headerValue != null) {
-                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
+                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
                 }
             }
 
