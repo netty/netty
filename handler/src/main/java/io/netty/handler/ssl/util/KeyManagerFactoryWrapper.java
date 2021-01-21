@@ -14,31 +14,29 @@
  * under the License.
  */
 
-package io.netty.handler.ssl;
-
-import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+package io.netty.handler.ssl.util;
 
 import java.security.KeyStore;
 import java.util.Objects;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.ManagerFactoryParameters;
-import javax.net.ssl.TrustManager;
 
-final class TrustManagerFactoryWrapper extends SimpleTrustManagerFactory {
-    private final TrustManager tm;
+public final class KeyManagerFactoryWrapper extends SimpleKeyManagerFactory {
+    private final KeyManager km;
 
-    TrustManagerFactoryWrapper(TrustManager tm) {
-        this.tm = Objects.requireNonNull(tm, "tm");
+    public KeyManagerFactoryWrapper(KeyManager km) {
+        this.km = Objects.requireNonNull(km, "km");
     }
 
     @Override
-    protected void engineInit(KeyStore keyStore) throws Exception { }
+    protected void engineInit(KeyStore keyStore, char[] var2) throws Exception { }
 
     @Override
     protected void engineInit(ManagerFactoryParameters managerFactoryParameters)
             throws Exception { }
 
     @Override
-    protected TrustManager[] engineGetTrustManagers() {
-        return new TrustManager[] {tm};
+    protected KeyManager[] engineGetKeyManagers() {
+        return new KeyManager[] {km};
     }
 }
