@@ -17,6 +17,8 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.util.LazyJavaxX509Certificate;
+import io.netty.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
@@ -2318,13 +2320,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                 } else {
                     if (isEmpty(chain)) {
-                        peerCerts = new Certificate[] {new OpenSslX509Certificate(clientCert)};
-                        x509PeerCerts = new X509Certificate[] {new OpenSslJavaxX509Certificate(clientCert)};
+                        peerCerts = new Certificate[] {new LazyX509Certificate(clientCert)};
+                        x509PeerCerts = new X509Certificate[] {new LazyJavaxX509Certificate(clientCert)};
                     } else {
                         peerCerts = new Certificate[chain.length + 1];
                         x509PeerCerts = new X509Certificate[chain.length + 1];
-                        peerCerts[0] = new OpenSslX509Certificate(clientCert);
-                        x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
+                        peerCerts[0] = new LazyX509Certificate(clientCert);
+                        x509PeerCerts[0] = new LazyJavaxX509Certificate(clientCert);
                         initCerts(chain, 1);
                     }
                 }
@@ -2334,8 +2336,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private void initCerts(byte[][] chain, int startPos) {
             for (int i = 0; i < chain.length; i++) {
                 int certPos = startPos + i;
-                peerCerts[certPos] = new OpenSslX509Certificate(chain[i]);
-                x509PeerCerts[certPos] = new OpenSslJavaxX509Certificate(chain[i]);
+                peerCerts[certPos] = new LazyX509Certificate(chain[i]);
+                x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
             }
         }
 
