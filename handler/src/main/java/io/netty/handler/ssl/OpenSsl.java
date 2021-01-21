@@ -555,7 +555,9 @@ public final class OpenSsl {
 
     static long memoryAddress(ByteBuf buf) {
         assert buf.isDirect();
-        return buf.hasMemoryAddress() ? buf.memoryAddress() : Buffer.address(buf.nioBuffer());
+        return buf.hasMemoryAddress() ? buf.memoryAddress() :
+                // Use internalNioBuffer to reduce object creation.
+                Buffer.address(buf.internalNioBuffer(0, buf.readableBytes()));
     }
 
     private OpenSsl() { }

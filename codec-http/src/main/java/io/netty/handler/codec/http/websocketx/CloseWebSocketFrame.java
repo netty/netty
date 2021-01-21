@@ -40,7 +40,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            example, <tt>1000</tt> indicates normal closure.
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status) {
-        this(status.code(), status.reasonText());
+        this(requireValidStatusCode(status.code()), status.reasonText());
     }
 
     /**
@@ -53,7 +53,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status, String reasonText) {
-        this(status.code(), reasonText);
+        this(requireValidStatusCode(status.code()), reasonText);
     }
 
     /**
@@ -66,7 +66,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(int statusCode, String reasonText) {
-        this(true, 0, statusCode, reasonText);
+        this(true, 0, requireValidStatusCode(statusCode), reasonText);
     }
 
     /**
@@ -95,7 +95,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        super(finalFragment, rsv, newBinaryData(statusCode, reasonText));
+        super(finalFragment, rsv, newBinaryData(requireValidStatusCode(statusCode), reasonText));
     }
 
     private static ByteBuf newBinaryData(int statusCode, String reasonText) {
@@ -200,5 +200,14 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     public CloseWebSocketFrame touch(Object hint) {
         super.touch(hint);
         return this;
+    }
+
+    static int requireValidStatusCode(int statusCode) {
+        if (WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+            return statusCode;
+        } else {
+            throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " +
+                    statusCode);
+        }
     }
 }

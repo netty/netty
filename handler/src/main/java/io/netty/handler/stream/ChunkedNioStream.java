@@ -60,7 +60,6 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
                     " (expected: a positive integer)");
         }
         this.in = in;
-        offset = 0;
         this.chunkSize = chunkSize;
         byteBuffer = ByteBuffer.allocate(chunkSize);
     }

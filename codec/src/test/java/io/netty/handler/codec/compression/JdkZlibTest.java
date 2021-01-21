@@ -90,4 +90,34 @@ public class JdkZlibTest extends ZlibTest {
             chDecoderGZip.close();
         }
     }
+
+    @Test
+    public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+
+        try {
+            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+
+            // Let's feed the input byte by byte to simulate fragmentation.
+            ByteBuf buf = Unpooled.copiedBuffer(bytes);
+            boolean written = false;
+            while (buf.isReadable()) {
+                written |= chDecoderGZip.writeInbound(buf.readRetainedSlice(1));
+            }
+            buf.release();
+
+            assertTrue(written);
+            Queue<Object> messages = chDecoderGZip.inboundMessages();
+            assertEquals(2, messages.size());
+
+            for (String s : Arrays.asList("a", "b")) {
+                ByteBuf msg = (ByteBuf) messages.poll();
+                assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                ReferenceCountUtil.release(msg);
+            }
+        } finally {
+            assertFalse(chDecoderGZip.finish());
+            chDecoderGZip.close();
+        }
+    }
 }

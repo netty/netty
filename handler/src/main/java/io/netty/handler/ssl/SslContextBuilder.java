@@ -16,6 +16,8 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
+import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.KeyManager;

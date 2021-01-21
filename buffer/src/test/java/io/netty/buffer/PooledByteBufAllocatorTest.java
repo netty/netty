@@ -635,4 +635,30 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     private static PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
         return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
     }
+
+    @Test
+    public void testCacheWorksForNormalAllocations() {
+        int maxCachedBufferCapacity = PooledByteBufAllocator.DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+        final PooledByteBufAllocator allocator =
+                new PooledByteBufAllocator(true, 1, 1,
+                        PooledByteBufAllocator.defaultPageSize(), PooledByteBufAllocator.defaultMaxOrder(),
+                        128, 128, true);
+        ByteBuf buffer = allocator.directBuffer(maxCachedBufferCapacity);
+        assertEquals(1, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        buffer = allocator.directBuffer(maxCachedBufferCapacity);
+        // Should come out of the cache so the count should not be incremented
+        assertEquals(1, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        // Should be allocated without cache and also not put back in a cache.
+        buffer = allocator.directBuffer(maxCachedBufferCapacity + 1);
+        assertEquals(2, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        buffer = allocator.directBuffer(maxCachedBufferCapacity + 1);
+        assertEquals(3, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+    }
 }
