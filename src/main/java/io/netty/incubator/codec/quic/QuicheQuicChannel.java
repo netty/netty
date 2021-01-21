@@ -220,12 +220,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private void failConnectPromiseAndThrow(Exception e) throws Exception {
+        tryFailConnectPromise(e);
+        throw e;
+    }
+
+    private boolean tryFailConnectPromise(Exception e) {
         ChannelPromise promise = connectPromise;
         if (promise != null) {
             connectPromise = null;
             promise.tryFailure(e);
+            return true;
         }
-        throw e;
+        return false;
     }
 
     ByteBuffer key() {
@@ -1037,6 +1043,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             done = Quiche.throwIfError(res);
                             didRecv = true;
                         } catch (Exception e) {
+                            if (tryFailConnectPromise(e)) {
+                                break;
+                            }
                             pipeline().fireExceptionCaught(e);
                             done = true;
                         }
