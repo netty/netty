@@ -524,7 +524,7 @@ public final class MqttMessageBuilders {
 
     public static final class PubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private byte reasonCode;
         private MqttProperties properties;
 
@@ -536,9 +536,17 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public PubAckBuilder packetId(short packetId) {
+        public PubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
+        }
+
+        /**
+         * @deprecated use {@link PubAckBuilder#packetId(int)} instead
+         */
+        @Deprecated
+        public PubAckBuilder packetId(short packetId) {
+            return packetId(packetId & 0xFFFF);
         }
 
         public PubAckBuilder properties(MqttProperties properties) {
@@ -557,16 +565,24 @@ public final class MqttMessageBuilders {
 
     public static final class SubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private MqttProperties properties;
         private final List<MqttQoS> grantedQoses = new ArrayList<MqttQoS>();
 
         SubAckBuilder() {
         }
 
-        public SubAckBuilder packetId(short packetId) {
+        public SubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
+        }
+
+        /**
+         * @deprecated use {@link SubAckBuilder#packetId(int)} instead
+         */
+        @Deprecated
+        public SubAckBuilder packetId(short packetId) {
+            return packetId(packetId & 0xFFFF);
         }
 
         public SubAckBuilder properties(MqttProperties properties) {
@@ -604,16 +620,24 @@ public final class MqttMessageBuilders {
 
     public static final class UnsubAckBuilder {
 
-        private short packetId;
+        private int packetId;
         private MqttProperties properties;
         private final List<Short> reasonCodes = new ArrayList<Short>();
 
         UnsubAckBuilder() {
         }
 
-        public UnsubAckBuilder packetId(short packetId) {
+        public UnsubAckBuilder packetId(int packetId) {
             this.packetId = packetId;
             return this;
+        }
+
+        /**
+         * @deprecated use {@link UnsubAckBuilder#packetId(int)} instead
+         */
+        @Deprecated
+        public UnsubAckBuilder packetId(short packetId) {
+            return packetId(packetId & 0xFFFF);
         }
 
         public UnsubAckBuilder properties(MqttProperties properties) {
