@@ -778,10 +778,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private void tryConnectionSend() {
         connectionSendNeeded = true;
-        if (!didRecv) {
-            if (connectionSend()) {
-                flushParent();
-            }
+        if (connectionSend()) {
+            flushParent();
         }
     }
 

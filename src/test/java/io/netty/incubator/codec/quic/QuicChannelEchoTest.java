@@ -187,7 +187,6 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
     public void testEchoStartedFromClient() throws Throwable {
         final EchoHandler sh = new EchoHandler(true, autoRead);
         final EchoHandler ch = new EchoHandler(false, autoRead);
-        ChannelFuture future = null;
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
@@ -239,13 +238,19 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             assertEquals(QuicStreamType.BIDIRECTIONAL, stream.type());
             assertEquals(0, stream.streamId());
             assertTrue(stream.isLocalCreated());
-            List<ChannelFuture> futures = writeAllData(stream);
 
-            for (ChannelFuture f: futures) {
-                f.sync();
+            for (int i = 0; i < 5; i++) {
+                ch.counter = 0;
+                sh.counter = 0;
+                List<ChannelFuture> futures = writeAllData(stream);
+
+                for (ChannelFuture f : futures) {
+                    f.sync();
+                }
+                waitForData(ch, sh);
+                waitForData(sh, ch);
+                Thread.sleep(100);
             }
-            waitForData(ch, sh);
-            waitForData(sh, ch);
 
             // Close underlying streams.
             sh.channel.close().sync();
