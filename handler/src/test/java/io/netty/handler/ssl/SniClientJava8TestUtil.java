@@ -260,7 +260,7 @@ final class SniClientJava8TestUtil {
                    IOException, CertificateException {
         return new SniX509KeyManagerFactory(
                 new SNIHostName(hostname), SslContext.buildKeyManagerFactory(
-                new X509Certificate[] { cert.cert() }, cert.key(), null, null, null));
+                new X509Certificate[] { cert.cert() }, null,  cert.key(), null, null, null));
     }
 
     private static final class SniX509KeyManagerFactory extends KeyManagerFactory {
