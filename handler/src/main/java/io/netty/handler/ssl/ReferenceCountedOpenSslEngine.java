@@ -482,6 +482,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return refCnt.release(decrement);
     }
 
+    // These method will override the method defined by Java 8u251 and later. As we may compile with an earlier
+    // java8 version we don't use @Override annotations here.
+    public String getApplicationProtocol() {
+        return applicationProtocol;
+    }
+
+    // These method will override the method defined by Java 8u251 and later. As we may compile with an earlier
+    // java8 version we don't use @Override annotations here.
+    public String getHandshakeApplicationProtocol() {
+        return applicationProtocol;
+    }
+
     @Override
     public final synchronized SSLSession getHandshakeSession() {
         // Javadocs state return value should be:
