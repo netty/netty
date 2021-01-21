@@ -63,15 +63,14 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpRequest) msg).headers())) {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-            List<WebSocketExtensionData> extraExtensions =
-              new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
-            for (WebSocketClientExtensionHandshaker extensionHandshaker : extensionHandshakers) {
-                extraExtensions.add(extensionHandshaker.newRequestData());
-            }
-            String newHeaderValue = WebSocketExtensionUtil
-              .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
 
-            request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
+            for (WebSocketClientExtensionHandshaker extensionHandshaker : extensionHandshakers) {
+                WebSocketExtensionData extensionData = extensionHandshaker.newRequestData();
+                headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
+                        extensionData.name(), extensionData.parameters());
+            }
+
+            request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
         }
 
         super.write(ctx, msg, promise);
