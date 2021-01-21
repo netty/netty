@@ -13,8 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package io.netty.handler.ssl.util;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.security.auth.x500.X500Principal;
@@ -30,6 +31,7 @@ import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
@@ -38,13 +40,25 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-final class OpenSslX509Certificate extends X509Certificate {
+public final class LazyX509Certificate extends X509Certificate {
+
+    static final CertificateFactory X509_CERT_FACTORY;
+    static {
+        try {
+            X509_CERT_FACTORY = CertificateFactory.getInstance("X.509");
+        } catch (CertificateException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     private final byte[] bytes;
     private X509Certificate wrapped;
 
-    OpenSslX509Certificate(byte[] bytes) {
-        this.bytes = bytes;
+    /**
+     * Creates a new instance which will lazy parse the given bytes. Be aware that the bytes will not be cloned.
+     */
+    public LazyX509Certificate(byte[] bytes) {
+        this.bytes = ObjectUtil.checkNotNull(bytes, "bytes");
     }
 
     @Override
@@ -217,7 +231,7 @@ final class OpenSslX509Certificate extends X509Certificate {
         X509Certificate wrapped = this.wrapped;
         if (wrapped == null) {
             try {
-                wrapped = this.wrapped = (X509Certificate) SslContext.X509_CERT_FACTORY.generateCertificate(
+                wrapped = this.wrapped = (X509Certificate) X509_CERT_FACTORY.generateCertificate(
                         new ByteArrayInputStream(bytes));
             } catch (CertificateException e) {
                 throw new IllegalStateException(e);
