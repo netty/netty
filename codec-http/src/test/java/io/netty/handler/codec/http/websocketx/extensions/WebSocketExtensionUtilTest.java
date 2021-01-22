@@ -21,19 +21,63 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.*;
 
 public class WebSocketExtensionUtilTest {
 
     @Test
     public void testIsWebsocketUpgrade() {
         HttpHeaders headers = new DefaultHttpHeaders();
-        assertFalse(WebSocketExtensionUtil.isWebsocketUpgrade(headers));
+        assertFalse(isWebsocketUpgrade(headers));
 
         headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        assertFalse(WebSocketExtensionUtil.isWebsocketUpgrade(headers));
+        assertFalse(isWebsocketUpgrade(headers));
 
         headers.add(HttpHeaderNames.CONNECTION, "Keep-Alive, Upgrade");
-        assertTrue(WebSocketExtensionUtil.isWebsocketUpgrade(headers));
+        assertTrue(isWebsocketUpgrade(headers));
+    }
+
+    @Test
+    public void computeMergeExtensionsHeaderValueWhenNoUserDefinedHeader() {
+        List<WebSocketExtensionData> extras = extractExtensions("permessage-deflate; client_max_window_bits," +
+          "permessage-deflate; client_no_context_takeover; client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame");
+        String newHeaderValue = computeMergeExtensionsHeaderValue(null, extras);
+        assertEquals("permessage-deflate;client_max_window_bits," +
+          "permessage-deflate;client_no_context_takeover;client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame", newHeaderValue);
+    }
+
+    @Test
+    public void computeMergeExtensionsHeaderValueWhenNoConflictingUserDefinedHeader() {
+        List<WebSocketExtensionData> extras = extractExtensions("permessage-deflate; client_max_window_bits," +
+          "permessage-deflate; client_no_context_takeover; client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame");
+        String newHeaderValue = computeMergeExtensionsHeaderValue("foo, bar", extras);
+        assertEquals("permessage-deflate;client_max_window_bits," +
+          "permessage-deflate;client_no_context_takeover;client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame," +
+          "foo," +
+          "bar", newHeaderValue);
+    }
+
+    @Test
+    public void computeMergeExtensionsHeaderValueWhenConflictingUserDefinedHeader() {
+        List<WebSocketExtensionData> extras = extractExtensions("permessage-deflate; client_max_window_bits," +
+          "permessage-deflate; client_no_context_takeover; client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame");
+        String newHeaderValue = computeMergeExtensionsHeaderValue("permessage-deflate; client_max_window_bits", extras);
+        assertEquals("permessage-deflate;client_max_window_bits," +
+          "permessage-deflate;client_no_context_takeover;client_max_window_bits," +
+          "deflate-frame," +
+          "x-webkit-deflate-frame", newHeaderValue);
     }
 }

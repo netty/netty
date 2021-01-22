@@ -122,12 +122,13 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
         if (WebSocketExtensionUtil.isWebsocketUpgrade(headers)) {
             if (validExtensions != null) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                List<WebSocketExtensionData> extraExtensions =
+                        new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
                 for (WebSocketServerExtension extension : validExtensions) {
-                    WebSocketExtensionData extensionData = extension.newResponseData();
-                    headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
-                        extensionData.name(),
-                        extensionData.parameters());
+                    extraExtensions.add(extension.newResponseData());
                 }
+                String newHeaderValue = WebSocketExtensionUtil
+                        .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
                 promise.addListener((ChannelFutureListener) future -> {
                     if (future.isSuccess()) {
                         for (WebSocketServerExtension extension : validExtensions) {
@@ -135,14 +136,15 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
                             WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
                             String name = ctx.name();
                             ctx.pipeline()
+
                                     .addAfter(name, decoder.getClass().getName(), decoder)
                                     .addAfter(name, encoder.getClass().getName(), encoder);
                         }
                     }
                 });
 
-                if (headerValue != null) {
-                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
+                if (newHeaderValue != null) {
+                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
                 }
             }
             promise.addListener((ChannelFutureListener) future -> {
