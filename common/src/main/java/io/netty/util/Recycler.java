@@ -42,9 +42,7 @@ public abstract class Recycler<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
     @SuppressWarnings("rawtypes")
-    private static final Handle NOOP_HANDLE = object -> {
-        // NOOP
-    };
+    private static final Handle NOOP_HANDLE = object -> false;
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
     private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
     private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 4 * 1024; // Use 4k instances as default.
@@ -220,7 +218,7 @@ public abstract class Recycler<T> {
         }
 
         @Override
-        public void recycle(Object object) {
+        public boolean recycle(Object object) {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
@@ -230,7 +228,7 @@ public abstract class Recycler<T> {
                 throw new IllegalStateException("recycled already");
             }
 
-            stack.push(this);
+            return stack.push(this);
         }
     }
 
@@ -371,7 +369,7 @@ public abstract class Recycler<T> {
             this.next = null;
         }
 
-        void add(DefaultHandle<?> handle) {
+        boolean add(DefaultHandle<?> handle) {
             handle.lastRecycledId = id;
 
             // While we also enforce the recycling ratio when we transfer objects from the WeakOrderQueue to the Stack
@@ -380,7 +378,7 @@ public abstract class Recycler<T> {
             if (handleRecycleCount < interval) {
                 handleRecycleCount++;
                 // Drop the item to prevent recycling to aggressive.
-                return;
+                return false;
             }
             handleRecycleCount = 0;
 
@@ -390,7 +388,7 @@ public abstract class Recycler<T> {
                 Link link = head.newLink();
                 if (link == null) {
                     // Drop it.
-                    return;
+                    return false;
                 }
                 // We allocate a Link so reserve the space
                 this.tail = tail = tail.next = link;
@@ -402,6 +400,7 @@ public abstract class Recycler<T> {
             // we lazy set to ensure that setting stack to null appears before we unnull it in the owning thread;
             // this also means we guarantee visibility of an element in the queue if we see the index updated
             tail.lazySet(writeIndex + 1);
+            return true;
         }
 
         boolean hasFinalData() {
@@ -632,20 +631,20 @@ public abstract class Recycler<T> {
             return success;
         }
 
-        void push(DefaultHandle<?> item) {
+        boolean push(DefaultHandle<?> item) {
             Thread currentThread = Thread.currentThread();
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
-                pushNow(item);
+                return pushNow(item);
             } else {
                 // The current Thread is not the one that belongs to the Stack
                 // (or the Thread that belonged to the Stack was collected already), we need to signal that the push
                 // happens later.
-                pushLater(item, currentThread);
+                return pushLater(item, currentThread);
             }
         }
 
-        private void pushNow(DefaultHandle<?> item) {
+        private boolean pushNow(DefaultHandle<?> item) {
             if ((item.recycleId | item.lastRecycledId) != 0) {
                 throw new IllegalStateException("recycled already");
             }
@@ -654,7 +653,7 @@ public abstract class Recycler<T> {
             int size = this.size;
             if (size >= maxCapacity || dropHandle(item)) {
                 // Hit the maximum capacity or should drop - drop the possibly youngest object.
-                return;
+                return false;
             }
             if (size == elements.length) {
                 elements = Arrays.copyOf(elements, min(size << 1, maxCapacity));
@@ -662,12 +661,13 @@ public abstract class Recycler<T> {
 
             elements[size] = item;
             this.size = size + 1;
+            return true;
         }
 
-        private void pushLater(DefaultHandle<?> item, Thread thread) {
+        private boolean pushLater(DefaultHandle<?> item, Thread thread) {
             if (maxDelayedQueues == 0) {
                 // We don't support recycling across threads and should just drop the item on the floor.
-                return;
+                return false;
             }
 
             // we don't want to have a ref to the queue as the value in our weak map
@@ -679,20 +679,20 @@ public abstract class Recycler<T> {
                 if (delayedRecycled.size() >= maxDelayedQueues) {
                     // Add a dummy queue so we know we should drop the object
                     delayedRecycled.put(this, WeakOrderQueue.DUMMY);
-                    return;
+                    return false;
                 }
                 // Check if we already reached the maximum number of delayed queues and if we can allocate at all.
                 if ((queue = newWeakOrderQueue(thread)) == null) {
                     // drop object
-                    return;
+                    return false;
                 }
                 delayedRecycled.put(this, queue);
             } else if (queue == WeakOrderQueue.DUMMY) {
                 // drop object
-                return;
+                return false;
             }
 
-            queue.add(item);
+            return queue.add(item);
         }
 
         /**

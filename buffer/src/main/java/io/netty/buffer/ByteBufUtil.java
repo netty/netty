@@ -1506,7 +1506,9 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                if (!handle.recycle(this)) {
+                    super.deallocate();
+                }
             }
         }
     }
@@ -1535,7 +1537,9 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                if (!handle.recycle(this)) {
+                    super.deallocate();
+                }
             }
         }
     }

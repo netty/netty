@@ -302,6 +302,16 @@ public class RecyclerTest {
                 " internally", array.length - maxCapacity / 2 <= instancesCount.get());
     }
 
+    @Test
+    public void testRecycleOrDrop() {
+        Recycler<HandledObject> recycler = newRecycler(16);
+        HandledObject object1 = recycler.get();
+        HandledObject object2 = recycler.get();
+
+        assertTrue(object1.recycle());
+        assertFalse(object2.recycle());
+    }
+
     static final class HandledObject {
         Recycler.Handle<HandledObject> handle;
 
@@ -309,8 +319,8 @@ public class RecyclerTest {
             this.handle = handle;
         }
 
-        void recycle() {
-            handle.recycle(this);
+        boolean recycle() {
+            return handle.recycle(this);
         }
     }
 }
