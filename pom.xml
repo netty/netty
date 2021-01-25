@@ -89,6 +89,7 @@
     -->
     <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
     <test.argLine>-D_</test.argLine>
+    <bundleNativeCode />
   </properties>
 
   <profiles>
@@ -102,6 +103,7 @@
       <properties>
         <extraLdflags>-Wl,-exported_symbol,_JNI_*</extraLdflags>
         <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
     </profile>
     <profile>
@@ -113,6 +115,7 @@
       </activation>
       <properties>
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
     </profile>
     <profile>
@@ -414,6 +417,7 @@
             </supportedProjectTypes>
             <instructions>
               <Export-Package>${project.groupId}.*</Export-Package>
+              <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
             </instructions>
           </configuration>
         </execution>
