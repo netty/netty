@@ -155,8 +155,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     public final B applicationProtocols(String... protocols) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             for (String p : protocols) {
-                out.write(p.length());
                 byte[] bytes = p.getBytes(StandardCharsets.US_ASCII);
+                out.write(bytes.length);
                 out.write(bytes);
             }
             this.protos = out.toByteArray();
