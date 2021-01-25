@@ -579,6 +579,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         streams.clear();
     }
 
+    void streamPriority(long streamId, byte priority, boolean incremental) throws Exception {
+       Quiche.throwIfError(Quiche.quiche_conn_stream_priority(connectionAddressChecked(), streamId,
+               priority, incremental));
+    }
+
     void streamClosed(long streamId) {
         streams.remove(streamId);
     }

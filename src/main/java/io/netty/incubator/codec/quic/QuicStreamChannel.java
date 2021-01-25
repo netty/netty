@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
 
 /**
@@ -56,6 +57,35 @@ public interface QuicStreamChannel extends DuplexChannel {
      * @return the stream id of this {@link QuicStreamChannel}.
      */
     long streamId();
+
+    /**
+     * The {@link QuicStreamPriority} if explicit set for the stream via {@link #updatePriority(QuicStreamPriority)} or
+     * {@link #updatePriority(QuicStreamPriority, ChannelPromise)}. Otherwise {@code null}.
+     *
+     * @return the priority if any was set.
+     */
+    QuicStreamPriority priority();
+
+    /**
+     * Update the priority of the stream. A stream's priority determines the order in which stream data is sent
+     * on the wire (streams with lower priority are sent first).
+     *
+     * @param priority  the priority.
+     * @return          future that is notified once the operation completes.
+     */
+    default ChannelFuture updatePriority(QuicStreamPriority priority) {
+        return updatePriority(priority, newPromise());
+    }
+
+    /**
+     * Update the priority of the stream. A stream's priority determines the order in which stream data is sent
+     * on the wire (streams with lower priority are sent first).
+     *
+     * @param priority  the priority.
+     * @param promise   notified once operations completes.
+     * @return          future that is notified once the operation completes.
+     */
+    ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise);
 
     @Override
     QuicChannel parent();

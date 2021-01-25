@@ -16,7 +16,6 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.NativeLibraryLoader;
@@ -236,6 +235,14 @@ final class Quiche {
     static native long quiche_connect(String server_name, long scidAddr, int scidLen, long configAddr);
 
     /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/
+     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L278">quiche_conn_stream_priority</a>.
+     */
+    static native int quiche_conn_stream_priority(
+            long connAddr, long streamId, byte urgency, boolean incremental);
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/
      * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L312">quiche_conn_trace_id</a>.
      */
@@ -245,6 +252,7 @@ final class Quiche {
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
      */
     static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr);
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_stream_send</a>.
      */

@@ -218,6 +218,50 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+    @Test
+    public void testConnectAndStreamPriority() throws Throwable {
+        int numBytes = 8;
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch clientLatch = new CountDownLatch(1);
+
+        Channel server = QuicTestUtils.newServer(serverQuicChannelHandler,
+                new BytesCountingHandler(serverLatch, numBytes));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient();
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new BytesCountingHandler(clientLatch, numBytes)).get();
+            assertNull(stream.priority());
+            QuicStreamPriority priority = new QuicStreamPriority(0, false);
+            stream.updatePriority(priority).sync();
+            assertEquals(priority, stream.priority());
+
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
+            clientLatch.await();
+
+            stream.close().sync();
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            serverLatch.await();
+            serverQuicChannelHandler.assertState();
+
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void testConnectWithoutBogusCertificate() throws Throwable {
         QuicTestUtils.newServer(

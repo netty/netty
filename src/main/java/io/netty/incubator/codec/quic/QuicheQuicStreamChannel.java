@@ -60,6 +60,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     private volatile boolean active = true;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
+    private volatile QuicStreamPriority priority;
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         super(parent);
@@ -96,6 +97,32 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     @Override
     public long streamId() {
         return address.streamId();
+    }
+
+    @Override
+    public QuicStreamPriority priority() {
+        return priority;
+    }
+
+    @Override
+    public ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise) {
+        if (eventLoop().inEventLoop()) {
+            updatePriority0(priority, promise);
+        } else {
+            eventLoop().execute(() -> updatePriority0(priority, promise));
+        }
+        return promise;
+    }
+
+    private void updatePriority0(QuicStreamPriority priority, ChannelPromise promise) {
+        try {
+            parent().streamPriority(streamId(), (byte) priority.urgency(), priority.isIncremental());
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        this.priority = priority;
+        promise.setSuccess();
     }
 
     @Override
