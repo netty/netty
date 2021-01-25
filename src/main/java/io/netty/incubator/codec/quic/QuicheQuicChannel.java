@@ -149,7 +149,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
 
-    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, String traceId,
+    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, byte[] traceId,
                       InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
@@ -163,7 +163,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.supportsDatagram = supportsDatagram;
         this.remote = remote;
         this.connAddr = connAddr;
-        this.traceId = traceId;
+        if (traceId != null) {
+            this.traceId = new String(traceId);
+        }
         this.streamHandler = streamHandler;
         this.streamOptionsArray = streamOptionsArray;
         this.streamAttrsArray = streamAttrsArray;
@@ -178,7 +180,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key,
-                                       long connAddr, String traceId, InetSocketAddress remote,
+                                       long connAddr, byte[] traceId, InetSocketAddress remote,
                                        boolean supportsDatagram, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
@@ -209,7 +211,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (connection == -1) {
                 failConnectPromiseAndThrow(new ConnectException());
             }
-            this.traceId = Quiche.traceId(connection, idBuffer);
+            byte[] bytes = Quiche.quiche_conn_trace_id(connection);
+            if (bytes != null) {
+                this.traceId = new String(bytes);
+            }
             this.connAddr = connection;
             this.supportsDatagram = supportsDatagram;
             connectionSendNeeded = true;

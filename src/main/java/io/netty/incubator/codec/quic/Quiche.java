@@ -236,6 +236,12 @@ final class Quiche {
     static native long quiche_connect(String server_name, long scidAddr, int scidLen, long configAddr);
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/
+     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L312">quiche_conn_trace_id</a>.
+     */
+    static native byte[] quiche_conn_trace_id(long connAddr);
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
      */
     static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr);
@@ -587,12 +593,6 @@ final class Quiche {
         } else {
             promise.setSuccess();
         }
-    }
-
-    static String traceId(long connAddr, ByteBuf buffer) {
-        // We just do the same as quiche does for the traceid but we should use Connection:trace_id() once it is exposed
-        // in the c API.
-        return ByteBufUtil.hexDump(buffer);
     }
 
     private Quiche() { }

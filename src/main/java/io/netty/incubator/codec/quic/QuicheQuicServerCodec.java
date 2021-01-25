@@ -188,7 +188,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
 
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), key, conn, Quiche.traceId(conn, dcid), sender, config.isDatagramSupported(),
+                ctx.channel(), key, conn, Quiche.quiche_conn_trace_id(conn), sender, config.isDatagramSupported(),
                 streamHandler, streamOptionsArray, streamAttrsArray);
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         putChannel(channel);
