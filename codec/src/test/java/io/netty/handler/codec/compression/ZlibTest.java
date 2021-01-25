@@ -105,9 +105,20 @@ public abstract class ZlibTest {
 
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
         try {
-            chDecoderGZip.writeInbound(deflatedData);
+            while (deflatedData.isReadable()) {
+                chDecoderGZip.writeInbound(deflatedData.readRetainedSlice(1));
+            }
+            deflatedData.release();
             assertTrue(chDecoderGZip.finish());
-            ByteBuf buf = chDecoderGZip.readInbound();
+            ByteBuf buf = Unpooled.buffer();
+            for (;;) {
+                ByteBuf b = chDecoderGZip.readInbound();
+                if (b == null) {
+                    break;
+                }
+                buf.writeBytes(b);
+                b.release();
+            }
             assertEquals(buf, data);
             assertNull(chDecoderGZip.readInbound());
             data.release();
