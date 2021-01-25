@@ -86,7 +86,7 @@
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>5403e54c40caf70f096a2a08c50c9d71c149da6f</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
-    <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include -I${boringsslSourceDir}/include</cflags>
+    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include -I${boringsslSourceDir}/include</cflags>
     <ldflags>-L${quicheBuildDir} -lquiche -L${boringsslHome}/ssl -L${boringsslHome}/crypto -L${boringsslHome}/decrepit -ldecrepit -lssl -lcrypto</ldflags>
     <extraLdflags />
     <extraConfigureArg />
