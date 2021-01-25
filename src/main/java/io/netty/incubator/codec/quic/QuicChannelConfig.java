@@ -59,22 +59,4 @@ public interface QuicChannelConfig extends ChannelConfig {
 
     @Override
     QuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
-
-    /**
-     * Return the server name parameter used to verify peer's certificate.
-     *
-     * @return the server name parameter.
-     */
-    String getPeerCertServerName();
-
-    /**
-     * Set set server name for peer's certificate verification.
-     *
-     * <strong>Be aware this config setting can only be adjusted before the
-     * connection is established.</strong>
-     *
-     * @param peerCertServerName    the server name parameter.
-     * @return                      the instance itself.
-     */
-    QuicChannelConfig setPeerCertServerName(String peerCertServerName);
 }

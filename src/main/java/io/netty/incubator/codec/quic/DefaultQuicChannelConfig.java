@@ -30,12 +30,6 @@ import io.netty.channel.WriteBufferWaterMark;
  */
 final class DefaultQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
 
-    /**
-     * Optional parameter to verify peer's certificate.
-     * See <a href="https://docs.rs/quiche/0.6.0/quiche/fn.connect.html">server_name</a>.
-     */
-    private volatile String peerCertServerName;
-
     DefaultQuicChannelConfig(Channel channel) {
         super(channel);
     }
@@ -43,29 +37,6 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(), QuicChannelOption.PEER_CERT_SERVER_NAME);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T getOption(ChannelOption<T> option) {
-        if (option == QuicChannelOption.PEER_CERT_SERVER_NAME) {
-            return (T) String.valueOf(getPeerCertServerName());
-        }
-
-        return super.getOption(option);
-    }
-
-    @Override
-    public <T> boolean setOption(ChannelOption<T> option, T value) {
-        validate(option, value);
-
-        if (option == QuicChannelOption.PEER_CERT_SERVER_NAME) {
-            setPeerCertServerName((String) value);
-        } else {
-            return super.setOption(option, value);
-        }
-
-        return true;
     }
 
     @Override
@@ -132,17 +103,6 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
     @Override
     public QuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
-        return this;
-    }
-
-    @Override
-    public String getPeerCertServerName() {
-        return peerCertServerName;
-    }
-
-    @Override
-    public QuicChannelConfig setPeerCertServerName(String peerCertServerName) {
-        this.peerCertServerName = peerCertServerName;
         return this;
     }
 }

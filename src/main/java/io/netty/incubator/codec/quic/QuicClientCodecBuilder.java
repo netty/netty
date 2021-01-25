@@ -17,6 +17,8 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
 
+import java.util.function.Function;
+
 /**
  * {@link QuicCodecBuilder} that configures and builds a {@link ChannelHandler} that should be added to the
  * {@link io.netty.channel.ChannelPipeline} of a {@code QUIC} client.
@@ -26,10 +28,14 @@ public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCod
     /**
      * Creates a new instance.
      */
-    public QuicClientCodecBuilder() { }
+    public QuicClientCodecBuilder() {
+        super(false);
+    }
 
     @Override
-    protected ChannelHandler build(QuicheConfig config, int localConnIdLength) {
-        return new QuicheQuicClientCodec(config, localConnIdLength);
+    protected ChannelHandler build(QuicheConfig config,
+                                   Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                   int localConnIdLength) {
+        return new QuicheQuicClientCodec(config, sslEngineProvider, localConnIdLength);
     }
 }

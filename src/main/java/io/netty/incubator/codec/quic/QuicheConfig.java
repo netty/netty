@@ -19,33 +19,20 @@ final class QuicheConfig {
     private final boolean isDatagramSupported;
     private final long config;
 
-    QuicheConfig(String certPath, String keyPath, Boolean verifyPeer, Boolean grease, boolean earlyData,
-                        byte[] protos, Long maxIdleTimeout, Long maxSendUdpPayloadSize, Long maxRecvUdpPayloadSize,
-                        Long initialMaxData, Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
+    QuicheConfig(Boolean grease, boolean earlyData, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
+                        Long maxRecvUdpPayloadSize, Long initialMaxData,
+                        Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
                         QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  Integer recvQueueLen, Integer sendQueueLen) {
-
         long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
         try {
-            if (certPath != null && Quiche.quiche_config_load_cert_chain_from_pem_file(config, certPath) != 0) {
-                throw new IllegalArgumentException("Unable to load certificate chain");
-            }
-            if (keyPath != null && Quiche.quiche_config_load_priv_key_from_pem_file(config, keyPath) != 0) {
-                throw new IllegalArgumentException("Unable to load private key");
-            }
-            if (verifyPeer != null) {
-                Quiche.quiche_config_verify_peer(config, verifyPeer);
-            }
             if (grease != null) {
                 Quiche.quiche_config_grease(config, grease);
             }
             if (earlyData) {
                 Quiche.quiche_config_enable_early_data(config);
-            }
-            if (protos != null) {
-                Quiche.quiche_config_set_application_protos(config, protos);
             }
             if (maxIdleTimeout != null) {
                 Quiche.quiche_config_set_max_idle_timeout(config, maxIdleTimeout);

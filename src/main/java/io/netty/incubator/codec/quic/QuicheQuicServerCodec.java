@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.function.Function;
 
 import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 
@@ -37,6 +38,7 @@ import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicServerCodec.class);
 
+    private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private final QuicConnectionIdGenerator connectionIdAddressGenerator;
     private final QuicTokenHandler tokenHandler;
     private final ChannelHandler handler;
@@ -52,6 +54,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           int localConnIdLength,
                           QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
+                          Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
                           ChannelHandler handler,
                           Map.Entry<ChannelOption<?>, Object>[] optionsArray,
                           Map.Entry<AttributeKey<?>, Object>[] attrsArray,
@@ -61,6 +64,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         super(config, localConnIdLength, tokenHandler.maxTokenLength());
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
+        this.sslEngineProvider = sslEngineProvider;
         this.handler = handler;
         this.optionsArray = optionsArray;
         this.attrsArray = attrsArray;
@@ -121,7 +125,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
         }
 
-        int offset = 0;
+        final int offset;
         boolean noToken = false;
         if (!token.isReadable()) {
             // Clear buffers so we can reuse these.
@@ -151,6 +155,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                 }
                 return null;
             }
+            offset = 0;
             noToken = true;
         } else {
             offset = tokenHandler.validateToken(token, sender);
@@ -164,33 +169,55 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
         final long conn;
         final ByteBuffer key;
+        final long scidAddr;
+        final int scidLen;
+        final long ocidAddr;
+        final int ocidLen;
+
         if (noToken) {
             connIdBuffer.clear();
             key = connectionIdAddressGenerator.newId(
                     dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
             connIdBuffer.writeBytes(key.duplicate());
-            conn = Quiche.quiche_accept_no_token(
-                    Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex(), localConnIdLength,
-                    config.nativeAddress());
+            scidAddr = Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex();
+            scidLen = localConnIdLength;
+            ocidAddr = -1;
+            ocidLen = -1;
         } else {
-            conn = Quiche.quiche_accept(Quiche.memoryAddress(dcid) + dcid.readerIndex(), localConnIdLength,
-                    Quiche.memoryAddress(token) + offset, token.readableBytes() - offset,
-                    config.nativeAddress());
-
+            scidAddr = Quiche.memoryAddress(dcid) + dcid.readerIndex();
+            scidLen = localConnIdLength;
+            ocidAddr = Quiche.memoryAddress(token) + offset;
+            ocidLen = token.readableBytes() - offset;
             // Now create the key to store the channel in the map.
             byte[] bytes = new byte[localConnIdLength];
             dcid.getBytes(dcid.readerIndex(), bytes);
             key = ByteBuffer.wrap(bytes);
         }
+
+        QuicheQuicChannel channel = QuicheQuicChannel.forServer(
+                ctx.channel(), key, sender, config.isDatagramSupported(),
+                streamHandler, streamOptionsArray, streamAttrsArray);
+        Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
+        QuicSslEngine engine = sslEngineProvider.apply(channel);
+        if (!(engine instanceof QuicheQuicSslEngine)) {
+            channel.unsafe().closeForcibly();
+            throw new IllegalArgumentException("QuicSslEngine is not of type "
+                    + QuicheQuicSslEngine.class.getSimpleName());
+        }
+        if (engine.getUseClientMode()) {
+            channel.unsafe().closeForcibly();
+            throw new IllegalArgumentException("QuicSslEngine is not created in server mode");
+        }
+
+        conn = Quiche.quiche_conn_new_with_tls(scidAddr, scidLen, ocidAddr, ocidLen,
+                config.nativeAddress(), ((QuicheQuicSslEngine) engine).createNative(), true);
         if (conn < 0) {
+            channel.unsafe().closeForcibly();
             LOGGER.debug("quiche_accept failed");
             return null;
         }
+        channel.attach(conn);
 
-        QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), key, conn, Quiche.quiche_conn_trace_id(conn), sender, config.isDatagramSupported(),
-                streamHandler, streamOptionsArray, streamAttrsArray);
-        Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         putChannel(channel);
         ctx.channel().eventLoop().register(channel);
         return channel;

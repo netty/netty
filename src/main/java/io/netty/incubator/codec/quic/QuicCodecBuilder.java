@@ -17,14 +17,10 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
 
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -34,13 +30,9 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <B> the type of the {@link QuicCodecBuilder}.
  */
 public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
-
-    private String certPath;
-    private String keyPath;
-    private Boolean verifyPeer;
+    private final boolean server;
     private Boolean grease;
     private boolean earlyData;
-    private byte[] protos;
     private Long maxIdleTimeout;
     private Long maxRecvUdpPayloadSize;
     private Long maxSendUdpPayloadSize;
@@ -56,9 +48,10 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean enableHystart;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
-
-    QuicCodecBuilder() {
+    private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
+    QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
+        this.server = server;
     }
 
     /**
@@ -85,41 +78,6 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
-     * Set the path to the certificate chain to use.
-     *
-     * @param path  the path to the chain.
-     * @return      the instance itself.
-     */
-    public final B certificateChain(String path) {
-        certPath = checkNotNull(path, "path");
-        return self();
-    }
-
-    /**
-     * Set the path to the private key to use.
-     *
-     * @param path  the path to the key.
-     * @return      the instance itself.
-     */
-    public final B privateKey(String path) {
-        keyPath = checkNotNull(path, "path");
-        return self();
-    }
-
-    /**
-     * Set if the remote peer should be verified or not.
-     *
-     * The default value is {@code true} for client connections, and {@code false} for server connections.
-     *
-     * @param verify    {@code true} if verification should be done.
-     * @return          the instance itself.
-     */
-    public final B verifyPeer(boolean verify) {
-        verifyPeer = verify;
-        return self();
-    }
-
-    /**
      * Set if <a href="https://tools.ietf.org/html/draft-thomson-quic-bit-grease-00">greasing</a> should be enabled
      * or not.
      *
@@ -141,42 +99,6 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final B earlyData(boolean enable) {
         earlyData = enable;
-        return self();
-    }
-
-    /**
-     * Set the application protocols to use. These are converted to wire-format.
-     *
-     * @see #applicationProtocols(byte[])
-     *
-     * @param protocols the application protocols.
-     * @return          the instance itself.
-     */
-    public final B applicationProtocols(String... protocols) {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            for (String p : protocols) {
-                byte[] bytes = p.getBytes(StandardCharsets.US_ASCII);
-                out.write(bytes.length);
-                out.write(bytes);
-            }
-            this.protos = out.toByteArray();
-            return self();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    /**
-     * Set the application protocols to use. These are in wire-format and so prefixed with the length each.
-     *
-     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_application_protos">
-     *     set_application_protos</a>
-     *
-     * @param protos    the application protocols in wire-format.
-     * @return          the instance itself.
-     */
-    public final B applicationProtocols(byte[] protos) {
-        this.protos = protos.clone();
         return self();
     }
 
@@ -405,9 +327,37 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return self();
     }
 
+    /**
+     * The {@link QuicSslContext} that will be used to create {@link QuicSslEngine}s for {@link QuicChannel}s.
+     *
+     * If you need a more flexible way to provide {@link QuicSslEngine}s use {@link #sslEngineProvider(Function)}.
+     *
+     * @param sslContext    the context.
+     * @return              the instance itself.
+     */
+    public final B sslContext(QuicSslContext sslContext) {
+        if (server != sslContext.isServer()) {
+            throw new IllegalArgumentException("QuicSslContext.isServer() " + sslContext.isServer()
+                    + " isn't supported by this builder");
+        }
+        return sslEngineProvider(q -> sslContext.newEngine(q.alloc()));
+    }
+
+    /**
+     * The {@link Function} that will return the {@link QuicSslEngine} that should be used for the
+     * {@link QuicChannel}.
+     *
+     * @param sslEngineProvider    the provider.
+     * @return                      the instance itself.
+     */
+    public final B sslEngineProvider(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider) {
+        this.sslEngineProvider = sslEngineProvider;
+        return self();
+    }
+
     private QuicheConfig createConfig() {
-        return new QuicheConfig(certPath, keyPath, verifyPeer, grease, earlyData,
-                protos, maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
+        return new QuicheConfig(grease, earlyData,
+                maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
@@ -417,7 +367,11 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Validate the configuration before building the codec.
      */
-    protected void validate() { }
+    protected void validate() {
+        if (sslEngineProvider == null) {
+            throw new IllegalStateException("sslEngineProvider can't be null");
+        }
+    }
 
     /**
      * Builds the QUIC codec that should be added to the {@link io.netty.channel.ChannelPipeline} of the underlying
@@ -429,7 +383,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         validate();
         QuicheConfig config = createConfig();
         try {
-            return build(config, localConnIdLength);
+            return build(config, sslEngineProvider, localConnIdLength);
         } catch (Throwable cause) {
             config.free();
             throw cause;
@@ -439,9 +393,12 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     /**
      * Builds the QUIC codec.
      *
-     * @param config            the {@link QuicheConfig} that should be used.
-     * @param localConnIdLength the local connection id length.
-     * @return                  the {@link ChannelHandler} which acts as codec.
+     * @param config                the {@link QuicheConfig} that should be used.
+     * @param sslContextProvider    the context provider
+     * @param localConnIdLength     the local connection id length.
+     * @return                      the {@link ChannelHandler} which acts as codec.
      */
-    protected abstract ChannelHandler build(QuicheConfig config, int localConnIdLength);
+    protected abstract ChannelHandler build(QuicheConfig config,
+                                            Function<QuicChannel, ? extends QuicSslEngine> sslContextProvider,
+                                            int localConnIdLength);
 }

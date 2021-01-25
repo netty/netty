@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,22 +15,17 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.SslContext;
 
-public abstract class AbstractQuicTest {
+/**
+ * Special {@link SslContext} that can be used for {@code QUIC}.
+ */
+public abstract class QuicSslContext extends SslContext {
 
-    private static final int TEST_GLOBAL_TIMEOUT_VALUE = Integer.getInteger(
-            "io.netty.incubator.codec.quic.defaultTestTimeout", 10);
+    @Override
+    public abstract QuicSslEngine newEngine(ByteBufAllocator alloc);
 
-    @Rule
-    public final Timeout globalTimeout = Timeout.seconds(TEST_GLOBAL_TIMEOUT_VALUE);
-
-    @BeforeClass
-    public static void assumeTrue() {
-        Quic.ensureAvailability();
-       Assume.assumeTrue(Quic.isAvailable());
-    }
+    @Override
+    public abstract QuicSslEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort);
 }

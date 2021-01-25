@@ -18,7 +18,6 @@ package io.netty.incubator.codec.quic.example;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,11 +28,14 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
@@ -44,16 +46,11 @@ public final class QuicServerExample {
     private QuicServerExample() { }
 
     public static void main(String[] args) throws Exception {
-        // We just want to support HTTP 0.9 as application protocol
-        byte[] proto = new byte[] {
-                0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
-        };
-
+        QuicSslContext context = QuicSslContextBuilder.forServer(
+                new File("./src/test/resources/cert.key"), null, new File("./src/test/resources/cert.crt"))
+                .applicationProtocols("http/0.9").build();
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        ChannelHandler codec = new QuicServerCodecBuilder()
-                .certificateChain("./src/test/resources/cert.crt")
-                .privateKey("./src/test/resources/cert.key")
-                .applicationProtocols(proto)
+        ChannelHandler codec = new QuicServerCodecBuilder().sslContext(context)
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 // Configure some limits for the maximal number of streams (and the data) that we want to handle.
                 .initialMaxData(10000000)

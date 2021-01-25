@@ -39,3 +39,11 @@ This product is statically linked against Quiche.
     * license/LICENSE.quiche.txt (BSD2)
   * HOMEPAGE:
     * https://github.com/cloudflare/quiche
+
+
+This product is statically linked against boringssl.
+
+  * LICENSE (Combination ISC and OpenSSL license)
+    * license/LICENSE.boringssl.txt (Combination ISC and OpenSSL license)
+  * HOMEPAGE:
+    * https://boringssl.googlesource.com/boringssl/

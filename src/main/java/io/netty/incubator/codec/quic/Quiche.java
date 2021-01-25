@@ -204,15 +204,10 @@ final class Quiche {
                                    int newScidLen, long tokenAddr, int tokenLen, int version, long outAddr, int outLen);
 
     /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L206">quiche_accept</a>.
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L229">quiche_conn_new_with_tls</a>.
      */
-    static native long quiche_accept(long scidAddr, int scidLen, long odcidAddr, int odcidLen, long configAddr);
-
-    /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L206">quiche_accept</a> but
-     * used for accepting QUIC connections without token validation.
-     */
-    static native long quiche_accept_no_token(long scidAddr, int scidLen, long configAddr);
+    static native long quiche_conn_new_with_tls(long scidAddr, int scidLen, long odcidAddr, int odcidLen,
+                                                long configAddr, long ssl, boolean isServer);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L249">quiche_conn_recv</a>.
@@ -230,6 +225,7 @@ final class Quiche {
     static native void quiche_conn_free(long connAddr);
 
     /**
+<<<<<<< HEAD
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L211">quiche_connect</a>.
      */
     static native long quiche_connect(String server_name, long scidAddr, int scidLen, long configAddr);
@@ -243,6 +239,8 @@ final class Quiche {
             long connAddr, long streamId, byte urgency, boolean incremental);
 
     /**
+=======
+>>>>>>> ccb1469... Allow to use KeyManagerFactory / TrustmanagerFactory
      * See <a href="https://github.com/cloudflare/quiche/blob/
      * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L312">quiche_conn_trace_id</a>.
      */
@@ -281,13 +279,6 @@ final class Quiche {
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L297">quiche_conn_close</a>.
      */
     static native int quiche_conn_close(long connAddr, boolean app, long err, long reasonAddr, int reasonLen);
-
-    /**
-     * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L301">
-     *     quiche_conn_application_proto</a>.
-     */
-    static native byte[] quiche_conn_application_proto(long connAddr);
 
     /**
      * See
@@ -388,27 +379,6 @@ final class Quiche {
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L118">
-     *     quiche_config_load_cert_chain_from_pem_file</a>.
-     */
-    static native int quiche_config_load_cert_chain_from_pem_file(long configAddr, String path);
-
-    /**
-     * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#122">
-     *     quiche_config_load_priv_key_from_pem_file</a>.
-     */
-    static native int quiche_config_load_priv_key_from_pem_file(long configAddr, String path);
-
-    /**
-     * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#126">
-     *     quiche_config_verify_peer</a>.
-     */
-    static native void quiche_config_verify_peer(long configAddr, boolean value);
-
-    /**
-     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#129">
      *     quiche_config_grease</a>.
      */
@@ -420,13 +390,6 @@ final class Quiche {
      *     quiche_config_enable_early_data</a>.
      */
     static native void quiche_config_enable_early_data(long configAddr);
-
-    /**
-     * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#138">
-     *     quiche_config_set_application_protos</a>.
-     */
-    static native int quiche_config_set_application_protos(long configAddr, byte[] protos);
 
     /**
      * See

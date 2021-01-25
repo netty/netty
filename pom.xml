@@ -69,18 +69,25 @@
     <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>false</skipTests>
-    <netty.version>4.1.58.Final</netty.version>
+    <netty.version>4.1.59.Final-SNAPSHOT</netty.version>
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
+    <boringsslBranch>chromium-stable</boringsslBranch>
+    <boringsslHome>${boringsslSourceDir}/build</boringsslHome>
+    <boringsslSourceDir>${project.build.directory}/boringssl</boringsslSourceDir>
+    <!--
+      See https://boringssl.googlesource.com/boringssl/+/refs/heads/chromium-stable for the latest commit
+    -->
+    <boringsslCommitSha>3743aafdacff2f7b083615a043a37101f740fa53</boringsslCommitSha>
     <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
     <quicheBuildDir>${quicheCheckoutDir}/target/release</quicheBuildDir>
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>5403e54c40caf70f096a2a08c50c9d71c149da6f</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
-    <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
-    <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
+    <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include -I${boringsslSourceDir}/include</cflags>
+    <ldflags>-L${quicheBuildDir} -lquiche -L${boringsslHome}/ssl -L${boringsslHome}/crypto -L${boringsslHome}/decrepit -ldecrepit -lssl -lcrypto</ldflags>
     <extraLdflags />
     <extraConfigureArg />
     <!-- We need 10.12 as minimum to compile quiche and use it.
@@ -199,6 +206,104 @@
         </dependency>
       </dependencies>
       <executions>
+
+        <!-- Build the BoringSSL static libs -->
+        <execution>
+          <id>build-boringssl</id>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          <configuration>
+            <target>
+              <!-- Add the ant tasks from ant-contrib -->
+              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+              <property environment="env" />
+              <if>
+                <available file="${boringsslHome}" />
+                <then>
+                  <echo message="BoringSSL was already build, skipping the build step." />
+                </then>
+                <else>
+                  <if>
+                    <available file="${boringsslSourceDir}" />
+                    <then>
+                      <echo message="BoringSSL was already cloned, skipping the clone step." />
+                    </then>
+                    <else>
+                      <echo message="Clone BoringSSL" />
+
+                      <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                        <arg value="clone" />
+                        <arg value="--branch" />
+                        <arg value="${boringsslBranch}" />
+                        <arg value="https://boringssl.googlesource.com/boringssl" />
+                        <arg value="${boringsslSourceDir}" />
+                      </exec>
+                    </else>
+                  </if>
+
+                  <echo message="Building BoringSSL" />
+
+                  <!-- Use the known SHA of the commit -->
+                  <exec executable="git" failonerror="true" dir="${boringsslSourceDir}" resolveexecutable="true">
+                    <arg value="checkout" />
+                    <arg value="${boringsslCommitSha}" />
+                  </exec>
+
+                  <mkdir dir="${boringsslHome}" />
+                  <if>
+                    <equals arg1="${os.detected.name}" arg2="linux" />
+                    <then>
+                      <!-- On *nix, add ASM flags to disable executable stack -->
+                      <property name="cmakeAsmFlags" value="-Wa,--noexecstack" />
+                      <property name="cmakeCFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
+                      <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+                      <property name="cmakeCxxFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS" />
+                    </then>
+                    <else>
+                      <!-- On *nix, add ASM flags to disable executable stack -->
+                      <property name="cmakeAsmFlags" value="-Wa,--noexecstack" />
+                      <property name="cmakeCFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
+                      <property name="cmakeCxxFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis" />
+                    </else>
+                  </if>
+                  <exec executable="cmake" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
+                    <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
+                    <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
+                    <arg value="-DCMAKE_BUILD_TYPE=Release" />
+                    <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
+                    <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
+                    <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                    <arg value="-GNinja" />
+                    <arg value="${boringsslSourceDir}" />
+                  </exec>
+                  <if>
+                    <!-- may be called ninja-build or ninja -->
+                    <!-- See https://github.com/netty/netty-tcnative/issues/475 -->
+                    <available file="ninja-build" filepath="${env.PATH}" />
+                    <then>
+                      <exec executable="ninja-build" failonerror="true" dir="${boringsslHome}" resolveexecutable="true" />
+                    </then>
+                    <else>
+                      <exec executable="ninja" failonerror="true" dir="${boringsslHome}" resolveexecutable="true" />
+                    </else>
+                  </if>
+                  <exec executable="ln" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
+                    <arg value="-s" />
+                    <arg value="ssl/libssl.a" />
+                    <arg value="." />
+                  </exec>
+                  <exec executable="ln" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
+                    <arg value="-s" />
+                    <arg value="crypto/libcrypto.a" />
+                    <arg value="." />
+                  </exec>
+                </else>
+              </if>
+            </target>
+          </configuration>
+        </execution>
         <!-- Build the Quiche static lib -->
         <execution>
           <id>build-quiche</id>
@@ -252,8 +357,9 @@
                         <arg value="ffi" />
                         <arg value="--release" />
                         <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
-                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
+                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer" />
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslSourceDir}/"/>
                       </exec>
 
                       <!-- delete the shared library as otherwise we may link against it and not against the static
@@ -418,6 +524,10 @@
             <instructions>
               <Export-Package>${project.groupId}.*</Export-Package>
               <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
+              <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
+              <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
+              <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
+              <Quiche-Branch>${quicheBranch}</Quiche-Branch>
             </instructions>
           </configuration>
         </execution>
@@ -589,6 +699,11 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
       <version>${netty.version}</version>
     </dependency>
     <dependency>

@@ -23,13 +23,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.channels.AlreadyConnectedException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -262,12 +273,161 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testConnectWithoutBogusCertificate() throws Throwable {
-        QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder().certificateChain("cert-does-not-exist.pem"),
-                InsecureQuicTokenHandler.INSTANCE,
-                new ChannelInboundHandlerAdapter(), new ChannelInboundHandlerAdapter());
+    @Test
+    public void testTrustManagerFailureOnTheClient() throws Throwable {
+        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(new TrustManagerFactoryWrapper(new TestTrustManager() {
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                            throws CertificateException {
+                        throw new CertificateException();
+                    }
+                })).applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            Throwable cause = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .await().cause();
+            assertThat(cause, Matchers.instanceOf(SSLException.class));
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testALPNProtocolMissmatch() throws Throwable {
+        CountDownLatch latch = new CountDownLatch(1);
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
+                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                        .applicationProtocols("my-protocol").clientAuth(ClientAuth.NONE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        if (cause instanceof SSLHandshakeException) {
+                            latch.countDown();
+                        } else {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                },
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("protocol").build()));
+        try {
+            Throwable cause = QuicChannel.newBootstrap(channel)
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 300)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .await().cause();
+            assertThat(cause, Matchers.instanceOf(ConnectTimeoutException.class));
+            latch.await();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testConnectSuccessWhenTrustManagerBuildFromSameCert() throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
+                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(QuicTestUtils.CERT)
+                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            assertTrue(quicChannel.close().await().isSuccess());
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testConnectMutualAuthSuccess() throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
+                QuicTestUtils.KEY, null, QuicTestUtils.CERT).trustManager(
+                InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).keyManager(
+                        QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            assertTrue(quicChannel.close().await().isSuccess());
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testConnectMutualAuthFailsIfClientNotSendCertificate() throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
+                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            Throwable cause = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .await().cause();
+            assertThat(cause, Matchers.instanceOf(SSLException.class));
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
     }
 
     private static final class BytesCountingHandler extends ChannelInboundHandlerAdapter {
@@ -349,6 +509,47 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 assertEquals(i, (int) states.take());
             }
             assertNull(states.poll());
+        }
+    }
+
+    private abstract static class TestTrustManager extends X509ExtendedTrustManager {
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+                throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+                throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
         }
     }
 }

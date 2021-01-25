@@ -55,6 +55,8 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+
 /**
  * {@link QuicChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
  */
@@ -121,7 +123,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final TimeoutHandler timeoutHandler = new TimeoutHandler();
     private final InetSocketAddress remote;
 
-    private long connAddr;
+    private long connAddr = -1;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private boolean connectionSendNeeded;
@@ -148,7 +150,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
 
-    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, long connAddr, byte[] traceId,
+    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key,
                       InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
@@ -161,10 +163,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         this.supportsDatagram = supportsDatagram;
         this.remote = remote;
-        this.connAddr = connAddr;
-        if (traceId != null) {
-            this.traceId = new String(traceId);
-        }
         this.streamHandler = streamHandler;
         this.streamOptionsArray = streamOptionsArray;
         this.streamAttrsArray = streamAttrsArray;
@@ -173,21 +171,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     static QuicheQuicChannel forClient(Channel parent, InetSocketAddress remote, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        return new QuicheQuicChannel(parent, false, null,
-                -1, null, remote, false, streamHandler,
+        return new QuicheQuicChannel(parent, false, null, remote, false, streamHandler,
                 streamOptionsArray, streamAttrsArray);
     }
 
-    static QuicheQuicChannel forServer(Channel parent, ByteBuffer key,
-                                       long connAddr, byte[] traceId, InetSocketAddress remote,
+    static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress remote,
                                        boolean supportsDatagram, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        return new QuicheQuicChannel(parent, true, key, connAddr, traceId, remote, supportsDatagram,
+        return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
-    private void connect(long configAddr, int localConnIdLength, boolean supportsDatagram) throws Exception {
+    void attach(long connAddr) {
+        this.connAddr = connAddr;
+        byte[] traceId = Quiche.quiche_conn_trace_id(connAddr);
+        if (traceId != null) {
+            this.traceId = new String(traceId);
+        }
+    }
+
+    private void connect(Function<QuicChannel, ? extends QuicSslEngine> engineProvider,
+                         long configAddr, int localConnIdLength,
+                         boolean supportsDatagram) throws Exception {
         assert this.connAddr == -1;
         assert this.traceId == null;
         assert this.key == null;
@@ -201,12 +207,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         + " instead of " + localConnIdLength));
             }
         }
+        QuicSslEngine engine = engineProvider.apply(this);
+        if (!(engine instanceof QuicheQuicSslEngine)) {
+            failConnectPromiseAndThrow(new IllegalArgumentException("QuicSslEngine is not of type "
+                    + QuicheQuicSslEngine.class.getSimpleName()));
+            return;
+        }
+        if (!engine.getUseClientMode()) {
+            failConnectPromiseAndThrow(new IllegalArgumentException("QuicSslEngine is not create in client mode"));
+        }
+        QuicheQuicSslEngine quicheEngine = (QuicheQuicSslEngine) engine;
         ByteBuffer connectId = address.connId.duplicate();
         ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
-        final String serverName = config().getPeerCertServerName();
         try {
-            long connection = Quiche.quiche_connect(serverName, Quiche.memoryAddress(idBuffer) + idBuffer.readerIndex(),
-                    idBuffer.readableBytes(), configAddr);
+            long connection = Quiche.quiche_conn_new_with_tls(Quiche.memoryAddress(idBuffer) + idBuffer.readerIndex(),
+                        idBuffer.readableBytes(), -1, -1, configAddr, quicheEngine.createNative(), false);
             if (connection == -1) {
                 failConnectPromiseAndThrow(new ConnectException());
             }
@@ -308,14 +323,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             eventLoop().execute(() -> ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise));
         }
         return promise;
-    }
-
-    @Override
-    public byte[] applicationProtocol() {
-        if (isConnDestroyed()) {
-            return null;
-        }
-        return Quiche.quiche_conn_application_proto(connAddr);
     }
 
     @Override
@@ -1242,12 +1249,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     // TODO: Come up with something better.
-    static QuicheQuicChannel handleConnect(SocketAddress address, long config, int localConnIdLength,
+    static QuicheQuicChannel handleConnect(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                           SocketAddress address, long config, int localConnIdLength,
                                            boolean supportsDatagram) throws Exception {
         if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
             QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
             QuicheQuicChannel channel = addr.channel;
-            channel.connect(config, localConnIdLength, supportsDatagram);
+            channel.connect(sslEngineProvider, config, localConnIdLength, supportsDatagram);
             return channel;
         }
         return null;

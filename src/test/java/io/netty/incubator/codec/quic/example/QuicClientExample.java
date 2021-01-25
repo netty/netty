@@ -25,8 +25,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
@@ -40,15 +43,12 @@ public final class QuicClientExample {
     private QuicClientExample() { }
 
     public static void main(String[] args) throws Exception {
-        // We just want to support HTTP 0.9 as application protocol
-        byte[] proto = new byte[] {
-                0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
-        };
-
+        QuicSslContext context = QuicSslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).
+                applicationProtocols("http/0.9").build();
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
             ChannelHandler codec = new QuicClientCodecBuilder()
-                    .applicationProtocols(proto)
+                    .sslContext(context)
                     .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                     .initialMaxData(10000000)
                     // As we don't want to support remote initiated streams just setup the limit for local initiated

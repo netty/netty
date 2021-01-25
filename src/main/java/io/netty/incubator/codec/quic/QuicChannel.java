@@ -75,13 +75,6 @@ public interface QuicChannel extends Channel {
     }
 
     /**
-     * Returns the negotiated ALPN protocol or {@code null} if none has been negotiated.
-     *
-     * @return the application protocol or {@code null} if none has been negotiated.
-     */
-    byte[] applicationProtocol();
-
-    /**
      * Close the {@link QuicChannel}
      *
      * @param applicationClose  {@code true} if an application close should be used,

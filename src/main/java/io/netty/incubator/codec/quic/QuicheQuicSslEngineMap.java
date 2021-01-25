@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,22 +15,23 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
 
-public abstract class AbstractQuicTest {
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-    private static final int TEST_GLOBAL_TIMEOUT_VALUE = Integer.getInteger(
-            "io.netty.incubator.codec.quic.defaultTestTimeout", 10);
+final class QuicheQuicSslEngineMap {
 
-    @Rule
-    public final Timeout globalTimeout = Timeout.seconds(TEST_GLOBAL_TIMEOUT_VALUE);
+    private final ConcurrentMap<Long, QuicheQuicSslEngine> engines = new ConcurrentHashMap<>();
 
-    @BeforeClass
-    public static void assumeTrue() {
-        Quic.ensureAvailability();
-       Assume.assumeTrue(Quic.isAvailable());
+    QuicheQuicSslEngine get(long ssl) {
+        return engines.get(ssl);
+    }
+
+    QuicheQuicSslEngine remove(long ssl) {
+        return engines.remove(ssl);
+    }
+
+    void put(long ssl, QuicheQuicSslEngine engine) {
+        engines.put(ssl, engine);
     }
 }

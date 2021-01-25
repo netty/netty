@@ -21,14 +21,20 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.NetUtil;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 final class QuicTestUtils {
+    static final String[] PROTOS = new String[]{"hq-29"};
+    static final File KEY = new File("./src/test/resources/cert.key");
+    static final File CERT = new File("./src/test/resources/cert.crt");
 
-    private QuicTestUtils() { }
+    private QuicTestUtils() {
+    }
 
     private static final EventLoopGroup GROUP = new NioEventLoopGroup();
 
@@ -40,12 +46,6 @@ final class QuicTestUtils {
             }
         });
     }
-    private static final byte[] PROTOS = new byte[] {
-            0x05, 'h', 'q', '-', '2', '9',
-            0x05, 'h', 'q', '-', '2', '8',
-            0x05, 'h', 'q', '-', '2', '7',
-            0x08, 'h', 't', 't', 'p', '/', '0', '.', '9'
-    };
 
     static Channel newClient() throws Exception {
         return newClient(newQuicClientBuilder());
@@ -60,10 +60,13 @@ final class QuicTestUtils {
     }
 
     static QuicClientCodecBuilder newQuicClientBuilder() {
+        return newQuicClientBuilder(QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(PROTOS).build());
+    }
+
+    static QuicClientCodecBuilder newQuicClientBuilder(QuicSslContext sslContext) {
         return new QuicClientCodecBuilder()
-                .certificateChain("./src/test/resources/cert.crt")
-                .privateKey("./src/test/resources/cert.key")
-                .applicationProtocols(PROTOS)
+                .sslEngineProvider(q -> sslContext.newEngine(q.alloc()))
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
@@ -76,10 +79,14 @@ final class QuicTestUtils {
     }
 
     static QuicServerCodecBuilder newQuicServerBuilder() {
+        return newQuicServerBuilder(QuicSslContextBuilder.forServer(
+                KEY, null, CERT)
+                .applicationProtocols(PROTOS).build());
+    }
+
+    static QuicServerCodecBuilder newQuicServerBuilder(QuicSslContext context) {
         return new QuicServerCodecBuilder()
-                .certificateChain("./src/test/resources/cert.crt")
-                .privateKey("./src/test/resources/cert.key")
-                .applicationProtocols(PROTOS)
+                .sslEngineProvider(q -> context.newEngine(q.alloc()))
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)

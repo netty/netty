@@ -17,12 +17,14 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link QuicCodecBuilder} that configures and builds a {@link ChannelHandler} that should be added to the
@@ -43,7 +45,9 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     /**
      * Creates a new instance.
      */
-    public QuicServerCodecBuilder() { }
+    public QuicServerCodecBuilder() {
+        super(true);
+    }
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link QuicChannel} instances once they got
@@ -162,7 +166,9 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     @Override
-    protected ChannelHandler build(QuicheConfig config, int localConnIdLength) {
+    protected ChannelHandler build(QuicheConfig config,
+                                   Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                   int localConnIdLength) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
@@ -171,7 +177,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
-        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator,
+        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, sslEngineProvider,
                 handler, Quic.optionsArray(options), Quic.attributesArray(attrs),
                 streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
     }

@@ -76,5 +76,8 @@ COPY ./pom.xml $SOURCE_DIR/pom.xml
 WORKDIR $SOURCE_DIR
 RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp'
 
+# Pre-build boringssl
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-boringssl -DquicheCheckoutDir=$SOURCE_DIR/boringssl'
+
 # Pre-build quiche
 RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-quiche -DquicheCheckoutDir=$SOURCE_DIR/quiche'
