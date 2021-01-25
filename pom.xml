@@ -263,6 +263,8 @@
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
+                        <arg value="--features" />
+                        <arg value="ffi" />
                         <arg value="--release" />
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
