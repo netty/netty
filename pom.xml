@@ -76,7 +76,8 @@
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
     <quicheBuildDir>${quicheCheckoutDir}/target/release</quicheBuildDir>
-    <quiche.version>0.6.0</quiche.version>
+    <quicheBranch>master</quicheBranch>
+    <quicheCommitSha>5403e54c40caf70f096a2a08c50c9d71c149da6f</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <cflags>-Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include</cflags>
     <ldflags>-L${quicheBuildDir} -lquiche</ldflags>
@@ -218,10 +219,16 @@
                   <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
                     <arg value="clone" />
                     <arg value="--branch" />
-                    <arg value="${quiche.version}" />
+                    <arg value="${quicheBranch}" />
                     <arg value="--recursive" />
                     <arg value="https://github.com/cloudflare/quiche" />
                     <arg value="${quicheCheckoutDir}" />
+                  </exec>
+
+                  <!-- Use the known SHA of the commit -->
+                  <exec executable="git" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                    <arg value="checkout" />
+                    <arg value="${quicheCommitSha}" />
                   </exec>
                 </else>
               </if>
@@ -238,6 +245,8 @@
                     <then>
                       <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
                         <arg value="build" />
+                        <arg value="--features" />
+                        <arg value="ffi" />
                         <arg value="--release" />
                         <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />

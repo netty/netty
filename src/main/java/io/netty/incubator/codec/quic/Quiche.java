@@ -415,10 +415,19 @@ final class Quiche {
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#146">
-     *     quiche_config_set_max_udp_payload_size</a>.
+     * <a href="https://github.com/cloudflare/quiche/blob/
+     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L150">
+     *     quiche_config_set_max_recv_udp_payload_size</a>.
      */
-    static native void quiche_config_set_max_udp_payload_size(long configAddr, long value);
+    static native void quiche_config_set_max_recv_udp_payload_size(long configAddr, long value);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/
+     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L153">
+     *     quiche_config_set_max_recv_udp_payload_size</a>.
+     */
+    static native void quiche_config_set_max_send_udp_payload_size(long configAddr, long value);
 
     /**
      * See

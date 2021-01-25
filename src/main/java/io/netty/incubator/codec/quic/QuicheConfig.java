@@ -20,8 +20,8 @@ final class QuicheConfig {
     private final long config;
 
     QuicheConfig(String certPath, String keyPath, Boolean verifyPeer, Boolean grease, boolean earlyData,
-                        byte[] protos, Long maxIdleTimeout, Long maxUdpPayloadSize, Long initialMaxData,
-                        Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
+                        byte[] protos, Long maxIdleTimeout, Long maxSendUdpPayloadSize, Long maxRecvUdpPayloadSize,
+                        Long initialMaxData, Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
                         QuicCongestionControlAlgorithm congestionControlAlgorithm,
@@ -50,8 +50,11 @@ final class QuicheConfig {
             if (maxIdleTimeout != null) {
                 Quiche.quiche_config_set_max_idle_timeout(config, maxIdleTimeout);
             }
-            if (maxUdpPayloadSize != null) {
-                Quiche.quiche_config_set_max_udp_payload_size(config, maxUdpPayloadSize);
+            if (maxSendUdpPayloadSize != null) {
+                Quiche.quiche_config_set_max_send_udp_payload_size(config, maxSendUdpPayloadSize);
+            }
+            if (maxRecvUdpPayloadSize != null) {
+                Quiche.quiche_config_set_max_recv_udp_payload_size(config, maxRecvUdpPayloadSize);
             }
             if (initialMaxData != null) {
                 Quiche.quiche_config_set_initial_max_data(config, initialMaxData);

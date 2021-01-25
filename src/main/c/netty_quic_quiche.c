@@ -369,8 +369,12 @@ static void netty_quiche_config_set_max_idle_timeout(JNIEnv* env, jclass clazz, 
     quiche_config_set_max_idle_timeout((quiche_config*) config, (uint64_t) value);
 }
 
-static void netty_quiche_config_set_max_udp_payload_size(JNIEnv* env, jclass clazz, jlong config, jlong value) {
-    quiche_config_set_max_udp_payload_size((quiche_config*) config, (uint64_t) value);
+static void netty_quiche_config_set_max_recv_udp_payload_size(JNIEnv* env, jclass clazz, jlong config, jlong value) {
+    quiche_config_set_max_recv_udp_payload_size((quiche_config*) config, (uint64_t) value);
+}
+
+static void netty_quiche_config_set_max_send_udp_payload_size(JNIEnv* env, jclass clazz, jlong config, jlong value) {
+    quiche_config_set_max_send_udp_payload_size((quiche_config*) config, (uint64_t) value);
 }
 
 static void netty_quiche_config_set_initial_max_data(JNIEnv* env, jclass clazz, jlong config, jlong value) {
@@ -520,7 +524,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_enable_early_data", "(J)V", (void *) netty_quiche_config_enable_early_data },
   { "quiche_config_set_application_protos", "(J[B)I", (void *) netty_quiche_config_set_application_protos },
   { "quiche_config_set_max_idle_timeout", "(JJ)V", (void *) netty_quiche_config_set_max_idle_timeout },
-  { "quiche_config_set_max_udp_payload_size", "(JJ)V", (void *) netty_quiche_config_set_max_udp_payload_size },
+  { "quiche_config_set_max_recv_udp_payload_size", "(JJ)V", (void *) netty_quiche_config_set_max_recv_udp_payload_size },
+  { "quiche_config_set_max_send_udp_payload_size", "(JJ)V", (void *) netty_quiche_config_set_max_send_udp_payload_size },
   { "quiche_config_set_initial_max_data", "(JJ)V", (void *) netty_quiche_config_set_initial_max_data },
   { "quiche_config_set_initial_max_stream_data_bidi_local", "(JJ)V", (void *) netty_quiche_config_set_initial_max_stream_data_bidi_local },
   { "quiche_config_set_initial_max_stream_data_bidi_remote", "(JJ)V", (void *) netty_quiche_config_set_initial_max_stream_data_bidi_remote },

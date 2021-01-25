@@ -42,7 +42,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private boolean earlyData;
     private byte[] protos;
     private Long maxIdleTimeout;
-    private Long maxUdpPayloadSize;
+    private Long maxRecvUdpPayloadSize;
+    private Long maxSendUdpPayloadSize;
     private Long initialMaxData;
     private Long initialMaxStreamDataBidiLocal;
     private Long initialMaxStreamDataBidiRemote;
@@ -195,16 +196,30 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
-     * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_udp_payload_size">
-     *     set_max_udp_payload_size</a>.
+     * See <a href="https://github.com/cloudflare/quiche/blob/35e38d987c1e53ef2bd5f23b754c50162b5adac8/src/lib.rs#L669">
+     *     set_max_send_udp_payload_size</a>.
+     *
+     * The default and minimum value is 1200.
+     *
+     * @param size    the maximum payload size that is advertised to the remote peer.
+     * @return        the instance itself.
+     */
+    public final B maxSendUdpPayloadSize(long size) {
+        this.maxSendUdpPayloadSize = checkPositiveOrZero(size, "value");
+        return self();
+    }
+
+    /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/35e38d987c1e53ef2bd5f23b754c50162b5adac8/src/lib.rs#L662">
+     *     set_max_recv_udp_payload_size</a>.
      *
      * The default value is 65527.
      *
      * @param size    the maximum payload size that is advertised to the remote peer.
      * @return        the instance itself.
      */
-    public final B maxUdpPayloadSize(long size) {
-        this.maxUdpPayloadSize = checkPositiveOrZero(size, "value");
+    public final B maxRecvUdpPayloadSize(long size) {
+        this.maxRecvUdpPayloadSize = checkPositiveOrZero(size, "value");
         return self();
     }
 
@@ -392,7 +407,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
 
     private QuicheConfig createConfig() {
         return new QuicheConfig(certPath, keyPath, verifyPeer, grease, earlyData,
-                protos, maxIdleTimeout, maxUdpPayloadSize, initialMaxData,
+                protos, maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
