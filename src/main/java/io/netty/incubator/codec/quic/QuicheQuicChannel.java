@@ -108,7 +108,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private static final int MAX_DATAGRAM_BUFFER_SIZE = 64 * 1024;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
@@ -1147,26 +1146,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 int numMessagesRead = 0;
                 do {
-                    ByteBuf datagramBuffer = recvHandle.allocate(alloc());
-                    int written;
-                    int writerIndex;
-
-                    for (;;) {
-                        writerIndex = datagramBuffer.writerIndex();
-                        written = Quiche.quiche_conn_dgram_recv(connAddr,
-                                datagramBuffer.memoryAddress() + writerIndex, datagramBuffer.writableBytes());
-                        if (written == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
-                            // Let's grow the buffer and use 65536 as the upper limit as this is the biggest that
-                            // will fit into a QUIC packet.
-                            // See https://tools.ietf.org/html/draft-ietf-quic-datagram-01#section-3
-                            int newCapacity = (int) (datagramBuffer.writableBytes() * 1.5);
-                            datagramBuffer.capacity(alloc().calculateNewCapacity(
-                                    Math.min(newCapacity, MAX_DATAGRAM_BUFFER_SIZE), MAX_DATAGRAM_BUFFER_SIZE));
-                        } else {
-                            // the buffer was big enough.
-                            break;
-                        }
+                    int len = Quiche.quiche_conn_dgram_recv_front_len(connAddr);
+                    if (len == Quiche.QUICHE_ERR_DONE) {
+                        datagramReadable = false;
+                        return;
                     }
+
+                    ByteBuf datagramBuffer = alloc().ioBuffer(len);
+                    int writerIndex = datagramBuffer.writerIndex();
+                    int written = Quiche.quiche_conn_dgram_recv(connAddr,
+                            datagramBuffer.memoryAddress() + writerIndex, datagramBuffer.writableBytes());
                     try {
                         if (Quiche.throwIfError(written)) {
                             datagramBuffer.release();

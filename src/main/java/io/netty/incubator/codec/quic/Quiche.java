@@ -352,6 +352,14 @@ final class Quiche {
 
     /**
      * See
+     * <a href=https://github.com/cloudflare/quiche/blob/
+     * 9d0c677ef1411b24d720b5c8b73bcc94b5535c29/include/quiche.h#L381">
+     *     quiche_conn_dgram_recv_front_len</a>.
+     */
+    static native int quiche_conn_dgram_recv_front_len(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L361">
      *     quiche_conn_dgram_recv</a>.
      */

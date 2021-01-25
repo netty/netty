@@ -323,6 +323,10 @@ static jint netty_quiche_conn_dgram_max_writable_len(JNIEnv* env, jclass clazz, 
     return (jint) quiche_conn_dgram_max_writable_len((quiche_conn *) conn);
 }
 
+static jint netty_quiche_conn_dgram_recv_front_len(JNIEnv* env, jclass clazz, jlong conn) {
+    return (jint) quiche_conn_dgram_recv_front_len((quiche_conn*) conn);
+}
+
 static jint netty_quiche_conn_dgram_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
     return (jint) quiche_conn_dgram_recv((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
 }
@@ -530,6 +534,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_stream_iter_free", "(J)V", (void *) netty_quiche_stream_iter_free },
   { "quiche_stream_iter_next", "(J[J)I", (void *) netty_quiche_stream_iter_next },
   { "quiche_conn_dgram_max_writable_len", "(J)I", (void* ) netty_quiche_conn_dgram_max_writable_len },
+  { "quiche_conn_dgram_recv_front_len", "(J)I", (void* ) netty_quiche_conn_dgram_recv_front_len },
   { "quiche_conn_dgram_recv", "(JJI)I", (void* ) netty_quiche_conn_dgram_recv },
   { "quiche_conn_dgram_send", "(JJI)I", (void* ) netty_quiche_conn_dgram_send },
   { "quiche_config_new", "(I)J", (void *) netty_quiche_config_new },
