@@ -29,9 +29,9 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
         with:
-          key: deploy-linux-x86_64-docker-cache-{hash}
+          key: deploy-docker-cache-{hash}
           restore-keys: |
-            deploy-linux-x86_64-docker-cache-
+            deploy-docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml build
