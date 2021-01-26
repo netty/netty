@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -44,8 +45,8 @@ public class PcapWriteHandlerTest {
 
         ByteBuf byteBuf = Unpooled.buffer();
 
-        InetSocketAddress srvAddr = new InetSocketAddress("127.0.0.1", 62001);
-        InetSocketAddress cltAddr = new InetSocketAddress("127.0.0.1", 62002);
+        InetSocketAddress srvReqAddr = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress cltReqAddr = new InetSocketAddress("127.0.0.1", 0);
 
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
 
@@ -60,7 +61,7 @@ public class PcapWriteHandlerTest {
                     }
                 });
 
-        ChannelFuture channelFutureServer = server.bind(srvAddr).sync();
+        ChannelFuture channelFutureServer = server.bind(srvReqAddr).sync();
         assertTrue(channelFutureServer.isSuccess());
 
         // We'll bootstrap a UDP Client for sending UDP Packets to UDP Server.
@@ -69,10 +70,11 @@ public class PcapWriteHandlerTest {
                 .channel(NioDatagramChannel.class)
                 .handler(new PcapWriteHandler(new ByteBufOutputStream(byteBuf)));
 
-        ChannelFuture channelFutureClient = client.connect(srvAddr, cltAddr).sync();
+        ChannelFuture channelFutureClient =
+                client.connect(channelFutureServer.channel().localAddress(), cltReqAddr).sync();
         assertTrue(channelFutureClient.isSuccess());
-        assertTrue(channelFutureClient.channel().writeAndFlush(Unpooled.wrappedBuffer("Meow".getBytes()))
-                .sync().isSuccess());
+        Channel clientChannel = channelFutureClient.channel();
+        assertTrue(clientChannel.writeAndFlush(Unpooled.wrappedBuffer("Meow".getBytes())).sync().isSuccess());
         assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
         // Verify Pcap Global Headers
@@ -109,15 +111,17 @@ public class PcapWriteHandlerTest {
         assertEquals((byte) 0xff, ipv4Packet.readByte());      // TTL
         assertEquals((byte) 17, ipv4Packet.readByte());        // Protocol
         assertEquals(0, ipv4Packet.readShort());      // Checksum
+        InetSocketAddress localAddr = (InetSocketAddress) clientChannel.remoteAddress();
         // Source IPv4 Address
-        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) srvAddr.getAddress()), ipv4Packet.readInt());
+        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) localAddr.getAddress()), ipv4Packet.readInt());
+        InetSocketAddress remoteAddr = (InetSocketAddress) clientChannel.localAddress();
         // Destination IPv4 Address
-        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) cltAddr.getAddress()), ipv4Packet.readInt());
+        assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) remoteAddr.getAddress()), ipv4Packet.readInt());
 
         // Verify UDP Packet
         ByteBuf udpPacket = ipv4Packet.readBytes(12);
-        assertEquals(cltAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Source Port
-        assertEquals(srvAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Destination Port
+        assertEquals(remoteAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Source Port
+        assertEquals(localAddr.getPort() & 0xffff, udpPacket.readUnsignedShort()); // Destination Port
         assertEquals(12, udpPacket.readShort());     // Length
         assertEquals(0x0001, udpPacket.readShort()); // Checksum
 
