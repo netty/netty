@@ -121,6 +121,11 @@ jobs:
       - name: Build project with leak detection
         run: docker-compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
+      - name: ${{ matrix.setup }} test-report
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
 

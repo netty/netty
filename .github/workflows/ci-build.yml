@@ -49,6 +49,11 @@ jobs:
       - name: Build project without leak detection
         run: docker-compose ${{ matrix.docker-compose-run }}
 
+      - name: ${{ matrix.setup }} test-report
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
