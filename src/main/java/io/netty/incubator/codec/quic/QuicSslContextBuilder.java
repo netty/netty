@@ -187,7 +187,7 @@ public final class QuicSslContextBuilder {
         try {
             java.security.KeyStore ks = java.security.KeyStore.getInstance(KeyStore.getDefaultType());
             ks.load(null);
-            char[] pass = keyPassword == null ? null: keyPassword.toCharArray();
+            char[] pass = keyPassword == null ? new char[0]: keyPassword.toCharArray();
             ks.setKeyEntry("alias", key, pass, certChain);
             KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
                     KeyManagerFactory.getDefaultAlgorithm());

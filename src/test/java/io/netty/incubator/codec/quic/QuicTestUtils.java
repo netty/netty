@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 
 import java.io.File;
@@ -30,8 +31,17 @@ import java.util.concurrent.TimeUnit;
 
 final class QuicTestUtils {
     static final String[] PROTOS = new String[]{"hq-29"};
-    static final File KEY = new File("./src/test/resources/cert.key");
-    static final File CERT = new File("./src/test/resources/cert.crt");
+    static final SelfSignedCertificate SELF_SIGNED_CERTIFICATE;
+
+    static {
+        SelfSignedCertificate cert;
+        try {
+            cert = new SelfSignedCertificate();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+        SELF_SIGNED_CERTIFICATE = cert;
+    }
 
     private QuicTestUtils() {
     }
@@ -80,7 +90,7 @@ final class QuicTestUtils {
 
     static QuicServerCodecBuilder newQuicServerBuilder() {
         return newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                KEY, null, CERT)
+                SELF_SIGNED_CERTIFICATE.privateKey(), null, SELF_SIGNED_CERTIFICATE.certificate())
                 .applicationProtocols(PROTOS).build());
     }
 

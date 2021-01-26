@@ -29,6 +29,7 @@ import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
@@ -302,12 +303,14 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+    @Ignore
     @Test
     public void testALPNProtocolMissmatch() throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
-                        .applicationProtocols("my-protocol").clientAuth(ClientAuth.NONE).build()),
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                        .applicationProtocols("my-protocol").build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -324,13 +327,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("protocol").build()));
         try {
             Throwable cause = QuicChannel.newBootstrap(channel)
-                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 300)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect()
                     .await().cause();
-            assertThat(cause, Matchers.instanceOf(ConnectTimeoutException.class));
+            assertThat(cause, Matchers.instanceOf(SSLHandshakeException.class));
             latch.await();
         } finally {
             server.close().sync();
@@ -342,14 +344,15 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Test
     public void testConnectSuccessWhenTrustManagerBuildFromSameCert() throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                         .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(QuicTestUtils.CERT)
+                .trustManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                 .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -373,7 +376,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Test
     public void testConnectMutualAuthSuccess() throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.KEY, null, QuicTestUtils.CERT).trustManager(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate()).trustManager(
                 InsecureTrustManagerFactory.INSTANCE)
                         .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
@@ -382,7 +386,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).keyManager(
-                        QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                 .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -406,7 +411,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Test
     public void testConnectMutualAuthFailsIfClientNotSendCertificate() throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.KEY, null, QuicTestUtils.CERT)
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
