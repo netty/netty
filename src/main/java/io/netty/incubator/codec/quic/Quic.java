@@ -22,6 +22,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class Quic {
@@ -77,12 +79,12 @@ public final class Quic {
         return UNAVAILABILITY_CAUSE;
     }
 
-    static Map.Entry<ChannelOption<?>, Object>[] optionsArray(Map<ChannelOption<?>, Object> opts) {
-        return opts.entrySet().toArray(EMPTY_OPTION_ARRAY);
+    static Map.Entry<ChannelOption<?>, Object>[] toOptionsArray(Map<ChannelOption<?>, Object> opts) {
+        return new HashMap<>(opts).entrySet().toArray(EMPTY_OPTION_ARRAY);
     }
 
-    static Map.Entry<AttributeKey<?>, Object>[] attributesArray(Map<AttributeKey<?>, Object> attributes) {
-        return attributes.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
+    static Map.Entry<AttributeKey<?>, Object>[] toAttributesArray(Map<AttributeKey<?>, Object> attributes) {
+        return new LinkedHashMap<>(attributes).entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
     }
 
     private static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {

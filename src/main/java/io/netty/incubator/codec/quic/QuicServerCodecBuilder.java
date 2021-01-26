@@ -17,7 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 
@@ -178,7 +177,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
         return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, sslEngineProvider,
-                handler, Quic.optionsArray(options), Quic.attributesArray(attrs),
-                streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
+                handler, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
+                streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
     }
 }

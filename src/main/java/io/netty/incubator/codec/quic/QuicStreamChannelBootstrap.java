@@ -125,7 +125,7 @@ public final class QuicStreamChannelBootstrap {
         }
 
         return parent.createStream(type, new QuicStreamChannelBootstrapHandler(handler,
-                Quic.optionsArray(options), Quic.attributesArray(attrs)), promise);
+                Quic.toOptionsArray(options), Quic.toAttributesArray(attrs)), promise);
     }
 
     private static final class QuicStreamChannelBootstrapHandler extends ChannelInitializer<QuicStreamChannel> {

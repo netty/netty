@@ -15,13 +15,48 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.ChannelOption;
+import io.netty.util.AttributeKey;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class QuicTest extends AbstractQuicTest {
 
     @Test
     public void test() {
         Quic.ensureAvailability();
-        System.err.println(Quiche.quiche_version());
+        assertNotNull(Quiche.quiche_version());
+    }
+
+    @Test
+    public void testToAttributesArrayDoesCopy() {
+        AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        String value = "testValue";
+        Map<AttributeKey<?>, Object> attributes = new HashMap<>();
+        attributes.put(key, value);
+        Map.Entry<AttributeKey<?>, Object>[] array = Quic.toAttributesArray(attributes);
+        assertEquals(1, array.length);
+        attributes.put(key, "newTestValue");
+        Map.Entry<AttributeKey<?>, Object> entry = array[0];
+        assertEquals(key, entry.getKey());
+        assertEquals(value, entry.getValue());
+    }
+
+    @Test
+    public void testToOptionsArrayDoesCopy() {
+        Map<ChannelOption<?>, Object> options = new HashMap<>();
+        options.put(ChannelOption.AUTO_READ, true);
+        Map.Entry<ChannelOption<?>, Object>[] array = Quic.toOptionsArray(options);
+        assertEquals(1, array.length);
+        options.put(ChannelOption.AUTO_READ, false);
+        Map.Entry<ChannelOption<?>, Object> entry = array[0];
+        assertEquals(ChannelOption.AUTO_READ, entry.getKey());
+        assertEquals(true, entry.getValue());
     }
 }

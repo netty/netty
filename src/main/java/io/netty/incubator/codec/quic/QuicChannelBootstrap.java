@@ -197,9 +197,9 @@ public final class QuicChannelBootstrap {
         }
         final QuicConnectionAddress address = connectionAddress;
         QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress) remote,
-                streamHandler, Quic.optionsArray(streamOptions), Quic.attributesArray(streamAttrs));
+                streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
 
-        Quic.setupChannel(channel, Quic.optionsArray(options), Quic.attributesArray(attrs), handler, logger);
+        Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
         EventLoop eventLoop = parent.eventLoop();
         eventLoop.register(channel).addListener((ChannelFuture future) -> {
             Throwable cause = future.cause();
