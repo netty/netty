@@ -53,10 +53,6 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         return new PooledByteBufAllocator(0, 0, 8192, 1);
     }
 
-    protected PooledByteBufAllocator newAllocator(boolean preferDirect, boolean useCacheForAllThreads) {
-        return new PooledByteBufAllocator(preferDirect, useCacheForAllThreads);
-    }
-
     @Override
     protected long expectedUsedMemory(PooledByteBufAllocator allocator, int capacity) {
         return allocator.metric().chunkSize();
@@ -673,7 +669,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         int elemSize = 8192;
         int length = 1024;
         ByteBuf[] byteBufs = new ByteBuf[length];
-        final PooledByteBufAllocator allocator = newAllocator(false, false);
+        final PooledByteBufAllocator allocator = new PooledByteBufAllocator(false, 32, 32, 8192, 11, 256, 64, false, 0);
 
         for (int i = 0; i < length; i++) {
             byteBufs[i] = allocator.heapBuffer(elemSize, elemSize);

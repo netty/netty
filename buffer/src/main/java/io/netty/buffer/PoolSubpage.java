@@ -115,6 +115,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
         if (numAvail ++ == 0) {
             addToPool(head);
+            // when maxNumElems == 1, cannot return directly, also need to go through the following judgment
             if (maxNumElems > 1) {
                 return true;
             }
