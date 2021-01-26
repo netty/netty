@@ -278,7 +278,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         p.addLast(config.handler());
 
         setChannelOptions(channel, newOptionsArray(), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
+        setAttributes(channel, newAttributesArray());
 
         return promise.setSuccess();
     }

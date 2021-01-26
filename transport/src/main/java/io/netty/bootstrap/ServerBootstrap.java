@@ -167,16 +167,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     ChannelFuture init(Channel channel) {
         final ChannelPromise promise = channel.newPromise();
         setChannelOptions(channel, newOptionsArray(), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
+        setAttributes(channel, newAttributesArray());
 
         ChannelPipeline p = channel.pipeline();
 
         final ChannelHandler currentChildHandler = childHandler;
-        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
-        synchronized (childOptions) {
-            currentChildOptions = childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
-        }
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions = newOptionsArray(childOptions);
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = newAttributesArray(childAttrs);
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
