@@ -75,19 +75,21 @@
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <boringsslBranch>chromium-stable</boringsslBranch>
-    <boringsslHome>${boringsslSourceDir}/build</boringsslHome>
-    <boringsslSourceDir>${project.build.directory}/boringssl</boringsslSourceDir>
+    <boringsslSourceDir>${project.build.directory}/boringssl-source</boringsslSourceDir>
+    <boringsslBuildDir>${boringsslSourceDir}/build</boringsslBuildDir>
+    <boringsslHomeDir>${project.build.directory}/boringssl</boringsslHomeDir>
     <!--
       See https://boringssl.googlesource.com/boringssl/+/refs/heads/chromium-stable for the latest commit
     -->
     <boringsslCommitSha>3743aafdacff2f7b083615a043a37101f740fa53</boringsslCommitSha>
-    <quicheCheckoutDir>${project.build.directory}/quiche</quicheCheckoutDir>
-    <quicheBuildDir>${quicheCheckoutDir}/target/release</quicheBuildDir>
+    <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
+    <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
+    <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>5403e54c40caf70f096a2a08c50c9d71c149da6f</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
-    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheCheckoutDir}/include -I${boringsslSourceDir}/include</cflags>
-    <ldflags>-L${quicheBuildDir} -lquiche -L${boringsslHome}/ssl -L${boringsslHome}/crypto -L${boringsslHome}/decrepit -ldecrepit -lssl -lcrypto</ldflags>
+    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeDir}/include -I${boringsslHomeDir}/include</cflags>
+    <ldflags>-L${quicheHomeDir}/build -lquiche -L${boringsslHomeDir}/build -lssl -lcrypto</ldflags>
     <extraLdflags />
     <extraConfigureArg />
     <!-- We need 10.12 as minimum to compile quiche and use it.
@@ -220,7 +222,7 @@
               <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
               <property environment="env" />
               <if>
-                <available file="${boringsslHome}" />
+                <available file="${boringsslHomeDir}" />
                 <then>
                   <echo message="BoringSSL was already build, skipping the build step." />
                 </then>
@@ -251,7 +253,7 @@
                     <arg value="${boringsslCommitSha}" />
                   </exec>
 
-                  <mkdir dir="${boringsslHome}" />
+                  <mkdir dir="${boringsslBuildDir}" />
                   <if>
                     <equals arg1="${os.detected.name}" arg2="linux" />
                     <then>
@@ -268,7 +270,7 @@
                       <property name="cmakeCxxFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis" />
                     </else>
                   </if>
-                  <exec executable="cmake" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
+                  <exec executable="cmake" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
                     <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                     <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
                     <arg value="-DCMAKE_BUILD_TYPE=Release" />
@@ -283,22 +285,20 @@
                     <!-- See https://github.com/netty/netty-tcnative/issues/475 -->
                     <available file="ninja-build" filepath="${env.PATH}" />
                     <then>
-                      <exec executable="ninja-build" failonerror="true" dir="${boringsslHome}" resolveexecutable="true" />
+                      <exec executable="ninja-build" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true" />
                     </then>
                     <else>
-                      <exec executable="ninja" failonerror="true" dir="${boringsslHome}" resolveexecutable="true" />
+                      <exec executable="ninja" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true" />
                     </else>
                   </if>
-                  <exec executable="ln" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
-                    <arg value="-s" />
-                    <arg value="ssl/libssl.a" />
-                    <arg value="." />
-                  </exec>
-                  <exec executable="ln" failonerror="true" dir="${boringsslHome}" resolveexecutable="true">
-                    <arg value="-s" />
-                    <arg value="crypto/libcrypto.a" />
-                    <arg value="." />
-                  </exec>
+
+                  <!-- Only copy the libs and header files we need -->
+                  <mkdir dir="${boringsslHomeDir}/build" />
+                  <copy file="${boringsslBuildDir}/ssl/libssl.a" todir="${boringsslHomeDir}/build/" />
+                  <copy file="${boringsslBuildDir}/crypto/libcrypto.a" todir="${boringsslHomeDir}/build/" />
+                  <copy todir="${boringsslHomeDir}/include">
+                    <fileset dir="${boringsslSourceDir}/include"/>
+                  </copy>
                 </else>
               </if>
             </target>
@@ -317,41 +317,41 @@
               <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
               <property environment="env" />
               <if>
-                <available file="${quicheCheckoutDir}" />
-                <then>
-                  <echo message="Quiche was already cloned, skipping the clone step." />
-                </then>
-                <else>
-                  <echo message="Clone Quiche" />
-
-                  <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
-                    <arg value="clone" />
-                    <arg value="--branch" />
-                    <arg value="${quicheBranch}" />
-                    <arg value="--recursive" />
-                    <arg value="https://github.com/cloudflare/quiche" />
-                    <arg value="${quicheCheckoutDir}" />
-                  </exec>
-
-                  <!-- Use the known SHA of the commit -->
-                  <exec executable="git" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
-                    <arg value="checkout" />
-                    <arg value="${quicheCommitSha}" />
-                  </exec>
-                </else>
-              </if>
-              <if>
-                <available file="${quicheCheckoutDir}/target" />
+                <available file="${quicheHomeDir}" />
                 <then>
                   <echo message="Quiche was already build, skipping the build step." />
                 </then>
-                <else>
-                  <echo message="Building Quiche" />
 
+                <else>
+                  <if>
+                    <available file="${quicheSourceDir}" />
+                    <then>
+                      <echo message="Quiche was already cloned, skipping the clone step." />
+                    </then>
+                    <else>
+                      <echo message="Clone Quiche" />
+
+                      <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                        <arg value="clone" />
+                        <arg value="--recursive" />
+                        <arg value="--branch" />
+                        <arg value="${quicheBranch}" />
+                        <arg value="https://github.com/cloudflare/quiche" />
+                        <arg value="${quicheSourceDir}" />
+                      </exec>
+
+                      <!-- Use the known SHA of the commit -->
+                      <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                        <arg value="checkout" />
+                        <arg value="${quicheCommitSha}" />
+                      </exec>
+                    </else>
+                  </if>
+                  <echo message="Building Quiche" />
                   <if>
                     <equals arg1="${os.detected.name}" arg2="osx" />
                     <then>
-                      <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                         <arg value="build" />
                         <arg value="--features" />
                         <arg value="ffi" />
@@ -359,18 +359,12 @@
                         <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer" />
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslSourceDir}/"/>
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
                       </exec>
-
-                      <!-- delete the shared library as otherwise we may link against it and not against the static
-                           library.
-                      -->
-                      <delete>
-                        <fileset dir="${quicheBuildDir}" includes="*.dylib" />
-                      </delete>
                     </then>
+
                     <else>
-                      <exec executable="cargo" failonerror="true" dir="${quicheCheckoutDir}" resolveexecutable="true">
+                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                         <arg value="build" />
                         <arg value="--features" />
                         <arg value="ffi" />
@@ -378,15 +372,14 @@
                         <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
                         <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
                       </exec>
-
-                      <!-- delete the shared library as otherwise we may link against it and not against the static
-                           library.
-                      -->
-                      <delete>
-                        <fileset dir="${quicheBuildDir}" includes="*.so" />
-                      </delete>
                     </else>
                   </if>
+                  <!-- Only copy the libs and header files we need -->
+                  <mkdir dir="${quicheHomeDir}" />
+                  <copy file="${quicheBuildDir}/libquiche.a" todir="${quicheHomeDir}/build/" />
+                  <copy todir="${quicheHomeDir}/include">
+                    <fileset dir="${quicheSourceDir}/include"/>
+                  </copy>
                 </else>
               </if>
             </target>

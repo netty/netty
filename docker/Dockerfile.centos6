@@ -1,6 +1,7 @@
 FROM centos:6.10
 
 ENV SOURCE_DIR /root/source
+ENV LIBS_DIR /root/libs
 ENV CMAKE_VERSION_BASE 3.8
 ENV CMAKE_VERSION $CMAKE_VERSION_BASE.2
 ENV NINJA_VERSION 1.7.2
@@ -74,10 +75,10 @@ ENV JAVA_HOME /jdk/
 
 COPY ./pom.xml $SOURCE_DIR/pom.xml
 WORKDIR $SOURCE_DIR
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp'
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp && rm -rf target'
 
 # Pre-build boringssl
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-boringssl -DboringsslSourceDir=$SOURCE_DIR/boringssl'
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-boringssl -DboringsslHomeDir=$LIBS_DIR/boringssl && rm -rf target'
 
 # Pre-build quiche
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-quiche -DquicheCheckoutDir=$SOURCE_DIR/quiche'
+RUN /bin/bash -c 'source $HOME/.bashrc && mvn antrun:run@build-quiche -DquicheHomeDir=$LIBS_DIR/quiche && rm -rf target'
