@@ -27,10 +27,8 @@ jobs:
       - name: Build project with leak detection
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak  | tee build-leak.output
 
-      - name: build-linux-x86_64 test-report
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checking for test failures
+        run: ./.github/scripts/check_build_result.sh build-leak.output
 
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
