@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.List;
 import java.util.zip.CRC32;
@@ -30,6 +31,9 @@ import java.util.zip.Inflater;
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
 public class JdkZlibDecoder extends ZlibDecoder {
+    private static final boolean IS_JAVA_11_INFLATER =
+            PlatformDependent.javaVersion() >= 11 && Java11ZlibUtils.isSupported();
+
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -220,7 +224,9 @@ public class JdkZlibDecoder extends ZlibDecoder {
         }
 
         if (inflater.needsInput()) {
-            if (in.hasArray()) {
+            if (IS_JAVA_11_INFLATER) {
+                Java11ZlibUtils.setInput(inflater, in.internalNioBuffer(in.readerIndex(), in.readableBytes()));
+            } else if (in.hasArray()) {
                 inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
             } else {
                 byte[] array = new byte[readableBytes];
@@ -233,15 +239,13 @@ public class JdkZlibDecoder extends ZlibDecoder {
         try {
             boolean readFooter = false;
             while (!inflater.needsInput()) {
-                byte[] outArray = decompressed.array();
                 int writerIndex = decompressed.writerIndex();
-                int outIndex = decompressed.arrayOffset() + writerIndex;
                 int writable = decompressed.writableBytes();
-                int outputLength = inflater.inflate(outArray, outIndex, writable);
+                int outputLength = inflate(decompressed, writerIndex, writable);
                 if (outputLength > 0) {
                     decompressed.writerIndex(writerIndex + outputLength);
                     if (crc != null) {
-                        crc.update(outArray, outIndex, outputLength);
+                        crc.update(decompressed, writerIndex, outputLength);
                     }
                 } else  if (inflater.needsDictionary()) {
                     if (dictionary == null) {
@@ -278,6 +282,15 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 decompressed.release();
             }
         }
+    }
+
+    private int inflate(ByteBuf decompressed, int writerIndex, int writable) throws DataFormatException {
+        if (IS_JAVA_11_INFLATER) {
+            return Java11ZlibUtils.inflate(inflater, decompressed.internalNioBuffer(writerIndex, writable));
+        }
+        byte[] outArray = decompressed.array();
+        int outIndex = decompressed.arrayOffset() + writerIndex;
+        return inflater.inflate(outArray, outIndex, writable);
     }
 
     private boolean handleGzipFooter(ByteBuf in) {
