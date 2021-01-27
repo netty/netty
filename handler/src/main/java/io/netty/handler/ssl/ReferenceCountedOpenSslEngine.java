@@ -159,7 +159,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile boolean destroyed;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
-    private String[] cachedEnabledProtocols;
+    private String[] explicitlyEnabledProtocols;
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
@@ -341,7 +341,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (context.protocols != null) {
                     setEnabledProtocols0(context.protocols, true);
                 } else {
-                    this.cachedEnabledProtocols = getEnabledProtocols();
+                    this.explicitlyEnabledProtocols = getEnabledProtocols();
                 }
 
                 // Use SNI if peerHost was specified and a valid hostname
@@ -1561,8 +1561,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(cachedEnabledProtocols.length);
-                    Collections.addAll(protocols, cachedEnabledProtocols);
+                    Set<String> protocols = new HashSet<String>(explicitlyEnabledProtocols.length);
+                    Collections.addAll(protocols, explicitlyEnabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
@@ -1707,7 +1707,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             if (cache) {
-                this.cachedEnabledProtocols = protocols;
+                this.explicitlyEnabledProtocols = protocols;
             }
             if (!isDestroyed()) {
                 // Clear out options which disable protocols
