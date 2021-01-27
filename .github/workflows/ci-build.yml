@@ -29,7 +29,7 @@ jobs:
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
 
       - name: Execute project build without leak detection
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build | build-leak.output
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build | tee build-leak.output
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build-leak.output
