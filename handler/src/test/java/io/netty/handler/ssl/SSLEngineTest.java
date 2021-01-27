@@ -553,6 +553,12 @@ public abstract class SSLEngineTest {
             final String clientCipher = "TLS_AES_256_GCM_SHA384";
             clientEngine.setEnabledCipherSuites(new String[] { clientCipher });
             handshake(clientEngine, serverEngine);
+
+            // We shouldn't get here as the handshake should throw a SSLHandshakeException. If
+            // we do, throw our own exception that is more informative as to what has happened.
+            fail("Unexpected handshake success. Negotiated TLS version: " +
+                    clientEngine.getSession().getProtocol() +
+                    ", cipher suite negotiated: " + clientEngine.getSession().getCipherSuite());
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
