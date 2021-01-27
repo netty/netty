@@ -1706,7 +1706,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
         }
         synchronized (this) {
-            this.cachedEnabledProtocols = protocols;
+            if (cache) {
+                this.cachedEnabledProtocols = protocols;
+            }
             if (!isDestroyed()) {
                 // Clear out options which disable protocols
                 SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
