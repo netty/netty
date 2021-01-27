@@ -17,6 +17,8 @@ package io.netty.handler.codec.compression;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -27,27 +29,30 @@ import java.util.zip.Inflater;
 @SuppressJava6Requirement(reason = "Guarded by version check")
 final class Java11ZlibUtils {
 
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(Java11ZlibUtils.class);
     private static final MethodHandle INFLATER_SET_INPUT;
     private static final MethodHandle INFLATER_INFLATE;
 
     static {
         MethodHandle inflaterSetInput = null;
         MethodHandle inflaterInflate = null;
-        try {
-            inflaterSetInput = MethodHandles.lookup().findVirtual(Inflater.class, "setInput",
-                    MethodType.methodType(void.class, ByteBuffer.class));
-            inflaterInflate = MethodHandles.lookup().findVirtual(Inflater.class, "inflate",
-                    MethodType.methodType(int.class, ByteBuffer.class));
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-            inflaterSetInput = null;
-            inflaterInflate = null;
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-            inflaterSetInput = null;
-            inflaterInflate = null;
-        }
 
+        if (PlatformDependent.javaVersion() >= 11) {
+            try {
+                inflaterSetInput = MethodHandles.lookup().findVirtual(Inflater.class, "setInput",
+                        MethodType.methodType(void.class, ByteBuffer.class));
+                inflaterInflate = MethodHandles.lookup().findVirtual(Inflater.class, "inflate",
+                        MethodType.methodType(int.class, ByteBuffer.class));
+            } catch (NoSuchMethodException e) {
+                LOGGER.debug("Couldn't find required methods on Inflater, falling-back to < Java11 methods", e);
+                inflaterSetInput = null;
+                inflaterInflate = null;
+            } catch (IllegalAccessException e) {
+                LOGGER.debug("Couldn't access required methods on Inflater, falling-back to < Java11 methods", e);
+                inflaterSetInput = null;
+                inflaterInflate = null;
+            }
+        }
         INFLATER_SET_INPUT = inflaterSetInput;
         INFLATER_INFLATE = inflaterInflate;
     }
