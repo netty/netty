@@ -47,12 +47,10 @@ jobs:
         run: docker-compose ${{ matrix.docker-compose-build }}
 
       - name: Build project without leak detection
-        run: docker-compose ${{ matrix.docker-compose-run }}
+        run: docker-compose ${{ matrix.docker-compose-run }} | tee build.output
 
-      - name: ${{ matrix.setup }} test-report
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checking for test failures
+        run: ./.github/scripts/check_build_result.sh build.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
