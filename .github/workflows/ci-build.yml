@@ -29,12 +29,10 @@ jobs:
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
 
       - name: Execute project build without leak detection
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build
+        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run build | build-leak.output
 
-      - name: build test-report
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checking for test failures
+        run: ./.github/scripts/check_build_result.sh build-leak.output
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
