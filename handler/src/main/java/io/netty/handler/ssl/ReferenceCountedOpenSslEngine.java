@@ -339,7 +339,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
                 if (context.protocols != null) {
-                    setEnabledProtocols(context.protocols);
+                    setEnabledProtocols0(context.protocols, true);
                 } else {
                     this.cachedEnabledProtocols = getEnabledProtocols();
                 }
