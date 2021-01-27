@@ -186,7 +186,8 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
-          <classifier>osx-x86_64</classifier>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -217,6 +218,12 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -241,6 +248,12 @@
           <artifactId>netty-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
