@@ -46,6 +46,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -160,6 +161,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile boolean destroyed;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
+    private String[] explicitlyEnabledProtocols;
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
@@ -339,7 +341,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
                 if (context.protocols != null) {
-                    setEnabledProtocols(context.protocols);
+                    setEnabledProtocols0(context.protocols, true);
+                } else {
+                    this.explicitlyEnabledProtocols = getEnabledProtocols();
                 }
 
                 // Use SNI if peerHost was specified and a valid hostname
@@ -1531,14 +1535,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final String[] getEnabledCipherSuites() {
         final String[] extraCiphers;
         final String[] enabled;
+        final boolean tls13Enabled;
         synchronized (this) {
             if (!isDestroyed()) {
                 enabled = SSL.getCiphers(ssl);
                 int opts = SSL.getOptions(ssl);
                 if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_3, PROTOCOL_TLS_V1_3)) {
                     extraCiphers = OpenSsl.EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
+                    tls13Enabled = true;
                 } else {
                     extraCiphers = EmptyArrays.EMPTY_STRINGS;
+                    tls13Enabled = false;
                 }
             } else {
                 return EmptyArrays.EMPTY_STRINGS;
@@ -1552,7 +1559,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 for (int i = 0; i < enabled.length; i++) {
                     String mapped = toJavaCipherSuite(enabled[i]);
                     final String cipher = mapped == null ? enabled[i] : mapped;
-                    if (!OpenSsl.isTlsv13Supported() && SslUtils.isTLSv13Cipher(cipher)) {
+                    if ((!tls13Enabled || !OpenSsl.isTlsv13Supported()) && SslUtils.isTLSv13Cipher(cipher)) {
                         continue;
                     }
                     enabledSet.add(cipher);
@@ -1579,17 +1586,36 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             if (!isDestroyed()) {
-                // TODO: Should we also adjust the protocols based on if there are any ciphers left that can be used
-                //       for TLSv1.3 or for previor SSL/TLS versions ?
                 try {
                     // Set non TLSv1.3 ciphers.
                     SSL.setCipherSuites(ssl, cipherSuiteSpec, false);
-
                     if (OpenSsl.isTlsv13Supported()) {
                         // Set TLSv1.3 ciphers.
                         SSL.setCipherSuites(ssl, cipherSuiteSpecTLSv13, true);
                     }
 
+                    // We also need to update the enabled protocols to ensure we disable the protocol if there are
+                    // no compatible ciphers left.
+                    Set<String> protocols = new HashSet<String>(explicitlyEnabledProtocols.length);
+                    Collections.addAll(protocols, explicitlyEnabledProtocols);
+
+                    // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
+                    // protocols.
+                    if (cipherSuiteSpec.isEmpty()) {
+                        protocols.remove(PROTOCOL_TLS_V1);
+                        protocols.remove(PROTOCOL_TLS_V1_1);
+                        protocols.remove(PROTOCOL_TLS_V1_2);
+                        protocols.remove(PROTOCOL_SSL_V3);
+                        protocols.remove(PROTOCOL_SSL_V2);
+                        protocols.remove(PROTOCOL_SSL_V2_HELLO);
+                    }
+                    // We have no ciphers that are compatible with TLSv1.3, let us explicit disable it.
+                    if (cipherSuiteSpecTLSv13.isEmpty()) {
+                        protocols.remove(PROTOCOL_TLS_V1_3);
+                    }
+                    // Update the protocols but not cache the value. We only cache when we call it from the user
+                    // code or when we construct the engine.
+                    setEnabledProtocols0(protocols.toArray(EmptyArrays.EMPTY_STRINGS), false);
                 } catch (Exception e) {
                     throw new IllegalStateException("failed to enable cipher suites: " + cipherSuiteSpec, e);
                 }
@@ -1656,6 +1682,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     @Override
     public final void setEnabledProtocols(String[] protocols) {
+        setEnabledProtocols0(protocols, true);
+    }
+
+    private void setEnabledProtocols0(String[] protocols, boolean cache) {
         if (protocols == null) {
             // This is correct from the API docs
             throw new IllegalArgumentException();
@@ -1711,6 +1741,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
         }
         synchronized (this) {
+            if (cache) {
+                this.explicitlyEnabledProtocols = protocols;
+            }
             if (!isDestroyed()) {
                 // Clear out options which disable protocols
                 SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
