@@ -45,7 +45,9 @@ static jmethodID dnsResolverMethodId = NULL;
 //     https://opensource.apple.com/tarballs/mDNSResponder/
 static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz) {
     dns_config_t* config = dns_configuration_copy();
-
+    if (config == NULL) {
+        goto error;
+    }
     jobjectArray array = (*env)->NewObjectArray(env, config->n_resolver, dnsResolverClass, NULL);
     if (array == NULL) {
         goto error;
@@ -53,6 +55,9 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
 
     for (int i = 0; i < config->n_resolver; i++) {
         dns_resolver_t* resolver = config->resolver[i];
+        if (resolver == NULL) {
+            goto error;
+        }
         jstring domain = NULL;
 
         if (resolver->domain != NULL) {
@@ -68,7 +73,11 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
         }
 
         for (int a = 0; a < resolver->n_nameserver; a++) {
-            jbyteArray address = netty_unix_socket_createInetSocketAddressArray(env, (const struct sockaddr_storage *) resolver->nameserver[a]);
+            const struct sockaddr_storage* addr = (const struct sockaddr_storage *) resolver->nameserver[a];
+            if (addr == NULL) {
+                goto error;
+            }
+            jbyteArray address = netty_unix_socket_createInetSocketAddressArray(env, addr);
             if (address == NULL) {
                 netty_unix_errors_throwOutOfMemoryError(env);
                 goto error;
@@ -84,7 +93,11 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
         }
 
         for (int a = 0; a < resolver->n_search; a++) {
-            jstring search = (*env)->NewStringUTF(env, resolver->search[a]);
+            char* s = resolver->search[a];
+            if (s == NULL) {
+                goto error;
+            }
+            jstring search = (*env)->NewStringUTF(env, s);
             if (search == NULL) {
                 goto error;
             }
@@ -114,7 +127,9 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
     dns_configuration_free(config);
     return array;
 error:
-    dns_configuration_free(config);
+    if (config != NULL) {
+        dns_configuration_free(config);
+    }
     return NULL;
 }
 
