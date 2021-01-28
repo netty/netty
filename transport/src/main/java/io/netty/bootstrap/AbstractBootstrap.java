@@ -52,9 +52,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
     @SuppressWarnings("unchecked")
-    static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
+    private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
     @SuppressWarnings("unchecked")
-    static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
+    private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
     volatile EventLoopGroup group;
     @SuppressWarnings("deprecation")
@@ -386,9 +386,21 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public abstract AbstractBootstrapConfig<B, C> config();
 
     final Map.Entry<ChannelOption<?>, Object>[] newOptionsArray() {
+        return newOptionsArray(options);
+    }
+
+    static Map.Entry<ChannelOption<?>, Object>[] newOptionsArray(Map<ChannelOption<?>, Object> options) {
         synchronized (options) {
-            return options.entrySet().toArray(EMPTY_OPTION_ARRAY);
+            return new LinkedHashMap<ChannelOption<?>, Object>(options).entrySet().toArray(EMPTY_OPTION_ARRAY);
         }
+    }
+
+    final Map.Entry<AttributeKey<?>, Object>[] newAttributesArray() {
+        return newAttributesArray(attrs0());
+    }
+
+    static Map.Entry<AttributeKey<?>, Object>[] newAttributesArray(Map<AttributeKey<?>, Object> attributes) {
+        return attributes.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
     }
 
     final Map<ChannelOption<?>, Object> options0() {

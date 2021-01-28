@@ -130,17 +130,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     @Override
     void init(Channel channel) {
         setChannelOptions(channel, newOptionsArray(), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
+        setAttributes(channel, newAttributesArray());
 
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
-        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
-        synchronized (childOptions) {
-            currentChildOptions = childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
-        }
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions = newOptionsArray(childOptions);
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = newAttributesArray(childAttrs);
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override

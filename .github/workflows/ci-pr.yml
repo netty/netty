@@ -121,6 +121,9 @@ jobs:
       - name: Build project with leak detection
         run: docker-compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
+      - name: Checking for test failures
+        run: ./.github/scripts/check_build_result.sh build-leak.output
+
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
 
