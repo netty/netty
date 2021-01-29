@@ -58,13 +58,7 @@ final class PemReader {
 
     static ByteBuf[] readCertificates(File file) throws CertificateException {
         try {
-            InputStream in = new FileInputStream(file);
-
-            try {
-                return readCertificates(in);
-            } finally {
-                safeClose(in);
-            }
+            return readCertificates(new FileInputStream(file));
         } catch (FileNotFoundException e) {
             throw new CertificateException("could not find certificate file: " + file);
         }
@@ -103,13 +97,7 @@ final class PemReader {
 
     static ByteBuf readPrivateKey(File file) throws KeyException {
         try {
-            InputStream in = new FileInputStream(file);
-
-            try {
-                return readPrivateKey(in);
-            } finally {
-                safeClose(in);
-            }
+            return readPrivateKey(new FileInputStream(file));
         } catch (FileNotFoundException e) {
             throw new KeyException("could not find key file: " + file);
         }
@@ -149,6 +137,7 @@ final class PemReader {
             return out.toString(CharsetUtil.US_ASCII.name());
         } finally {
             safeClose(out);
+            safeClose(in);
         }
     }
 
