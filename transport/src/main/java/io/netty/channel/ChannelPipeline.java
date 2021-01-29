@@ -271,7 +271,7 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline. {@code null} handlers will be skipped.
      *
      * @param handlers  the handlers to insert first
      *
@@ -279,7 +279,7 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline. {@code null} handlers will be skipped.
      *
      * @param handlers  the handlers to insert last
      *
