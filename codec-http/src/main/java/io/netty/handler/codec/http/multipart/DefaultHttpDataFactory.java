@@ -321,7 +321,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
             List<HttpData> list = e.getValue();
             for (HttpData data : list) {
-                data.release();
+                if (data.refCnt() > 0) {
+                    data.release();
+                }
             }
 
             i.remove();

@@ -1170,8 +1170,41 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         try {
             newOffset = findDelimiter(undecodedChunk, delimiter, lastDataPosition);
             if (newOffset < 0) {
-                // delimiter not found
+                // delimiter not found, so add content up to newOffset (does not contains part of delimiter)
                 lastDataPosition = -newOffset;
+                // Check if LF or CRLF at the end
+                if (undecodedChunk.getByte(startReaderIndex + lastDataPosition - 1) == HttpConstants.LF) {
+                    lastDataPosition--;
+                    if (undecodedChunk.getByte(startReaderIndex + lastDataPosition - 1) == HttpConstants.CR) {
+                        lastDataPosition--;
+                    }
+                }
+                if (lastDataPosition > 0) {
+                    ByteBuf content = undecodedChunk.retainedSlice(startReaderIndex, lastDataPosition);
+                    try {
+                        httpData.addContent(content, false);
+                        if (content.refCnt() == 1) {
+                            // Can remove partial buffer virtually since content was consumed
+                            // But need to move existing finaly bytes from lastDataPosition to end
+                            int leftBytes = undecodedChunk.writerIndex() - startReaderIndex - lastDataPosition;
+                            if (leftBytes > 0) {
+                                undecodedChunk
+                                        .getBytes(startReaderIndex + lastDataPosition, undecodedChunk,
+                                                  startReaderIndex, leftBytes);
+                            } else {
+                                leftBytes = 0;
+                            }
+                            undecodedChunk.readerIndex(startReaderIndex);
+                            undecodedChunk.writerIndex(startReaderIndex + leftBytes);
+                        } else {
+                            // Mandatory to increase buffer since Data is fully in memory
+                            undecodedChunk.readerIndex(startReaderIndex + lastDataPosition);
+                        }
+                        lastDataPosition = 0;
+                    } catch (IOException e) {
+                        throw new ErrorDataDecoderException(e);
+                    }
+                }
                 return false;
             }
         } catch (NotEnoughDataDecoderException e) {
@@ -1193,7 +1226,22 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             throw new ErrorDataDecoderException(e);
         }
         lastDataPosition = 0;
-        undecodedChunk.readerIndex(startReaderIndex + startDelimiter);
+        if (content.refCnt() == 1) {
+            // Can remove partial buffer virtually since content was consumed
+            // But need to move existing finaly bytes from lastDataPosition to end
+            int leftBytes = undecodedChunk.writerIndex() - startReaderIndex - lastDataPosition;
+            if (leftBytes > 0) {
+                undecodedChunk.getBytes(startReaderIndex + lastDataPosition, undecodedChunk,
+                                        startReaderIndex, leftBytes);
+            } else {
+                leftBytes = 0;
+            }
+            undecodedChunk.readerIndex(startReaderIndex);
+            undecodedChunk.writerIndex(startReaderIndex + leftBytes);
+        } else {
+            // Mandatory to increase buffer since Data is fully in memory
+            undecodedChunk.readerIndex(startReaderIndex + startDelimiter);
+        }
         return true;
     }
 
@@ -1253,6 +1301,17 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
         return false;
+    }
+
+    /**
+     * This method is package private intentionnaly in order to allow during tests
+     * to access to the amount of memory allocated (capacity) within the private
+     * ByteBuf undecodedChunk
+     *
+     * @return the number of bytes the internal buffer can contain
+     */
+    int getCurrentAllocatedCapacity() {
+        return undecodedChunk.capacity();
     }
 
     /**
