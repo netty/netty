@@ -73,6 +73,7 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
         clientSslCtx.newEngine(null);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof ReferenceCountedOpenSslContext) {

@@ -147,6 +147,7 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {

@@ -29,9 +29,22 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
     /**
      * If enabled heavy-operations may be offloaded from the {@link io.netty.channel.EventLoop} if possible.
      */
-    public static final SslContextOption<Boolean> USE_TASKS = OpenSslContextOption.valueOf("USE_TASKS");
+    public static final OpenSslContextOption<Boolean> USE_TASKS =
+            new OpenSslContextOption<Boolean>("USE_TASKS");
     /**
      * If enabled <a href="https://tools.ietf.org/html/rfc7918">TLS false start</a> will be enabled if supported.
+     *
+     * This is currently only supported when {@code BoringSSL} is used.
      */
-    public static final SslContextOption<Boolean> TLS_FALSE_START = OpenSslContextOption.valueOf("TLS_FALSE_START");
+    public static final OpenSslContextOption<Boolean> TLS_FALSE_START =
+            new OpenSslContextOption<Boolean>("TLS_FALSE_START");
+
+    /**
+     * Set the {@link OpenSslPrivateKeyMethod} to use. This allows to offload private-key operations
+     * if needed.
+     *
+     * This is currently only supported when {@code BoringSSL} is used.
+     */
+    public static final OpenSslContextOption<OpenSslPrivateKeyMethod> PRIVATE_KEY_METHOD =
+            new OpenSslContextOption<OpenSslPrivateKeyMethod>("PRIVATE_KEY_METHOD");
 }

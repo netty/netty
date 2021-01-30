@@ -209,6 +209,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         boolean tlsFalseStart = false;
         boolean useTasks = USE_TASKS;
+        OpenSslPrivateKeyMethod privateKeyMethod = null;
+
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
                 SslContextOption<?> option = ctxOpt.getKey();
@@ -217,6 +219,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     tlsFalseStart = (Boolean) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.USE_TASKS) {
                     useTasks = (Boolean) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD) {
+                    privateKeyMethod = (OpenSslPrivateKeyMethod) ctxOpt.getValue();
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -358,6 +362,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             SSLContext.setUseTasks(ctx, useTasks);
+            if (privateKeyMethod != null) {
+                SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, privateKeyMethod));
+            }
             success = true;
         } finally {
             if (!success) {
@@ -537,7 +544,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * This method is currently only supported when {@code BoringSSL} is used.
      *
      * @param method method to use.
+     * @deprecated use {@link OpenSslContextOption#PRIVATE_KEY_METHOD}
      */
+    @Deprecated
     @UnstableApi
     public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
         ObjectUtil.checkNotNull(method, "method");
@@ -550,6 +559,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    /**
+     * @deprecated use {@link OpenSslContextOption#USE_TASKS}
+     */
+    @Deprecated
     public final void setUseTasks(boolean useTasks) {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
