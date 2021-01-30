@@ -1026,6 +1026,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (isConnDestroyed()) {
                 return;
             }
+            int bufferReadable = buffer.readableBytes();
+            if (bufferReadable == 0) {
+                // Nothing to do here. Just return...
+                // See also https://github.com/cloudflare/quiche/issues/817
+                return;
+            }
             inRecv = true;
             try {
                 ByteBuf tmpBuffer = null;
@@ -1036,7 +1042,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     tmpBuffer.writeBytes(buffer);
                     buffer = tmpBuffer;
                 }
-                int bufferReadable = buffer.readableBytes();
                 int bufferReaderIndex = buffer.readerIndex();
                 long memoryAddress = Quiche.memoryAddress(buffer) + bufferReaderIndex;
 
