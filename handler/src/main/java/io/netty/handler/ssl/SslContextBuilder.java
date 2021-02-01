@@ -68,7 +68,7 @@ public final class SslContextBuilder {
      * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
      *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
      *                                  called.
-     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format The caller is
+     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
      *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
      *                                  called.
      *
