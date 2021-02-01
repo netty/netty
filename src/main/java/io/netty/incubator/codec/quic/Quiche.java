@@ -225,24 +225,14 @@ final class Quiche {
     static native void quiche_conn_free(long connAddr);
 
     /**
-<<<<<<< HEAD
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L211">quiche_connect</a>.
-     */
-    static native long quiche_connect(String server_name, long scidAddr, int scidLen, long configAddr);
-
-    /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/
-     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L278">quiche_conn_stream_priority</a>.
+     * <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L275">quiche_conn_stream_priority</a>.
      */
     static native int quiche_conn_stream_priority(
             long connAddr, long streamId, byte urgency, boolean incremental);
 
     /**
-=======
->>>>>>> ccb1469... Allow to use KeyManagerFactory / TrustmanagerFactory
-     * See <a href="https://github.com/cloudflare/quiche/blob/
-     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L312">quiche_conn_trace_id</a>.
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L309">quiche_conn_trace_id</a>.
      */
     static native byte[] quiche_conn_trace_id(long connAddr);
 
@@ -400,16 +390,14 @@ final class Quiche {
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/
-     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L150">
+     * <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L150">
      *     quiche_config_set_max_recv_udp_payload_size</a>.
      */
     static native void quiche_config_set_max_recv_udp_payload_size(long configAddr, long value);
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/
-     * 35e38d987c1e53ef2bd5f23b754c50162b5adac8/include/quiche.h#L153">
+     * <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L153">
      *     quiche_config_set_max_recv_udp_payload_size</a>.
      */
     static native void quiche_config_set_max_send_udp_payload_size(long configAddr, long value);
