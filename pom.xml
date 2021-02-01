@@ -86,7 +86,7 @@
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>115c18bfc55561c33488d690856d45d62ac1c062</quicheCommitSha>
+    <quicheCommitSha>5092e4d1e8ae2773a56eddda6a8205f5e65b4b37</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeDir}/include -I${boringsslHomeDir}/include</cflags>
     <ldflags>-L${quicheHomeDir}/build -lquiche -L${boringsslHomeDir}/build -lssl -lcrypto</ldflags>
