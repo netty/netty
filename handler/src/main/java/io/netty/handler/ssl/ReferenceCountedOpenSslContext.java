@@ -179,14 +179,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         DH_KEY_LENGTH = dhLen;
     }
 
-    ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   ApplicationProtocolConfig apnCfg, long sessionCacheSize, long sessionTimeout,
-                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, String[] protocols,
-                                   boolean startTls, boolean enableOcsp, boolean leakDetection) throws SSLException {
-        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, leakDetection, new Map.Entry[0]);
-    }
-
     final boolean tlsFalseStart;
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
@@ -543,8 +535,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      *
      * This method is currently only supported when {@code BoringSSL} is used.
      *
-     * @param method method to use.
-     * @deprecated use {@link OpenSslContextOption#PRIVATE_KEY_METHOD}
+     * @param        method method to use.
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#PRIVATE_KEY_METHOD}.
      */
     @Deprecated
     @UnstableApi
@@ -560,7 +553,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     /**
-     * @deprecated use {@link OpenSslContextOption#USE_TASKS}
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#USE_TASKS}.
      */
     @Deprecated
     public final void setUseTasks(boolean useTasks) {

@@ -18,7 +18,7 @@ package io.netty.handler.ssl;
 /**
  * {@link SslContextOption}s that are specific to the {@link SslProvider#OPENSSL} / {@link SslProvider#OPENSSL_REFCNT}.
  *
- * @param <T> the type of the value.
+ * @param <T>   the type of the value.
  */
 public final class OpenSslContextOption<T> extends SslContextOption<T> {
 
@@ -33,8 +33,10 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
             new OpenSslContextOption<Boolean>("USE_TASKS");
     /**
      * If enabled <a href="https://tools.ietf.org/html/rfc7918">TLS false start</a> will be enabled if supported.
+     * When TLS false start is enabled the flow of {@link SslHandshakeCompletionEvent}s may be different compared when,
+     * not enabled.
      *
-     * This is currently only supported when {@code BoringSSL} is used.
+     * This is currently only supported when {@code BoringSSL} and ALPN is used.
      */
     public static final OpenSslContextOption<Boolean> TLS_FALSE_START =
             new OpenSslContextOption<Boolean>("TLS_FALSE_START");

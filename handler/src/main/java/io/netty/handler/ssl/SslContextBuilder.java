@@ -45,6 +45,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Builder for configuring a new SslContext for creation.
  */
 public final class SslContextBuilder {
+    @SuppressWarnings("rawtypes")
+    private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
 
     /**
      * Creates a builder for new client-side {@link SslContext}.
@@ -588,12 +590,12 @@ public final class SslContextBuilder {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStoreType, toArray(options.entrySet(), new Map.Entry[0]));
+                enableOcsp, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
-                    toArray(options.entrySet(), new Map.Entry[0]));
+                    toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
