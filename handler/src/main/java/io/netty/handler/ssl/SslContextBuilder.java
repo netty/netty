@@ -66,11 +66,11 @@ public final class SslContextBuilder {
      * Creates a builder for new server-side {@link SslContext}.
      *
      * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
-     *                                  called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
-     *                                  called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      *
      * @see #keyManager(InputStream, InputStream)
      */
@@ -118,11 +118,11 @@ public final class SslContextBuilder {
      * Creates a builder for new server-side {@link SslContext}.
      *
      * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
-     *                                  called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()} was
-     *                                  called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
      *     password-protected
      * @see #keyManager(InputStream, InputStream, String)
@@ -248,7 +248,7 @@ public final class SslContextBuilder {
      * Trusted certificates for verifying the remote endpoint's certificate. The input stream should
      * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
      *
-     * The caller is responsible for calling {@link InputStream#close()} once {@link #build()} was called.
+     * The caller is responsible for calling {@link InputStream#close()} after {@link #build()} has been called.
      */
     public SslContextBuilder trustManager(InputStream trustCertCollectionInputStream) {
         try {
@@ -312,11 +312,11 @@ public final class SslContextBuilder {
      * be {@code null} for client contexts, which disables mutual authentication.
      *
      * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()}
-     *                                  was called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()}
-     *                                  was called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      */
     public SslContextBuilder keyManager(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return keyManager(keyCertChainInputStream, keyInputStream, null);
@@ -374,11 +374,11 @@ public final class SslContextBuilder {
      * be {@code null} for client contexts, which disables mutual authentication.
      *
      * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()}
-     *                                  was called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
-     *                                  responsible for calling {@link InputStream#close()} once {@link #build()}
-     *                                  was called.
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyPassword the password of the {@code keyInputStream}, or {@code null} if it's not
      *     password-protected
      */
