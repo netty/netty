@@ -115,7 +115,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
         if (numAvail ++ == 0) {
             addToPool(head);
-            return true;
+            /* When maxNumElems == 1, the maximum numAvail is also 1.
+             * Each of these PoolSubpages will go in here when they do free operation.
+             * If they return true directly from here, then the rest of the code will be unreachable
+             * and they will not actually be recycled. So return true only on maxNumElems > 1. */
+            if (maxNumElems > 1) {
+                return true;
+            }
         }
 
         if (numAvail != maxNumElems) {
