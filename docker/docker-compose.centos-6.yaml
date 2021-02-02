@@ -19,12 +19,12 @@ services:
 
   build:
     <<: *common
-    command: /bin/bash -cl "mvn clean package -DboringsslHomeDir=/root/libs/boringssl -DquicheHomeDir=/root/libs/quiche"
+    command: /bin/bash -cl "mvn clean package"
 
 
   build-leak:
     <<: *common
-    command: /bin/bash -cl "mvn -Pleak clean package -DboringsslHomeDir=/root/libs/boringssl -DquicheHomeDir=/root/libs/quiche"
+    command: /bin/bash -cl "mvn -Pleak clean package"
 
 
   build-clean:
@@ -33,7 +33,7 @@ services:
 
   deploy:
     <<: *common
-    command: /bin/bash -cl "mvn clean deploy -DskipTests=true -DboringsslHomeDir=/root/libs/boringssl -DquicheHomeDir=/root/libs/quiche"
+    command: /bin/bash -cl "mvn clean deploy -DskipTests=true"
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg

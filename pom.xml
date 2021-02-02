@@ -78,6 +78,9 @@
     <boringsslSourceDir>${project.build.directory}/boringssl-source</boringsslSourceDir>
     <boringsslBuildDir>${boringsslSourceDir}/build</boringsslBuildDir>
     <boringsslHomeDir>${project.build.directory}/boringssl</boringsslHomeDir>
+    <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
+    <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
+
     <!--
       See https://boringssl.googlesource.com/boringssl/+/refs/heads/chromium-stable for the latest commit
     -->
@@ -85,22 +88,26 @@
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
+    <quicheHomeBuildDir>${quicheHomeDir}/build</quicheHomeBuildDir>
+    <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>5092e4d1e8ae2773a56eddda6a8205f5e65b4b37</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
-    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeDir}/include -I${boringsslHomeDir}/include</cflags>
-    <ldflags>-L${quicheHomeDir}/build -lquiche -L${boringsslHomeDir}/build -lssl -lcrypto</ldflags>
+    <cargoTarget/>
+    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+    <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
+    <extraCflags/>
+    <extraCxxflags/>
     <extraLdflags />
     <extraConfigureArg />
     <!-- We need 10.12 as minimum to compile quiche and use it.
          Anything below will fail when trying to load quiche with:
          Symbol not found: ___isPlatformVersionAtLeast
     -->
-    <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
+    <macosxDeploymentTarget/>
     <test.argLine>-D_</test.argLine>
     <bundleNativeCode />
   </properties>
-
   <profiles>
     <profile>
       <id>mac</id>
@@ -110,6 +117,21 @@
         </os>
       </activation>
       <properties>
+        <!--  We need 10.12 as minimum to compile quiche and use it.
+              Anything below will fail when trying to load quiche with:
+              Symbol not found: ___isPlatformVersionAtLeast
+        -->
+        <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
+        <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
+        <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCflags} -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
         <extraLdflags>-Wl,-exported_symbol,_JNI_*</extraLdflags>
         <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=${os.detected.arch}</bundleNativeCode>
@@ -123,6 +145,16 @@
         </os>
       </activation>
       <properties>
+        <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
+        <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
@@ -254,22 +286,6 @@
                   </exec>
 
                   <mkdir dir="${boringsslBuildDir}" />
-                  <if>
-                    <equals arg1="${os.detected.name}" arg2="linux" />
-                    <then>
-                      <!-- On *nix, add ASM flags to disable executable stack -->
-                      <property name="cmakeAsmFlags" value="-Wa,--noexecstack" />
-                      <property name="cmakeCFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
-                      <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-                      <property name="cmakeCxxFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS" />
-                    </then>
-                    <else>
-                      <!-- On *nix, add ASM flags to disable executable stack -->
-                      <property name="cmakeAsmFlags" value="-Wa,--noexecstack" />
-                      <property name="cmakeCFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC" />
-                      <property name="cmakeCxxFlags" value="-O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis" />
-                    </else>
-                  </if>
                   <exec executable="cmake" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
                     <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                     <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
@@ -297,10 +313,10 @@
                   </exec>
 
                   <!-- Only copy the libs and header files we need -->
-                  <mkdir dir="${boringsslHomeDir}/build" />
-                  <copy file="${boringsslBuildDir}/ssl/libssl.a" todir="${boringsslHomeDir}/build/" />
-                  <copy file="${boringsslBuildDir}/crypto/libcrypto.a" todir="${boringsslHomeDir}/build/" />
-                  <copy todir="${boringsslHomeDir}/include">
+                  <mkdir dir="${boringsslHomeBuildDir}" />
+                  <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true"/>
+                  <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true"/>
+                  <copy todir="${boringsslHomeIncludeDir}" verbose="true">
                     <fileset dir="${boringsslSourceDir}/include"/>
                   </copy>
                 </else>
@@ -352,38 +368,21 @@
                     </else>
                   </if>
                   <echo message="Building Quiche" />
-                  <if>
-                    <equals arg1="${os.detected.name}" arg2="osx" />
-                    <then>
-                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg value="build" />
-                        <arg value="--no-default-features" />
-                        <arg value="--features" />
-                        <arg value="ffi" />
-                        <arg value="--release" />
-                        <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
-                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer" />
-                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
-                      </exec>
-                    </then>
 
-                    <else>
-                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg value="build" />
-                        <arg value="--no-default-features" />
-                        <arg value="--features" />
-                        <arg value="ffi" />
-                        <arg value="--release" />
-                        <env key="CFLAGS" value="-O3 -fno-omit-frame-pointer" />
-                        <env key="CXXFLAGS" value="-O3 -fno-omit-frame-pointer" />
-                      </exec>
-                    </else>
-                  </if>
+                  <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                    <arg value="build" />
+                    <arg value="--features" />
+                    <arg value="ffi" />
+                    <arg value="--release" />
+                    <env key="CFLAGS" value="${extraCflags}" />
+                    <env key="CXXFLAGS" value="${extraCxxflags}" />
+                    <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
+                  </exec>
+
                   <!-- Only copy the libs and header files we need -->
                   <mkdir dir="${quicheHomeDir}" />
-                  <copy file="${quicheBuildDir}/libquiche.a" todir="${quicheHomeDir}/build/" />
-                  <copy todir="${quicheHomeDir}/include">
+                  <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
+                  <copy todir="${quicheHomeIncludeDir}">
                     <fileset dir="${quicheSourceDir}/include"/>
                   </copy>
                 </else>
@@ -626,6 +625,7 @@
                    This hack will make the hawtjni plugin to put the native library
                    under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
               <platform>.</platform>
+              <verbose>true</verbose>
               <configureArgs>
                 <configureArg>${extraConfigureArg}</configureArg>
                 <configureArg>CFLAGS=${cflags}</configureArg>
