@@ -48,6 +48,23 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         super(true);
     }
 
+    private QuicServerCodecBuilder(QuicServerCodecBuilder builder) {
+        super(builder);
+        options.putAll(builder.options);
+        attrs.putAll(builder.attrs);
+        streamOptions.putAll(builder.streamOptions);
+        streamAttrs.putAll(builder.streamAttrs);
+        handler = builder.handler;
+        streamHandler = builder.streamHandler;
+        connectionIdAddressGenerator = builder.connectionIdAddressGenerator;
+        tokenHandler = builder.tokenHandler;
+    }
+
+    @Override
+    public QuicServerCodecBuilder clone() {
+        return new QuicServerCodecBuilder(this);
+    }
+
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link QuicChannel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.

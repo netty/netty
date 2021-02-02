@@ -32,6 +32,15 @@ public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCod
         super(false);
     }
 
+    private QuicClientCodecBuilder(QuicCodecBuilder<QuicClientCodecBuilder> builder) {
+        super(builder);
+    }
+
+    @Override
+    public QuicClientCodecBuilder clone() {
+        return new QuicClientCodecBuilder(this);
+    }
+
     @Override
     protected ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,

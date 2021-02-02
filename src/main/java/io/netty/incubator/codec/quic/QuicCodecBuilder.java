@@ -49,9 +49,33 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
+
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
         this.server = server;
+    }
+
+    QuicCodecBuilder(QuicCodecBuilder<B> builder) {
+        Quic.ensureAvailability();
+        this.server = builder.server;
+        this.grease = builder.grease;
+        this.earlyData = builder.earlyData;
+        this.maxIdleTimeout = builder.maxIdleTimeout;
+        this.maxRecvUdpPayloadSize = builder.maxRecvUdpPayloadSize;
+        this.maxSendUdpPayloadSize = builder.maxSendUdpPayloadSize;
+        this.initialMaxData = builder.initialMaxData;
+        this.initialMaxStreamDataBidiLocal = builder.initialMaxStreamDataBidiLocal;
+        this.initialMaxStreamDataBidiRemote = builder.initialMaxStreamDataBidiRemote;
+        this.initialMaxStreamDataUni = builder.initialMaxStreamDataUni;
+        this.initialMaxStreamsBidi = builder.initialMaxStreamsBidi;
+        this.initialMaxStreamsUni = builder.initialMaxStreamsUni;
+        this.ackDelayExponent = builder.ackDelayExponent;
+        this.maxAckDelay = builder.maxAckDelay;
+        this.disableActiveMigration = builder.disableActiveMigration;
+        this.enableHystart = builder.enableHystart;
+        this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
+        this.localConnIdLength = builder.localConnIdLength;
+        this.sslEngineProvider = builder.sslEngineProvider;
     }
 
     /**
@@ -389,6 +413,13 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
             throw cause;
         }
     }
+
+    /**
+     * Clone the builder
+     *
+     * @return the new instance that is a clone if this instance.
+     */
+    public abstract B clone();
 
     /**
      * Builds the QUIC codec.
