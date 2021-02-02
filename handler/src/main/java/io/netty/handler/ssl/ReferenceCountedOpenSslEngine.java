@@ -347,9 +347,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     SSL.enableOcsp(ssl);
                 }
 
-                if (!jdkCompatibilityMode) {
-                    SSL.setMode(ssl, SSL.getMode(ssl) | SSL.SSL_MODE_ENABLE_PARTIAL_WRITE);
+                int mode = SSL.getMode(ssl);
+                if (context.tlsFalseStart) {
+                    mode |= SSL.SSL_MODE_ENABLE_FALSE_START;
                 }
+
+                if (!jdkCompatibilityMode) {
+                    mode |= SSL.SSL_MODE_ENABLE_PARTIAL_WRITE;
+                }
+                SSL.setMode(ssl, mode);
 
                 if (isProtocolEnabled(SSL.getOptions(ssl), SSL.SSL_OP_NO_TLSv1_3, PROTOCOL_TLS_V1_3)) {
                     final boolean enableTickets = clientMode ?

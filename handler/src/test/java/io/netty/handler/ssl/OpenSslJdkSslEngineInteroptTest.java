@@ -148,6 +148,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {

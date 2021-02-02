@@ -1410,6 +1410,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return (ReferenceCountedOpenSslEngine) engine;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {

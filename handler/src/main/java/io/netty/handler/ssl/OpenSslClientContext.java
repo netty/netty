@@ -19,6 +19,7 @@ import io.netty.internal.tcnative.SSL;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -34,23 +35,15 @@ import static io.netty.handler.ssl.ReferenceCountedOpenSslClientContext.newSessi
 final class OpenSslClientContext extends OpenSslContext {
     private final OpenSslSessionContext sessionContext;
 
-    OpenSslClientContext(X509Certificate[] trustCertCollection,
-                         TrustManagerFactory trustManagerFactory,
-                         X509Certificate[] keyCertChain,
-                         PrivateKey key,
-                         String keyPassword,
-                         KeyManagerFactory keyManagerFactory,
-                         Iterable<String> ciphers,
-                         CipherSuiteFilter cipherFilter,
-                         ApplicationProtocolConfig apn,
-                         String[] protocols,
-                         long sessionCacheSize,
-                         long sessionTimeout,
-                         boolean enableOcsp,
-                         String keyStore)
-      throws SSLException {
+    OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
+                         Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
-          ClientAuth.NONE, protocols, false, enableOcsp);
+                ClientAuth.NONE, protocols, false, enableOcsp, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
