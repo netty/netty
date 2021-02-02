@@ -492,9 +492,9 @@
           </configuration>
         </execution>
 
-        <!-- Copy the native lib that was generated. -->
+        <!-- Copy the native lib that was generated and the license material for attribution -->
         <execution>
-          <id>copy-native-lib</id>
+          <id>copy-native-lib-and-license</id>
           <phase>process-test-resources</phase>
           <goals>
             <goal>run</goal>
@@ -508,6 +508,14 @@
                 <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
                 <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
               </copy>
+
+              <!-- Copy license material for attribution-->
+              <copy file="NOTICE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+              <copy file="LICENSE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+              <copy todir="${project.build.outputDirectory}/META-INF/license">
+                <fileset dir="license" />
+              </copy>
+
             </target>
           </configuration>
         </execution>
@@ -747,9 +755,12 @@
           <execution>
             <id>default-jar</id>
             <configuration>
-              <!-- Exclude native lib -->
+              <!-- Exclude native lib and attribution for the jar without classifier-->
               <excludes>
                 <exclude>META-INF/native/**</exclude>
+                <exclude>META-INF/license/**</exclude>
+                <exclude>META-INF/NOTICE.txt</exclude>
+                <exclude>META-INF/LICENSE.txt</exclude>
               </excludes>
             </configuration>
           </execution>
