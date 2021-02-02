@@ -179,19 +179,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         DH_KEY_LENGTH = dhLen;
     }
 
-    ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   ApplicationProtocolConfig apnCfg, long sessionCacheSize, long sessionTimeout,
-                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, String[] protocols,
-                                   boolean startTls, boolean enableOcsp, boolean leakDetection) throws SSLException {
-        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, leakDetection);
-    }
+    final boolean tlsFalseStart;
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
                                    long sessionTimeout, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                                   boolean leakDetection) throws SSLException {
+                                   boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+            throws SSLException {
         super(startTls);
 
         OpenSsl.ensureAvailability();
@@ -203,6 +198,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {
             throw new IllegalArgumentException("mode most be either SSL.SSL_MODE_SERVER or SSL.SSL_MODE_CLIENT");
         }
+
+        boolean tlsFalseStart = false;
+        boolean useTasks = USE_TASKS;
+        OpenSslPrivateKeyMethod privateKeyMethod = null;
+
+        if (ctxOptions != null) {
+            for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
+                SslContextOption<?> option = ctxOpt.getKey();
+
+                if (option == OpenSslContextOption.TLS_FALSE_START) {
+                    tlsFalseStart = (Boolean) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.USE_TASKS) {
+                    useTasks = (Boolean) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD) {
+                    privateKeyMethod = (OpenSslPrivateKeyMethod) ctxOpt.getValue();
+                } else {
+                    logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
+                            + ": " + ctxOpt.getKey());
+                }
+            }
+        }
+        this.tlsFalseStart = tlsFalseStart;
+
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
@@ -335,7 +353,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.enableOcsp(ctx, isClient());
             }
 
-            SSLContext.setUseTasks(ctx, USE_TASKS);
+            SSLContext.setUseTasks(ctx, useTasks);
+            if (privateKeyMethod != null) {
+                SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, privateKeyMethod));
+            }
             success = true;
         } finally {
             if (!success) {
@@ -514,8 +535,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      *
      * This method is currently only supported when {@code BoringSSL} is used.
      *
-     * @param method method to use.
+     * @param        method method to use.
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#PRIVATE_KEY_METHOD}.
      */
+    @Deprecated
     @UnstableApi
     public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
         ObjectUtil.checkNotNull(method, "method");
@@ -528,6 +552,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    /**
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#USE_TASKS}.
+     */
+    @Deprecated
     public final void setUseTasks(boolean useTasks) {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();

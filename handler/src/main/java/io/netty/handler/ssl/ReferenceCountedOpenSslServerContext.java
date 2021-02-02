@@ -30,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
@@ -60,10 +61,11 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore) throws SSLException {
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore);
+                enableOcsp, keyStore, options);
     }
 
     ReferenceCountedOpenSslServerContext(
@@ -71,9 +73,10 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore) throws SSLException {
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
-              clientAuth, protocols, startTls, enableOcsp, true);
+              clientAuth, protocols, startTls, enableOcsp, true, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {

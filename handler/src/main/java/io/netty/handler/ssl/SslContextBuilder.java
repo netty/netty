@@ -33,7 +33,9 @@ import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
@@ -43,6 +45,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Builder for configuring a new SslContext for creation.
  */
 public final class SslContextBuilder {
+    @SuppressWarnings("rawtypes")
+    private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
 
     /**
      * Creates a builder for new client-side {@link SslContext}.
@@ -201,9 +205,22 @@ public final class SslContextBuilder {
     private boolean startTls;
     private boolean enableOcsp;
     private String keyStoreType = KeyStore.getDefaultType();
+    private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
+    }
+
+    /**
+     * Configure a {@link SslContextOption}.
+     */
+    public <T> SslContextBuilder option(SslContextOption<T> option, T value) {
+        if (value == null) {
+            options.remove(option);
+        } else {
+            options.put(option, value);
+        }
+        return this;
     }
 
     /**
@@ -592,11 +609,12 @@ public final class SslContextBuilder {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStoreType);
+                enableOcsp, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType);
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
+                    toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 

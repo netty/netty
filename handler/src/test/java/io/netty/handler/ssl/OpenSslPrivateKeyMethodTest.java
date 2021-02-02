@@ -151,15 +151,13 @@ public class OpenSslPrivateKeyMethodTest {
 
         final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(kmf)
+       return SslContextBuilder.forServer(kmf)
                 .sslProvider(SslProvider.OPENSSL)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
                 .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .option(OpenSslContextOption.PRIVATE_KEY_METHOD, method)
                 .build();
-
-        ((OpenSslContext) sslServerContext).setPrivateKeyMethod(method);
-        return sslServerContext;
     }
 
     private SslContext buildClientContext()  throws Exception {
