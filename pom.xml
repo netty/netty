@@ -68,6 +68,7 @@
   <properties>
     <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
     <netty.version>4.1.59.Final-SNAPSHOT</netty.version>
     <netty.build.version>28</netty.build.version>
@@ -93,6 +94,7 @@
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>5092e4d1e8ae2773a56eddda6a8205f5e65b4b37</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
+    <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget/>
     <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
     <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
@@ -109,6 +111,29 @@
     <bundleNativeCode />
   </properties>
   <profiles>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <boringsslHomeBuildDir>${boringsslHomeDir}/build/RelWithDebInfo</boringsslHomeBuildDir>
+        <quicheTarget>x86_64-pc-windows-msvc</quicheTarget>
+        <cargoTarget>--target=${quicheTarget}</cargoTarget>
+        <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
+        <cmakeAsmFlags/>
+        <!-- On Windows, build with /MT for static linking -->
+        <cmakeCFlags>/MT</cmakeCFlags>
+        <!-- Disable one warning to be able to build on windows -->
+        <cmakeCxxFlags>/MT /wd4091</cmakeCxxFlags>
+        <libssl>ssl.lib</libssl>
+        <libcrypto>crypto.lib</libcrypto>
+        <libquiche>quiche.lib</libquiche>
+        <bundleNativeCode>META-INF/native/${jniLibName}.dll;osname=win32;processor=${os.detected.arch}</bundleNativeCode>
+      </properties>
+    </profile>
     <profile>
       <id>mac</id>
       <activation>
@@ -368,17 +393,33 @@
                     </else>
                   </if>
                   <echo message="Building Quiche" />
-
-                  <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                    <arg value="build" />
-                    <arg value="--features" />
-                    <arg value="ffi" />
-                    <arg value="--release" />
-                    <env key="CFLAGS" value="${extraCflags}" />
-                    <env key="CXXFLAGS" value="${extraCxxflags}" />
-                    <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
-                  </exec>
-
+                  <if>
+                    <equals arg1="${os.detected.name}" arg2="windows" />
+                    <then>
+                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                        <arg value="build" />
+                        <arg value="--features" />
+                        <arg value="ffi" />
+                        <arg value="--release" />
+                        <arg value="${cargoTarget}" />
+                        <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
+                        <env key="DEBUG" value="true" />
+                        <env key="OPT_LEVEL" value="3" />
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
+                      </exec>
+                   </then>
+                    <else>
+                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                        <arg value="build" />
+                        <arg value="--features" />
+                        <arg value="ffi" />
+                        <arg value="--release" />
+                        <env key="CFLAGS" value="${extraCflags}" />
+                        <env key="CXXFLAGS" value="${extraCxxflags}" />
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
+                      </exec>
+                    </else>
+                  </if>
                   <!-- Only copy the libs and header files we need -->
                   <mkdir dir="${quicheHomeDir}" />
                   <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
@@ -406,6 +447,66 @@
 
               <copy todir="${generatedSourcesDir}/c">
                 <fileset dir="${jniUtilIncludeDir}" />
+              </copy>
+            </target>
+          </configuration>
+        </execution>
+
+        <execution>
+          <!-- Adjust our template and copy it over so it can be used when compiling on windows -->
+          <id>setup-template</id>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          <configuration>
+            <target>
+              <!-- Add the ant tasks from ant-contrib -->
+              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+              <property environment="env" />
+              <!-- Convert the paths to windows format -->
+              <pathconvert property="boringsslHomeIncludeWindowsDir" targetos="windows">
+                <path location="${boringsslHomeIncludeDir}" />
+              </pathconvert>
+              <pathconvert property="quicheHomeIncludeWindowsDir" targetos="windows">
+                <path location="${quicheHomeIncludeDir}" />
+              </pathconvert>
+              <pathconvert property="boringsslHomeBuildWindowsDir" targetos="windows">
+                <path location="${boringsslHomeBuildDir}" />
+              </pathconvert>
+              <pathconvert property="quicheHomeBuildWindowsDir" targetos="windows">
+                <path location="${quicheHomeBuildDir}" />
+              </pathconvert>
+
+              <!-- Copy and filter the template MSVC project -->
+              <filter token="BORINGSSL_INCLUDE_DIR" value="${boringsslHomeIncludeWindowsDir}" />
+              <filter token="QUICHE_INCLUDE_DIR" value="${quicheHomeIncludeWindowsDir}" />
+              <filter token="BORINGSSL_LIB_DIR" value="${boringsslHomeBuildWindowsDir}" />
+              <filter token="QUICHE_LIB_DIR" value="${quicheHomeBuildWindowsDir}" />
+              <filter token="QUICHE_LIB" value="${libquiche}" />
+              <filter token="CRYPTO_LIB" value="${libcrypto}" />
+              <filter token="SSL_LIB" value="${libssl}" />
+
+              <copy file="src/main/native-package/vs2010.custom.props.template" tofile="${templateDir}/vs2010.custom.props" filtering="true" overwrite="true" verbose="true" />
+            </target>
+          </configuration>
+        </execution>
+
+        <!-- Copy the native lib that was generated. -->
+        <execution>
+          <id>copy-native-lib</id>
+          <phase>process-test-resources</phase>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          <configuration>
+            <target>
+              <!-- Add the ant tasks from ant-contrib -->
+              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+              <copy todir="${project.build.outputDirectory}" includeEmptyDirs="false">
+                <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
+                <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
               </copy>
             </target>
           </configuration>
@@ -612,20 +713,19 @@
       </plugin>
       <plugin>
         <groupId>org.fusesource.hawtjni</groupId>
-        <artifactId>maven-hawtjni-plugin</artifactId>
-        <version>1.14</version>
+        <artifactId>hawtjni-maven-plugin</artifactId>
+        <version>1.18</version>
         <executions>
           <execution>
             <id>build-native-lib</id>
             <configuration>
               <name>${jniLibName}</name>
               <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
-              <libDirectory>${project.build.outputDirectory}</libDirectory>
-              <!-- We use Maven's artifact classifier instead.
-                   This hack will make the hawtjni plugin to put the native library
-                   under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
-              <platform>.</platform>
-              <verbose>true</verbose>
+              <customPackageDirectory>${templateDir}</customPackageDirectory>
+              <windowsBuildTool>msbuild</windowsBuildTool>
+              <windowsCustomProps>true</windowsCustomProps>
+              <windowsPlatformToolset>v140</windowsPlatformToolset>
+              <libDirectory>${nativeLibOnlyDir}</libDirectory>
               <configureArgs>
                 <configureArg>${extraConfigureArg}</configureArg>
                 <configureArg>CFLAGS=${cflags}</configureArg>
@@ -647,6 +747,7 @@
           <execution>
             <id>default-jar</id>
             <configuration>
+              <!-- Exclude native lib -->
               <excludes>
                 <exclude>META-INF/native/**</exclude>
               </excludes>

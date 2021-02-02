@@ -581,7 +581,7 @@ done:
             netty_jni_util_unregister_natives(env, packagePrefix, QUICHE_CLASSNAME);
         }
         if (boringsslLoaded == 1) {
-            netty_boringssl_JNI_OnUnLoad(env, packagePrefix);
+            netty_boringssl_JNI_OnUnload(env, packagePrefix);
         }
 
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
@@ -591,7 +591,7 @@ done:
 }
 
 static void netty_quiche_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    netty_boringssl_JNI_OnUnLoad(env, packagePrefix);
+    netty_boringssl_JNI_OnUnload(env, packagePrefix);
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
 

@@ -10,6 +10,7 @@ on:
 jobs:
   build-linux-x86_64:
     runs-on: ubuntu-latest
+    name: linux-x86_64
     steps:
       - uses: actions/checkout@v2
 
@@ -37,4 +38,45 @@ jobs:
         if: ${{ failure() }}
         with:
           name: target
+          path: "**/target/"
+
+  build-pr-windows:
+    runs-on: windows-2016
+    name: windows-x86_64
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_amd64
+
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install ninja nasm
+
+      - name: Build project
+        run: mvn --file pom.xml clean package
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: build-pr-windows-target
           path: "**/target/"

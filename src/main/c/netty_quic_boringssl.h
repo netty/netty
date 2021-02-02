@@ -18,6 +18,6 @@
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
 jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
-void netty_boringssl_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix);
+void netty_boringssl_JNI_OnUnload(JNIEnv* env, const char* packagePrefix);
 
 #endif /* NETTY_BORINGSSL_H_ */
