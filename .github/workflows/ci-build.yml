@@ -72,6 +72,17 @@ jobs:
         with:
           args: install ninja nasm
 
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: build-cache-windows-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+            ${{ runner.os }}-
+
       - name: Build project
         run: mvn --file pom.xml clean package
 

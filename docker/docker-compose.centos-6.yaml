@@ -49,6 +49,15 @@ services:
       - ~/.m2/settings.xml:/root/.m2/settings.xml
       - ..:/code
 
+  stage-snapshot:
+    <<: *common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "mvn clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
+
   shell:
     <<: *common
     environment:

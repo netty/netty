@@ -11,30 +11,150 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-linux-x86_64:
+  stage-snapshot-linux-x86_64:
     runs-on: ubuntu-latest
+    name: stage-snapshot-linux-x86_64
     steps:
-      - uses: s4u/maven-settings-action@v2.2.0
-        with:
-          servers: |
-            [{
-                "id": "sonatype-nexus-snapshots",
-                "username": "${{ secrets.SONATYPE_USERNAME }}",
-                "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
-
       - uses: actions/checkout@v2
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
+        env:
+          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
         continue-on-error: true
         with:
-          key: deploy-docker-cache-{hash}
+          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
           restore-keys: |
-            deploy-docker-cache-
+            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml build
 
-      - name: Deploy project snapshot to sonatype
-        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run deploy
+      - name: Stage snapshots to local staging directory
+        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run stage-snapshot
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-x86_64-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+
+
+  stage-snapshot-windows-x86_64:
+    runs-on: windows-2016
+    name: stage-snapshot-windows-x86_64
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_amd64
+
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install ninja nasm
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: staging-cache-windows-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+            ${{ runner.os }}-
+
+      - name: Stage snapshots to local staging directory
+        run: mvn --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-x86_64-local-staging
+          path: local-staging
+          if-no-files-found: error
+
+  deploy-staged-snapshots:
+    runs-on: ubuntu-18.04
+    # Wait until we have staged everything
+    needs: [stage-snapshot-linux-x86_64, stage-snapshot-windows-x86_64]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: deploy-staging-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-deploy-${{ env.cache-name }}-
+            ${{ runner.os }}-deploy-
+
+      # Setup some env to re-use later.
+      - name: Prepare enviroment variables
+        run: |
+          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
+
+      # Hardcode the staging artifacts that need to be downloaded.
+      # These must match the matrix setups and windows build. There is currently no way to pull this out of the config.
+      - name: Download windows_x86_64 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-x86_64-local-staging
+          path: ~/windows-x86_64-local-staging
+
+      - name: Download linux-x86_64 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-local-staging
+          path: ~/linux-x86_64-local-staging
+
+      - name: Merge staging repositories
+        run: |
+          mkdir -p ~/local-staging/deferred
+          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-x86_64-local-staging/deferred/* ~/local-staging/deferred/
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-snapshots",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - name: Deploy local staged artifacts
+        run: mvn -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
