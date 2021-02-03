@@ -299,15 +299,12 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                     // which is not really usable for us as we may exceed it once we add more bytes.
                     buf.alloc().buffer(buf.readableBytes()).writeBytes(buf);
         } else {
-            int readPos = undecodedChunk.readerIndex();
-            int writable = undecodedChunk.writableBytes();
-            int toWrite = buf.readableBytes();
-            if (undecodedChunk.refCnt() == 1 && writable < toWrite && readPos + writable >= toWrite) {
-                undecodedChunk.discardReadBytes();
-            }
             undecodedChunk.writeBytes(buf);
         }
         parseBody();
+        if (undecodedChunk != null && undecodedChunk.writerIndex() > discardThreshold) {
+            undecodedChunk.discardReadBytes();
+        }
         return this;
     }
 
