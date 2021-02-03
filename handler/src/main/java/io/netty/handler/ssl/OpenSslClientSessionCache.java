@@ -36,13 +36,8 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     @Override
     protected boolean sessionCreated(OpenSslSession session) {
         assert Thread.holdsLock(this);
-        String host = session.getPeerHost();
-        int port = session.getPeerPort();
-        if (host == null || port == -1) {
-            return false;
-        }
-        HostPort hostPort = new HostPort(host, port);
-        if (sessions.containsKey(hostPort)) {
+        HostPort hostPort = keyFor(session.getPeerHost(), session.getPeerPort());
+        if (hostPort == null || sessions.containsKey(hostPort)) {
             return false;
         }
         sessions.put(hostPort, session);
@@ -52,12 +47,11 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     @Override
     protected void sessionRemoved(OpenSslSession session) {
         assert Thread.holdsLock(this);
-        String host = session.getPeerHost();
-        int port = session.getPeerPort();
-        if (host == null || port == -1) {
+        HostPort hostPort = keyFor(session.getPeerHost(), session.getPeerPort());
+        if (hostPort == null) {
             return;
         }
-        sessions.remove(new HostPort(host, port));
+        sessions.remove(hostPort);
     }
 
     private static boolean isProtocolEnabled(OpenSslSession session, String[] enabledProtocols) {
@@ -79,12 +73,10 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     }
 
     void setSession(ReferenceCountedOpenSslEngine engine) throws SSLException {
-        String host = engine.getPeerHost();
-        int port = engine.getPeerPort();
-        if (host == null || port == -1) {
+        HostPort hostPort = keyFor(engine.getPeerHost(), engine.getPeerPort());
+        if (hostPort == null) {
             return;
         }
-        HostPort hostPort = new HostPort(host, port);
         final OpenSslSession session;
         synchronized (this) {
             session = sessions.get(hostPort);
@@ -93,7 +85,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             }
             assert session.refCnt() >= 1;
             if (!session.isValid()) {
-                removeSession(session);
+                removeSessionWithId(session.sessionId());
                 return;
             }
         }
@@ -113,6 +105,19 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             }
             session.updateLastAccessedTime();
         }
+    }
+
+    private static HostPort keyFor(String host, int port) {
+        if (host == null && port < 1) {
+            return null;
+        }
+        return new HostPort(host, port);
+    }
+
+    @Override
+    synchronized void clear() {
+        super.clear();
+        sessions.clear();
     }
 
     /**

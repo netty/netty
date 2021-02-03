@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link SSLSessionCache} implementation for our native SSL implementation.
  */
 class OpenSslSessionCache implements SSLSessionCache {
+    private static final OpenSslSession[] EMPTY_SESSIONS = new OpenSslSession[0];
+
     private static final int DEFAULT_CACHE_SIZE;
     static {
         // Respect the same system property as the JDK implementation to make it easy to switch between implementations.
@@ -52,8 +54,7 @@ class OpenSslSessionCache implements SSLSessionCache {
                 protected boolean removeEldestEntry(Map.Entry<OpenSslSessionId, OpenSslSession> eldest) {
                     int maxSize = maximumCacheSize.get();
                     if (maxSize >= 0 && this.size() > maxSize) {
-                        OpenSslSession session = eldest.getValue();
-                        removeSession(session);
+                        removeSessionWithId(eldest.getKey());
                     }
                     // We always need to return false as we modify the map directly.
                     return false;
@@ -76,7 +77,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         if (oldTimeout > seconds) {
             // Drain the whole cache as this way we can use the ordering of the LinkedHashMap to detect early
             // if there are any other sessions left that are invalid.
-            freeSessions();
+            clear();
         }
     }
 
@@ -105,7 +106,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         long oldSize = maximumCacheSize.getAndSet(size);
         if (oldSize > size) {
             // Just keep it simple for now and drain the whole cache.
-            freeSessions();
+            clear();
         }
     }
 
@@ -113,7 +114,11 @@ class OpenSslSessionCache implements SSLSessionCache {
         return maximumCacheSize.get();
     }
 
-    private void expungeInvalidSessions(long now) {
+    private void expungeInvalidSessions() {
+        if (sessions.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
         Iterator<Map.Entry<OpenSslSessionId, OpenSslSession>> iterator = sessions.entrySet().iterator();
         while (iterator.hasNext()) {
             OpenSslSession session = iterator.next().getValue();
@@ -124,8 +129,8 @@ class OpenSslSessionCache implements SSLSessionCache {
                 break;
             }
             iterator.remove();
-            sessionRemoved(session);
-            session.release();
+
+            notifyRemovalAndRelease(session);
         }
     }
 
@@ -133,30 +138,31 @@ class OpenSslSessionCache implements SSLSessionCache {
     public final boolean sessionCreated(long ssl, long sslSession) {
         ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
         if (engine == null) {
+            // We couldn't find the engine itself.
             return false;
         }
         final OpenSslSession session = engine.sessionCreated(sslSession);
+        if (session == null) {
+            return false;
+        }
+
         synchronized (this) {
             // Mimic what OpenSSL is doing and expunge every 255 new sessions
             // See https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_flush_sessions.html
             if (++sessionCounter == 255) {
                 sessionCounter = 0;
-                expungeInvalidSessions(System.currentTimeMillis());
+                expungeInvalidSessions();
             }
 
-            if (session == null) {
-                return false;
-            }
             assert session.refCnt() >= 1;
             if (!sessionCreated(session)) {
+                // Should not be cached, return false.
                 return false;
             }
 
             final OpenSslSession old = sessions.put(session.sessionId(), session.retain());
             if (old != null) {
-                // Let's remove the old session and release it.
-                sessionRemoved(old);
-                old.release();
+                notifyRemovalAndRelease(old);
             }
         }
         return true;
@@ -173,24 +179,26 @@ class OpenSslSessionCache implements SSLSessionCache {
             }
             assert session.refCnt() >= 1;
 
-            if (!session.isValid()) {
-                removeSession(session);
-                return -1;
-            }
-
-            // This needs to happen in the synchronized block so we ensure we never destroy it before we incremented
-            // the reference count.
-            if (!session.upRef()) {
-                // we could not increment the reference count, something is wrong. Let's just drop the session.
-                removeSession(session);
+            // If the session is not valid anymore we should remove it from the cache and just signal back
+            // that we couldn't find a session that is re-usable.
+            if (!session.isValid() ||
+                    // This needs to happen in the synchronized block so we ensure we never destroy it before we
+                    // incremented the reference count. If we cant increment the reference count there is something
+                    // wrong. In this case just remove the session from the cache and signal back that we couldn't
+                    // find a session for re-use.
+                    !session.upRef()) {
+                removeSessionWithId(session.sessionId());
                 return -1;
             }
         }
 
+        // Now that we incremented the reference count of the native SSL_SESSION we should also retain the reference
+        // count of our java session.
         session.retain();
 
         if (session.shouldBeSingleUse()) {
-            // Should only be used once
+            // Should only be used once. In this case invalidate the session which will also ensure we remove it
+            // from the cache and not use it again in the future.
             session.invalidate();
         }
         session.updateLastAccessedTime();
@@ -200,13 +208,11 @@ class OpenSslSessionCache implements SSLSessionCache {
     final synchronized void removeSessionWithId(OpenSslSessionId id) {
         OpenSslSession sslSession = sessions.remove(id);
         if (sslSession != null) {
-            sessionRemoved(sslSession);
-            sslSession.release();
+            notifyRemovalAndRelease(sslSession);
         }
     }
 
-    protected final void removeSession(OpenSslSession session) {
-        sessions.remove(session.sessionId());
+    private void notifyRemovalAndRelease(OpenSslSession session) {
         sessionRemoved(session);
         session.release();
     }
@@ -215,11 +221,10 @@ class OpenSslSessionCache implements SSLSessionCache {
         OpenSslSessionId id = new OpenSslSessionId(bytes);
         synchronized (this) {
             OpenSslSession session = sessions.get(id);
-            if (session == null) {
-                return null;
-            }
-            if (!session.isValid()) {
-                removeSession(session);
+            if (session != null && !session.isValid()) {
+                // The session is not valid anymore, let's remove it and just signale back that there is no session
+                // with the given ID in the cache anymore.
+                removeSessionWithId(session.sessionId());
                 return null;
             }
             return session;
@@ -229,7 +234,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     final List<byte[]> getIds() {
         final OpenSslSession[] sessionsArray;
         synchronized (this) {
-            sessionsArray = sessions.values().toArray(new OpenSslSession[0]);
+            sessionsArray = sessions.values().toArray(EMPTY_SESSIONS);
         }
         List<byte[]> ids = new ArrayList<byte[]>(sessionsArray.length);
         for (OpenSslSession session: sessionsArray) {
@@ -240,14 +245,12 @@ class OpenSslSessionCache implements SSLSessionCache {
         return ids;
     }
 
-    final synchronized void freeSessions() {
+    synchronized void clear() {
         Iterator<Map.Entry<OpenSslSessionId, OpenSslSession>> iterator = sessions.entrySet().iterator();
         while (iterator.hasNext()) {
             OpenSslSession session = iterator.next().getValue();
-
             iterator.remove();
-            sessionRemoved(session);
-            session.release();
+            notifyRemovalAndRelease(session);
         }
     }
 }

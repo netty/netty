@@ -175,7 +175,7 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         try {
             SSLContext.setSessionCacheMode(context.ctx, mode);
             if (!enabled) {
-                sessionCache.freeSessions();
+                sessionCache.clear();
             }
         } finally {
             writerLock.unlock();
@@ -213,6 +213,6 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         if (provider != null) {
             provider.destroy();
         }
-        sessionCache.freeSessions();
+        sessionCache.clear();
     }
 }
