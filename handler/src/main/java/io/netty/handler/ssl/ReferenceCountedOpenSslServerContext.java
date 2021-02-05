@@ -53,9 +53,6 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
 
-    private static final boolean ENABLE_SESSION_TICKET =
-            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
-
     ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
@@ -82,7 +79,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                       keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
-            if (ENABLE_SESSION_TICKET) {
+            if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
             success = true;
