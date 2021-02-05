@@ -28,4 +28,10 @@ public class EpollSocketConnectTest extends SocketConnectTest {
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.statefulSocket();
     }
+
+    @Override
+    protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
+        sb.childOption(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
+        cb.option(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
+    }
 }

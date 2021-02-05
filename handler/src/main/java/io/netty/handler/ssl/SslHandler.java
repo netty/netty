@@ -28,6 +28,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -1957,8 +1958,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(ctx.channel(), 16);
-        if (ctx.channel().isActive()) {
+        Channel channel = ctx.channel();
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
+        if (channel.isActive() || channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT)) {
             startHandshakeProcessing();
         }
     }

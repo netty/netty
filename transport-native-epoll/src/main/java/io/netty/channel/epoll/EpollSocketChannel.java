@@ -43,7 +43,6 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private final EpollSocketChannelConfig config;
 
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
-    private boolean pendingFastOpenWrite;
 
     public EpollSocketChannel() {
         super(newSocketStream(), false);
@@ -118,28 +117,27 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     boolean doConnect0(SocketAddress remote) throws Exception {
         if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.isTcpFastOpenConnect()) {
-            pendingFastOpenWrite = true;
-            return true;
+            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            outbound.addFlush();
+            Object curr;
+            if ((curr = outbound.current()) != null) {
+                if (curr instanceof ByteBuf) {
+                    ByteBuf initialData = (ByteBuf) curr;
+
+                    long localFlushedAmount = doWriteOrSendBytes(
+                            initialData, (InetSocketAddress) remote, true);
+                    if (localFlushedAmount > 0) {
+                        // We had a cookie and our fast-open proceeded. Remove written data
+                        // then continue with normal TCP operation.
+                        outbound.removeBytes(localFlushedAmount);
+                        return true;
+                    }
+                    // If no cookie is present, the write fails with EINPROGRESS and this call basically
+                    // becomes a normal async connect. All writes will be sent normally afterwards.
+                }
+            }
         }
         return super.doConnect0(remote);
-    }
-
-    @Override
-    int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
-        if (pendingFastOpenWrite && buf.isReadable()) {
-            pendingFastOpenWrite = false;
-            long localFlushedAmount = doWriteOrSendBytes(buf, remoteAddress(), true);
-            if (localFlushedAmount > 0) {
-                // We had a cookie and our fast-open proceeded. Remove written data
-                // then continue with normal TCP operation.
-                in.removeBytes(localFlushedAmount);
-                return 1;
-            }
-            // If no cookie is present, the write fails with EINPROGRESS and this call basically
-            // becomes a normal async connect. All writes will be sent normally afterwards.
-            return 0;
-        }
-        return super.writeBytes(in, buf);
     }
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
