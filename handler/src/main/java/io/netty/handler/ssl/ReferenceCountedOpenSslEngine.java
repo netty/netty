@@ -368,14 +368,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 SSL.setMode(ssl, mode);
 
                 if (isProtocolEnabled(SSL.getOptions(ssl), SSL.SSL_OP_NO_TLSv1_3, PROTOCOL_TLS_V1_3)) {
-                    boolean enableTickets = false;
-                    if (clientMode) {
-                        if (ReferenceCountedOpenSslContext.CLIENT_ENABLE_SESSION_TICKET_TLSV13) {
-                            enableTickets = true;
-                        }
-                    } else if (ReferenceCountedOpenSslContext.SERVER_ENABLE_SESSION_TICKET_TLSV13) {
-                        enableTickets = true;
-                    }
+                    final boolean enableTickets = clientMode ?
+                            ReferenceCountedOpenSslContext.CLIENT_ENABLE_SESSION_TICKET_TLSV13 :
+                            ReferenceCountedOpenSslContext.SERVER_ENABLE_SESSION_TICKET_TLSV13;
                     if (enableTickets) {
                         // We should enable session tickets for stateless resumption when TLSv1.3 is enabled. This
                         // is also done by OpenJDK and without this session resumption does not work at all with
