@@ -1,4 +1,4 @@
-name: PR Builder Reports
+name: PR Reports
 on:
   workflow_run:
     workflows: [ "Build PR" ]
@@ -22,4 +22,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           report_paths: '**/target/surefire-reports/TEST-*.xml'
           commit: ${{ github.event.workflow_run.head_commit.id }}
-          check_name: Test Report PR Build
+          check_name: test reports
