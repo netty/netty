@@ -10,7 +10,7 @@ on:
 jobs:
   build-linux-x86_64:
     runs-on: ubuntu-latest
-    name: linux-x86_64
+    name: linux-x86_64 build
     steps:
       - uses: actions/checkout@v2
 
@@ -34,6 +34,13 @@ jobs:
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
 
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-pr-linux-x86_64
+          path: '**/target/surefire-reports/TEST-*.xml'
+
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
@@ -42,7 +49,7 @@ jobs:
 
   build-pr-windows:
     runs-on: windows-2016
-    name: windows-x86_64
+    name: windows-x86_64 build
     steps:
       - uses: actions/checkout@v2
 
@@ -85,6 +92,13 @@ jobs:
 
       - name: Build project
         run: mvn --file pom.xml clean package
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-pr-windows-x86_64
+          path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}

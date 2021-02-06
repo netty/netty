@@ -1,0 +1,44 @@
+name: PR Reports
+on:
+  workflow_run:
+    workflows: [ "Build PR" ]
+    types:
+      - completed
+jobs:
+  tests-linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: dawidd6/action-download-artifact@v2.11.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: ${{ github.event.workflow_run.workflow_id }}
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          # File location set in ci-pr.yml and must be coordinated.
+          name: test-results-pr-linux-x86_64
+      - name: Publish Test Report
+        uses: scacap/action-surefire-report@v1.0.7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          check_name: linux-x86_64 test results
+
+  tests-windows-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: dawidd6/action-download-artifact@v2.11.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: ${{ github.event.workflow_run.workflow_id }}
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          # File location set in ci-pr.yml and must be coordinated.
+          name: test-results-pr-windows-x86_64
+      - name: Publish Test Report
+        uses: scacap/action-surefire-report@v1.0.7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          check_name: windows-x86_64 test results
