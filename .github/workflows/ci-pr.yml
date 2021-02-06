@@ -57,6 +57,13 @@ jobs:
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
 
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-build
+          path: '**/target/surefire-reports/TEST-*.xml'
+
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
