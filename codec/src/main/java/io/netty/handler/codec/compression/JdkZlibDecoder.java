@@ -201,18 +201,17 @@ public class JdkZlibDecoder extends ZlibDecoder {
         }
 
         if (crc != null) {
-            switch (gzipState) {
-                case FOOTER_START:
-                    if (readGZIPFooter(in)) {
-                        finished = true;
+            if (gzipState == GzipState.FOOTER_START) {
+                if (readGZIPFooter(in)) {
+                    finished = true;
+                }
+                return;
+            } else {
+                if (gzipState != GzipState.HEADER_END) {
+                    if (!readGZIPHeader(in)) {
+                        return;
                     }
-                    return;
-                default:
-                    if (gzipState != GzipState.HEADER_END) {
-                        if (!readGZIPHeader(in)) {
-                            return;
-                        }
-                    }
+                }
             }
             // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
             readableBytes = in.readableBytes();
