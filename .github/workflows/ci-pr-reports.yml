@@ -1,0 +1,32 @@
+name: PR Reports
+on:
+  workflow_run:
+    workflows: [ "Build PR" ]
+    types:
+      - completed
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java8
+          - setup: linux-x86_64-java11
+          - setup: linux-x86_64-java15
+          - setup: linux-x86_64-java11-boringssl
+    steps:
+      - name: Download Artifacts
+        uses: dawidd6/action-download-artifact@v2.11.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: ${{ github.event.workflow_run.workflow_id }}
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          # File location set in ci-pr.yml and must be coordinated.
+          name: test-results-${{ matrix.setup }}
+      - name: Publish Test Report
+        uses: scacap/action-surefire-report@v1.0.7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          check_name: test reports
