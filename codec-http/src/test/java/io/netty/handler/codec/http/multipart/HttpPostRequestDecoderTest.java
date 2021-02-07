@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
@@ -961,6 +962,7 @@ public class HttpPostRequestDecoderTest {
 
         try {
             HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+            assertEquals(2, decoder.getBodyHttpDatas().size());
             InterfaceHttpData data = decoder.getBodyHttpData("title");
             assertTrue(data instanceof MemoryAttribute);
             assertEquals("bar-stream", ((MemoryAttribute) data).getString());
@@ -975,5 +977,245 @@ public class HttpPostRequestDecoderTest {
         } finally {
             assertTrue(req.release());
         }
+    }
+
+    private HttpPostMultipartRequestDecoder commonTestBigFileDelimiterInMiddleChunk(HttpDataFactory factory,
+                                                                                    HttpRequest request, String prefix,
+                                                                                    String suffix1, String suffix2,
+                                                                                    int nbChunks, int bytesPerChunk,
+                                                                                    int bytesLastChunk) {
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(prefix.getBytes(CharsetUtil.UTF_8))));
+
+        byte[] body = new byte[bytesPerChunk];
+        Arrays.fill(body, (byte) 1);
+        for (int i = 0; i < nbChunks; i++) {
+            ByteBuf content = Unpooled.wrappedBuffer(body, 0, bytesPerChunk);
+            decoder.offer(new DefaultHttpContent(content)); // **OutOfMemory here**
+            content.release();
+        }
+
+        byte[] bsuffix1 = suffix1.getBytes(CharsetUtil.UTF_8);
+        byte[] lastbody = new byte[bytesLastChunk + bsuffix1.length];
+        Arrays.fill(body, (byte) 1);
+        for (int i = 0; i < bsuffix1.length; i++) {
+            lastbody[bytesLastChunk + i] = bsuffix1[i];
+        }
+
+        ByteBuf content2 = Unpooled.wrappedBuffer(lastbody, 0, lastbody.length);
+        decoder.offer(new DefaultHttpContent(content2));
+        content2.release();
+        content2 = Unpooled.wrappedBuffer(suffix2.getBytes(CharsetUtil.UTF_8));
+        decoder.offer(new DefaultHttpContent(content2));
+        content2.release();
+        decoder.offer(new DefaultLastHttpContent());
+        return decoder;
+    }
+
+    @Test
+    public void testBIgFileUploadDelimiterInMiddleChunkDecoder() throws IOException {
+        int nbChunks = 100;
+        int bytesPerChunk = 1000000;
+        int bytesLastChunk = 10000;
+        int fileSize = bytesPerChunk * nbChunks + bytesLastChunk; // set Xmx to a number lower than this and it crashes
+
+        String prefix = "--861fbeab-cd20-470c-9609-d40a0f704466\n" +
+                "Content-Disposition: form-data; name=\"image\"; filename=\"guangzhou.jpeg\"\n" +
+                "Content-Type: image/jpeg\n" +
+                "Content-Length: " + fileSize + "\n" +
+                "\n";
+
+        String suffix1 = "\n" +
+                "--861fbeab-";
+        String suffix2 = "cd20-470c-9609-d40a0f704466--\n";
+        String suffix = suffix1 + suffix2;
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        request.headers().set("content-length", prefix.length() + fileSize + suffix.length());
+
+        // First Test using Disk
+        HttpDataFactory factory = new DefaultHttpDataFactory(true);
+
+        HttpPostMultipartRequestDecoder decoder = commonTestBigFileDelimiterInMiddleChunk(factory, request, prefix,
+                suffix1, suffix2, nbChunks, bytesPerChunk, bytesLastChunk);
+
+        FileUpload data = (FileUpload) decoder.getBodyHttpDatas().get(0);
+        assertEquals(data.length(), fileSize);
+        assertFalse(data.isInMemory());
+        assertTrue("Capacity should be less than 10M", decoder.getCurrentAllocatedCapacity()
+                < 10 * 1024 * 1024);
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Not mandatory since implicitely called during destroy of decoder
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
+
+        // Second Test using Memory
+        factory = new DefaultHttpDataFactory(false);
+
+        decoder = commonTestBigFileDelimiterInMiddleChunk(factory, request, prefix,
+                suffix1, suffix2, nbChunks, bytesPerChunk, bytesLastChunk);
+
+        data = (FileUpload) decoder.getBodyHttpDatas().get(0);
+        assertEquals(data.length(), fileSize);
+        assertTrue(data.isInMemory());
+        assertFalse("Capacity should be higher than 10M", data.getByteBuf().capacity()
+                < 10 * 1024 * 1024);
+        assertTrue("Capacity should be lower than 10M", decoder.getCurrentAllocatedCapacity()
+                < 10 * 1024 * 1024);
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Mandatory with In Memory Factory
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
+
+        // Third Test using Mixed mode
+        factory = new DefaultHttpDataFactory(10000);
+
+        decoder = commonTestBigFileDelimiterInMiddleChunk(factory, request, prefix,
+                suffix1, suffix2, nbChunks, bytesPerChunk, bytesLastChunk);
+
+        data = (FileUpload) decoder.getBodyHttpDatas().get(0);
+        assertEquals(data.length(), fileSize);
+        assertFalse(data.isInMemory());
+        assertTrue("Capacity should be lower than 10M", decoder.getCurrentAllocatedCapacity()
+                < 10 * 1024 * 1024);
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Mandatory with In Memory Factory
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
+    }
+
+    private HttpPostMultipartRequestDecoder commonNotBadReleaseBuffersDuringDecoding(HttpDataFactory factory,
+                                                                                     HttpRequest request,
+                                                                                     String prefix1, String prefix2,
+                                                                                     String suffix, int nbItems,
+                                                                                     int bytesPerItem, int maxMemory) {
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
+        decoder.setDiscardThreshold(maxMemory);
+        for (int rank = 0; rank < nbItems; rank++) {
+            byte[] bp1 = prefix1.getBytes(CharsetUtil.UTF_8);
+            byte[] bp2 = prefix2.getBytes(CharsetUtil.UTF_8);
+            byte[] prefix = new byte[bp1.length + 2 + bp2.length];
+            for (int i = 0; i < bp1.length; i++) {
+                prefix[i] = bp1[i];
+            }
+            byte[] brank = Integer.toString(10 + rank).getBytes();
+            prefix[bp1.length] = brank[0];
+            prefix[bp1.length + 1] = brank[1];
+            for (int i = 0; i < bp2.length; i++) {
+                prefix[bp1.length + 2 + i] = bp2[i];
+            }
+            decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(prefix)));
+            byte[] body = new byte[bytesPerItem];
+            Arrays.fill(body, (byte) rank);
+            ByteBuf content = Unpooled.wrappedBuffer(body, 0, bytesPerItem);
+            decoder.offer(new DefaultHttpContent(content));
+            content.release();
+        }
+        byte[] lastbody = suffix.getBytes(CharsetUtil.UTF_8);
+        ByteBuf content2 = Unpooled.wrappedBuffer(lastbody, 0, lastbody.length);
+        decoder.offer(new DefaultHttpContent(content2));
+        content2.release();
+        decoder.offer(new DefaultLastHttpContent());
+        return decoder;
+    }
+
+    @Test
+    public void testNotBadReleaseBuffersDuringDecoding() throws IOException {
+        int nbItems = 20;
+        int bytesPerItem = 1000;
+        int maxMemory = 500;
+
+        String prefix1 = "\n--861fbeab-cd20-470c-9609-d40a0f704466\n" +
+                "Content-Disposition: form-data; name=\"image";
+        String prefix2 =
+                "\"; filename=\"guangzhou.jpeg\"\n" +
+                "Content-Type: image/jpeg\n" +
+                "Content-Length: " + bytesPerItem + "\n" + "\n";
+
+        String suffix = "\n--861fbeab-cd20-470c-9609-d40a0f704466--\n";
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        request.headers().set("content-length", nbItems * (prefix1.length() + prefix2.length() + 2 + bytesPerItem)
+                + suffix.length());
+
+        // First Test using Disk
+        HttpDataFactory factory = new DefaultHttpDataFactory(true);
+        HttpPostMultipartRequestDecoder decoder = commonNotBadReleaseBuffersDuringDecoding(factory, request, prefix1,
+                prefix2, suffix, nbItems, bytesPerItem, maxMemory);
+
+        for (int rank = 0; rank < nbItems; rank++) {
+            FileUpload data = (FileUpload) decoder.getBodyHttpData("image" + (10 + rank));
+            assertEquals(data.length(), bytesPerItem);
+            assertFalse(data.isInMemory());
+            byte[] body = new byte[bytesPerItem];
+            Arrays.fill(body, (byte) rank);
+            assertTrue(Arrays.equals(body, data.get()));
+        }
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Not mandatory since implicitely called during destroy of decoder
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
+
+        // Second Test using Memory
+        factory = new DefaultHttpDataFactory(false);
+        decoder = commonNotBadReleaseBuffersDuringDecoding(factory, request, prefix1,
+                prefix2, suffix, nbItems, bytesPerItem, maxMemory);
+
+        for (int rank = 10; rank < nbItems; rank++) {
+            FileUpload data = (FileUpload) decoder.getBodyHttpData("image" + (10 + rank));
+            assertEquals(data.length(), bytesPerItem);
+            assertTrue(data.isInMemory());
+            byte[] body = new byte[bytesPerItem];
+            Arrays.fill(body, (byte) rank);
+            assertTrue(Arrays.equals(body, data.get()));
+        }
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Not mandatory since implicitely called during destroy of decoder
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
+
+        // Third Test using Mixed mode
+        factory = new DefaultHttpDataFactory(100);
+        decoder = commonNotBadReleaseBuffersDuringDecoding(factory, request, prefix1,
+                prefix2, suffix, nbItems, bytesPerItem, maxMemory);
+
+        for (int rank = 10; rank < nbItems; rank++) {
+            FileUpload data = (FileUpload) decoder.getBodyHttpData("image" + (10 + rank));
+            assertEquals(data.length(), bytesPerItem);
+            assertFalse(data.isInMemory());
+            byte[] body = new byte[bytesPerItem];
+            Arrays.fill(body, (byte) rank);
+            assertTrue(Arrays.equals(body, data.get()));
+        }
+        // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
+        // Not mandatory since implicitely called during destroy of decoder
+        for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+            httpData.release();
+            factory.removeHttpDataFromClean(request, httpData);
+        }
+        factory.cleanAllHttpData();
+        decoder.destroy();
     }
 }

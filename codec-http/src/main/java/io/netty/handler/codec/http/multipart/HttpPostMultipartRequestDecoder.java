@@ -1529,4 +1529,15 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         values.add(svalue.substring(start));
         return values.toArray(new String[0]);
     }
+
+    /**
+     * This method is package private intentionally in order to allow during tests
+     * to access to the amount of memory allocated (capacity) within the private
+     * ByteBuf undecodedChunk
+     *
+     * @return the number of bytes the internal buffer can contain
+     */
+    int getCurrentAllocatedCapacity() {
+        return undecodedChunk.capacity();
+    }
 }
