@@ -29,4 +29,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           report_paths: '**/target/surefire-reports/TEST-*.xml'
           commit: ${{ github.event.workflow_run.head_commit.id }}
-          check_name: test reports
+          check_name: ${{ matrix.setup }} test reports
