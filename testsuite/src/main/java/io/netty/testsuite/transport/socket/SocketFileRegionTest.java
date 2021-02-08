@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
@@ -101,7 +102,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     public void testFileRegionCountLargerThenFile(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        File file = File.createTempFile("netty-", ".tmp");
+        File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
         file.deleteOnExit();
 
         final FileOutputStream out = new FileOutputStream(file);
@@ -135,7 +136,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
         final int bufferSize = 1024;
-        final File file = File.createTempFile("netty-", ".tmp");
+        final File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
         file.deleteOnExit();
 
         final FileOutputStream out = new FileOutputStream(file);

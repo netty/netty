@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ public class ChunkedWriteHandlerTest {
 
         FileOutputStream out = null;
         try {
-            TMP = File.createTempFile("netty-chunk-", ".tmp");
+            TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
             out = new FileOutputStream(TMP);
             out.write(BYTES);

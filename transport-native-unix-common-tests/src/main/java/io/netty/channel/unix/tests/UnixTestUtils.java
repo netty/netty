@@ -17,6 +17,7 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Socket;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +27,7 @@ public final class UnixTestUtils {
         try {
             File file;
             do {
-                file = File.createTempFile("NETTY", "UDS");
+                file = PlatformDependent.createTempFile("NETTY", "UDS", null);
                 if (!file.delete()) {
                     throw new IOException("failed to delete: " + file);
                 }

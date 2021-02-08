@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -320,7 +322,7 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
-        File keyFile = File.createTempFile("keyutil_" + fqdn + '_', ".key");
+        File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
         OutputStream keyOut = new FileOutputStream(keyFile);
@@ -351,7 +353,7 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
-        File certFile = File.createTempFile("keyutil_" + fqdn + '_', ".crt");
+        File certFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".crt", null);
         certFile.deleteOnExit();
 
         OutputStream certOut = new FileOutputStream(certFile);

@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.File;
@@ -272,8 +273,9 @@ public class DiskFileUploadTest {
             assertEquals(maxSize, originalFile.length());
             assertEquals(maxSize, f1.length());
             byte[] bytes = new byte[8];
+
             ThreadLocalRandom.current().nextBytes(bytes);
-            File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+            File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
             tmpFile.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tmpFile);
             try {

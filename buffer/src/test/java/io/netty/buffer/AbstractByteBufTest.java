@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -4534,7 +4535,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testReadBytesAndWriteBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
@@ -4573,7 +4574,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testGetBytesAndSetBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
