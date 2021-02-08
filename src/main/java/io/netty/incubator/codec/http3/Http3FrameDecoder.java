@@ -23,12 +23,16 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_DATA_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthInteger;
@@ -120,13 +124,22 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_DATA_FRAME_TYPE:
                 // DATA
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.1
-                int length = Math.min(in.readableBytes(), payLoadLength);
+                int readable = in.readableBytes();
+                if (readable == 0 && payLoadLength > 0) {
+                    return 0;
+                }
+                int length = Math.min(readable, payLoadLength);
                 out.add(new DefaultHttp3DataFrame(in.readRetainedSlice(length)));
                 return length;
             case HTTP3_HEADERS_FRAME_TYPE:
                 // HEADERS
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
-                if (in.readableBytes() < payLoadLength) {
+
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        // Let's use the maxHeaderListSize as a limit as this is this is the decompressed amounts of
+                        // bytes which means the once we decompressed the headers we will be bigger then the actual
+                        // payload size now.
+                        maxHeaderListSize, Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -137,7 +150,8 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_CANCEL_PUSH_FRAME_TYPE:
                 // CANCEL_PUSH
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        HTTP3_CANCEL_PUSH_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
                     return 0;
                 }
                 int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -146,7 +160,10 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_SETTINGS_FRAME_TYPE:
                 // SETTINGS
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
-                if (in.readableBytes() < payLoadLength) {
+
+                // Use 256 as this gives space for 16 maximal size encoder and 128 minimal size encoded settings.
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength, HTTP3_SETTINGS_FRAME_MAX_LEN,
+                        Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
                 Http3SettingsFrame settingsFrame = decodeSettings(ctx, in, payLoadLength);
@@ -157,7 +174,11 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_PUSH_PROMISE_FRAME_TYPE:
                 // PUSH_PROMISE
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        // Let's use the maxHeaderListSize as a limit as this is this is the decompressed amounts of
+                        // bytes which means the once we decompressed the headers we will be bigger then the actual
+                        // payload size now.
+                        Math.max(maxHeaderListSize, maxHeaderListSize + 8), Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
                 int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -171,7 +192,8 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_GO_AWAY_FRAME_TYPE:
                 // GO_AWAY
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        HTTP3_GO_AWAY_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
                     return 0;
                 }
                 int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -180,7 +202,8 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
                 // MAX_PUSH_ID
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        HTTP3_MAX_PUSH_ID_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
                     return 0;
                 }
                 int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -195,6 +218,17 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                 out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
                 return payLoadLength;
         }
+    }
+
+    private static boolean enforceMaxPayloadLength(
+            ChannelHandlerContext ctx, ByteBuf in, int type, int payLoadLength,
+            long maxPayLoadLength, Http3ErrorCode error) {
+        if (payLoadLength > maxPayLoadLength) {
+            Http3CodecUtils.connectionError(ctx, error,
+                    "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.', true);
+            return false;
+        }
+        return in.readableBytes() >= payLoadLength;
     }
 
     private static Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
