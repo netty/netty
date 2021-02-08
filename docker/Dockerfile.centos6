@@ -18,7 +18,7 @@ RUN yum install -y \
  tar \
  wget
 
-ARG java_version=1.8
+ARG java_version=adopt@1.8.0-272
 ENV JAVA_VERSION $java_version
 # installing java with jabba
 RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install $JAVA_VERSION -o /jdk" bash
