@@ -120,22 +120,19 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
             ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
             outbound.addFlush();
             Object curr;
-            if ((curr = outbound.current()) != null) {
-                if (curr instanceof ByteBuf) {
-                    ByteBuf initialData = (ByteBuf) curr;
-
-                    long localFlushedAmount = doWriteOrSendBytes(
-                            initialData, (InetSocketAddress) remote, true);
-                    if (localFlushedAmount > 0) {
-                        // We had a cookie and our fast-open proceeded. Remove written data
-                        // then continue with normal TCP operation.
-                        outbound.removeBytes(localFlushedAmount);
-                        return true;
-                    }
-                    // If no cookie is present, the write fails with EINPROGRESS and this call basically
-                    // becomes a normal async connect. All writes will be sent normally afterwards.
+            if ((curr = outbound.current()) instanceof ByteBuf) {
+                ByteBuf initialData = (ByteBuf) curr;
+                long localFlushedAmount = doWriteOrSendBytes(
+                        initialData, (InetSocketAddress) remote, true);
+                if (localFlushedAmount > 0) {
+                    // We had a cookie and our fast-open proceeded. Remove written data
+                    // then continue with normal TCP operation.
+                    outbound.removeBytes(localFlushedAmount);
+                    return true;
                 }
             }
+            // If no cookie is present, the write fails with EINPROGRESS and this call basically
+            // becomes a normal async connect. All writes will be sent normally afterwards.
         }
         return super.doConnect0(remote);
     }

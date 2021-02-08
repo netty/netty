@@ -32,13 +32,13 @@ import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.charset.Charset;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -152,8 +152,9 @@ public class SocketConnectTest extends AbstractSocketTest {
         cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
         write.sync().isDone();
         cc.disconnect().sync();
-        String result = handler.collectBuffer();
-        assertEquals("[fastopen][normal data]", result);
+        String expectedString = "[fastopen][normal data]";
+        String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
+        assertEquals(expectedString, result);
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
@@ -181,16 +182,17 @@ public class SocketConnectTest extends AbstractSocketTest {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                stringBuffer.append(buf.readCharSequence(buf.readableBytes(), Charset.forName("US-ASCII")));
-                semaphore.release();
+                int readableBytes = buf.readableBytes();
+                stringBuffer.append(buf.readCharSequence(readableBytes, US_ASCII));
+                semaphore.release(readableBytes);
             } else {
                 throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
             super.channelRead(ctx, msg);
         }
 
-        String collectBuffer() {
-            semaphore.acquireUninterruptibly();
+        String collectBuffer(int expectedBytes) throws InterruptedException {
+            semaphore.acquire(expectedBytes);
             synchronized (stringBuffer) {
                 String result = stringBuffer.toString();
                 stringBuffer.setLength(0);
