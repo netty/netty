@@ -35,6 +35,7 @@ import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
@@ -123,7 +124,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         }
     }
 
-    @Test//(timeout = 3000)
+    @Test(timeout = 3000)
     public void testWriteWithFastOpenBeforeConnect() throws Throwable {
         run();
     }
@@ -131,34 +132,28 @@ public class SocketConnectTest extends AbstractSocketTest {
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         enableTcpFastOpen(sb, cb);
 
-        cb.handler(new BootstrapHandler());
-        sb.childHandler(new ServerBootstrapHandler());
+        ServerBootstrapHandler handler = new ServerBootstrapHandler();
+        sb.childHandler(handler);
 
         Channel sc = sb.bind().sync().channel();
-        {
-            ChannelFuture register = cb.register();
-            Channel channel = register.sync().channel();
-            ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
-            SocketAddress remoteAddress = sc.localAddress();
-            ChannelFuture connectFuture = channel.connect(remoteAddress);
-//        ChannelFuture connectFuture = cb.connect(remoteAddress); // xxx doesn't work
-            Channel cc = connectFuture.sync().channel();
-            cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
-            write.sync().isDone();
-            cc.disconnect().sync();
-        }
-        {
-            ChannelFuture register = cb.register();
-            Channel channel = register.sync().channel();
-            ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
-            SocketAddress remoteAddress = sc.localAddress();
-            ChannelFuture connectFuture = channel.connect(remoteAddress);
-//        ChannelFuture connectFuture = cb.connect(remoteAddress); // xxx doesn't work
-            Channel cc = connectFuture.sync().channel();
-            cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
-            write.sync().isDone();
-            cc.disconnect().sync();
-        }
+        connectAndVerifyDataTransfer(cb, sc, handler);
+        connectAndVerifyDataTransfer(cb, sc, handler);
+    }
+
+    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc, ServerBootstrapHandler handler)
+            throws InterruptedException {
+        cb.handler(new ChannelInboundHandlerAdapter());
+        ChannelFuture register = cb.register();
+        Channel channel = register.sync().channel();
+        ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        SocketAddress remoteAddress = sc.localAddress();
+        ChannelFuture connectFuture = channel.connect(remoteAddress);
+        Channel cc = connectFuture.sync().channel();
+        cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
+        write.sync().isDone();
+        cc.disconnect().sync();
+        String result = handler.collectBuffer();
+        assertEquals("[fastopen][normal data]", result);
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
@@ -172,75 +167,35 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     @ChannelHandler.Sharable
-    private static class BootstrapHandler extends ChannelInboundHandlerAdapter {
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            debug("cb channel active: " + ctx);
-            super.channelActive(ctx);
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            debug("cb channel read: " + ctx + " => " + msg);
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                debug(buf.readCharSequence(buf.readableBytes(), Charset.forName("US-ASCII")).toString());
-            }
-            super.channelRead(ctx, msg);
-        }
-
-        @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            debug("cb channel read complete: " + ctx);
-            super.channelReadComplete(ctx);
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            debug("cb exception:");
-            cause.printStackTrace();
-            super.exceptionCaught(ctx, cause);
-        }
-    }
-
-    @ChannelHandler.Sharable
     private static class ServerBootstrapHandler extends ChannelInboundHandlerAdapter {
+        private final Semaphore semaphore = new Semaphore(0);
+        private final StringBuffer stringBuffer = new StringBuffer();
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            debug("sb channel active: " + ctx);
             ctx.read();
             super.channelActive(ctx);
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            debug("sb channel read: " + ctx + " => " + msg);
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                debug(buf.readCharSequence(buf.readableBytes(), Charset.forName("US-ASCII")).toString());
+                stringBuffer.append(buf.readCharSequence(buf.readableBytes(), Charset.forName("US-ASCII")));
+                semaphore.release();
+            } else {
+                throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
             super.channelRead(ctx, msg);
         }
 
-        @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            debug("sb channel read complete: " + ctx);
-            super.channelReadComplete(ctx);
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            debug("sb exception:");
-            cause.printStackTrace();
-            super.exceptionCaught(ctx, cause);
-        }
-    }
-
-    private static void debug(String output) {
-        synchronized (System.out) {
-            System.out.flush();
-            System.err.println(output);
-            System.err.flush();
+        String collectBuffer() {
+            semaphore.acquireUninterruptibly();
+            synchronized (stringBuffer) {
+                String result = stringBuffer.toString();
+                stringBuffer.setLength(0);
+                return result;
+            }
         }
     }
 }
