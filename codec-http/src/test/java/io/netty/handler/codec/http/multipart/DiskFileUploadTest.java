@@ -273,7 +273,7 @@ public class DiskFileUploadTest {
             assertEquals(maxSize, f1.length());
             byte[] bytes = new byte[8];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
-            File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+            File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
             tmpFile.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tmpFile);
             try {

@@ -306,7 +306,7 @@ public class ReadOnlyDirectByteBufferBufTest {
 
     @Test
     public void testWrapMemoryMapped() throws Exception {
-        File file = File.createTempFile("netty-test", "tmp");
+        File file = PlatformDependent.createTempFile("netty-test", "tmp", null);
         FileChannel output = null;
         FileChannel input = null;
         ByteBuf b1 = null;

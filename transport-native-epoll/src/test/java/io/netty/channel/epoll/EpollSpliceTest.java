@@ -28,6 +28,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -192,7 +193,7 @@ public class EpollSpliceTest {
     @Test(timeout = 10000)
     public void spliceToFile() throws Throwable {
         EventLoopGroup group = new EpollEventLoopGroup(1);
-        File file = File.createTempFile("netty-splice", null);
+        File file = PlatformDependent.createTempFile("netty-splice", null, null);
         file.deleteOnExit();
 
         SpliceHandler sh = new SpliceHandler(file);

@@ -177,7 +177,7 @@ public final class NativeLibraryLoader {
             String prefix = libname.substring(0, index);
             String suffix = libname.substring(index);
 
-            tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
+            tmpFile = PlatformDependent.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
 

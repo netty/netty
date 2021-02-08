@@ -32,6 +32,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -61,7 +62,7 @@ public class FileRegionThrottleTest {
             BYTES[i] = (byte) r.nextInt(255);
         }
 
-        tmp = File.createTempFile("netty-traffic", ".tmp");
+        tmp = PlatformDependent.createTempFile("netty-traffic", ".tmp", null);
         tmp.deleteOnExit();
         FileOutputStream out = null;
         try {
