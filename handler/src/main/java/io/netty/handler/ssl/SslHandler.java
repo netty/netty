@@ -1960,7 +1960,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         Channel channel = ctx.channel();
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
-        if (channel.isActive() || channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT)) {
+        Boolean fastOpen = channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT);
+        if (channel.isActive() /*|| Boolean.TRUE.equals(fastOpen)*/) {
             startHandshakeProcessing();
         }
     }
