@@ -53,7 +53,7 @@ run echo 'export C_INCLUDE_PATH="$HOME/.include/"' >>  ~/.bashrc
 # Needed to compile against old glibc
 run echo 'export LDFLAGS=-lrt' >>  ~/.bashrc
 
-ARG java_version=1.8
+ARG java_version=adopt@1.8.0-275
 ENV JAVA_VERSION $java_version
 # installing java with jabba
 RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install $JAVA_VERSION -o /jdk" bash
