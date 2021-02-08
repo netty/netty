@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
@@ -341,20 +342,38 @@ public class Http3FrameEncoderDecoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(newEncoder());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(newDecoder());
 
+        boolean isDataFrame = frame instanceof Http3DataFrame;
         assertTrue(encoderChannel.writeOutbound(retainAndDuplicate(frame)));
         ByteBuf buffer = encoderChannel.readOutbound();
         if (fragmented) {
             do {
                 ByteBuf slice = buffer.readRetainedSlice(
                         ThreadLocalRandom.current().nextInt(buffer.readableBytes() + 1));
-                assertEquals(!buffer.isReadable(), decoderChannel.writeInbound(slice));
+                boolean producedData = decoderChannel.writeInbound(slice);
+                if (!isDataFrame) {
+                    assertEquals(!buffer.isReadable(), producedData);
+                }
             } while (buffer.isReadable());
             buffer.release();
         } else {
             assertTrue(decoderChannel.writeInbound(buffer));
         }
-        Http3Frame readFrame = decoderChannel.readInbound();
-        Http3TestUtils.assertFrameEquals(frame, readFrame);
+
+        final Http3Frame actualFrame;
+        if (isDataFrame) {
+            CompositeByteBuf composite = Unpooled.compositeBuffer();
+            for (;;) {
+                Http3DataFrame dataFrame = decoderChannel.readInbound();
+                if (dataFrame == null) {
+                    break;
+                }
+                composite.addComponent(true, dataFrame.content());
+            }
+            actualFrame = new DefaultHttp3DataFrame(composite);
+        } else {
+            actualFrame = decoderChannel.readInbound();
+        }
+        Http3TestUtils.assertFrameEquals(frame, actualFrame);
         assertFalse(encoderChannel.finish());
         assertFalse(decoderChannel.finish());
     }

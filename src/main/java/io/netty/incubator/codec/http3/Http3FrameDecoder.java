@@ -41,8 +41,8 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
     private final long maxHeaderListSize;
     private final QpackDecoder qpackDecoder;
 
-    private long type = -1;
-    private long payLoadLength = -1;
+    private int type = -1;
+    private int payLoadLength = -1;
 
     Http3FrameDecoder(QpackDecoder qpackDecoder, long maxHeaderListSize) {
         this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
@@ -74,97 +74,126 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             }
             long type = readVariableLengthInteger(in, typeLen);
             if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
-                    // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-                    Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                            "Reserved type for HTTP/2 received.", true);
-                    return;
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                        "Reserved type for HTTP/2 received.", true);
+                return;
             }
-            this.type = type;
+            if (type > Integer.MAX_VALUE) {
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                        "Received an invalid frame type.", true);
+                return;
+            }
+            this.type = (int) type;
             if (!in.isReadable()) {
                 return;
             }
         }
         if (payLoadLength == -1) {
             int payloadLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            assert payloadLen <= 8;
             if (in.readableBytes() < payloadLen) {
                 return;
             }
-            payLoadLength = readVariableLengthInteger(in, payloadLen);
-        }
-        if (in.readableBytes() < payLoadLength) {
-            return;
-        }
-
-        long type = this.type;
-        int payLoadLength = (int) this.payLoadLength;
-        int readerIndex = in.readerIndex();
-        this.type = -1;
-        this.payLoadLength = -1;
-        try {
-            if (type <= Integer.MAX_VALUE) {
-                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
-                switch ((int) type) {
-                    case HTTP3_DATA_FRAME_TYPE:
-                        // DATA
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.1
-                        out.add(new DefaultHttp3DataFrame(in.readRetainedSlice(payLoadLength)));
-                        break;
-                    case HTTP3_HEADERS_FRAME_TYPE:
-                        // HEADERS
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
-                        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                        if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength))) {
-                            out.add(headersFrame);
-                        }
-                        break;
-                    case HTTP3_CANCEL_PUSH_FRAME_TYPE:
-                        // CANCEL_PUSH
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
-                        int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
-                        break;
-                    case HTTP3_SETTINGS_FRAME_TYPE:
-                        // SETTINGS
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
-                        Http3SettingsFrame settingsFrame = decodeSettings(ctx, in, payLoadLength);
-                        if (settingsFrame == null) {
-                            // Decoding failed
-                            return;
-                        }
-                        out.add(settingsFrame);
-                        break;
-                    case HTTP3_PUSH_PROMISE_FRAME_TYPE:
-                        // PUSH_PROMISE
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
-                        int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
-                        Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
-                                readVariableLengthInteger(in, pushPromiseIdLen));
-                        if (decodeHeaders(ctx, pushPromiseFrame.headers(),
-                                in.readSlice(payLoadLength - pushPromiseIdLen))) {
-                            out.add(pushPromiseFrame);
-                        }
-                        break;
-                    case HTTP3_GO_AWAY_FRAME_TYPE:
-                        // GO_AWAY
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
-                        int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
-                        break;
-                    case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
-                        // MAX_PUSH_ID
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
-                        int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
-                        out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
-                        break;
-                    default:
-                        // Handling reserved frame types
-                        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-                        out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
-                        break;
-                }
+            long len = readVariableLengthInteger(in, payloadLen);
+            if (len > Integer.MAX_VALUE) {
+                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_EXCESSIVE_LOAD,
+                        "Received an invalid frame len.", true);
+                return;
             }
-        } finally {
-            in.readerIndex(readerIndex + payLoadLength);
+            payLoadLength = (int) len;
+        }
+        int read = decodeFrame(ctx, type, payLoadLength, in, out);
+        if (read > 0) {
+            if (read == payLoadLength) {
+                type = -1;
+                payLoadLength = -1;
+            } else {
+                payLoadLength -= read;
+            }
+        }
+    }
+
+    private int decodeFrame(ChannelHandlerContext ctx, int type, int payLoadLength, ByteBuf in, List<Object> out) {
+        // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
+        switch (type) {
+            case HTTP3_DATA_FRAME_TYPE:
+                // DATA
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.1
+                int length = Math.min(in.readableBytes(), payLoadLength);
+                out.add(new DefaultHttp3DataFrame(in.readRetainedSlice(length)));
+                return length;
+            case HTTP3_HEADERS_FRAME_TYPE:
+                // HEADERS
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+                if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength))) {
+                    out.add(headersFrame);
+                }
+                return payLoadLength;
+            case HTTP3_CANCEL_PUSH_FRAME_TYPE:
+                // CANCEL_PUSH
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
+                return payLoadLength;
+            case HTTP3_SETTINGS_FRAME_TYPE:
+                // SETTINGS
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                Http3SettingsFrame settingsFrame = decodeSettings(ctx, in, payLoadLength);
+                if (settingsFrame != null) {
+                    out.add(settingsFrame);
+                }
+                return payLoadLength;
+            case HTTP3_PUSH_PROMISE_FRAME_TYPE:
+                // PUSH_PROMISE
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
+                        readVariableLengthInteger(in, pushPromiseIdLen));
+                if (decodeHeaders(ctx, pushPromiseFrame.headers(),
+                        in.readSlice(payLoadLength - pushPromiseIdLen))) {
+                    out.add(pushPromiseFrame);
+                }
+                return payLoadLength;
+            case HTTP3_GO_AWAY_FRAME_TYPE:
+                // GO_AWAY
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
+                return payLoadLength;
+            case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
+                // MAX_PUSH_ID
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
+                return payLoadLength;
+            default:
+                // Handling reserved frame types
+                // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
+                if (in.readableBytes() < payLoadLength) {
+                    return 0;
+                }
+                out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
+                return payLoadLength;
         }
     }
 
