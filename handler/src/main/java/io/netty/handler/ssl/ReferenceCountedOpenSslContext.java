@@ -93,6 +93,18 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // TODO: Maybe make configurable ?
     protected static final int VERIFY_DEPTH = 10;
 
+    static final boolean CLIENT_ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", false);
+
+    static final boolean CLIENT_ENABLE_SESSION_TICKET_TLSV13 =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", true);
+
+    static final boolean SERVER_ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
+
+     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
+
     /**
      * The OpenSSL SSL_CTX object.
      *
