@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-quic</artifactId>
-  <version>0.0.4.Final-SNAPSHOT</version>
+  <version>0.0.4.Final</version>
   <name>Netty/Incubator/Codec/Quic</name>
   <packaging>jar</packaging>
   <url>https://netty.io/</url>
@@ -51,7 +51,7 @@
     <url>https://github.com/netty/netty-incubator-codec-quic</url>
     <connection>scm:git:git://github.com/netty/netty-incubator-codec-quic.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty-incubator-codec-quic.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-incubator-codec-quic-0.0.4.Final</tag>
   </scm>
 
   <developers>
@@ -95,18 +95,18 @@
     <quicheCommitSha>5092e4d1e8ae2773a56eddda6a8205f5e65b4b37</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
-    <cargoTarget/>
+    <cargoTarget />
     <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
     <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
-    <extraCflags/>
-    <extraCxxflags/>
+    <extraCflags />
+    <extraCxxflags />
     <extraLdflags />
     <extraConfigureArg />
     <!-- We need 10.12 as minimum to compile quiche and use it.
          Anything below will fail when trying to load quiche with:
          Symbol not found: ___isPlatformVersionAtLeast
     -->
-    <macosxDeploymentTarget/>
+    <macosxDeploymentTarget />
     <test.argLine>-D_</test.argLine>
     <bundleNativeCode />
   </properties>
@@ -123,7 +123,7 @@
         <quicheTarget>x86_64-pc-windows-msvc</quicheTarget>
         <cargoTarget>--target=${quicheTarget}</cargoTarget>
         <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
-        <cmakeAsmFlags/>
+        <cmakeAsmFlags />
         <!-- On Windows, build with /MT for static linking -->
         <cmakeCFlags>/MT</cmakeCFlags>
         <!-- Disable one warning to be able to build on windows -->
@@ -332,17 +332,17 @@
                       <property name="ninjaExecutable" value="ninja" />
                     </else>
                   </if>
-                  <exec executable="${ninjaExecutable}" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true" >
+                  <exec executable="${ninjaExecutable}" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
                     <arg value="crypto" />
                     <arg value="ssl" />
                   </exec>
 
                   <!-- Only copy the libs and header files we need -->
                   <mkdir dir="${boringsslHomeBuildDir}" />
-                  <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true"/>
-                  <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true"/>
+                  <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                  <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
                   <copy todir="${boringsslHomeIncludeDir}" verbose="true">
-                    <fileset dir="${boringsslSourceDir}/include"/>
+                    <fileset dir="${boringsslSourceDir}/include" />
                   </copy>
                 </else>
               </if>
@@ -405,7 +405,7 @@
                         <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                         <env key="DEBUG" value="true" />
                         <env key="OPT_LEVEL" value="3" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                       </exec>
                    </then>
                     <else>
@@ -416,7 +416,7 @@
                         <arg value="--release" />
                         <env key="CFLAGS" value="${extraCflags}" />
                         <env key="CXXFLAGS" value="${extraCxxflags}" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/"/>
+                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                       </exec>
                     </else>
                   </if>
@@ -424,7 +424,7 @@
                   <mkdir dir="${quicheHomeDir}" />
                   <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
                   <copy todir="${quicheHomeIncludeDir}">
-                    <fileset dir="${quicheSourceDir}/include"/>
+                    <fileset dir="${quicheSourceDir}/include" />
                   </copy>
                 </else>
               </if>
