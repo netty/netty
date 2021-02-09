@@ -130,9 +130,16 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendTo(fd, useIpv6(addr), buf, pos, limit, address, scopeId, port, fastOpen);
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendTo(fd, useIpv6(addr), buf, pos, limit, address, scopeId, port, flags);
         if (res >= 0) {
             return res;
+        }
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
         }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendTo failed");
@@ -159,9 +166,16 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddress(fd, useIpv6(addr), memoryAddress, pos, limit, address, scopeId, port, fastOpen);
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendToAddress(fd, useIpv6(addr), memoryAddress, pos, limit, address, scopeId, port, flags);
         if (res >= 0) {
             return res;
+        }
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
         }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddress failed");
@@ -187,11 +201,17 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port, fastOpen);
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port, flags);
         if (res >= 0) {
             return res;
         }
-
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
+        }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddresses failed");
         }
@@ -483,15 +503,15 @@ public class Socket extends FileDescriptor {
 
     private static native int sendTo(
             int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,
-            boolean fastOpen);
+            int flags);
 
     private static native int sendToAddress(
             int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port,
-            boolean fastOpen);
+            int flags);
 
     private static native int sendToAddresses(
             int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
-            boolean fastOpen);
+            int flags);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -499,6 +519,7 @@ public class Socket extends FileDescriptor {
             int fd, long memoryAddress, int pos, int limit) throws IOException;
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
+    private static native int msgFastopen();
 
     private static native int newSocketStreamFd(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);

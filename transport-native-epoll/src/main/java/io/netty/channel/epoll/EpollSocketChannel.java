@@ -122,6 +122,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
             Object curr;
             if ((curr = outbound.current()) instanceof ByteBuf) {
                 ByteBuf initialData = (ByteBuf) curr;
+                // If no cookie is present, the write fails with EINPROGRESS and this call basically
+                // becomes a normal async connect. All writes will be sent normally afterwards.
                 long localFlushedAmount = doWriteOrSendBytes(
                         initialData, (InetSocketAddress) remote, true);
                 if (localFlushedAmount > 0) {
@@ -131,8 +133,6 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
                     return true;
                 }
             }
-            // If no cookie is present, the write fails with EINPROGRESS and this call basically
-            // becomes a normal async connect. All writes will be sent normally afterwards.
         }
         return super.doConnect0(remote);
     }
