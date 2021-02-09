@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -129,7 +130,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 @Override
                 public Bootstrap newInstance() {
                     return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
-                                          .option(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
+                                          .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
                 }
             });
         }

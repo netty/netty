@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConnectTest;
 
@@ -31,7 +32,7 @@ public class EpollSocketConnectTest extends SocketConnectTest {
 
     @Override
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
-        sb.childOption(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
-        cb.option(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
+        sb.childOption(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+        cb.option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
     }
 }

@@ -21,9 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
@@ -132,17 +134,22 @@ public class SocketConnectTest extends AbstractSocketTest {
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         enableTcpFastOpen(sb, cb);
 
-        ServerBootstrapHandler handler = new ServerBootstrapHandler();
-        sb.childHandler(handler);
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new EchoServerHandler());
+            }
+        });
 
         Channel sc = sb.bind().sync().channel();
-        connectAndVerifyDataTransfer(cb, sc, handler);
-        connectAndVerifyDataTransfer(cb, sc, handler);
+        connectAndVerifyDataTransfer(cb, sc);
+        connectAndVerifyDataTransfer(cb, sc);
     }
 
-    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc, ServerBootstrapHandler handler)
+    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc)
             throws InterruptedException {
-        cb.handler(new ChannelInboundHandlerAdapter());
+        BufferingClientHandler handler = new BufferingClientHandler();
+        cb.handler(handler);
         ChannelFuture register = cb.register();
         Channel channel = register.sync().channel();
         ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
@@ -150,10 +157,10 @@ public class SocketConnectTest extends AbstractSocketTest {
         ChannelFuture connectFuture = channel.connect(remoteAddress);
         Channel cc = connectFuture.sync().channel();
         cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
-        write.sync().isDone();
-        cc.disconnect().sync();
+        write.sync();
         String expectedString = "[fastopen][normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
+        cc.disconnect().sync();
         assertEquals(expectedString, result);
     }
 
@@ -167,8 +174,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         assertFalse(address.getAddress().isAnyLocalAddress());
     }
 
-    @ChannelHandler.Sharable
-    private static class ServerBootstrapHandler extends ChannelInboundHandlerAdapter {
+    private static class BufferingClientHandler extends ChannelInboundHandlerAdapter {
         private final Semaphore semaphore = new Semaphore(0);
         private final StringBuffer stringBuffer = new StringBuffer();
 
@@ -185,19 +191,44 @@ public class SocketConnectTest extends AbstractSocketTest {
                 int readableBytes = buf.readableBytes();
                 stringBuffer.append(buf.readCharSequence(readableBytes, US_ASCII));
                 semaphore.release(readableBytes);
+                buf.release();
             } else {
                 throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
-            super.channelRead(ctx, msg);
         }
 
         String collectBuffer(int expectedBytes) throws InterruptedException {
             semaphore.acquire(expectedBytes);
-            synchronized (stringBuffer) {
-                String result = stringBuffer.toString();
-                stringBuffer.setLength(0);
-                return result;
+            String result = stringBuffer.toString();
+            stringBuffer.setLength(0);
+            return result;
+        }
+    }
+
+    private static final class EchoServerHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
+            super.channelActive(ctx);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof ByteBuf) {
+                ByteBuf buffer = ctx.alloc().buffer();
+                ByteBuf buf = (ByteBuf) msg;
+                buffer.writeBytes(buf);
+                buf.release();
+                ctx.channel().writeAndFlush(buffer);
+            } else {
+                throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
+            ctx.read();
         }
     }
 }
