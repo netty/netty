@@ -118,10 +118,10 @@ final class LinuxSocket extends Socket {
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            joinSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            joinSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            joinGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            joinGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -131,10 +131,10 @@ final class LinuxSocket extends Socket {
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            leaveSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            leaveSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            leaveGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            leaveGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
