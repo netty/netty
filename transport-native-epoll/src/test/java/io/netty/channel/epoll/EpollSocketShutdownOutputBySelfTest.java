@@ -24,6 +24,6 @@ import java.util.List;
 public class EpollSocketShutdownOutputBySelfTest extends SocketShutdownOutputBySelfTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.clientSocket(false);
+        return EpollSocketTestPermutation.INSTANCE.clientSocket();
     }
 }

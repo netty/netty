@@ -27,7 +27,7 @@ public class EpollSocketConnectTest extends SocketConnectTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.statefulSocket();
+        return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }
 
     @Override

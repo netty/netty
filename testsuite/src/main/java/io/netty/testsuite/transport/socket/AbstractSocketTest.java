@@ -35,7 +35,7 @@ public abstract class AbstractSocketTest extends AbstractComboTestsuiteTest<Serv
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return SocketTestPermutation.INSTANCE.socket();
+        return SocketTestPermutation.INSTANCE.socketWithFastOpen();
     }
 
     @Override

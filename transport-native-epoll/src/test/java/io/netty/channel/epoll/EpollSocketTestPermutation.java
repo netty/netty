@@ -54,22 +54,23 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollSocketTestPermutation.class);
+    // Constants describing if/how TCP Fast Open is allowed to work on Linux:
+    private static final int TFO_ENABLED_CLIENT = 1;
+    private static final int TFO_ENABLED_SERVER = 2;
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
-
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverSocket(), clientSocket());
+                combo(serverSocket(), clientSocketWithFastOpen());
 
         list.remove(list.size() - 1); // Exclude NIO x NIO test
 
         return list;
     }
 
-    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> statefulSocket() {
-
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socketWithoutFastOpen() {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverSocket(), clientSocket(false));
+                combo(serverSocket(), clientSocket());
 
         list.remove(list.size() - 1); // Exclude NIO x NIO test
 
@@ -111,11 +112,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return clientSocket(true);
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<BootstrapFactory<Bootstrap>> clientSocket(boolean allowStateless) {
         List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
 
         toReturn.add(new BootstrapFactory<Bootstrap>() {
@@ -124,16 +120,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class);
             }
         });
-
-        if (isFastOpen() && allowStateless) {
-            toReturn.add(new BootstrapFactory<Bootstrap>() {
-                @Override
-                public Bootstrap newInstance() {
-                    return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
-                                          .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
-                }
-            });
-        }
 
         toReturn.add(new BootstrapFactory<Bootstrap>() {
             @Override
@@ -146,10 +132,27 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
+        List<BootstrapFactory<Bootstrap>> factories = clientSocket();
+
+        if (isFastOpen()) {
+            int insertIndex = factories.size() - 1; // Keep NIO fixture last.
+            factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
+                            .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+                }
+            });
+        }
+
+        return factories;
+    }
+
+    @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
             final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
-        @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
@@ -193,7 +196,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 Collections.singletonList(datagramBootstrapFactory(family)));
     }
 
-    private BootstrapFactory<Bootstrap> datagramBootstrapFactory(final InternetProtocolFamily family) {
+    private static BootstrapFactory<Bootstrap> datagramBootstrapFactory(final InternetProtocolFamily family) {
         return new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
@@ -255,7 +258,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     public boolean isFastOpen() {
-        return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+        int tfoEnabled = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
             @Override
             public Integer run() {
                 int fastopen = 0;
@@ -265,9 +268,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     try {
                         in = new BufferedReader(new FileReader(file));
                         fastopen = Integer.parseInt(in.readLine());
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("{}: {}", file, fastopen);
-                        }
+                        logger.debug("{}: {}", file, fastopen);
                     } catch (Exception e) {
                         logger.debug("Failed to get TCP_FASTOPEN from: {}", file, e);
                     } finally {
@@ -280,13 +281,13 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                         }
                     }
                 } else {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("{}: {} (non-existent)", file, fastopen);
-                    }
+                    logger.debug("{}: {} (non-existent)", file, fastopen);
                 }
                 return fastopen;
             }
-        }) == 3;
+        });
+        // TCP Fast Open needs to be enabled for both clients and servers, before we can test our intergration with it.
+        return tfoEnabled == TFO_ENABLED_CLIENT + TFO_ENABLED_SERVER;
     }
 
     public static DomainSocketAddress newSocketAddress() {

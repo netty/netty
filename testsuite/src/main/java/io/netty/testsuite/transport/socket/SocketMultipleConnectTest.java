@@ -65,7 +65,7 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories
                 = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
-                : SocketTestPermutation.INSTANCE.socket()) {
+                : SocketTestPermutation.INSTANCE.socketWithFastOpen()) {
             if (comboFactory.newClientInstance().config().group() instanceof NioEventLoopGroup) {
                 factories.add(comboFactory);
             }
