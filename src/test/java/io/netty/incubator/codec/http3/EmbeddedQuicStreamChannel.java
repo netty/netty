@@ -30,6 +30,7 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamAddress;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannelConfig;
+import io.netty.incubator.codec.quic.QuicStreamPriority;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
 import java.util.Map;
@@ -56,6 +57,16 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         this.localCreated = localCreated;
         this.type = type;
         this.id = id;
+    }
+
+    @Override
+    public QuicStreamPriority priority() {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

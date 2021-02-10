@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.http3.DefaultHttp3DataFrame;
 import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame;
 import io.netty.incubator.codec.http3.Http3;
@@ -32,6 +33,8 @@ import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
 import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -45,9 +48,11 @@ public final class Http3ServerExample {
 
     public static void main(String... args) throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        QuicSslContext sslContext = QuicSslContextBuilder.forServer(cert.key(), null, cert.cert())
+                .applicationProtocols(Http3.supportedApplicationProtocols()).build();
         ChannelHandler codec = Http3.newQuicServerCodecBuilder()
-                .certificateChain("./src/test/resources/cert.crt")
-                .privateKey("./src/test/resources/cert.key")
+                .sslContext(sslContext)
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)

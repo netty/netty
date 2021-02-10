@@ -27,8 +27,6 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 
-import java.util.function.Supplier;
-
 /**
  * Contains utility methods that help to bootstrap server / clients with HTTP3 support.
  */
@@ -36,11 +34,11 @@ public final class Http3 {
 
     private Http3() {  }
 
-    private static final byte[] H3_PROTOS = new byte[] {
-            0x05, 'h', '3', '-', '2', '9',
-            0x05, 'h', '3', '-', '3', '0',
-            0x05, 'h', '3', '-', '3', '1',
-            0x05, 'h', '3', '-', '3', '2'
+    private static final String[] H3_PROTOS = new String[] {
+            "h3-29",
+            "h3-30",
+            "h3-31",
+            "h3-32"
     };
 
     private static final AttributeKey<QuicStreamChannel> HTTP3_CONTROL_STREAM_KEY =
@@ -116,7 +114,7 @@ public final class Http3 {
      *
      * @return the supported protocols.
      */
-    public static byte[] supportedApplicationProtocols() {
+    public static String[] supportedApplicationProtocols() {
         return H3_PROTOS.clone();
     }
 
@@ -153,7 +151,6 @@ public final class Http3 {
 
     private static <T extends QuicCodecBuilder<T>> T configure(T builder) {
         return builder.initialMaxStreamsUnidirectional(MIN_INITIAL_MAX_STREAMS_UNIDIRECTIONAL)
-                .initialMaxStreamDataUnidirectional(MIN_INITIAL_MAX_STREAM_DATA_UNIDIRECTIONAL)
-                .applicationProtocols(supportedApplicationProtocols());
+                .initialMaxStreamDataUnidirectional(MIN_INITIAL_MAX_STREAM_DATA_UNIDIRECTIONAL);
     }
 }
