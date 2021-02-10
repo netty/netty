@@ -298,12 +298,6 @@
       </properties>
     </profile>
     <profile>
-      <id>ijDebug</id>
-      <properties>
-        <argLine.ijDebug>-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005</argLine.ijDebug>
-      </properties>
-    </profile>
-    <profile>
       <id>coverage</id>
       <properties>
         <argLine.coverage>${jacoco.argLine}</argLine.coverage>
@@ -368,12 +362,10 @@
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
     <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
-    <argLine.ijDebug /> <!-- Overridden when 'ijDebug' profile is active -->
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
-      ${argLine.ijDebug}
     </argLine.common>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
@@ -1329,12 +1321,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
+          <version>2.22.2</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.1</version>
+          <version>2.22.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
