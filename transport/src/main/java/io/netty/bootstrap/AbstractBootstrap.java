@@ -233,10 +233,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public ChannelFuture bind() {
         validate();
         SocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            throw new IllegalStateException("localAddress not set");
-        }
-        return doBind(localAddress);
+        return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
     /**
@@ -265,6 +262,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
+        this.localAddress = localAddress;
         return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
