@@ -189,9 +189,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     public ChannelFuture bind() {
         validate();
         SocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            throw new IllegalStateException("localAddress not set");
-        }
+        requireNonNull(localAddress, "localAddress");
         return doBind(localAddress);
     }
 
