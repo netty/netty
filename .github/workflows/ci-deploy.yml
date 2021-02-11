@@ -18,7 +18,7 @@ jobs:
         with:
           servers: |
             [{
-                "id": "sonatype-nexus",
+                "id": "sonatype-nexus-snapshots",
                 "username": "${{ secrets.SONATYPE_USERNAME }}",
                 "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
