@@ -35,7 +35,7 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf(EpollChannelOption.class, "TCP_FASTOPEN");
 
     /**
-     * Use {@link ChannelOption#TCP_FASTOPEN_CONNECT} instead.
+     * @deprecated Use {@link ChannelOption#TCP_FASTOPEN_CONNECT} instead.
      */
     @Deprecated
     public static final ChannelOption<Boolean> TCP_FASTOPEN_CONNECT = ChannelOption.TCP_FASTOPEN_CONNECT;

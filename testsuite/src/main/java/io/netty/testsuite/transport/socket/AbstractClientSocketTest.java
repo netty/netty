@@ -34,7 +34,7 @@ public abstract class AbstractClientSocketTest extends AbstractTestsuiteTest<Boo
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return SocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
+        return SocketTestPermutation.INSTANCE.clientSocket();
     }
 
     @Override
