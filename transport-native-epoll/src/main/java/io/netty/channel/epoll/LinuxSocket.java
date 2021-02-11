@@ -117,6 +117,9 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
             joinSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
@@ -130,6 +133,9 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
             leaveSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
