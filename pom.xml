@@ -351,9 +351,8 @@
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
-    <!-- Skip for now as we have no version released yet of netty 5 -->
+    <graalvm.version>19.2.1</graalvm.version>
     <skipJapicmp>true</skipJapicmp>
-    <graalvm.version>19.0.0</graalvm.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
