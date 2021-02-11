@@ -1,0 +1,286 @@
+name: Release
+
+on:
+  # Releases can only be triggered via the action tab
+  workflow_dispatch:
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: release-cache-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-pr-${{ env.cache-name }}-
+            ${{ runner.os }}-pr-
+
+      - name: Prepare release with Maven
+        run: |
+          mvn -DpreparationGoals=clean release:prepare -B --file pom.xml -DskipTests=true
+          mvn clean
+
+      - name: Checkout tag
+        run: ./.github/scripts/release_checkout_tag.sh release.properties
+
+      - name: Upload workspace
+        uses: actions/upload-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ${{ github.workspace }}/**
+
+  stage-release-linux-x86_64:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    name: stage-release-linux-x86_64
+    steps:
+      - name: Download release-workspace
+        uses: actions/download-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ./prepare-release-workspace/
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        env:
+          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
+        continue-on-error: true
+        with:
+          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
+          restore-keys: |
+            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - name: Build docker image
+        working-directory: ./prepare-release-workspace/
+        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml build
+
+      - name: Stage release to local staging directory
+        working-directory: ./prepare-release-workspace/
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEYNAME: ${{ secrets.GPG_KEYNAME }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: docker-compose -f docker/docker-compose.centos-6.yaml -f docker/docker-compose.centos-6.18.yaml run stage-release
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-x86_64-local-staging
+          path: ~/local-staging
+
+      - name: Rollback release on failure
+        working-directory: ./prepare-release-workspace/
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty-incubator-codec-quic main
+
+  stage-release-windows-x86_64:
+    runs-on: windows-2016
+    name: stage-release-windows-x86_64
+    needs: prepare-release
+    steps:
+      - name: Download release-workspace
+        uses: actions/download-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: prepare-release-workspace
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_amd64
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v3
+        with:
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install ninja nasm
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        env:
+          cache-name: staging-cache-windows-m2-repository
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+            ${{ runner.os }}-
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - name: Stage release to local staging directory
+        working-directory: prepare-release-workspace
+        run: mvn --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-x86_64-local-staging
+          path: prepare-release-workspace/local-staging
+          if-no-files-found: error
+
+      - name: Rollback release on failure
+        working-directory: prepare-release-workspace
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: ./.github/scripts/release_rollback.ps1 release.properties netty/netty-incubator-codec-quic main
+
+  deploy-staged-release:
+    runs-on: ubuntu-18.04
+    # Wait until we have staged everything
+    needs: [stage-release-linux-x86_64, stage-release-windows-x86_64]
+    steps:
+      - name: Download release-workspace
+        uses: actions/download-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ./prepare-release-workspace/
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Hardcode the staging artifacts that need to be downloaded.
+      # These must match the matrix setups. There is currently no way to pull this out of the config.
+      - name: Download windows-x86_64 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-x86_64-local-staging
+          path: ~/windows-x86_64-local-staging
+
+      - name: Download linux-x86_64 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-local-staging
+          path: ~/linux-x86_64-local-staging
+
+      # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
+      # all together with one maven command.
+      - name: Merge staging repositories
+        working-directory: ./prepare-release-workspace/
+        run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/windows-x86_64-local-staging/staging ~/linux-x86_64-local-staging/staging
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      - name: Deploy local staged artifacts
+        working-directory: ./prepare-release-workspace/
+        # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
+        run: mvn -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+
+      - name: Rollback release on failure
+        working-directory: ./prepare-release-workspace/
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty-incubator-codec-quic main

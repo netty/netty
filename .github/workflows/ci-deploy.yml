@@ -140,12 +140,7 @@ jobs:
           path: ~/linux-x86_64-local-staging
 
       - name: Merge staging repositories
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-local-staging/deferred/* ~/local-staging/deferred/
+        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/linux-x86_64-local-staging
 
       - uses: s4u/maven-settings-action@v2.2.0
         with:

@@ -26,5 +26,8 @@ services:
   stage-snapshot:
     image: netty-codec-quic-centos6:centos-6-1.8
 
+  stage-release:
+    image: netty-codec-quic-centos6:centos-6-1.8
+
   shell:
     image: netty-codec-quic-centos6:centos-6-1.8
