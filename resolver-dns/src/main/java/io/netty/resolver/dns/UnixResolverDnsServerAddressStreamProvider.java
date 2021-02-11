@@ -87,7 +87,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * the default DNS server to use, and also overrides for individual domains. Also parse list of files of the format
      * <a href="
      * https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man5/resolver.5.html">
-     * /etc/resolver</a> which may contain multiple files to override the name servers used for multimple domains.
+     * /etc/resolver</a> which may contain multiple files to override the name servers used for multiple domains.
      * @param etcResolvConf <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
      * @param etcResolverFiles List of files of the format defined in
      * <a href="
@@ -122,7 +122,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * the default DNS server to use, and also overrides for individual domains. Also parse a directory of the format
      * <a href="
      * https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man5/resolver.5.html">
-     * /etc/resolver</a> which may contain multiple files to override the name servers used for multimple domains.
+     * /etc/resolver</a> which may contain multiple files to override the name servers used for multiple domains.
      * @param etcResolvConf <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
      * @param etcResolverDir Directory containing files of the format defined in
      * <a href="
@@ -381,7 +381,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                 } else if (line.startsWith(SEARCH_ROW_LABEL)) {
                     int i = indexOfNonWhiteSpace(line, SEARCH_ROW_LABEL.length());
                     if (i >= 0) {
-                        // May contain more then one entry, either seperated by whitespace or tab.
+                        // May contain more then one entry, either separated by whitespace or tab.
                         // See https://linux.die.net/man/5/resolver
                         String[] domains = WHITESPACE_PATTERN.split(line.substring(i));
                         Collections.addAll(searchDomains, domains);
