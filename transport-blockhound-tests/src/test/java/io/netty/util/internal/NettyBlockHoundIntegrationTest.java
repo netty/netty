@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
@@ -35,7 +36,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.ReferenceCountUtil;
@@ -59,6 +60,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.ServiceLoader;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -320,7 +322,30 @@ public class NettyBlockHoundIntegrationTest {
     }
 
     @Test(timeout = 5000L)
-    public void testParseEtcResolverFilesAllowsBlockingCalls() throws InterruptedException {
+    public void testUnixResolverDnsServerAddressStreamProvider_Parse() throws InterruptedException {
+        doTestParseResolverFilesAllowsBlockingCalls(DnsServerAddressStreamProviders::unixDefault);
+    }
+
+    @Test(timeout = 5000L)
+    public void testHostsFileParser_Parse() throws InterruptedException {
+        doTestParseResolverFilesAllowsBlockingCalls(DnsNameResolverBuilder::new);
+    }
+
+    @Test(timeout = 5000L)
+    public void testUnixResolverDnsServerAddressStreamProvider_ParseEtcResolverSearchDomainsAndOptions()
+            throws InterruptedException {
+        NioEventLoopGroup group = new NioEventLoopGroup();
+        try {
+            DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
+                    .channelFactory(NioDatagramChannel::new);
+            doTestParseResolverFilesAllowsBlockingCalls(builder::build);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    private static void doTestParseResolverFilesAllowsBlockingCalls(Callable<Object> callable)
+            throws InterruptedException {
         SingleThreadEventExecutor executor =
                 new SingleThreadEventExecutor(null, new DefaultThreadFactory("test"), true) {
                     @Override
@@ -335,11 +360,11 @@ public class NettyBlockHoundIntegrationTest {
                 };
         try {
             CountDownLatch latch = new CountDownLatch(1);
-            List<DnsServerAddressStreamProvider> result = new ArrayList<>();
+            List<Object> result = new ArrayList<>();
             List<Throwable> error = new ArrayList<>();
             executor.execute(() -> {
                 try {
-                    result.add(DnsServerAddressStreamProviders.unixDefault());
+                    result.add(callable.call());
                 } catch (Throwable t) {
                     error.add(t);
                 }
