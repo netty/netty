@@ -73,6 +73,8 @@
     <netty.build.version>28</netty.build.version>
     <netty.quic.version>0.0.4.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
+    <release.gpg.keyname/>
+    <release.gpg.passphrase/>
     <test.argLine>-D_</test.argLine>
   </properties>
 
@@ -260,11 +262,23 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.8</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>sonatype-nexus</serverId>
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <!-- Automatically release the artifacts after the verification was complete -->
+          <autoReleaseAfterClose>true</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-release-plugin</artifactId>
         <version>2.5.3</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release -Dgpg.keyname=${release.gpg.keyname} -Dgpg.passphrase=${release.gpg.passphrase}</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>${project.artifactId}-@{project.version}</tagNameFormat>
