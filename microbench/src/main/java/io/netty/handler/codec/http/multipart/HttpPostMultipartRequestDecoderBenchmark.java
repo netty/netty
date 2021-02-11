@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -54,12 +55,12 @@ public class HttpPostMultipartRequestDecoderBenchmark
                                  "Content-Disposition: form-data; name=\"msg_id\"\n\n15200\n--" +
                                  BOUNDARY +
                                  "\nContent-Disposition: form-data; name=\"msg1\"; filename=\"file1.txt\"\n\n" +
-                                 data).getBytes();
-        byte[] bodyPartBigBytes = data.getBytes();
+                                 data).getBytes(CharsetUtil.UTF_8);
+        byte[] bodyPartBigBytes = data.getBytes(CharsetUtil.UTF_8);
         byte[] intermediaryBytes = ("\n--" + BOUNDARY +
                                     "\nContent-Disposition: form-data; name=\"msg2\"; filename=\"file2.txt\"\n\n" +
-                                    data).getBytes();
-        byte[] finalBigBytes = ("\n" + "--" + BOUNDARY + "--\n").getBytes();
+                                    data).getBytes(CharsetUtil.UTF_8);
+        byte[] finalBigBytes = ("\n" + "--" + BOUNDARY + "--\n").getBytes(CharsetUtil.UTF_8);
         ByteBuf firstBuf = Unpooled.wrappedBuffer(bodyStartBytes);
         ByteBuf finalBuf = Unpooled.wrappedBuffer(finalBigBytes);
         ByteBuf nextBuf;

@@ -943,12 +943,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         // Set name=
         if (isKey) {
             String key = currentData.getName();
-            buffer = wrappedBuffer(key.getBytes());
+            buffer = wrappedBuffer(key.getBytes(charset));
             isKey = false;
             if (currentBuffer == null) {
-                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes(charset)));
             } else {
-                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes(charset)));
             }
             // continue
             size -= buffer.readableBytes() + 1;
@@ -969,7 +969,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
             isKey = true;
-            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes()) : null;
+            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes(charset)) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data

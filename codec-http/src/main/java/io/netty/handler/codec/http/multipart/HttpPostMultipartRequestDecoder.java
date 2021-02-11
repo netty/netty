@@ -648,7 +648,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         skipOneLine();
         String newline;
         try {
-            newline = readDelimiterOptimized(undecodedChunk, delimiter);
+            newline = readDelimiterOptimized(undecodedChunk, delimiter, charset);
         } catch (NotEnoughDataDecoderException ignored) {
             undecodedChunk.readerIndex(readerIndex);
             return null;
@@ -1002,8 +1002,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         int readerIndex = undecodedChunk.readerIndex();
         ByteBuf line = null;
         try {
-            while (undecodedChunk.isReadable()) {
-                int posLfOrCrLf = HttpPostBodyUtil.findLForCRLF(undecodedChunk, undecodedChunk.readerIndex());
+            if (undecodedChunk.isReadable()) {
+                int posLfOrCrLf = HttpPostBodyUtil.findLineBreak(undecodedChunk, undecodedChunk.readerIndex());
                 if (posLfOrCrLf <= 0) {
                     throw new NotEnoughDataDecoderException();
                 }
@@ -1013,7 +1013,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
                     byte nextByte = undecodedChunk.readByte();
                     if (nextByte == HttpConstants.CR) {
-                        // force read since LF is following
+                        // force read next byte since LF is the following one
                         undecodedChunk.readByte();
                     }
                     return line.toString(charset);
@@ -1044,9 +1044,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks and reset the {@code readerIndex} to the previous
      *             value
      */
-    private static String readDelimiterOptimized(ByteBuf undecodedChunk, String delimiter) {
+    private static String readDelimiterOptimized(ByteBuf undecodedChunk, String delimiter, Charset charset) {
         final int readerIndex = undecodedChunk.readerIndex();
-        final byte[] bdelimiter = delimiter.getBytes();
+        final byte[] bdelimiter = delimiter.getBytes(charset);
         final int delimiterLength = bdelimiter.length;
         try {
             int delimiterPos = HttpPostBodyUtil.findDelimiter(undecodedChunk, readerIndex, bdelimiter, false);
@@ -1121,7 +1121,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     }
 
     /**
-     * Rewrite buffer in order to skip a decoded part
+     * Rewrite buffer in order to skip lengthToSkip bytes from current readerIndex,
+     * such that any readable bytes available after readerIndex + lengthToSkip (so before writerIndex)
+     * are moved at readerIndex position,
+     * therefore decreasing writerIndex of lengthToSkip at the end of the process.
      *
      * @param buffer the buffer to rewrite from current readerIndex
      * @param lengthToSkip the size to skip from readerIndex
@@ -1153,11 +1156,11 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             return false;
         }
         final int startReaderIndex = undecodedChunk.readerIndex();
-        final byte[] bdelimiter = delimiter.getBytes();
+        final byte[] bdelimiter = delimiter.getBytes(httpData.getCharset());
         int posDelimiter = HttpPostBodyUtil.findDelimiter(undecodedChunk, startReaderIndex, bdelimiter, true);
         if (posDelimiter < 0) {
             // Not found but however perhaps because incomplete so search LF or CRLF
-            posDelimiter = HttpPostBodyUtil.findLForCRLF(undecodedChunk, startReaderIndex);
+            posDelimiter = HttpPostBodyUtil.findLineBreak(undecodedChunk, startReaderIndex);
             if (posDelimiter < 0) {
                 // not found so this chunk can be fully added
                 ByteBuf content = undecodedChunk.copy();
@@ -1170,7 +1173,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 undecodedChunk.writerIndex(startReaderIndex);
                 return false;
             } else if (posDelimiter > 0) {
-                // Not fully but still some bytes to provide
+                // Not fully but still some bytes to provide: httpData is not yet finished since delimiter not found
                 ByteBuf content = undecodedChunk.copy(startReaderIndex, posDelimiter);
                 try {
                     httpData.addContent(content, false);
@@ -1183,7 +1186,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             // Empty chunk or so
             return false;
         }
-        // Delimiter found at posDelimiter, including LF or CRLF
+        // Delimiter found at posDelimiter, including LF or CRLF, so httpData has its last chunk
         ByteBuf content = undecodedChunk.copy(startReaderIndex, posDelimiter);
         try {
             httpData.addContent(content, true);

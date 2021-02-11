@@ -106,6 +106,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             size += localsize;
             if (byteBuf == null) {
                 byteBuf = buffer;
+            } else if (localsize == 0) {
+                // Nothing to add and byteBuf already exists
+                buffer.release();
             } else if (byteBuf instanceof CompositeByteBuf) {
                 CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
                 cbb.addComponent(true, buffer);
