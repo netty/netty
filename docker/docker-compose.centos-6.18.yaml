@@ -23,6 +23,9 @@ services:
   stage-snapshot:
     image: netty:centos-6-1.8
 
+  stage-release:
+    image: netty:centos-6-1.8
+
   deploy:
     image: netty:centos-6-1.8
 
