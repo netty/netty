@@ -61,6 +61,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             return;
         }
         final NativeSslSession session;
+        final boolean reused;
         synchronized (this) {
             session = sessions.get(hostPort);
             if (session == null) {
@@ -70,11 +71,10 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
                 removeSessionWithId(session.sessionId());
                 return;
             }
+            // Try to set the session, if true is returned OpenSSL incremented the reference count
+            // of the underlying SSL_SESSION*.
+            reused = SSL.setSession(ssl, session.session());
         }
-
-        // Try to set the session, if true is returned OpenSSL incremented the reference count
-        // of the underlying SSL_SESSION*.
-        boolean reused = SSL.setSession(ssl, session.session());
 
         if (reused) {
             if (session.shouldBeSingleUse()) {

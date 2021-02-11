@@ -201,9 +201,9 @@ class OpenSslSessionCache implements SSLSessionCache {
                 // from the cache and call SSL_SESSION_free(...).
                 removeSessionWithId(session.sessionId());
             }
-            session.updateLastAccessedTime();
-            return session.session();
         }
+        session.updateLastAccessedTime();
+        return session.session();
     }
 
     void setSession(long ssl, String host, int port) {
