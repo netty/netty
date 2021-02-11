@@ -69,12 +69,10 @@ public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 int b4 = dataLen & 0x7F;
                 if (b1 == 0) {
                     if (b2 == 0) {
-                        if (b3 == 0) {
-                            buf.writeByte(b4);
-                        } else {
+                        if (b3 != 0) {
                             buf.writeByte(b3 | 0x80);
-                            buf.writeByte(b4);
                         }
+                        buf.writeByte(b4);
                     } else {
                         buf.writeByte(b2 | 0x80);
                         buf.writeByte(b3 | 0x80);
