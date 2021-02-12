@@ -82,6 +82,8 @@ final class BoringSSL {
     static native long CRYPTO_BUFFER_stack_new(long ssl, byte[][] bytes);
     static native void CRYPTO_BUFFER_stack_free(long chain);
 
+    static native String ERR_last_error();
+
     private static String tlsExtHostName(String hostname) {
         if (hostname != null && hostname.endsWith(".")) {
             // Strip trailing dot if included.

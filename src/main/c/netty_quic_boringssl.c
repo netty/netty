@@ -32,6 +32,8 @@
 #define STATICALLY_CLASSNAME "io/netty/incubator/codec/quic/BoringSSLNativeStaticallyReferencedJniMethods"
 #define CLASSNAME "io/netty/incubator/codec/quic/BoringSSL"
 
+#define ERR_LEN 256
+
 static jclass verifyCallbackClass = NULL;
 static jmethodID verifyCallbackMethod = NULL;
 
@@ -699,6 +701,17 @@ void netty_boringssl_CRYPTO_BUFFER_stack_free(JNIEnv* env, jclass clazz, jlong c
     sk_CRYPTO_BUFFER_pop_free((STACK_OF(CRYPTO_BUFFER) *) chain, CRYPTO_BUFFER_free);
 }
 
+jstring netty_boringssl_ERR_last_error(JNIEnv* env, jclass clazz) {
+    char buf[ERR_LEN];
+    unsigned long err = ERR_get_error();
+    if (err == 0) {
+        return NULL;
+    }
+    ERR_error_string_n(err, buf, ERR_LEN);
+    return (*env)->NewStringUTF(env, buf);
+}
+
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -724,7 +737,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "EVP_PKEY_parse", "([BLjava/lang/String;)J", (void *) netty_boringssl_EVP_PKEY_parse },
   { "EVP_PKEY_free", "(J)V", (void *) netty_boringssl_EVP_PKEY_free },
   { "CRYPTO_BUFFER_stack_new", "(J[[B)J", (void *) netty_boringssl_CRYPTO_BUFFER_stack_new },
-  { "CRYPTO_BUFFER_stack_free", "(J)V", (void *) netty_boringssl_CRYPTO_BUFFER_stack_free }
+  { "CRYPTO_BUFFER_stack_free", "(J)V", (void *) netty_boringssl_CRYPTO_BUFFER_stack_free },
+  { "ERR_last_error", "()Ljava/lang/String;", (void *) netty_boringssl_ERR_last_error }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

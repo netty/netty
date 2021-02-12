@@ -526,15 +526,18 @@ final class Quiche {
         return PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? buffer : buffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
-    static String errorAsString(int err) {
-        return QuicError.valueOf(err).message();
-    }
-
     static Exception newException(int err) {
         final QuicError error = QuicError.valueOf(err);
         final QuicException reason = new QuicException(error);
         if (err == QUICHE_ERR_TLS_FAIL) {
-            final SSLHandshakeException sslExc = new SSLHandshakeException(error.message());
+            String lastSslError = BoringSSL.ERR_last_error();
+            final String message;
+            if (lastSslError != null) {
+                message = error.message() + ": " + lastSslError;
+            } else {
+                message = error.message();
+            }
+            final SSLHandshakeException sslExc = new SSLHandshakeException(message);
             sslExc.initCause(reason);
             return sslExc;
         }
