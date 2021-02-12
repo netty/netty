@@ -32,7 +32,7 @@ public class EpollSocketConnectTest extends SocketConnectTest {
 
     @Override
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
-        sb.childOption(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+        sb.childOption(EpollChannelOption.TCP_FASTOPEN, 5);
         cb.option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
     }
 }
