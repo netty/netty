@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -31,6 +32,7 @@ import io.netty.util.internal.StringUtil;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
@@ -132,6 +134,8 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        cb.option(ChannelOption.AUTO_READ, true);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -175,20 +179,14 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     private static class BufferingClientHandler extends ChannelInboundHandlerAdapter {
         private final Semaphore semaphore = new Semaphore(0);
-        private final StringBuffer stringBuffer = new StringBuffer();
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
-            super.channelActive(ctx);
-        }
+        private final ByteArrayOutputStream streamBuffer = new ByteArrayOutputStream();
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 int readableBytes = buf.readableBytes();
-                stringBuffer.append(buf.readCharSequence(readableBytes, US_ASCII));
+                buf.readBytes(streamBuffer, readableBytes);
                 semaphore.release(readableBytes);
                 buf.release();
             } else {
@@ -198,19 +196,13 @@ public class SocketConnectTest extends AbstractSocketTest {
 
         String collectBuffer(int expectedBytes) throws InterruptedException {
             semaphore.acquire(expectedBytes);
-            String result = stringBuffer.toString();
-            stringBuffer.setLength(0);
-            return result;
+            byte[] bytes = streamBuffer.toByteArray();
+            streamBuffer.reset();
+            return new String(bytes, US_ASCII);
         }
     }
 
     private static final class EchoServerHandler extends ChannelInboundHandlerAdapter {
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
-            super.channelActive(ctx);
-        }
-
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
@@ -222,12 +214,6 @@ public class SocketConnectTest extends AbstractSocketTest {
             } else {
                 throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
-        }
-
-        @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
-            ctx.read();
         }
     }
 }
