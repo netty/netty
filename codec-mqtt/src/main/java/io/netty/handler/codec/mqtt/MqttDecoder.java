@@ -507,9 +507,9 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                         decodedClientId.value,
                         willProperties,
                         decodedWillTopic != null ? decodedWillTopic.value : null,
-                        decodedWillMessage != null ? decodedWillMessage : null,
+                        decodedWillMessage,
                         decodedUserName != null ? decodedUserName.value : null,
-                        decodedPassword != null ? decodedPassword : null);
+                        decodedPassword);
         return new Result<MqttConnectPayload>(mqttConnectPayload, numberOfBytesConsumed);
     }
 

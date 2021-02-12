@@ -36,6 +36,7 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -92,6 +93,7 @@ public class FileRegionThrottleTest {
         group.shutdownGracefully();
     }
 
+    @Ignore("This test is flaky, need more investigation")
     @Test
     public void testGlobalWriteThrottle() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
