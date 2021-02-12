@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,22 +15,18 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramMulticastTest;
-
-import java.util.List;
 
 public class EpollDatagramMulticastIpv6WithIpv4AddrTest extends DatagramMulticastTest {
 
     @Override
-    protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv6);
+    protected InternetProtocolFamily groupInternetProtocalFamily() {
+        return InternetProtocolFamily.IPv4;
     }
 
     @Override
-    protected InternetProtocolFamily internetProtocolFamily() {
-        return InternetProtocolFamily.IPv4;
+    protected InternetProtocolFamily socketInternetProtocalFamily() {
+        return InternetProtocolFamily.IPv6;
     }
 }
