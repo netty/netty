@@ -30,7 +30,7 @@ public class EpollSocketMultipleConnectTest extends SocketMultipleConnectTest {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories
                 = new ArrayList<>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
-                : EpollSocketTestPermutation.INSTANCE.socket()) {
+                : EpollSocketTestPermutation.INSTANCE.socketWithFastOpen()) {
             factories.add(comboFactory);
         }
         return factories;

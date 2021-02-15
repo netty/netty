@@ -37,6 +37,7 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 
 public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig implements SocketChannelConfig {
+    private volatile boolean tcpFastopen;
 
     /**
      * Creates a new instance.
@@ -58,7 +59,7 @@ public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig imp
                 EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
                 EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT,
-                EpollChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
+                ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
     }
 
     @SuppressWarnings("unchecked")
@@ -109,7 +110,7 @@ public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig imp
         if (option == EpollChannelOption.IP_TRANSPARENT) {
             return (T) Boolean.valueOf(isIpTransparent());
         }
-        if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
+        if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
         if (option == EpollChannelOption.SO_BUSY_POLL) {
@@ -156,7 +157,7 @@ public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig imp
             setTcpMd5Sig(m);
         } else if (option == EpollChannelOption.TCP_QUICKACK) {
             setTcpQuickAck((Boolean) value);
-        } else if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
+        } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
         } else if (option == EpollChannelOption.SO_BUSY_POLL) {
             setSoBusyPoll((Integer) value);
@@ -544,29 +545,21 @@ public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig imp
     }
 
     /**
-     * Set the {@code TCP_FASTOPEN_CONNECT} option on the socket. Requires Linux kernel 4.11 or later.
-     * See
-     * <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=19f6d3f3">this commit</a>
-     * for more details.
+     * Enables client TCP fast open. {@code TCP_FASTOPEN_CONNECT} normally
+     * requires Linux kernel 4.11 or later, so instead we use the traditional fast open
+     * client socket mechanics that work with kernel 3.6 and later. See this
+     * <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
     public EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
-        try {
-            ((EpollSocketChannel) channel).socket.setTcpFastOpenConnect(fastOpenConnect);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        tcpFastopen = fastOpenConnect;
+        return this;
     }
 
     /**
-     * Returns {@code true} if {@code TCP_FASTOPEN_CONNECT} is enabled, {@code false} otherwise.
+     * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
      */
     public boolean isTcpFastOpenConnect() {
-        try {
-            return ((EpollSocketChannel) channel).socket.isTcpFastOpenConnect();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return tcpFastopen;
     }
 
     @Override

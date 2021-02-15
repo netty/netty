@@ -33,8 +33,12 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> IP_TRANSPARENT = valueOf("IP_TRANSPARENT");
     public static final ChannelOption<Boolean> IP_RECVORIGDSTADDR = valueOf("IP_RECVORIGDSTADDR");
     public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf(EpollChannelOption.class, "TCP_FASTOPEN");
-    public static final ChannelOption<Boolean> TCP_FASTOPEN_CONNECT =
-            valueOf(EpollChannelOption.class, "TCP_FASTOPEN_CONNECT");
+
+    /**
+     * @deprecated Use {@link ChannelOption#TCP_FASTOPEN_CONNECT} instead.
+     */
+    @Deprecated
+    public static final ChannelOption<Boolean> TCP_FASTOPEN_CONNECT = ChannelOption.TCP_FASTOPEN_CONNECT;
     public static final ChannelOption<Integer> TCP_DEFER_ACCEPT =
             ChannelOption.valueOf(EpollChannelOption.class, "TCP_DEFER_ACCEPT");
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(EpollChannelOption.class, "TCP_QUICKACK");

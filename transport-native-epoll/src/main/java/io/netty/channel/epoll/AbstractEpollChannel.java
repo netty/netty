@@ -34,6 +34,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -368,6 +369,43 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
         return WRITE_STATUS_SNDBUF_FULL;
+    }
+
+    /**
+     * Write bytes to the socket, with or without a remote address.
+     * Used for datagram and TCP client fast open writes.
+     */
+    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
+            throws IOException {
+        assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
+        if (data.hasMemoryAddress()) {
+            long memoryAddress = data.memoryAddress();
+            if (remoteAddress == null) {
+                return socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+            }
+            return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
+                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+        }
+
+        if (data.nioBufferCount() > 1) {
+            IovArray array = registration().cleanIovArray();
+            array.add(data, data.readerIndex(), data.readableBytes());
+            int cnt = array.count();
+            assert cnt != 0;
+
+            if (remoteAddress == null) {
+                return socket.writevAddresses(array.memoryAddress(0), cnt);
+            }
+            return socket.sendToAddresses(array.memoryAddress(0), cnt,
+                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+        }
+
+        ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
+        if (remoteAddress == null) {
+            return socket.write(nioData, nioData.position(), nioData.limit());
+        }
+        return socket.sendTo(nioData, nioData.position(), nioData.limit(),
+                remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
@@ -718,7 +756,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return connected;
     }
 
-    private boolean doConnect0(SocketAddress remote) throws Exception {
+    boolean doConnect0(SocketAddress remote) throws Exception {
         boolean success = false;
         try {
             boolean connected = socket.connect(remote);
