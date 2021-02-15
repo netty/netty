@@ -40,7 +40,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SocketReadPendingTest extends AbstractSocketTest {
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testReadPendingIsResetAfterEachRead() throws Throwable {
         run();
     }

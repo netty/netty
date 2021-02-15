@@ -15,8 +15,10 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -24,6 +26,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -109,6 +112,29 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollSocketChannelUnsafe();
+    }
+
+    @Override
+    boolean doConnect0(SocketAddress remote) throws Exception {
+        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.isTcpFastOpenConnect()) {
+            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            outbound.addFlush();
+            Object curr;
+            if ((curr = outbound.current()) instanceof ByteBuf) {
+                ByteBuf initialData = (ByteBuf) curr;
+                // If no cookie is present, the write fails with EINPROGRESS and this call basically
+                // becomes a normal async connect. All writes will be sent normally afterwards.
+                long localFlushedAmount = doWriteOrSendBytes(
+                        initialData, (InetSocketAddress) remote, true);
+                if (localFlushedAmount > 0) {
+                    // We had a cookie and our fast-open proceeded. Remove written data
+                    // then continue with normal TCP operation.
+                    outbound.removeBytes(localFlushedAmount);
+                    return true;
+                }
+            }
+        }
+        return super.doConnect0(remote);
     }
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {

@@ -26,7 +26,7 @@ import java.util.List;
 public class EpollCompositeBufferGatheringWriteTest extends CompositeBufferGatheringWriteTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socket();
+        return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }
 
     @Override

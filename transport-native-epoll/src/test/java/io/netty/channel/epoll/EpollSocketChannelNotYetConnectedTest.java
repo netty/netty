@@ -24,6 +24,6 @@ import java.util.List;
 public class EpollSocketChannelNotYetConnectedTest extends SocketChannelNotYetConnectedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.clientSocket();
+        return EpollSocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
     }
 }

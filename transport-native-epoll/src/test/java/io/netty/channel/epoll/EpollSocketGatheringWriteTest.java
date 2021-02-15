@@ -26,6 +26,6 @@ public class EpollSocketGatheringWriteTest extends SocketGatheringWriteTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socket();
+        return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }
 }

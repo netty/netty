@@ -25,6 +25,6 @@ public class EpollWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.clientSocket();
+        return EpollSocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
     }
 }

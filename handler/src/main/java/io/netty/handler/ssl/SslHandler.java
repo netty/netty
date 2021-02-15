@@ -28,6 +28,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -780,7 +781,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             forceFlush(ctx);
             // Explicit start handshake processing once we send the first message. This will also ensure
             // we will schedule the timeout if needed.
-            startHandshakeProcessing();
+            startHandshakeProcessing(true);
             return;
         }
 
@@ -1957,20 +1958,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(ctx.channel(), 16);
-        if (ctx.channel().isActive()) {
-            startHandshakeProcessing();
+        Channel channel = ctx.channel();
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
+        boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
+        boolean active = channel.isActive();
+        if (active || fastOpen) {
+            // Do not flush the handshake when TCP Fast Open is enabled, unless the channel is active.
+            // With TCP Fast Open, we write to the outbound buffer before the TCP connect is established.
+            // The buffer will then be flushed as part of estabilishing the connection, saving us a round-trip.
+            startHandshakeProcessing(active || !fastOpen);
         }
     }
 
-    private void startHandshakeProcessing() {
+    private void startHandshakeProcessing(boolean flushAtEnd) {
         if (!handshakeStarted) {
             handshakeStarted = true;
             if (engine.getUseClientMode()) {
                 // Begin the initial handshake.
                 // channelActive() event has been fired already, which means this.channelActive() will
                 // not be invoked. We have to initialize here instead.
-                handshake();
+                handshake(flushAtEnd);
             }
             applyHandshakeTimeout();
         }
@@ -2022,28 +2029,30 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
         } else {
             handshakePromise = newHandshakePromise;
-            handshake();
+            handshake(true);
             applyHandshakeTimeout();
         }
     }
 
     /**
      * Performs TLS (re)negotiation.
+     * @param flushAtEnd Set to {@code true} if the outbound buffer should be flushed (written to the network) at the
+     *                  end. Set to {@code false} if the handshake will be flushed later, e.g. as part of TCP Fast Open
+     *                  connect.
      */
-    private void handshake() {
+    private void handshake(boolean flushAtEnd) {
         if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
             // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
-        } else {
-            if (handshakePromise.isDone()) {
-                // If the handshake is done already lets just return directly as there is no need to trigger it again.
-                // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
-                // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
-                // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
-                // call fireChannelActive() on the pipeline.
-                return;
-            }
+        }
+        if (handshakePromise.isDone()) {
+            // If the handshake is done already lets just return directly as there is no need to trigger it again.
+            // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
+            // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
+            // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
+            // call fireChannelActive() on the pipeline.
+            return;
         }
 
         // Begin handshake.
@@ -2054,7 +2063,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } catch (Throwable e) {
             setHandshakeFailure(ctx, e);
         } finally {
-            forceFlush(ctx);
+            if (flushAtEnd) {
+                forceFlush(ctx);
+            }
         }
     }
 
@@ -2105,7 +2116,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         if (!startTls) {
-            startHandshakeProcessing();
+            startHandshakeProcessing(true);
         }
         ctx.fireChannelActive();
     }
