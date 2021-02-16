@@ -126,7 +126,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private long connAddr = -1;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
-    private boolean connectionSendNeeded;
     private ByteBuf finBuffer;
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
@@ -142,7 +141,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean recvStreamPending;
     private boolean streamReadable;
     private boolean inRecv;
-    private boolean didRecv;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -231,7 +229,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             this.connAddr = connection;
             this.supportsDatagram = supportsDatagram;
-            connectionSendNeeded = true;
             key = connectId;
         } finally {
             idBuffer.release();
@@ -410,10 +407,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             closeData = null;
         }
 
-        if (connectionSendNeeded) {
-            // Call connectionSend() so we ensure we send all that is queued before we close the channel
-            connectionSend();
-        }
+        // Call connectionSend() so we ensure we send all that is queued before we close the channel
+        boolean written = connectionSend();
 
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
                 Quiche.memoryAddress(reason) + reason.readerIndex(), reason.readableBytes()));
@@ -422,7 +417,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // now or we will do so once we see the channelReadComplete event.
         //
         // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.close
-        tryConnectionSend();
+        written |= connectionSend();
+        if (written) {
+            flushParent();
+        }
     }
 
     @Override
@@ -493,7 +491,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     res = sendDatagram(buffer);
                 }
                 if (res >= 0) {
-                    connectionSendNeeded = true;
                     channelOutboundBuffer.remove();
                     sendSomething = true;
                     retry = false;
@@ -518,7 +515,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         sendSomething = false;
                         // If this returned DONE we couldn't write anymore. This happens if the internal queue
                         // is full. In this case we should call quiche_conn_send(...) and so make space again.
-                        connectionSendNeeded = true;
                         if (connectionSend()) {
                             flushParent();
                         }
@@ -528,8 +524,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             }
         } finally {
-            if (sendSomething) {
-                tryConnectionSend();
+            if (sendSomething && connectionSend()) {
+                flushParent();
             }
         }
     }
@@ -642,7 +638,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // now or we will do so once we see the channelReadComplete event.
         //
         // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-        tryConnectionSend();
+        if (connectionSend()) {
+            flushParent();
+        }
         Quiche.notifyPromise(res, promise);
     }
 
@@ -718,7 +716,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // We couldn't send the data as there was not enough space.
                     return StreamSendResult.NO_SPACE;
                 }
-
                 sendSomething = true;
                 if (fin) {
                     return handleFin(streamOutboundBuffer, res, finSent);
@@ -727,12 +724,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             return StreamSendResult.DONE;
         } finally {
+            // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
+            // now or we will do so once we see the channelReadComplete event.
+            //
+            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
             if (sendSomething) {
-                // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
-                // now or we will do so once we see the channelReadComplete event.
-                //
-                // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-                tryConnectionSend();
+                if (connectionSend()) {
+                    flushParent();
+                }
             }
         }
     }
@@ -761,7 +760,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // now or we will do so once we see the channelReadComplete event.
             //
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-            tryConnectionSend();
+            if (connectionSend()) {
+                flushParent();
+            }
         }
     }
 
@@ -791,13 +792,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return finBuffer.getBoolean(0) ? StreamRecvResult.FIN : StreamRecvResult.OK;
     }
 
-    private void tryConnectionSend() {
-        connectionSendNeeded = true;
-        if (connectionSend()) {
-            flushParent();
-        }
-    }
-
     /**
      * Receive some data on a QUIC connection.
      */
@@ -805,11 +799,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         ((QuicChannelUnsafe) unsafe()).connectionRecv(buffer);
     }
 
-    boolean writable() {
-        if (handleWritableStreams()) {
-            return connectionSend();
-        }
-        return false;
+    void writable() {
+        connectionSend();
+        handleWritableStreams();
+        connectionSend();
     }
 
     void streamHasPendingWrites(long streamId) {
@@ -866,27 +859,17 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * Called once we receive a channelReadComplete event. This method will take care of calling
      * {@link ChannelPipeline#fireChannelReadComplete()} if needed and also to handle pending flushes of
      * writable {@link QuicheQuicStreamChannel}s.
-     *
-     * If this methods returns {@code true} we need to call {@link Channel#flush()} on the {@link #parent()}
-     * {@link Channel} once we notified all {@link QuicheQuicChannel} that are handled by the same parent
-     * {@link Channel}.
      */
-    boolean channelReadComplete() {
+    void recvComplete() {
         inFireChannelReadCompleteQueue = false;
         if (isConnDestroyed()) {
-            return false;
+            return;
         }
         fireChannelReadCompleteIfNeeded();
 
-        if (didRecv) {
-            // If we had called recv we need to ensure we call send as well.
-            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-            connectionSendNeeded = true;
-        }
-        // Try flush more streams that had some flushes pending.
-        handleWritableStreams();
-
-        return connectionSend();
+        // If we had called recv we need to ensure we call send as well.
+        // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
+        connectionSend();
     }
 
     private void fireChannelReadCompleteIfNeeded() {
@@ -905,10 +888,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * {@link Channel#flush()} at some point.
      */
     private boolean connectionSend() {
-        if (isConnDestroyed() || !connectionSendNeeded) {
+        if (isConnDestroyed()) {
             return false;
         }
-        connectionSendNeeded = false;
         ChannelFuture lastFuture = null;
 
         for (;;) {
@@ -1045,9 +1027,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 int bufferReaderIndex = buffer.readerIndex();
                 long memoryAddress = Quiche.memoryAddress(buffer) + bufferReaderIndex;
 
-                // We need to call quiche_conn_send(...),
-                // see https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-                connectionSendNeeded = true;
                 try {
                     do  {
                         // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
@@ -1055,7 +1034,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         boolean done;
                         try {
                             done = Quiche.throwIfError(res);
-                            didRecv = true;
                         } catch (Exception e) {
                             if (tryFailConnectPromise(e)) {
                                 break;
@@ -1072,6 +1050,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                         if (Quiche.quiche_conn_is_established(connAddr) ||
                                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
+
+                            if (handleWritableStreams()) {
+                                // TODO: Should we only flush once ?
+                                flushParent();
+                            }
+
                             datagramReadable = true;
                             streamReadable = true;
                             recvDatagram();
@@ -1301,10 +1285,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     timeoutFuture = null;
                     forceClose();
                 } else {
-                    // We need to set connectionSendNeeded to true as we always need to call this method when
-                    // a timeout was triggered.
+                    // We need to call connectionSend when a timeout was triggered.
                     // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send.
-                    connectionSendNeeded = true;
                     boolean send = connectionSend();
                     if (send) {
                         flushParent();
