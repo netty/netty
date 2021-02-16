@@ -1963,10 +1963,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
         boolean active = channel.isActive();
         if (active || fastOpen) {
-            // Do not flush the handshake when TCP Fast Open is enabled, unless the channel is active.
+            // Explicitly flush the handshake only if the channel is already active.
             // With TCP Fast Open, we write to the outbound buffer before the TCP connect is established.
-            // The buffer will then be flushed as part of estabilishing the connection, saving us a round-trip.
-            startHandshakeProcessing(active || !fastOpen);
+            // The buffer will then be flushed as part of establishing the connection, saving us a round-trip.
+            startHandshakeProcessing(active);
         }
     }
 
