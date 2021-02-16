@@ -117,11 +117,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            joinSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            joinSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            joinGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            joinGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -130,11 +133,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            leaveSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            leaveSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            leaveGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            leaveGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
