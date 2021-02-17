@@ -15,6 +15,7 @@
  */
 package io.netty.handler.traffic;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
@@ -650,8 +651,8 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
      * @return size the size of the msg or {@code -1} if unknown.
      */
     protected long calculateSize(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
+        if (msg instanceof AsByteBuf) {
+            return ((AsByteBuf) msg).readableBytes();
         }
         if (msg instanceof ByteBufHolder) {
             return ((ByteBufHolder) msg).content().readableBytes();

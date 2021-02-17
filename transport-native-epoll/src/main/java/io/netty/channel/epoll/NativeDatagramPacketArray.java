@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
@@ -117,8 +118,8 @@ final class NativeDatagramPacketArray {
                 ByteBuf buf = packet.content();
                 return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
             }
-            if (msg instanceof ByteBuf && connected) {
-                ByteBuf buf = (ByteBuf) msg;
+            if (msg instanceof AsByteBuf && connected) {
+                ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
                 return add0(buf, buf.readerIndex(), buf.readableBytes(), null);
             }
             return false;

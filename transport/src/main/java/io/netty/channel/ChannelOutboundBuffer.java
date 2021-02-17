@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -197,8 +198,8 @@ public final class ChannelOutboundBuffer {
     }
 
     private static long total(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
+        if (msg instanceof AsByteBuf) {
+            return ((AsByteBuf) msg).readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();
@@ -334,12 +335,12 @@ public final class ChannelOutboundBuffer {
     public void removeBytes(long writtenBytes) {
         for (;;) {
             Object msg = current();
-            if (!(msg instanceof ByteBuf)) {
+            if (!(msg instanceof AsByteBuf)) {
                 assert writtenBytes == 0;
                 break;
             }
 
-            final ByteBuf buf = (ByteBuf) msg;
+            final ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
@@ -406,9 +407,9 @@ public final class ChannelOutboundBuffer {
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
-        while (isFlushedEntry(entry) && entry.msg instanceof ByteBuf) {
+        while (isFlushedEntry(entry) && entry.msg instanceof AsByteBuf) {
             if (!entry.cancelled) {
-                ByteBuf buf = (ByteBuf) entry.msg;
+                ByteBuf buf = ((AsByteBuf) entry.msg).asByteBuf();
                 final int readerIndex = buf.readerIndex();
                 final int readableBytes = buf.writerIndex() - readerIndex;
 

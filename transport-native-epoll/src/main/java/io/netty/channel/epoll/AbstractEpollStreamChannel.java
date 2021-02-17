@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -288,7 +289,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof ByteBuf) {
+            if (msgCount > 1 && in.current() instanceof AsByteBuf) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
@@ -337,8 +338,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
-        if (msg instanceof ByteBuf) {
-            return writeBytes(in, (ByteBuf) msg);
+        if (msg instanceof AsByteBuf) {
+            return writeBytes(in, ((AsByteBuf) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
@@ -380,8 +381,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof AsByteBuf) {
+            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf): buf;
         }
 

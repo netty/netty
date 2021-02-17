@@ -14,6 +14,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -109,8 +110,8 @@ public abstract class AbstractCoalescingBufferQueue {
         if (entry == null) {
             return null;
         }
-        assert entry instanceof ByteBuf;
-        ByteBuf result = (ByteBuf) entry;
+        assert entry instanceof AsByteBuf;
+        ByteBuf result = ((AsByteBuf) entry).asByteBuf();
 
         decrementReadableBytes(result.readableBytes());
 
@@ -222,7 +223,7 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
         Throwable pending = null;
-        ByteBuf previousBuf = null;
+        AsByteBuf previousBuf = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
             try {
@@ -234,12 +235,12 @@ public abstract class AbstractCoalescingBufferQueue {
                     break;
                 }
 
-                if (entry instanceof ByteBuf) {
+                if (entry instanceof AsByteBuf) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
-                    previousBuf = (ByteBuf) entry;
+                    previousBuf = (AsByteBuf) entry;
                 } else if (entry instanceof ChannelPromise) {
                     decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf, (ChannelPromise) entry);
@@ -336,8 +337,8 @@ public abstract class AbstractCoalescingBufferQueue {
                 break;
             }
             try {
-                if (entry instanceof ByteBuf) {
-                    ByteBuf buffer = (ByteBuf) entry;
+                if (entry instanceof AsByteBuf) {
+                    ByteBuf buffer = ((AsByteBuf) entry).asByteBuf();
                     decrementReadableBytes(buffer.readableBytes());
                     safeRelease(buffer);
                 } else {

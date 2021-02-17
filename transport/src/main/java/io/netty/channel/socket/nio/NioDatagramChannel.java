@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -268,7 +269,7 @@ public final class NioDatagramChannel
             remoteAddress = envelope.recipient();
             data = envelope.content();
         } else {
-            data = (ByteBuf) msg;
+            data = ((AsByteBuf) msg).asByteBuf();
             remoteAddress = null;
         }
 
@@ -299,8 +300,8 @@ public final class NioDatagramChannel
             return new DatagramPacket(newDirectBuffer(p, content), p.recipient());
         }
 
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof AsByteBuf) {
+            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
             if (isSingleDirectBuffer(buf)) {
                 return buf;
             }
@@ -310,8 +311,8 @@ public final class NioDatagramChannel
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBuf) {
-                ByteBuf content = (ByteBuf) e.content();
+            if (e.content() instanceof AsByteBuf) {
+                ByteBuf content = ((AsByteBuf) e.content()).asByteBuf();
                 if (isSingleDirectBuffer(content)) {
                     return e;
                 }

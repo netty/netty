@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AddressedEnvelope;
@@ -288,7 +289,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = (ByteBuf) msg;
+            data = ((AsByteBuf) msg).asByteBuf();
             remoteAddress = null;
         }
 
@@ -340,18 +341,18 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof AsByteBuf) {
+            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBuf &&
+            if (e.content() instanceof AsByteBuf &&
                     (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
-                ByteBuf content = (ByteBuf) e.content();
+                ByteBuf content = ((AsByteBuf) e.content()).asByteBuf();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
                         new DefaultAddressedEnvelope<>(
                                 newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;

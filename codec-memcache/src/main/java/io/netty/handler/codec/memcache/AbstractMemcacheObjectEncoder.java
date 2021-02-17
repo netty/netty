@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.memcache;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,7 +50,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
             out.add(encodeMessage(ctx, m));
         }
 
-        if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+        if (msg instanceof MemcacheContent || msg instanceof AsByteBuf || msg instanceof FileRegion) {
             int contentLength = contentLength(msg);
             if (contentLength > 0) {
                 out.add(encodeAndRetain(msg));
@@ -63,7 +64,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof MemcacheObject || msg instanceof ByteBuf || msg instanceof FileRegion;
+        return msg instanceof MemcacheObject || msg instanceof AsByteBuf || msg instanceof FileRegion;
     }
 
     /**
@@ -85,8 +86,8 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
         if (msg instanceof MemcacheContent) {
             return ((MemcacheContent) msg).content().readableBytes();
         }
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
+        if (msg instanceof AsByteBuf) {
+            return ((AsByteBuf) msg).readableBytes();
         }
         if (msg instanceof FileRegion) {
             return (int) ((FileRegion) msg).count();
@@ -101,8 +102,8 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
      * @return the encoded object.
      */
     private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).retain();
+        if (msg instanceof AsByteBuf) {
+            return ((AsByteBuf) msg).asByteBuf().retain();
         }
         if (msg instanceof MemcacheContent) {
             return ((MemcacheContent) msg).content().retain();

@@ -236,7 +236,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, AsByteBuf {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
@@ -399,6 +399,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * {@code (this.writerIndex - this.readerIndex)}, but maybe overridden to accommodate
      * specialized behavior (e.g. write only).
      */
+    @Override
     public abstract int readableBytes();
 
     /**
@@ -2348,6 +2349,15 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      */
     public boolean isContiguous() {
         return false;
+    }
+
+    /**
+     * A {@code ByteBuf} can turn into itself.
+     * @return This {@code ByteBuf} instance.
+     */
+    @Override
+    public final ByteBuf asByteBuf() {
+        return this;
     }
 
     /**

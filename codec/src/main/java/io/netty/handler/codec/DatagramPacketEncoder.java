@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import static java.util.Objects.requireNonNull;
 
+import io.netty.buffer.AsByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
@@ -81,9 +82,9 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
                     StringUtil.simpleClassName(encoder) + " must produce only one message.");
         }
         Object content = out.get(0);
-        if (content instanceof ByteBuf) {
+        if (content instanceof AsByteBuf) {
             // Replace the ByteBuf with a DatagramPacket.
-            out.set(0, new DatagramPacket((ByteBuf) content, msg.recipient(), msg.sender()));
+            out.set(0, new DatagramPacket(((AsByteBuf) content).asByteBuf(), msg.recipient(), msg.sender()));
         } else {
             throw new EncoderException(
                     StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");
