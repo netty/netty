@@ -919,7 +919,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             lastFuture = parent().write(new DatagramPacket(out, remote));
         }
         if (lastFuture != null) {
-            lastFuture.addListener(timeoutHandler);
+            timeoutHandler.scheduleTimeout();
             return true;
         }
         return false;
@@ -1262,27 +1262,17 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private final class TimeoutHandler implements ChannelFutureListener, Runnable {
-        private Future<?> timeoutFuture;
-
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            if (future.isSuccess()) {
-                // Schedule timeout.
-                // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
-                timeoutFuture = null;
-                scheduleTimeout();
-            }
-        }
+    private final class TimeoutHandler implements Runnable {
+        private ScheduledFuture<?> timeoutFuture;
 
         @Override
         public void run() {
             if (!isConnDestroyed()) {
+                timeoutFuture = null;
                 // Notify quiche there was a timeout.
                 Quiche.quiche_conn_on_timeout(connAddr);
 
                 if (Quiche.quiche_conn_is_closed(connAddr)) {
-                    timeoutFuture = null;
                     forceClose();
                 } else {
                     // We need to call connectionSend when a timeout was triggered.
@@ -1291,23 +1281,32 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     if (send) {
                         flushParent();
                     }
-                    if (!closeAllIfConnectionClosed() && send) {
+                    if (!closeAllIfConnectionClosed()) {
                         // The connection is alive, reschedule.
-                        timeoutFuture = null;
                         scheduleTimeout();
                     }
                 }
             }
         }
 
-        private void scheduleTimeout() {
-            cancel();
+        // Schedule timeout.
+        // See https://docs.rs/quiche/0.6.0/quiche/#generating-outgoing-packets
+        void scheduleTimeout() {
             if (isConnDestroyed()) {
+                cancel();
                 return;
             }
             long nanos = Quiche.quiche_conn_timeout_as_nanos(connAddr);
-            timeoutFuture = eventLoop().schedule(this,
-                    nanos, TimeUnit.NANOSECONDS);
+            if (timeoutFuture == null) {
+                timeoutFuture = eventLoop().schedule(this,
+                        nanos, TimeUnit.NANOSECONDS);
+            } else {
+                long remaining = timeoutFuture.getDelay(TimeUnit.NANOSECONDS);
+                if (remaining <= 0 || remaining > nanos) {
+                    cancel();
+                    timeoutFuture = eventLoop().schedule(this, nanos, TimeUnit.NANOSECONDS);
+                }
+            }
         }
 
         void cancel() {
