@@ -32,7 +32,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private final boolean server;
     private Boolean grease;
-    private boolean earlyData;
     private Long maxIdleTimeout;
     private Long maxRecvUdpPayloadSize;
     private Long maxSendUdpPayloadSize;
@@ -59,7 +58,6 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         Quic.ensureAvailability();
         this.server = builder.server;
         this.grease = builder.grease;
-        this.earlyData = builder.earlyData;
         this.maxIdleTimeout = builder.maxIdleTimeout;
         this.maxRecvUdpPayloadSize = builder.maxRecvUdpPayloadSize;
         this.maxSendUdpPayloadSize = builder.maxSendUdpPayloadSize;
@@ -112,17 +110,6 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final B grease(boolean enable) {
         grease = enable;
-        return self();
-    }
-
-    /**
-     * Enable the support of early data.
-     *
-     * @param enable {@code true} if enabled, {@code false} otherwise
-     * @return the instance itself.
-     */
-    public final B earlyData(boolean enable) {
-        earlyData = enable;
         return self();
     }
 
@@ -380,7 +367,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     private QuicheConfig createConfig() {
-        return new QuicheConfig(grease, earlyData,
+        return new QuicheConfig(grease,
                 maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,

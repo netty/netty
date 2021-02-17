@@ -101,9 +101,18 @@ public final class QuicSslContextBuilder {
     private long sessionTimeout = 300;
     private ClientAuth clientAuth = ClientAuth.NONE;
     private String[] applicationProtocols;
+    private Boolean earlyData;
 
     private QuicSslContextBuilder(boolean forServer) {
         this.forServer = forServer;
+    }
+
+    /**
+     * Enable / disable the usage of early data.
+     */
+    public QuicSslContextBuilder earlyData(boolean enabled) {
+        this.earlyData = enabled;
+        return this;
     }
 
     /**
@@ -260,10 +269,10 @@ public final class QuicSslContextBuilder {
     public QuicSslContext build() {
         if (forServer) {
             return new QuicheQuicSslContext(true, sessionCacheSize, sessionTimeout, clientAuth,
-                    trustManagerFactory, keyManagerFactory, keyPassword, applicationProtocols);
+                    trustManagerFactory, keyManagerFactory, keyPassword, earlyData, applicationProtocols);
         } else {
             return new QuicheQuicSslContext(false, sessionCacheSize, sessionTimeout, clientAuth,
-                    trustManagerFactory, keyManagerFactory, keyPassword, applicationProtocols);
+                    trustManagerFactory, keyManagerFactory, keyPassword, earlyData, applicationProtocols);
         }
     }
 }

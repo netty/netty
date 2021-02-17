@@ -620,6 +620,10 @@ static jlong netty_boringssl_SSLContext_setSessionCacheSize(JNIEnv* env, jclass 
     return 0;
 }
 
+static void netty_boringssl_SSLContext_set_early_data_enabled(JNIEnv* env, jclass clazz, jlong ctx, jboolean enabled){
+    SSL_CTX_set_early_data_enabled((SSL_CTX*) ctx, enabled == JNI_TRUE ? 1 : 0);
+}
+
 jlong netty_boringssl_SSL_new0(JNIEnv* env, jclass clazz, jlong ctx, jboolean server, jstring hostname) {
     SSL* ssl = SSL_new((SSL_CTX*) ctx);
 
@@ -732,6 +736,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
+  { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSL_new0", "(JZLjava/lang/String;)J", (void *) netty_boringssl_SSL_new0 },
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
   { "EVP_PKEY_parse", "([BLjava/lang/String;)J", (void *) netty_boringssl_EVP_PKEY_parse },

@@ -324,10 +324,6 @@ static void netty_quiche_config_grease(JNIEnv* env, jclass clazz, jlong config, 
     quiche_config_grease((quiche_config*) config, value == JNI_TRUE ? true : false);
 }
 
-static void netty_quiche_config_enable_early_data(JNIEnv* env, jclass clazz, jlong config) {
-    quiche_config_enable_early_data((quiche_config*) config);
-}
-
 static void netty_quiche_config_set_max_idle_timeout(JNIEnv* env, jclass clazz, jlong config, jlong value) {
     quiche_config_set_max_idle_timeout((quiche_config*) config, (uint64_t) value);
 }
@@ -479,7 +475,6 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_new", "(I)J", (void *) netty_quiche_config_new },
   { "quiche_config_enable_dgram", "(JZII)V", (void *) netty_quiche_config_enable_dgram },
   { "quiche_config_grease", "(JZ)V", (void *) netty_quiche_config_grease },
-  { "quiche_config_enable_early_data", "(J)V", (void *) netty_quiche_config_enable_early_data },
   { "quiche_config_set_max_idle_timeout", "(JJ)V", (void *) netty_quiche_config_set_max_idle_timeout },
   { "quiche_config_set_max_recv_udp_payload_size", "(JJ)V", (void *) netty_quiche_config_set_max_recv_udp_payload_size },
   { "quiche_config_set_max_send_udp_payload_size", "(JJ)V", (void *) netty_quiche_config_set_max_send_udp_payload_size },

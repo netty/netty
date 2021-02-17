@@ -376,13 +376,6 @@ final class Quiche {
 
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#135">
-     *     quiche_config_enable_early_data</a>.
-     */
-    static native void quiche_config_enable_early_data(long configAddr);
-
-    /**
-     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#143">
      *     quiche_config_set_max_idle_timeout</a>.
      */

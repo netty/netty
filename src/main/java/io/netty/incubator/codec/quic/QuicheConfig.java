@@ -19,7 +19,7 @@ final class QuicheConfig {
     private final boolean isDatagramSupported;
     private final long config;
 
-    QuicheConfig(Boolean grease, boolean earlyData, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
+    QuicheConfig(Boolean grease, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
                         Long maxRecvUdpPayloadSize, Long initialMaxData,
                         Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
@@ -30,9 +30,6 @@ final class QuicheConfig {
         try {
             if (grease != null) {
                 Quiche.quiche_config_grease(config, grease);
-            }
-            if (earlyData) {
-                Quiche.quiche_config_enable_early_data(config);
             }
             if (maxIdleTimeout != null) {
                 Quiche.quiche_config_set_max_idle_timeout(config, maxIdleTimeout);

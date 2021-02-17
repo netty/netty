@@ -63,6 +63,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
                          ClientAuth clientAuth, TrustManagerFactory trustManagerFactory,
                          KeyManagerFactory keyManagerFactory, String password,
+                         Boolean earlyData,
                          String... applicationProtocols) {
         Quic.ensureAvailability();
         this.server = server;
@@ -97,6 +98,9 @@ final class QuicheQuicSslContext extends QuicSslContext {
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
         this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(ctx, sessionCacheSize);
         this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(ctx, sessionTimeout);
+        if (earlyData != null) {
+            BoringSSL.SSLContext_set_early_data_enabled(ctx, earlyData);
+        }
         sessionCtx = new QuicheQuicSslSessionContext(this);
     }
 
