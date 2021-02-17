@@ -95,7 +95,12 @@ static STACK_OF(CRYPTO_BUFFER)* arrayToStack(JNIEnv* env, jobjectArray array, CR
         int data_len = (*env)->GetArrayLength(env, bytes);
         uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, bytes, 0);
         CRYPTO_BUFFER *buffer = CRYPTO_BUFFER_new(data, data_len, pool);
-        if (buffer == NULL || sk_CRYPTO_BUFFER_push(stack, buffer) <= 0) {
+        if (buffer == NULL) {
+            goto cleanup;
+        }
+        if (sk_CRYPTO_BUFFER_push(stack, buffer) <= 0) {
+            // If we cant push for whatever reason ensure we release the buffer.
+            CRYPTO_BUFFER_free(buffer);
             goto cleanup;
         }
     }
@@ -541,7 +546,8 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     SSL_CTX_set_ex_data(ctx, certificateCallbackIdx, certificateCallbackRef);
     SSL_CTX_set_cert_cb(ctx, quic_certificate_cb, certificateCallbackRef);
 
-    SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
+    // Disable the usage of the pool for now.
+    //SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
 
     STACK_OF(CRYPTO_BUFFER) *names = arrayToStack(env, subjectNames, NULL);
     if (names != NULL) {
@@ -599,10 +605,13 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, long ctx)
     OPENSSL_free(data);
 
     CRYPTO_BUFFER_POOL* pool = SSL_CTX_get_ex_data(ssl_ctx, crypto_buffer_pool_idx);
+    SSL_CTX_free(ssl_ctx);
+
+    // The pool should be freed last in case that the SSL_CTX has a reference to things tha are stored in the
+    // pool itself. Otherwise we may see an assert error when trying to call CRYPTO_BUFFER_POOL_free.
     if (pool != NULL) {
         CRYPTO_BUFFER_POOL_free(pool);
     }
-    SSL_CTX_free(ssl_ctx);
 }
 
 static jlong netty_boringssl_SSLContext_setSessionCacheTimeout(JNIEnv* env, jclass clazz, jlong ctx, jlong timeout){

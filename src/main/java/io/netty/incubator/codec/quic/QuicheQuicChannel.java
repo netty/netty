@@ -124,6 +124,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final InetSocketAddress remote;
 
     private long connAddr = -1;
+    @SuppressWarnings("unused")
+    private QuicheQuicSslEngine engine;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
@@ -181,8 +183,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
-    void attach(long connAddr) {
+    void attach(long connAddr, QuicheQuicSslEngine engine) {
         this.connAddr = connAddr;
+        // Store a reference to QuicheQuicSslEngine in the channel so it is never collected before
+        // the channel
+        this.engine = engine;
         byte[] traceId = Quiche.quiche_conn_trace_id(connAddr);
         if (traceId != null) {
             this.traceId = new String(traceId);
@@ -223,6 +228,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (connection == -1) {
                 failConnectPromiseAndThrow(new ConnectException());
             }
+            // Store a reference to QuicheQuicSslEngine in the channel so it is never collected before
+            // the channel
+            this.engine = quicheEngine;
             byte[] bytes = Quiche.quiche_conn_trace_id(connection);
             if (bytes != null) {
                 this.traceId = new String(bytes);
@@ -293,6 +301,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         state = CLOSED;
 
         timeoutHandler.cancel();
+        // Set to null so the wrapped context can be collected
+        engine = null;
     }
 
     @Override

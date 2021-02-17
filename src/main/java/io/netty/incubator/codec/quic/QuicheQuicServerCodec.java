@@ -209,14 +209,16 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             throw new IllegalArgumentException("QuicSslEngine is not created in server mode");
         }
 
+        QuicheQuicSslEngine quicSslEngine = (QuicheQuicSslEngine) engine;
         conn = Quiche.quiche_conn_new_with_tls(scidAddr, scidLen, ocidAddr, ocidLen,
-                config.nativeAddress(), ((QuicheQuicSslEngine) engine).createNative(), true);
+                config.nativeAddress(), quicSslEngine.createNative(), true);
         if (conn < 0) {
             channel.unsafe().closeForcibly();
             LOGGER.debug("quiche_accept failed");
             return null;
         }
-        channel.attach(conn);
+
+        channel.attach(conn, quicSslEngine);
 
         putChannel(channel);
         ctx.channel().eventLoop().register(channel);
