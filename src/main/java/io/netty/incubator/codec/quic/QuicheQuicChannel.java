@@ -915,8 +915,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (isConnDestroyed()) {
             return false;
         }
-        ChannelFuture lastFuture = null;
 
+        boolean packetWasWritten = false;
         for (;;) {
             ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
             int writerIndex = out.writerIndex();
@@ -940,9 +940,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 continue;
             }
             out.writerIndex(writerIndex + written);
-            lastFuture = parent().write(new DatagramPacket(out, remote));
+            parent().write(new DatagramPacket(out, remote));
+            packetWasWritten = true;
         }
-        if (lastFuture != null) {
+        if (packetWasWritten) {
             timeoutHandler.scheduleTimeout();
             return true;
         }
