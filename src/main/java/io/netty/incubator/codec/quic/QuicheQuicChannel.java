@@ -419,7 +419,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.close
         written |= connectionSend();
         if (written) {
-            flushParent();
+            // As this is the close let us flush it asap.
+            forceFlushParent();
         }
     }
 
@@ -516,7 +517,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         // If this returned DONE we couldn't write anymore. This happens if the internal queue
                         // is full. In this case we should call quiche_conn_send(...) and so make space again.
                         if (connectionSend()) {
-                            flushParent();
+                            forceFlushParent();
                         }
                         // Let's try again to write the message.
                         retry = true;
@@ -555,7 +556,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return METADATA;
     }
 
+    /**
+     * This may call {@link #flush()} on the parent channel if needed. The flush may delayed until the read loop
+     * is over.
+     */
     private void flushParent() {
+        if (!inFireChannelReadCompleteQueue) {
+            forceFlushParent();
+        }
+    }
+
+    /**
+     * Call @link #flush()} on the parent channel.
+     */
+    private void forceFlushParent() {
         parent().flush();
     }
 
@@ -639,7 +653,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         //
         // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
         if (connectionSend()) {
-            flushParent();
+            // Force the flush so the shutdown can be seen asap.
+            forceFlushParent();
         }
         Quiche.notifyPromise(res, promise);
     }
@@ -728,10 +743,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // now or we will do so once we see the channelReadComplete event.
             //
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-            if (sendSomething) {
-                if (connectionSend()) {
-                    flushParent();
-                }
+            if (sendSomething && connectionSend()) {
+                flushParent();
             }
         }
     }
@@ -761,7 +774,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             //
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
             if (connectionSend()) {
-                flushParent();
+                // Let's try to send as fast as possible.
+                forceFlushParent();
             }
         }
     }
@@ -800,9 +814,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void writable() {
-        connectionSend();
+        boolean written = connectionSend();
         handleWritableStreams();
-        connectionSend();
+        written |= connectionSend();
+
+        if (written) {
+            // The writability changed so lets flush as fast as possible.
+            forceFlushParent();
+        }
     }
 
     void streamHasPendingWrites(long streamId) {
@@ -863,6 +882,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     void recvComplete() {
         inFireChannelReadCompleteQueue = false;
         if (isConnDestroyed()) {
+            // Ensure we flush all pending writes.
+            forceFlushParent();
             return;
         }
         fireChannelReadCompleteIfNeeded();
@@ -870,6 +891,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // If we had called recv we need to ensure we call send as well.
         // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
         connectionSend();
+
+        // We are done with the read loop, flush all pending writes now.
+        forceFlushParent();
     }
 
     private void fireChannelReadCompleteIfNeeded() {
@@ -1052,7 +1076,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
 
                             if (handleWritableStreams()) {
-                                // TODO: Should we only flush once ?
+                                // Some data was produced, let's flush.
                                 flushParent();
                             }
 

@@ -39,7 +39,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
     private final int maxTokenLength;
-    private boolean channelReadPending;
 
     private QuicHeaderParser headerParser;
     private QuicHeaderParser.QuicHeaderProcessor parserCallback;
@@ -99,7 +98,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        channelReadPending = true;
         DatagramPacket packet = (DatagramPacket) msg;
         try {
             ByteBuf buffer = ((DatagramPacket) msg).content();
@@ -150,28 +148,15 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) {
-        try {
-            for (;;) {
-                QuicheQuicChannel channel = needsFireChannelReadComplete.poll();
-                if (channel == null) {
-                    break;
-                }
-                channel.recvComplete();
-                if (channel.freeIfClosed()) {
-                    connections.remove(channel.key());
-                }
+        for (;;) {
+            QuicheQuicChannel channel = needsFireChannelReadComplete.poll();
+            if (channel == null) {
+                break;
             }
-        } finally {
-            channelReadPending = false;
-            ctx.flush();
-        }
-    }
-
-    @Override
-    public final void flush(ChannelHandlerContext ctx) {
-        if (!channelReadPending) {
-            // We can't really easily aggregate flushes, so just do it now.
-            ctx.flush();
+            channel.recvComplete();
+            if (channel.freeIfClosed()) {
+                connections.remove(channel.key());
+            }
         }
     }
 
@@ -183,15 +168,13 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 QuicheQuicChannel channel = entries.next().getValue();
                 // TODO: Be a bit smarter about this.
                 channel.writable();
-                if (!ctx.channel().isWritable()) {
-                    ctx.flush();
-                }
                 removeIfClosed(entries, channel);
             }
+        } else {
+            // As we batch flushes we need to ensure we at least try to flush a batch once the channel becomes
+            // unwritable. Otherwise we may end up with buffering too much writes and so waste memory.
+            ctx.flush();
         }
-        // As we batch flushes we need to ensure we at least try to flush a batch once the channel becomes
-        // unwritable. Otherwise we may end up with buffering too much writes and so waste memory.
-        ctx.flush();
 
         ctx.fireChannelWritabilityChanged();
     }
