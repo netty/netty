@@ -26,11 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class WebSocket08FrameDecoderTest {
+public class WebSocket13FrameDecoderTest {
 
     @Test
     public void channelInactive() throws Exception {
-        final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
+        final WebSocket13FrameDecoder decoder = new WebSocket13FrameDecoder(true, true, 65535, false);
         final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         decoder.handlerAdded(ctx);
         decoder.channelInactive(ctx);
@@ -50,8 +50,8 @@ public class WebSocket08FrameDecoderTest {
         validIanaCodes.removeAll(forbiddenIanaCodes);
 
         for (int statusCode: validIanaCodes) {
-            EmbeddedChannel encoderChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
-            EmbeddedChannel decoderChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(true, true, 65535, false));
+            EmbeddedChannel encoderChannel = new EmbeddedChannel(new WebSocket13FrameEncoder(true));
+            EmbeddedChannel decoderChannel = new EmbeddedChannel(new WebSocket13FrameDecoder(true, true, 65535, false));
 
             assertTrue(encoderChannel.writeOutbound(new CloseWebSocketFrame(statusCode, "Bye")));
             assertTrue(encoderChannel.finish());

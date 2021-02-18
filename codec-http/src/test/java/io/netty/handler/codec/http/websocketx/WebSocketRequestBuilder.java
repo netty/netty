@@ -107,16 +107,6 @@ public class WebSocketRequestBuilder {
         return this;
     }
 
-    public WebSocketRequestBuilder version8() {
-        version = WebSocketVersion.V08;
-        return this;
-    }
-
-    public WebSocketRequestBuilder version00() {
-        version = null;
-        return this;
-    }
-
     public WebSocketRequestBuilder noVersion() {
         return this;
     }
@@ -138,7 +128,7 @@ public class WebSocketRequestBuilder {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            if (version == WebSocketVersion.V13 || version == WebSocketVersion.V00) {
+            if (version == WebSocketVersion.V13) {
                 headers.set(HttpHeaderNames.ORIGIN, origin);
             } else {
                 headers.set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin);

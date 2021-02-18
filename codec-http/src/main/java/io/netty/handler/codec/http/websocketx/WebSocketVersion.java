@@ -31,24 +31,6 @@ public enum WebSocketVersion {
     UNKNOWN(AsciiString.cached("unknown")),
 
     /**
-     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
-     * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
-     */
-    V00(AsciiString.cached("0")),
-
-    /**
-     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07"
-     * >draft-ietf-hybi-thewebsocketprotocol- 07</a>
-     */
-    V07(AsciiString.cached("7")),
-
-    /**
-     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
-     * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
-     */
-    V08(AsciiString.cached("8")),
-
-    /**
      * <a href="https://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
      * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
      * 17</a>

@@ -15,12 +15,32 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import org.junit.Test;
 
 import java.net.URI;
 
-public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07Test {
+import static org.junit.Assert.assertEquals;
+
+public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTest {
+
+    @Test
+    public void testHostHeaderPreserved() {
+        URI uri = URI.create("ws://localhost:9999");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null,
+                new DefaultHttpHeaders().set(HttpHeaderNames.HOST, "test.netty.io"), false);
+
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/", request.uri());
+            assertEquals("test.netty.io", request.headers().get(HttpHeaderNames.HOST));
+        } finally {
+            request.release();
+        }
+    }
 
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -33,6 +53,16 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07
     @Override
     protected CharSequence getOriginHeaderName() {
         return HttpHeaderNames.ORIGIN;
+    }
+
+    @Override
+    protected CharSequence getProtocolHeaderName() {
+        return HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL;
+    }
+
+    @Override
+    protected CharSequence[] getHandshakeRequiredHeaderNames() {
+        return new CharSequence[0];
     }
 
 }

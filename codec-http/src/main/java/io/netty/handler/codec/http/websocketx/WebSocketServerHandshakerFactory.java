@@ -136,21 +136,11 @@ public class WebSocketServerHandshakerFactory {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
                 return new WebSocketServerHandshaker13(
                         webSocketURL, subprotocols, decoderConfig);
-            } else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
-                // Version 8 of the wire protocol - version 10 of the draft hybi specification.
-                return new WebSocketServerHandshaker08(
-                        webSocketURL, subprotocols, decoderConfig);
-            } else if (version.equals(WebSocketVersion.V07.toHttpHeaderValue())) {
-                // Version 8 of the wire protocol - version 07 of the draft hybi specification.
-                return new WebSocketServerHandshaker07(
-                        webSocketURL, subprotocols, decoderConfig);
             } else {
                 return null;
             }
-        } else {
-            // Assume version 00 where version header was not specified
-            return new WebSocketServerHandshaker00(webSocketURL, subprotocols, decoderConfig);
         }
+        return null;
     }
 
     /**
