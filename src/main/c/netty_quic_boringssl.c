@@ -546,8 +546,8 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     SSL_CTX_set_ex_data(ctx, certificateCallbackIdx, certificateCallbackRef);
     SSL_CTX_set_cert_cb(ctx, quic_certificate_cb, certificateCallbackRef);
 
-    // Disable the usage of the pool for now.
-    //SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
+    // Use a pool for our certificates so we can share these across connections.
+    SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
 
     STACK_OF(CRYPTO_BUFFER) *names = arrayToStack(env, subjectNames, NULL);
     if (names != NULL) {
