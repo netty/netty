@@ -163,6 +163,13 @@ final class Quiche {
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_congestion_control();
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L98">
+     *     QUICHE_ERR_STREAM_STOPPED</a>.
+     */
+    static final int QUICHE_ERR_STREAM_STOPPED =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_stream_stopped();
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L176">
      *     QUICHE_CC_RENO</a>.
      */

@@ -35,6 +35,7 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int quiche_err_flow_control();
     static native int quiche_err_stream_limit();
     static native int quiche_err_final_size();
+    static native int quiche_err_stream_stopped();
     static native int quiche_err_congestion_control();
 
     static native int quiche_cc_reno();
