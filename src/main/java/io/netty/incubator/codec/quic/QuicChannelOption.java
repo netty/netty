@@ -23,13 +23,6 @@ import io.netty.channel.ChannelOption;
 public final class QuicChannelOption<T> extends ChannelOption<T> {
 
     /**
-     * Optional parameter to verify peer's certificate.
-     * See <a href="https://docs.rs/quiche/0.6.0/quiche/fn.connect.html">server_name</a>.
-     */
-    public static final ChannelOption<String> PEER_CERT_SERVER_NAME =
-        valueOf(QuicChannelOption.class, "PEER_CERT_SERVER_NAME");
-
-    /**
      * If set to {@code true} the {@link QuicStreamChannel} will read {@link QuicStreamFrame}s and fire it through
      * the pipeline, if {@code false} it will read {@link io.netty.buffer.ByteBuf} and translate the FIN flag to
      * events.

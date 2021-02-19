@@ -15,11 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.util.Map;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -32,11 +29,6 @@ final class DefaultQuicChannelConfig extends DefaultChannelConfig implements Qui
 
     DefaultQuicChannelConfig(Channel channel) {
         super(channel);
-    }
-
-    @Override
-    public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), QuicChannelOption.PEER_CERT_SERVER_NAME);
     }
 
     @Override
