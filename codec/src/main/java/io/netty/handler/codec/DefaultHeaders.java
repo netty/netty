@@ -1012,12 +1012,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return value;
     }
 
-    private HeaderEntry<K, V> remove0(HeaderEntry<K, V> entry, HeaderEntry<K, V> previous) {
+    HeaderEntry<K, V> remove0(HeaderEntry<K, V> entry, HeaderEntry<K, V> previous) {
         int i = index(entry.hash);
-        HeaderEntry<K, V> e = entries[i];
-        if (e == entry) {
+        HeaderEntry<K, V> firstEntry = entries[i];
+        if (firstEntry == entry) {
             entries[i] = entry.next;
             previous = entries[i];
+        } else if (previous == null) {
+            // If we don't have any existing starting point, then start from the beginning.
+            previous = firstEntry;
+            HeaderEntry<K, V> next = firstEntry.next;
+            while (next != null && next != entry) {
+                previous = next;
+                next = next.next;
+            }
+            assert next != null: "Entry not found in its hash bucket: " + entry;
+            previous.next = entry.next;
         } else {
             previous.next = entry.next;
         }

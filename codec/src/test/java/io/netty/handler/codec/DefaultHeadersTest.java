@@ -15,6 +15,7 @@
 package io.netty.handler.codec;
 
 import io.netty.util.AsciiString;
+import io.netty.util.HashingStrategy;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -26,6 +27,9 @@ import java.util.NoSuchElementException;
 
 import static io.netty.util.AsciiString.of;
 import static java.util.Arrays.asList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -47,6 +51,10 @@ public class DefaultHeadersTest {
 
         TestDefaultHeaders(ValueConverter<CharSequence> converter) {
             super(converter);
+        }
+
+        TestDefaultHeaders(HashingStrategy<CharSequence> nameHashingStrategy) {
+            super(nameHashingStrategy, CharSequenceValueConverter.INSTANCE);
         }
     }
 
@@ -758,5 +766,51 @@ public class DefaultHeadersTest {
         assertTrue(headers.getBoolean("name1", false));
         assertTrue(headers.getBoolean("name2", false));
         assertTrue(headers.getBoolean("name3", false));
+    }
+
+    @Test
+    public void handlingOfHeaderNameHashCollisions() {
+        TestDefaultHeaders headers = new TestDefaultHeaders(new HashingStrategy<CharSequence>() {
+            @Override
+            public int hashCode(CharSequence obj) {
+                return 0; // Degenerate hashing strategy to enforce collisions.
+            }
+
+            @Override
+            public boolean equals(CharSequence a, CharSequence b) {
+                return a.equals(b);
+            }
+        });
+
+        headers.add("Cookie", "a=b; c=d; e=f");
+        headers.add("other", "text/plain");  // Add another header which will be saved in the same entries[index]
+
+        simulateCookieSplitting(headers);
+        List<CharSequence> cookies = headers.getAll("Cookie");
+
+        assertThat(cookies, hasSize(3));
+        assertThat(cookies, containsInAnyOrder((CharSequence) "a=b", "c=d", "e=f"));
+    }
+
+    /**
+     * Split up cookies into individual cookie crumb headers.
+     */
+    static void simulateCookieSplitting(TestDefaultHeaders headers) {
+        Iterator<CharSequence> cookieItr = headers.valueIterator("Cookie");
+        if (!cookieItr.hasNext()) {
+            return;
+        }
+        // We want to avoid "concurrent modifications" of the headers while we are iterating. So we insert crumbs
+        // into an intermediate collection and insert them after the split process concludes.
+        List<CharSequence> cookiesToAdd = new ArrayList<CharSequence>();
+        while (cookieItr.hasNext()) {
+            //noinspection DynamicRegexReplaceableByCompiledPattern
+            String[] cookies = cookieItr.next().toString().split("; ");
+            cookiesToAdd.addAll(asList(cookies));
+            cookieItr.remove();
+        }
+        for (CharSequence crumb : cookiesToAdd) {
+            headers.add("Cookie", crumb);
+        }
     }
 }
