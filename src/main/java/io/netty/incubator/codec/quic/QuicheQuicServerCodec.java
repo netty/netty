@@ -119,10 +119,10 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             if (res < 0) {
                 out.release();
                 Quiche.throwIfError(res);
-                return null;
+            } else {
+                ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
             }
-
-            ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
+            return null;
         }
 
         final int offset;
