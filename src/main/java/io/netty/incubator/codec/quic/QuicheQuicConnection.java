@@ -16,21 +16,14 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.util.ReferenceCounted;
-import io.netty.util.ResourceLeakDetector;
-import io.netty.util.ResourceLeakDetectorFactory;
-import io.netty.util.ResourceLeakTracker;
 
 final class QuicheQuicConnection {
-    private static final ResourceLeakDetector<QuicheQuicConnection> LEAK_DETECTOR =
-            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(QuicheQuicConnection.class);
-    private long connection;
     private final ReferenceCounted refCnt;
-    private final ResourceLeakTracker<QuicheQuicConnection> tracker;
+    private long connection;
 
     QuicheQuicConnection(long connection, ReferenceCounted refCnt) {
         this.connection = connection;
         this.refCnt = refCnt;
-        tracker = LEAK_DETECTOR.track(this);
     }
 
     // This should not need to be synchronized as it will either be called from the EventLoop thread or
@@ -40,9 +33,6 @@ final class QuicheQuicConnection {
             try {
                 Quiche.quiche_conn_free(connection);
                 refCnt.release();
-                if (tracker != null) {
-                    tracker.close(this);
-                }
             } finally {
                 connection = -1;
             }

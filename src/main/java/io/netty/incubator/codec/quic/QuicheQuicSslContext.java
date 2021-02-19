@@ -21,9 +21,6 @@ import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.ResourceLeakDetector;
-import io.netty.util.ResourceLeakDetectorFactory;
-import io.netty.util.ResourceLeakTracker;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
@@ -332,15 +329,10 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     private static final class NativeSslContext extends AbstractReferenceCounted {
-        private static final ResourceLeakDetector<NativeSslContext> LEAK_DETECTOR =
-                ResourceLeakDetectorFactory.instance().newResourceLeakDetector(NativeSslContext.class);
-
         private final long ctx;
-        private final ResourceLeakTracker<NativeSslContext> tracker;
 
         NativeSslContext(long ctx) {
             this.ctx = ctx;
-            tracker = LEAK_DETECTOR.track(this);
         }
 
         long address() {
@@ -350,9 +342,6 @@ final class QuicheQuicSslContext extends QuicSslContext {
         @Override
         protected void deallocate() {
             BoringSSL.SSLContext_free(ctx);
-            if (tracker != null) {
-                tracker.close(this);
-            }
         }
 
         @Override
