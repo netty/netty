@@ -360,6 +360,18 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
     }
 
     @Override
+    public QuicStreamChannel flush() {
+        super.flush();
+        return this;
+    }
+
+    @Override
+    public QuicStreamChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
     public QuicStreamChannelConfig config() {
         return config;
     }

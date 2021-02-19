@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
@@ -89,6 +90,12 @@ public interface QuicStreamChannel extends DuplexChannel {
 
     @Override
     QuicChannel parent();
+
+    @Override
+    QuicStreamChannel read();
+
+    @Override
+    QuicStreamChannel flush();
 
     @Override
     QuicStreamChannelConfig config();

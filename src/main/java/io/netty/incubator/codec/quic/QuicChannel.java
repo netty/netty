@@ -28,6 +28,12 @@ import io.netty.util.concurrent.Promise;
  */
 public interface QuicChannel extends Channel {
 
+    @Override
+    QuicChannel read();
+
+    @Override
+    QuicChannel flush();
+
     /**
      * Returns the configuration of this channel.
      */
