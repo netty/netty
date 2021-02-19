@@ -152,7 +152,7 @@ final class PoolThreadCache {
     }
 
     /**
-     * Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
+     * Try to allocate a normal buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
     boolean allocateNormal(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int sizeIdx) {
         return allocate(cacheForNormal(area, sizeIdx), buf, reqCapacity);
