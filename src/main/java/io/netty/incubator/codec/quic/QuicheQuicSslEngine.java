@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.LongFunction;
 
 final class QuicheQuicSslEngine extends QuicSslEngine {
     private final QuicheQuicSslContext ctx;
@@ -49,7 +50,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     private List<SNIServerName> sniHostNames;
     private boolean handshakeFinished;
     private String applicationProtocol;
-    private final String tlsHostName;
+    final String tlsHostName;
 
     QuicheQuicSslEngine(QuicheQuicSslContext ctx, String peerHost, int peerPort) {
         this.ctx = ctx;
@@ -65,8 +66,8 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
     }
 
-    long createNative() {
-        return ctx.newSSL(this, tlsHostName);
+    QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator) {
+        return ctx.createConnection(connectionCreator, this);
     }
 
     void setLocalCertificateChain(Certificate[] localCertificateChain) {

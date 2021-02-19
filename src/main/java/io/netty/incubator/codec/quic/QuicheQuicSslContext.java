@@ -19,6 +19,11 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
@@ -46,11 +51,11 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
+import java.util.function.LongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 final class QuicheQuicSslContext extends QuicSslContext {
-    final long ctx;
     final ClientAuth clientAuth;
     private final boolean server;
     @SuppressWarnings("deprecation")
@@ -59,6 +64,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     private long sessionTimeout;
     private final QuicheQuicSslSessionContext sessionCtx;
     private final QuicheQuicSslEngineMap engineMap = new QuicheQuicSslEngineMap();
+    private final NativeSslContext nativeSslContext;
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
                          ClientAuth clientAuth, TrustManagerFactory trustManagerFactory,
@@ -91,15 +97,16 @@ final class QuicheQuicSslContext extends QuicSslContext {
             keyManager = chooseKeyManager(keyManagerFactory);
         }
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
-        ctx = BoringSSL.SSLContext_new(server, applicationProtocols, new BoringSSLHandshakeCompleteCallback(engineMap),
+        nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
+                new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
-                verifyMode, BoringSSL.subjectNames(trustManager.getAcceptedIssuers()));
+                verifyMode, BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
-        this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(ctx, sessionCacheSize);
-        this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(ctx, sessionTimeout);
+        this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), sessionCacheSize);
+        this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), sessionTimeout);
         if (earlyData != null) {
-            BoringSSL.SSLContext_set_early_data_enabled(ctx, earlyData);
+            BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), earlyData);
         }
         sessionCtx = new QuicheQuicSslSessionContext(this);
     }
@@ -152,10 +159,20 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
     }
 
-    long newSSL(QuicheQuicSslEngine engine, String tlsHostName) {
-        long ssl = BoringSSL.SSL_new(ctx, isServer(), tlsHostName);
+    QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator, QuicheQuicSslEngine engine) {
+        nativeSslContext.retain();
+        long ssl = BoringSSL.SSL_new(nativeSslContext.address(), isServer(), engine.tlsHostName);
         engineMap.put(ssl, engine);
-        return ssl;
+        long connection = connectionCreator.apply(ssl);
+        if (connection == -1) {
+            engineMap.remove(ssl);
+            // We retained before but as we don't create a QuicheQuicConnection and transfer ownership we need to
+            // explict call release again here.
+            nativeSslContext.release();
+            return null;
+        }
+        // The connection will call nativeSslContext.release() once it is freed.
+        return new QuicheQuicConnection(connection, nativeSslContext);
     }
 
     @Override
@@ -232,16 +249,19 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     @Override
     protected void finalize() throws Throwable {
-        super.finalize();
-        BoringSSL.SSLContext_free(ctx);
+        try {
+            nativeSslContext.release();
+        } finally {
+            super.finalize();
+        }
     }
 
     void setSessionTimeout(int seconds) throws IllegalArgumentException {
-        sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(ctx, seconds);
+        sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), seconds);
     }
 
     void setSessionCacheSize(int size) throws IllegalArgumentException {
-        sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(ctx, size);
+        sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), size);
     }
 
     @SuppressWarnings("deprecation")
@@ -308,6 +328,36 @@ final class QuicheQuicSslContext extends QuicSslContext {
         @Override
         public int getSessionCacheSize() {
             return (int) context.sessionCacheSize();
+        }
+    }
+
+    private static final class NativeSslContext extends AbstractReferenceCounted {
+        private static final ResourceLeakDetector<NativeSslContext> LEAK_DETECTOR =
+                ResourceLeakDetectorFactory.instance().newResourceLeakDetector(NativeSslContext.class);
+
+        private final long ctx;
+        private final ResourceLeakTracker<NativeSslContext> tracker;
+
+        NativeSslContext(long ctx) {
+            this.ctx = ctx;
+            tracker = LEAK_DETECTOR.track(this);
+        }
+
+        long address() {
+            return ctx;
+        }
+
+        @Override
+        protected void deallocate() {
+            BoringSSL.SSLContext_free(ctx);
+            if (tracker != null) {
+                tracker.close(this);
+            }
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
         }
     }
 }

@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 final class QuicheConfig {
     private final boolean isDatagramSupported;
-    private final long config;
+    private long config = -1;
 
     QuicheConfig(Boolean grease, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
                         Long maxRecvUdpPayloadSize, Long initialMaxData,
@@ -104,9 +104,24 @@ final class QuicheConfig {
         return config;
     }
 
+    // Let's override finalize() as we want to ensure we never leak memory even if the user will miss to close
+    // Channel that uses this handler that used the config and just let it get GC'ed.
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            free();
+        } finally {
+            super.finalize();
+        }
+    }
+
     void free() {
-        if (config != 0) {
-            Quiche.quiche_config_free(config);
+        if (config != -1) {
+            try {
+                Quiche.quiche_config_free(config);
+            } finally {
+                config = -1;
+            }
         }
     }
 }
