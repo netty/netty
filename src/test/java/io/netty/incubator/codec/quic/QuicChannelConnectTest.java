@@ -40,6 +40,8 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.AlreadyConnectedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
@@ -53,6 +55,41 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class QuicChannelConnectTest extends AbstractQuicTest {
+
+    @Test(timeout = 5000)
+    public void testConnectAndQLog() throws Throwable {
+        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient();
+        Path path = Files.createTempFile("qlog", ".quic");
+        assertTrue(path.toFile().delete());
+        try {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .option(QuicChannelOption.QLOG,
+                            new QLogConfiguration(path.toString(), "testTitle", "test"))
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get();
+
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(10)).sync();
+            stream.close().sync();
+            quicChannel.close().sync();
+            quicChannel.closeFuture().sync();
+            // Some log should have been written at some point.
+            while (Files.readAllLines(path).isEmpty()) {
+                Thread.sleep(100);
+            }
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
 
     @Test
     public void testAddressValidation() throws Throwable {

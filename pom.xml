@@ -397,10 +397,7 @@
                     <equals arg1="${os.detected.name}" arg2="windows" />
                     <then>
                       <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg value="build" />
-                        <arg value="--features" />
-                        <arg value="ffi" />
-                        <arg value="--release" />
+                        <arg line='build --features "ffi qlog" --release' />
                         <arg value="${cargoTarget}" />
                         <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                         <env key="DEBUG" value="true" />
@@ -410,10 +407,7 @@
                    </then>
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg value="build" />
-                        <arg value="--features" />
-                        <arg value="ffi" />
-                        <arg value="--release" />
+                        <arg line='build --features "ffi qlog" --release' />
                         <env key="CFLAGS" value="${extraCflags}" />
                         <env key="CXXFLAGS" value="${extraCxxflags}" />
                         <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />

@@ -219,7 +219,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             return null;
         }
 
-        channel.attach(connection);
+        channel.attachQuicheConnection(connection);
 
         putChannel(channel);
         ctx.channel().eventLoop().register(channel);

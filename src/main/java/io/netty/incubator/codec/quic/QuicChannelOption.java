@@ -30,6 +30,12 @@ public final class QuicChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Boolean> READ_FRAMES =
             valueOf(QuicChannelOption.class, "READ_FRAMES");
 
+    /**
+     * Enable <a href="https://quiclog.github.io/internet-drafts/draft-marx-qlog-main-schema.html">qlog</a>
+     * for a {@link QuicChannel}.
+     */
+    public static final ChannelOption<QLogConfiguration> QLOG = valueOf(QuicChannelOption.class, "QLOG");
+
     @SuppressWarnings({ "deprecation" })
     private QuicChannelOption() {
         super(null);

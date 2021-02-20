@@ -114,7 +114,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final long[] readableStreams = new long[128];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
-    private final QuicChannelConfig config;
+    private final DefaultQuicChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
     private final ChannelHandler streamHandler;
@@ -181,8 +181,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
-    void attach(QuicheQuicConnection connection) {
+    void attachQuicheConnection(QuicheQuicConnection connection) {
         this.connection = connection;
+        QLogConfiguration configuration = config.getQLogConfiguration();
+        if (configuration != null) {
+            if (!Quiche.quiche_conn_set_qlog_path(connection.address(), configuration.path(),
+                    configuration.logTitle(), configuration.logDescription())) {
+                logger.info("Unable to create qlog file: {} ", configuration.path());
+            }
+        }
         byte[] traceId = Quiche.quiche_conn_trace_id(connection.address());
         if (traceId != null) {
             this.traceId = new String(traceId);
@@ -225,11 +232,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 failConnectPromiseAndThrow(new ConnectException());
                 return;
             }
-            byte[] bytes = Quiche.quiche_conn_trace_id(connection.address());
-            if (bytes != null) {
-                this.traceId = new String(bytes);
-            }
-            this.connection = connection;
+            attachQuicheConnection(connection);
             this.supportsDatagram = supportsDatagram;
             key = connectId;
         } finally {

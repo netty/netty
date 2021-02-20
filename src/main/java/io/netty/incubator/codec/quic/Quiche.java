@@ -217,6 +217,12 @@ final class Quiche {
                                                 long configAddr, long ssl, boolean isServer);
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/master/include/quiche.h#L248">
+     *     quiche_conn_set_qlog_path</a>.
+     */
+    static native boolean quiche_conn_set_qlog_path(long connAddr, String path, String logTitle, String logDescription);
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L249">quiche_conn_recv</a>.
      */
     static native int quiche_conn_recv(long connAddr, long bufAddr, int bufLen);

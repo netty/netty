@@ -134,6 +134,20 @@ static jboolean netty_quiche_version_is_supported(JNIEnv* env, jclass clazz, jin
     return quiche_version_is_supported(version) == true ? JNI_TRUE : JNI_FALSE;
 }
 
+static jboolean netty_quiche_conn_set_qlog_path(JNIEnv* env, jclass clazz, jlong conn, jstring path,
+                          jstring log_title, jstring log_desc) {
+    const char *nativePath = (*env)->GetStringUTFChars(env, path, 0);
+    const char *nativeLogTitle = (*env)->GetStringUTFChars(env, log_title, 0);
+    const char *nativeLogDesc = (*env)->GetStringUTFChars(env, log_desc, 0);
+    bool ret = quiche_conn_set_qlog_path((quiche_conn *) conn, nativePath,
+                          nativeLogTitle, nativeLogDesc);
+    (*env)->ReleaseStringUTFChars(env, path, nativePath);
+    (*env)->ReleaseStringUTFChars(env, log_title, nativeLogTitle);
+    (*env)->ReleaseStringUTFChars(env, log_desc, nativeLogDesc);
+
+    return ret == true ? JNI_TRUE : JNI_FALSE;
+}
+
 static jint netty_quiche_header_info(JNIEnv* env, jclass clazz, jlong buf, jint buf_len, jint dcil, jlong version,
                  jlong type, jlong scid, jlong scid_len, jlong dcid, jlong dcid_len, jlong token, jlong token_len) {
     return (jint) quiche_header_info((const uint8_t *) buf, (size_t) buf_len, (size_t) dcil,
@@ -452,6 +466,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_header_info", "(JIIJJJJJJJJ)I", (void *) netty_quiche_header_info },
   { "quiche_negotiate_version", "(JIJIJI)I", (void *) netty_quiche_negotiate_version },
   { "quiche_retry", "(JIJIJIJIIJI)I", (void *) netty_quiche_retry },
+  { "quiche_conn_set_qlog_path", "(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z", (void *) netty_quiche_conn_set_qlog_path },
   { "quiche_conn_trace_id", "(J)[B", (void *) netty_quiche_conn_trace_id },
   { "quiche_conn_new_with_tls", "(JIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
   { "quiche_conn_recv", "(JJI)I", (void *) netty_quiche_conn_recv },
