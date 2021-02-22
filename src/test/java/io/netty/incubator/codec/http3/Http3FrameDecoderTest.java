@@ -77,6 +77,21 @@ public class Http3FrameDecoderTest {
                 MAX_HEADER_SIZE + 9, Http3ErrorCode.H3_EXCESSIVE_LOAD);
     }
 
+    @Test
+    public void testSkipUnknown() {
+        ByteBuf buffer = Unpooled.buffer();
+        writeVariableLengthInteger(buffer, 4611686018427387903L);
+        writeVariableLengthInteger(buffer, 10);
+        buffer.writeZero(10);
+
+        QuicChannel parent = mockParent();
+
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
+                true, false, new Http3FrameDecoder(new QpackDecoder(), MAX_HEADER_SIZE));
+        assertFalse(decoderChannel.writeInbound(buffer));
+        assertFalse(decoderChannel.finish());
+    }
+
     private static void testInvalidHttp3Frame0(int type, int length, Http3ErrorCode code) {
         ByteBuf buffer = Unpooled.buffer();
         writeVariableLengthInteger(buffer, type);

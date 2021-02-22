@@ -47,7 +47,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
     private final long maxHeaderListSize;
     private final QpackDecoder qpackDecoder;
 
-    private int type = -1;
+    private long type = -1;
     private int payLoadLength = -1;
 
     Http3FrameDecoder(QpackDecoder qpackDecoder, long maxHeaderListSize) {
@@ -78,19 +78,13 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             if (in.readableBytes() < typeLen) {
                 return;
             }
-            long type = readVariableLengthInteger(in, typeLen);
+            type = readVariableLengthInteger(in, typeLen);
             if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
                         "Reserved type for HTTP/2 received.", true);
                 return;
             }
-            if (type > Integer.MAX_VALUE) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
-                        "Received an invalid frame type.", true);
-                return;
-            }
-            this.type = (int) type;
             if (!in.isReadable()) {
                 return;
             }
@@ -110,7 +104,7 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
             payLoadLength = (int) len;
         }
         int read = decodeFrame(ctx, type, payLoadLength, in, out);
-        if (read > 0) {
+        if (read >= 0) {
             if (read == payLoadLength) {
                 type = -1;
                 payLoadLength = -1;
@@ -120,7 +114,16 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private int decodeFrame(ChannelHandlerContext ctx, int type, int payLoadLength, ByteBuf in, List<Object> out) {
+    private static int skipBytes(ByteBuf in, int payLoadLength) {
+        in.skipBytes(payLoadLength);
+        return payLoadLength;
+    }
+
+    private int decodeFrame(ChannelHandlerContext ctx, long longType, int payLoadLength, ByteBuf in, List<Object> out) {
+        if (longType > Integer.MAX_VALUE && !Http3CodecUtils.isReservedFrameType(longType)) {
+            return skipBytes(in, payLoadLength);
+        }
+        int type  = (int) longType;
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
         switch (type) {
             case HTTP3_DATA_FRAME_TYPE:
@@ -229,12 +232,15 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                 out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                 return payLoadLength;
             default:
+                if (!Http3CodecUtils.isReservedFrameType(longType)) {
+                    return skipBytes(in, payLoadLength);
+                }
                 // Handling reserved frame types
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                 if (in.readableBytes() < payLoadLength) {
                     return 0;
                 }
-                out.add(new DefaultHttp3UnknownFrame(type, in.readRetainedSlice(payLoadLength)));
+                out.add(new DefaultHttp3UnknownFrame(longType, in.readRetainedSlice(payLoadLength)));
                 return payLoadLength;
         }
     }
