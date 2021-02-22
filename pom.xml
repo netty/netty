@@ -71,7 +71,7 @@
     <skipTests>false</skipTests>
     <netty.version>4.1.59.Final</netty.version>
     <netty.build.version>28</netty.build.version>
-    <netty.quic.version>0.0.4.Final</netty.quic.version>
+    <netty.quic.version>0.0.7.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     <release.gpg.keyname/>
     <release.gpg.passphrase/>
