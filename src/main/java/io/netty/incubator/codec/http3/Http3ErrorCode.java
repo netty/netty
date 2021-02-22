@@ -92,6 +92,11 @@ public enum Http3ErrorCode {
     H3_REQUEST_INCOMPLETE(0x10d),
 
     /**
+     * An HTTP message was malformed and cannot be processed.
+     */
+    H3_MESSAGE_ERROR(0x10e),
+
+    /**
      * The TCP connection established in response to a CONNECT request was reset or abnormally closed.
      */
     H3_CONNECT_ERROR(0x10f),

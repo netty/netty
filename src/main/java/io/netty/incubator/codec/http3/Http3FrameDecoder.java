@@ -18,6 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.util.internal.ObjectUtil;
 
@@ -144,6 +146,23 @@ final class Http3FrameDecoder extends ByteToMessageDecoder {
                 }
                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
                 if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength))) {
+                    if (headersFrame.headers().contains(HttpHeaderNames.CONNECTION)) {
+                        ctx.fireExceptionCaught(new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
+                                "connection header included"));
+                        // We should close the stream.
+                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
+                        ctx.close();
+                        return payLoadLength;
+                    }
+                    CharSequence value = headersFrame.headers().get(HttpHeaderNames.TE);
+                    if (value != null && !HttpHeaderValues.TRAILERS.equals(value)) {
+                        ctx.fireExceptionCaught(new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
+                                "te header field included with invalid value: " + value));
+                        // We should close the stream.
+                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
+                        ctx.close();
+                        return payLoadLength;
+                    }
                     out.add(headersFrame);
                 }
                 return payLoadLength;

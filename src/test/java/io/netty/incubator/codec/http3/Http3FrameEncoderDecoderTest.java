@@ -23,6 +23,8 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -134,6 +136,38 @@ public class Http3FrameEncoderDecoderTest {
         settingsFrame.put(1073741823, 1073741823L);
         settingsFrame.put(4611686018427387903L, 4611686018427387903L);
         testFrameEncodedAndDecoded(settingsFrame);
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithConnectionHeader() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        addRequestHeaders(headersFrame.headers());
+        headersFrame.headers().add(HttpHeaderNames.CONNECTION, "something");
+        try {
+            testFrameEncodedAndDecoded(headersFrame);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
+        }
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithTeHeaderAndInvalidValue() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        addRequestHeaders(headersFrame.headers());
+        headersFrame.headers().add(HttpHeaderNames.TE, "something");
+        try {
+            testFrameEncodedAndDecoded(headersFrame);
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
+        }
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithTeHeaderAndValidValue() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        addRequestHeaders(headersFrame.headers());
+        headersFrame.headers().add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
+        testFrameEncodedAndDecoded(headersFrame);
     }
 
     @Test
