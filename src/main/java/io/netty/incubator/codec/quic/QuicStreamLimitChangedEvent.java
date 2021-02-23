@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,8 +16,11 @@
 package io.netty.incubator.codec.quic;
 
 /**
- * Marker interface for events that will be passed through the {@link io.netty.channel.ChannelPipeline} via
- * {@link io.netty.channel.ChannelPipeline#fireUserEventTriggered(Object)} to notify the user about supported
- * QUIC extensions by the remote peer.
+ * Event fired once the stream limit of a {@link QuicChannel} changes.
  */
-public interface QuicExtensionEvent extends QuicEvent { }
+public final class QuicStreamLimitChangedEvent implements QuicEvent {
+
+    static final QuicStreamLimitChangedEvent INSTANCE = new QuicStreamLimitChangedEvent();
+
+    private QuicStreamLimitChangedEvent() { }
+}

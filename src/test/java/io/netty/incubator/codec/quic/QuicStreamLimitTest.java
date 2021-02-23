@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -26,8 +27,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public class QuicStreamLimitTest extends AbstractQuicTest {
 
@@ -51,22 +54,50 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     public boolean isSharable() {
                         return true;
                     }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                            ctx.close();
+                        }
+                    }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         try {
+            CountDownLatch latch = new CountDownLatch(1);
+            CountDownLatch latch2 = new CountDownLatch(1);
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel).handler(
-                    new ChannelInboundHandlerAdapter()).streamHandler(new ChannelInboundHandlerAdapter())
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                            if (evt instanceof QuicStreamLimitChangedEvent) {
+                                if (latch.getCount() == 0) {
+                                    latch2.countDown();
+                                } else {
+                                    latch.countDown();
+                                }
+                            }
+                        }
+                    }).streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect().get();
+            latch.await();
+            assertEquals(1, quicChannel.peerAllowedStreams(QuicStreamType.UNIDIRECTIONAL));
+            assertEquals(1, quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL));
             QuicStreamChannel stream = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).get();
+
+            assertEquals(0, quicChannel.peerAllowedStreams(type));
 
             // Second stream creation should fail.
             Throwable cause = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).await().cause();
             assertThat(cause, CoreMatchers.instanceOf(IOException.class));
             stream.close().sync();
+            latch2.await();
+
+            assertEquals(1, quicChannel.peerAllowedStreams(type));
             quicChannel.close().sync();
         } finally {
             server.close().sync();

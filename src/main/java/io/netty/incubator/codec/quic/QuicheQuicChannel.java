@@ -56,6 +56,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.Function;
 
 /**
@@ -150,6 +151,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile int state;
     private volatile String traceId;
 
+    private static final AtomicLongFieldUpdater<QuicheQuicChannel> UNI_STREAMS_LEFT_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "uniStreamsLeft");
+    private volatile long uniStreamsLeft;
+
+    private static final AtomicLongFieldUpdater<QuicheQuicChannel> BIDI_STREAMS_LEFT_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "bidiStreamsLeft");
+    private volatile long bidiStreamsLeft;
+
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key,
                       InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
@@ -181,6 +190,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
+    }
+
+    @Override
+    public long peerAllowedStreams(QuicStreamType type) {
+        switch (type) {
+            case BIDIRECTIONAL:
+                return bidiStreamsLeft;
+            case UNIDIRECTIONAL:
+                return uniStreamsLeft;
+            default:
+                return 0;
+        }
     }
 
     void attachQuicheConnection(QuicheQuicConnection connection) {
@@ -995,6 +1016,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 promise.setFailure(e);
                 return;
             }
+            if (type == QuicStreamType.UNIDIRECTIONAL) {
+                UNI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
+            } else {
+                BIDI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
+            }
             QuicheQuicStreamChannel streamChannel = addNewStreamChannel(streamId);
             if (handler != null) {
                 streamChannel.pipeline().addLast(handler);
@@ -1110,6 +1136,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                         if (Quiche.quiche_conn_is_established(connAddr) ||
                                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                            long uniLeftOld = uniStreamsLeft;
+                            long bidiLeftOld = bidiStreamsLeft;
+                            // Only fetch new stream info when we used all our credits
+                            if (uniLeftOld == 0 || bidiLeftOld == 0) {
+                                long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
+                                long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
+                                uniStreamsLeft = uniLeft;
+                                bidiStreamsLeft = bidiLeft;
+                                if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
+                                    pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
+                                }
+                            }
 
                             if (handleWritableStreams()) {
                                 // Some data was produced, let's flush.

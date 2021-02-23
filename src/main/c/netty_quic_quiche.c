@@ -214,6 +214,14 @@ static void netty_quiche_conn_free(JNIEnv* env, jclass clazz, jlong conn) {
     quiche_conn_free((quiche_conn *) conn);
 }
 
+static jlong netty_quiche_conn_peer_streams_left_bidi(JNIEnv* env, jclass clazz, jlong conn) {
+    return (jlong) quiche_conn_peer_streams_left_bidi((quiche_conn *) conn);
+}
+
+static jlong netty_quiche_conn_peer_streams_left_uni(JNIEnv* env, jclass clazz, jlong conn) {
+    return (jlong) quiche_conn_peer_streams_left_uni((quiche_conn *) conn);
+}
+
 static jint netty_quiche_conn_stream_priority(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jbyte urgency, jboolean incremental) {
     return (jint) quiche_conn_stream_priority((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t) urgency, incremental == JNI_TRUE ? true : false);
 }
@@ -472,6 +480,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_recv", "(JJI)I", (void *) netty_quiche_conn_recv },
   { "quiche_conn_send", "(JJI)I", (void *) netty_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quiche_conn_free },
+  { "quiche_conn_peer_streams_left_bidi", "(J)J", (void *) netty_quiche_conn_peer_streams_left_bidi },
+  { "quiche_conn_peer_streams_left_uni", "(J)J", (void *) netty_quiche_conn_peer_streams_left_uni },
   { "quiche_conn_stream_priority", "(JJBZ)I", (void *) netty_quiche_conn_stream_priority },
   { "quiche_conn_stream_recv", "(JJJIJ)I", (void *) netty_quiche_conn_stream_recv },
   { "quiche_conn_stream_send", "(JJJIZ)I", (void *) netty_quiche_conn_stream_send },

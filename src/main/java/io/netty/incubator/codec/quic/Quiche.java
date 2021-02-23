@@ -238,6 +238,18 @@ final class Quiche {
     static native void quiche_conn_free(long connAddr);
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L330">
+     *     quiche_conn_peer_streams_left_bidi</a>.
+     */
+    static native long quiche_conn_peer_streams_left_bidi(long connAddr);
+
+    /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L334">
+     *     quiche_conn_peer_streams_left_uni</a>.
+     */
+    static native long quiche_conn_peer_streams_left_uni(long connAddr);
+
+    /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L275">quiche_conn_stream_priority</a>.
      */

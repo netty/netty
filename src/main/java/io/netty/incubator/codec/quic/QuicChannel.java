@@ -41,6 +41,15 @@ public interface QuicChannel extends Channel {
     QuicChannelConfig config();
 
     /**
+     * Returns the number of streams that can be created before stream creation will fail
+     * with {@link QuicError#STREAM_LIMIT} error.
+     *
+     * @param type the stream type.
+     * @return the number of streams left.
+     */
+    long peerAllowedStreams(QuicStreamType type);
+
+    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
