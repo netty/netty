@@ -43,6 +43,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -62,6 +63,7 @@ import java.util.function.Function;
  */
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(QuicheQuicChannel.class);
+    private static final String QLOG_FILE_EXTENSION = ".qlog";
 
     enum StreamRecvResult {
         /**
@@ -183,16 +185,33 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     void attachQuicheConnection(QuicheQuicConnection connection) {
         this.connection = connection;
-        QLogConfiguration configuration = config.getQLogConfiguration();
-        if (configuration != null) {
-            if (!Quiche.quiche_conn_set_qlog_path(connection.address(), configuration.path(),
-                    configuration.logTitle(), configuration.logDescription())) {
-                logger.info("Unable to create qlog file: {} ", configuration.path());
-            }
-        }
         byte[] traceId = Quiche.quiche_conn_trace_id(connection.address());
         if (traceId != null) {
             this.traceId = new String(traceId);
+        }
+
+        // Setup QLOG if needed.
+        QLogConfiguration configuration = config.getQLogConfiguration();
+        if (configuration != null) {
+            final String fileName;
+            File file = new File(configuration.path());
+            if (file.isDirectory()) {
+                // Create directory if needed.
+                file.mkdir();
+                if (this.traceId != null) {
+                    fileName = configuration.path() + File.separatorChar + this.traceId + "-" +
+                            id().asShortText() + QLOG_FILE_EXTENSION;
+                } else {
+                    fileName = configuration.path() + File.separatorChar + id().asShortText() + QLOG_FILE_EXTENSION;
+                }
+            } else {
+                fileName = configuration.path();
+            }
+
+            if (!Quiche.quiche_conn_set_qlog_path(connection.address(), fileName,
+                    configuration.logTitle(), configuration.logDescription())) {
+                logger.info("Unable to create qlog file: {} ", fileName);
+            }
         }
     }
 

@@ -36,6 +36,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedTrustManager;
+import java.io.File;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -47,6 +48,7 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -58,12 +60,45 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @Test(timeout = 5000)
     public void testConnectAndQLog() throws Throwable {
+        Path path = Files.createTempFile("qlog", ".quic");
+        assertTrue(path.toFile().delete());
+        testQLog(path, p -> {
+            try {
+                // Some log should have been written at some point.
+                while (Files.readAllLines(p).isEmpty()) {
+                    Thread.sleep(100);
+                }
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        });
+    }
+
+    @Test(timeout = 5000)
+    public void testConnectAndQLogDir() throws Throwable {
+        Path path = Files.createTempDirectory("qlogdir-");
+        testQLog(path, p -> {
+            try {
+                for (;;) {
+                    File[] files = path.toFile().listFiles();
+                    if (files != null && files.length == 1) {
+                        if (!Files.readAllLines(files[0].toPath()).isEmpty()) {
+                            return;
+                        }
+                    }
+                    Thread.sleep(100);
+                }
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        });
+    }
+
+    private void testQLog(Path path, Consumer<Path> consumer) throws Exception {
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
-        Path path = Files.createTempFile("qlog", ".quic");
-        assertTrue(path.toFile().delete());
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -80,10 +115,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             stream.close().sync();
             quicChannel.close().sync();
             quicChannel.closeFuture().sync();
-            // Some log should have been written at some point.
-            while (Files.readAllLines(path).isEmpty()) {
-                Thread.sleep(100);
-            }
+            consumer.accept(path);
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
