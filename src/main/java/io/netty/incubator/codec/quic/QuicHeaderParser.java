@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.net.InetSocketAddress;
 
@@ -48,14 +49,19 @@ public final class QuicHeaderParser implements AutoCloseable {
         Quic.ensureAvailability();
         this.maxTokenLength = checkPositiveOrZero(maxTokenLength, "maxTokenLength");
         this.localConnectionIdLength = checkPositiveOrZero(localConnectionIdLength, "localConnectionIdLength");
+        // Allocate the buffer from which we read primative values like integer/long with native order to ensure
+        // we read the right value.
         versionBuffer = allocateNativeOrder(Integer.BYTES);
         typeBuffer = allocateNativeOrder(Byte.BYTES);
-        scidBuffer = allocateNativeOrder(Quiche.QUICHE_MAX_CONN_ID_LEN);
         scidLenBuffer = allocateNativeOrder(Integer.BYTES);
-        dcidBuffer = allocateNativeOrder(Quiche.QUICHE_MAX_CONN_ID_LEN);
         dcidLenBuffer = allocateNativeOrder(Integer.BYTES);
         tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
-        tokenBuffer = allocateNativeOrder(maxTokenLength);
+
+        // Now allocate the buffers that dont need native ordering and so will be cheaper to access when we slice into
+        // these or obtain a view into these via internalNioBuffer(...).
+        scidBuffer = Unpooled.directBuffer(Quiche.QUICHE_MAX_CONN_ID_LEN);
+        dcidBuffer = Unpooled.directBuffer(Quiche.QUICHE_MAX_CONN_ID_LEN);
+        tokenBuffer = Unpooled.directBuffer(maxTokenLength);
     }
 
     @Override
