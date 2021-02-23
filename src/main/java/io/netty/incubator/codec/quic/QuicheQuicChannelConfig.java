@@ -28,11 +28,11 @@ import java.util.Map;
 /**
  * Default {@link QuicChannelConfig} implementation.
  */
-final class DefaultQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
+final class QuicheQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
 
     private volatile QLogConfiguration qLogConfiguration;
 
-    DefaultQuicChannelConfig(Channel channel) {
+    QuicheQuicChannelConfig(Channel channel) {
         super(channel);
     }
 

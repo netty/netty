@@ -64,7 +64,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         super(parent);
-        config = new DefaultQuicStreamChannelConfig(this);
+        config = new QuicheQuicStreamChannelConfig(this);
         this.address = new QuicStreamAddress(streamId);
 
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for

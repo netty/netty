@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.util.internal.StringUtil;
 
-final class DefaultQuicConnectionStats implements QuicConnectionStats {
+final class QuicheQuicConnectionStats implements QuicConnectionStats {
 
     private final long recv;
     private final long sent;
@@ -26,7 +26,7 @@ final class DefaultQuicConnectionStats implements QuicConnectionStats {
     private final long congestionWindow;
     private final long deliveryRate;
 
-    DefaultQuicConnectionStats(long recv, long sent, long lost, long rttNanos, long cwnd, long deliveryRate) {
+    QuicheQuicConnectionStats(long recv, long sent, long lost, long rttNanos, long cwnd, long deliveryRate) {
         this.recv = recv;
         this.sent = sent;
         this.lost = lost;

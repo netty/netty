@@ -24,13 +24,13 @@ import io.netty.channel.WriteBufferWaterMark;
 
 import java.util.Map;
 
-final class DefaultQuicStreamChannelConfig extends DefaultChannelConfig implements QuicStreamChannelConfig {
+final class QuicheQuicStreamChannelConfig extends DefaultChannelConfig implements QuicStreamChannelConfig {
     // We should use half-closure sementatics by default as this is what QUIC does by default.
     // If you receive a FIN you should still keep the stream open until you write a FIN as well.
     private volatile boolean allowHalfClosure = true;
     private volatile boolean readFrames;
 
-    DefaultQuicStreamChannelConfig(QuicStreamChannel channel) {
+    QuicheQuicStreamChannelConfig(QuicStreamChannel channel) {
         super(channel);
     }
 

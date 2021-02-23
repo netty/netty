@@ -117,7 +117,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final long[] readableStreams = new long[128];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
-    private final DefaultQuicChannelConfig config;
+    private final QuicheQuicChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
     private final ChannelHandler streamHandler;
@@ -164,7 +164,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(parent);
-        config = new DefaultQuicChannelConfig(this);
+        config = new QuicheQuicChannelConfig(this);
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
         this.key = key;
@@ -1443,8 +1443,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return null;
         }
 
-        final DefaultQuicConnectionStats connStats =
-            new DefaultQuicConnectionStats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
+        final QuicheQuicConnectionStats connStats =
+            new QuicheQuicConnectionStats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
         promise.setSuccess(connStats);
         return connStats;
     }
