@@ -17,6 +17,9 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -33,6 +36,10 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     private final boolean server;
     private final BooleanSupplier goAwayReceivedSupplier;
 
+    private boolean head;
+    private long expectedLength = -1;
+    private long seenLength;
+
     static Http3RequestStreamValidationHandler newServerValidator() {
         return new Http3RequestStreamValidationHandler(true, () -> false);
     }
@@ -47,15 +54,30 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
         this.goAwayReceivedSupplier = goAwayReceivedSupplier;
     }
 
-    private State checkState(State state, Http3RequestStreamFrame frame) {
+    private State checkState(boolean inbound, State state, Http3RequestStreamFrame frame) throws Http3Exception {
         switch (state) {
             case Initial:
                 if (!(frame instanceof Http3HeadersFrame)) {
                     return null;
                 }
+                Http3HeadersFrame headersFrame = (Http3HeadersFrame) frame;
+                if (inbound) {
+                    CharSequence contentLengthValue = headersFrame.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+                    if (contentLengthValue != null) {
+                        expectedLength = Long.parseLong(contentLengthValue.toString());
+                    }
+                } else if (!server) {
+                    head = HttpMethod.HEAD.asciiName().equals(headersFrame.headers().method());
+                }
                 return State.Started;
             case Started:
+                if (inbound && frame instanceof Http3DataFrame) {
+                    verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
+                }
                 if (frame instanceof Http3HeadersFrame) {
+                    if (inbound) {
+                        verifyContentLength(0, true);
+                    }
                     // trailers
                     return State.End;
                 }
@@ -78,12 +100,18 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                 ctx.close();
                 return;
             }
-            State newState = checkState(writeState, frame);
-            if (newState == null) {
-                frameTypeUnexpected(promise, frame);
-                return;
+            try {
+                State newState = checkState(false, writeState, frame);
+                if (newState == null) {
+                    frameTypeUnexpected(promise, frame);
+                    return;
+                }
+                writeState = newState;
+            } catch (Http3Exception e) {
+                ReferenceCountUtil.release(frame);
+                promise.setFailure(e);
+                ctx.close();
             }
-            writeState = newState;
         } else if (!server) {
             // Only supported on the server.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
@@ -97,12 +125,18 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     @Override
     public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame) {
         if (!(frame instanceof Http3PushPromiseFrame)) {
-            State newState = checkState(readState, frame);
-            if (newState == null) {
-                frameTypeUnexpected(ctx, frame);
-                return;
+            try {
+                State newState = checkState(true, readState, frame);
+                if (newState == null) {
+                    frameTypeUnexpected(ctx, frame);
+                    return;
+                }
+                readState = newState;
+            } catch (Http3Exception e) {
+                ReferenceCountUtil.release(frame);
+                ctx.fireExceptionCaught(e);
+                ctx.close();
             }
-            readState = newState;
         } else if (!server) {
             // Only supported on the server.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
@@ -113,8 +147,32 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     }
 
     @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+            try {
+                verifyContentLength(0, true);
+            } catch (Http3Exception e) {
+                ctx.fireExceptionCaught(e);
+                ctx.close();
+                return;
+            }
+        }
+        ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
     public boolean isSharable() {
         // This handle keeps state so we can't share it.
         return false;
+    }
+
+    // See https://tools.ietf.org/html/draft-ietf-quic-http-34#section-4.1.3
+    private void verifyContentLength(int length, boolean end) throws Http3Exception {
+        seenLength += length;
+        if (expectedLength != -1 && (seenLength > expectedLength || (!head && end && seenLength != expectedLength))) {
+            throw new Http3Exception(
+                    Http3ErrorCode.H3_MESSAGE_ERROR, "Expected content-length " + expectedLength +
+                    " != " + seenLength + ".");
+        }
     }
 }

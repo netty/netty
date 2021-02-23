@@ -18,6 +18,9 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
 
@@ -177,5 +180,115 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertFrameEquals(dataFrame, channel.readOutbound());
 
         assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void testClientHeadRequestWithContentLength() {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newClientValidator(() -> false));
+
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().method(HttpMethod.HEAD.asciiName());
+        assertTrue(channel.writeOutbound(headersFrame));
+
+        Http3HeadersFrame responseHeadersFrame = new DefaultHttp3HeadersFrame();
+        responseHeadersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+
+        assertTrue(channel.writeInbound(responseHeadersFrame));
+        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testClientNonHeadRequestWithContentLengthNoData() {
+        testClientNonHeadRequestWithContentLength(true, false);
+    }
+
+    @Test
+    public void testClientNonHeadRequestWithContentLengthNoDataAndTrailers() {
+        testClientNonHeadRequestWithContentLength(true, true);
+    }
+
+    @Test
+    public void testClientNonHeadRequestWithContentLengthNotEnoughData() {
+        testClientNonHeadRequestWithContentLength(false, false);
+    }
+
+    @Test
+    public void testClientNonHeadRequestWithContentLengthNotEnoughDataAndTrailer() {
+        testClientNonHeadRequestWithContentLength(false, true);
+    }
+
+    private static void testClientNonHeadRequestWithContentLength(boolean noData, boolean trailers) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newClientValidator(() -> false));
+
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().method(HttpMethod.GET.asciiName());
+        assertTrue(channel.writeOutbound(headersFrame));
+
+        Http3HeadersFrame responseHeadersFrame = new DefaultHttp3HeadersFrame();
+        responseHeadersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+
+        assertTrue(channel.writeInbound(responseHeadersFrame));
+        if (!noData) {
+            assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer().writeZero(9))));
+        }
+        try {
+            if (trailers) {
+                channel.writeInbound(new DefaultHttp3HeadersFrame());
+            } else {
+                channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                channel.checkException();
+            }
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
+        }
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testServerWithContentLengthNoData() {
+        testServerWithContentLength(true, false);
+    }
+
+    @Test
+    public void testServerWithContentLengthNoDataAndTrailers() {
+        testServerWithContentLength(true, true);
+    }
+
+    @Test
+    public void testServerWithContentLengthNotEnoughData() {
+        testServerWithContentLength(false, false);
+    }
+
+    @Test
+    public void testServerWithContentLengthNotEnoughDataAndTrailer() {
+        testServerWithContentLength(false, true);
+    }
+
+    private static void testServerWithContentLength(boolean noData, boolean trailers) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newServerValidator());
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+        headersFrame.headers().method(HttpMethod.POST.asciiName());
+        assertTrue(channel.writeInbound(headersFrame));
+
+        if (!noData) {
+            assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer().writeZero(9))));
+        }
+        try {
+            if (trailers) {
+                channel.writeInbound(new DefaultHttp3HeadersFrame());
+            } else {
+                channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                channel.checkException();
+            }
+        } catch (Exception e) {
+            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
+        }
+        assertTrue(channel.finishAndReleaseAll());
     }
 }
