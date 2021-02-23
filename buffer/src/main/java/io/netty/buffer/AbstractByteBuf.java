@@ -255,17 +255,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void adjustMarkers(int decrement) {
-        int markedReaderIndex = this.markedReaderIndex;
         if (markedReaderIndex <= decrement) {
-            this.markedReaderIndex = 0;
-            int markedWriterIndex = this.markedWriterIndex;
+            markedReaderIndex = 0;
             if (markedWriterIndex <= decrement) {
-                this.markedWriterIndex = 0;
+                markedWriterIndex = 0;
             } else {
-                this.markedWriterIndex = markedWriterIndex - decrement;
+                markedWriterIndex -= decrement;
             }
         } else {
-            this.markedReaderIndex = markedReaderIndex - decrement;
+            markedReaderIndex -= decrement;
             markedWriterIndex -= decrement;
         }
     }
