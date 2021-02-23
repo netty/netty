@@ -67,11 +67,11 @@ public final class DnsServerAddressStreamProviders {
                     throw (Throwable) maybeProvider;
                 }
             } catch (ClassNotFoundException cause) {
-                LOGGER.warn("Can not find {} in the classpath, fallback to system defaults. {}",
-                        MACOS_PROVIDER_CLASS_NAME, "This may result in incorrect DNS resolutions on MacOS.");
+                LOGGER.warn("Can not find {} in the classpath, fallback to system defaults. This may result in "
+                        + "incorrect DNS resolutions on MacOS.", MACOS_PROVIDER_CLASS_NAME);
             } catch (Throwable cause) {
-                LOGGER.error("Unable to load {}, fallback to system defaults. {}", MACOS_PROVIDER_CLASS_NAME,
-                        "This may result in incorrect DNS resolutions on MacOS.", cause);
+                LOGGER.error("Unable to load {}, fallback to system defaults. This may result in "
+                        + "incorrect DNS resolutions on MacOS.", MACOS_PROVIDER_CLASS_NAME, cause);
                 constructor = null;
             }
         }
