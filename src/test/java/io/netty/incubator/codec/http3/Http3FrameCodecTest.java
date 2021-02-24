@@ -140,38 +140,6 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testHttp3HeadersFrameWithConnectionHeader() {
-        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        addRequestHeaders(headersFrame.headers());
-        headersFrame.headers().add(HttpHeaderNames.CONNECTION, "something");
-        try {
-            testFrameEncodedAndDecoded(headersFrame);
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
-        }
-    }
-
-    @Test
-    public void testHttp3HeadersFrameWithTeHeaderAndInvalidValue() {
-        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        addRequestHeaders(headersFrame.headers());
-        headersFrame.headers().add(HttpHeaderNames.TE, "something");
-        try {
-            testFrameEncodedAndDecoded(headersFrame);
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
-        }
-    }
-
-    @Test
-    public void testHttp3HeadersFrameWithTeHeaderAndValidValue() {
-        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        addRequestHeaders(headersFrame.headers());
-        headersFrame.headers().add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
-        testFrameEncodedAndDecoded(headersFrame);
-    }
-
-    @Test
     public void testHttp3HeadersFrame() {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());

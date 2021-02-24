@@ -48,7 +48,7 @@ final class Http3TestUtils {
         return parent;
     }
 
-    static void assertException(Http3ErrorCode code, Exception e) {
+    static void assertException(Http3ErrorCode code, Throwable e) {
         MatcherAssert.assertThat(e, CoreMatchers.instanceOf(Http3Exception.class));
         Http3Exception exception = (Http3Exception) e;
         assertEquals(code, exception.errorCode());

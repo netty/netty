@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
@@ -62,6 +63,19 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                 }
                 Http3HeadersFrame headersFrame = (Http3HeadersFrame) frame;
                 if (inbound) {
+                    if (headersFrame.headers().contains(HttpHeaderNames.CONNECTION)) {
+                        // We should close the stream.
+                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
+                        throw new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
+                                "connection header included");
+                    }
+                    CharSequence value = headersFrame.headers().get(HttpHeaderNames.TE);
+                    if (value != null && !HttpHeaderValues.TRAILERS.equals(value)) {
+                        // We should close the stream.
+                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
+                        throw new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
+                                "te header field included with invalid value: " + value);
+                    }
                     CharSequence contentLengthValue = headersFrame.headers().get(HttpHeaderNames.CONTENT_LENGTH);
                     if (contentLengthValue != null) {
                         expectedLength = Long.parseLong(contentLengthValue.toString());
@@ -147,7 +161,7 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
             try {
                 verifyContentLength(0, true);

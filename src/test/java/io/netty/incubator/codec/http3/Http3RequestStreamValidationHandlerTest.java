@@ -20,6 +20,7 @@ import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
@@ -290,5 +291,43 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
             assertException(Http3ErrorCode.H3_MESSAGE_ERROR, e);
         }
         assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithConnectionHeader() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().add(HttpHeaderNames.CONNECTION, "something");
+        testHeadersFrame(headersFrame, Http3ErrorCode.H3_MESSAGE_ERROR);
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithTeHeaderAndInvalidValue() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().add(HttpHeaderNames.TE, "something");
+        testHeadersFrame(headersFrame, Http3ErrorCode.H3_MESSAGE_ERROR);
+    }
+
+    @Test
+    public void testHttp3HeadersFrameWithTeHeaderAndValidValue() {
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
+        testHeadersFrame(headersFrame, null);
+    }
+
+    private static void testHeadersFrame(Http3HeadersFrame headersFrame, Http3ErrorCode code) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                Http3RequestStreamValidationHandler.newServerValidator());
+        try {
+            assertTrue(channel.writeInbound(headersFrame));
+            if (code != null) {
+                fail();
+            }
+        } catch (Throwable cause) {
+            if (code == null) {
+                throw cause;
+            }
+            assertException(code, cause);
+        }
+        channel.finishAndReleaseAll();
     }
 }
