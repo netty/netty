@@ -399,7 +399,6 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * {@code (this.writerIndex - this.readerIndex)}, but maybe overridden to accommodate
      * specialized behavior (e.g. write only).
      */
-    @Override
     public abstract int readableBytes();
 
     /**

@@ -266,7 +266,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             return ((HttpContent) msg).content().readableBytes();
         }
         if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).readableBytes();
+            return ((AsByteBuf) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();

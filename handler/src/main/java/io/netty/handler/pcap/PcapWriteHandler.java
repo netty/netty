@@ -265,7 +265,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (msg instanceof AsByteBuf) {
 
             // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
-            if (((AsByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
+            if (((AsByteBuf) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
                 logger.debug("Discarding Zero Byte TCP Packet. isWriteOperation {}", isWriteOperation);
                 return;
             }

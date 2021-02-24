@@ -87,7 +87,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
             return ((MemcacheContent) msg).content().readableBytes();
         }
         if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).readableBytes();
+            return ((AsByteBuf) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return (int) ((FileRegion) msg).count();

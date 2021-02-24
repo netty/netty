@@ -223,7 +223,7 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
         Throwable pending = null;
-        AsByteBuf previousBuf = null;
+        ByteBuf previousBuf = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
             try {
@@ -240,7 +240,7 @@ public abstract class AbstractCoalescingBufferQueue {
                         decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
-                    previousBuf = (AsByteBuf) entry;
+                    previousBuf = ((AsByteBuf) entry).asByteBuf();
                 } else if (entry instanceof ChannelPromise) {
                     decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf, (ChannelPromise) entry);

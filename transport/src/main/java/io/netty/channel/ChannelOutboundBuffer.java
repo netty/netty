@@ -199,7 +199,7 @@ public final class ChannelOutboundBuffer {
 
     private static long total(Object msg) {
         if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).readableBytes();
+            return ((AsByteBuf) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();

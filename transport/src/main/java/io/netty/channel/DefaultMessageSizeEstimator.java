@@ -37,7 +37,7 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
         @Override
         public int size(Object msg) {
             if (msg instanceof AsByteBuf) {
-                return ((AsByteBuf) msg).readableBytes();
+                return ((AsByteBuf) msg).asByteBuf().readableBytes();
             }
             if (msg instanceof ByteBufHolder) {
                 return ((ByteBufHolder) msg).content().readableBytes();

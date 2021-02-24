@@ -29,10 +29,4 @@ public interface AsByteBuf {
      * @return A {@link ByteBuf} instance from this object.
      */
     ByteBuf asByteBuf();
-
-    /**
-     * Returns the number of bytes that could be read from the {@link ByteBuf} given by {@link #asByteBuf()}.
-     * @return The number of potentially readable bytes.
-     */
-    int readableBytes();
 }
