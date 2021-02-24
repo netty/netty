@@ -934,20 +934,23 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * writable {@link QuicheQuicStreamChannel}s.
      */
     void recvComplete() {
-        inFireChannelReadCompleteQueue = false;
-        if (isConnDestroyed()) {
-            // Ensure we flush all pending writes.
+        try {
+            if (isConnDestroyed()) {
+                // Ensure we flush all pending writes.
+                forceFlushParent();
+                return;
+            }
+            fireChannelReadCompleteIfNeeded();
+
+            // If we had called recv we need to ensure we call send as well.
+            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
+            connectionSend();
+
+            // We are done with the read loop, flush all pending writes now.
             forceFlushParent();
-            return;
+        } finally {
+            inFireChannelReadCompleteQueue = false;
         }
-        fireChannelReadCompleteIfNeeded();
-
-        // If we had called recv we need to ensure we call send as well.
-        // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-        connectionSend();
-
-        // We are done with the read loop, flush all pending writes now.
-        forceFlushParent();
     }
 
     private void fireChannelReadCompleteIfNeeded() {
