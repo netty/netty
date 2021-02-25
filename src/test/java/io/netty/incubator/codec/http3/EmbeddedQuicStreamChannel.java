@@ -26,6 +26,8 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamAddress;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
@@ -57,6 +59,14 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         this.localCreated = localCreated;
         this.type = type;
         this.id = id;
+    }
+
+    boolean writeInboundWithFin(Object... msgs) {
+        shutdownInput();
+        boolean written = writeInbound(msgs);
+        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+        pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        return written;
     }
 
     @Override
