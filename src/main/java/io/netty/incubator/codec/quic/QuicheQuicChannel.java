@@ -340,6 +340,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             timeoutHandler.cancel();
         } finally {
+            flushParent();
             conn.free();
         }
     }
@@ -828,8 +829,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             //
             // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
             if (connectionSend()) {
-                // Let's try to send as fast as possible.
-                forceFlushParent();
+                flushParent();
             }
         }
     }
