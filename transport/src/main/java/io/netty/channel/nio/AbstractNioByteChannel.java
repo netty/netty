@@ -15,7 +15,7 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -217,8 +217,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private int doWriteInternal(ChannelOutboundBuffer in, Object msg) throws Exception {
-        if (msg instanceof AsByteBuf) {
-            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (!buf.isReadable()) {
                 in.remove();
                 return 0;
@@ -273,8 +273,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected final Object filterOutboundMessage(Object msg) {
-        if (msg instanceof AsByteBuf) {
-            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (buf.isDirect()) {
                 return msg;
             }

@@ -19,7 +19,7 @@ package io.netty.buffer;
  * An interface that can be implemented by any object that know how to turn itself into a {@link ByteBuf}.
  * All {@link ByteBuf} classes implement this interface, and return themselves.
  */
-public interface AsByteBuf {
+public interface ByteBufConvertible {
     /**
      * Turn this object into a {@link ByteBuf}.
      * This does <strong>not</strong> increment the reference count of the {@link ByteBuf} instance.

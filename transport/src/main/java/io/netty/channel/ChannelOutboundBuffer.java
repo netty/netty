@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -198,8 +198,8 @@ public final class ChannelOutboundBuffer {
     }
 
     private static long total(Object msg) {
-        if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).asByteBuf().readableBytes();
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();
@@ -335,12 +335,12 @@ public final class ChannelOutboundBuffer {
     public void removeBytes(long writtenBytes) {
         for (;;) {
             Object msg = current();
-            if (!(msg instanceof AsByteBuf)) {
+            if (!(msg instanceof ByteBufConvertible)) {
                 assert writtenBytes == 0;
                 break;
             }
 
-            final ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
+            final ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
@@ -407,9 +407,9 @@ public final class ChannelOutboundBuffer {
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
-        while (isFlushedEntry(entry) && entry.msg instanceof AsByteBuf) {
+        while (isFlushedEntry(entry) && entry.msg instanceof ByteBufConvertible) {
             if (!entry.cancelled) {
-                ByteBuf buf = ((AsByteBuf) entry.msg).asByteBuf();
+                ByteBuf buf = ((ByteBufConvertible) entry.msg).asByteBuf();
                 final int readerIndex = buf.readerIndex();
                 final int readableBytes = buf.writerIndex() - readerIndex;
 

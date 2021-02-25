@@ -15,7 +15,7 @@
  */
 package io.netty.handler.pcap;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
@@ -262,16 +262,16 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                         else set {@code false}
      */
     private void handleTCP(ChannelHandlerContext ctx, Object msg, boolean isWriteOperation) {
-        if (msg instanceof AsByteBuf) {
+        if (msg instanceof ByteBufConvertible) {
 
             // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
-            if (((AsByteBuf) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
+            if (((ByteBufConvertible) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
                 logger.debug("Discarding Zero Byte TCP Packet. isWriteOperation {}", isWriteOperation);
                 return;
             }
 
             ByteBufAllocator byteBufAllocator = ctx.alloc();
-            ByteBuf packet = ((AsByteBuf) msg).asByteBuf().duplicate();
+            ByteBuf packet = ((ByteBufConvertible) msg).asByteBuf().duplicate();
             ByteBuf tcpBuf = byteBufAllocator.buffer();
             int bytes = packet.readableBytes();
 
@@ -409,15 +409,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
                 UDPPacket.writePacket(udpBuf, datagramPacket.content(), srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
-            } else if (msg instanceof AsByteBuf && ((DatagramChannel) ctx.channel()).isConnected()) {
+            } else if (msg instanceof ByteBufConvertible && ((DatagramChannel) ctx.channel()).isConnected()) {
 
                 // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
-                if (((AsByteBuf) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
+                if (((ByteBufConvertible) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
                     logger.debug("Discarding Zero Byte UDP Packet");
                     return;
                 }
 
-                ByteBuf byteBuf = ((AsByteBuf) msg).asByteBuf().duplicate();
+                ByteBuf byteBuf = ((ByteBufConvertible) msg).asByteBuf().duplicate();
 
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         byteBuf.readableBytes(), srcAddr, dstAddr);

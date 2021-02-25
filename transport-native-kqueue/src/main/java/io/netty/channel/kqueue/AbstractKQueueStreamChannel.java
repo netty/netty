@@ -15,7 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -271,7 +271,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof AsByteBuf) {
+            if (msgCount > 1 && in.current() instanceof ByteBufConvertible) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
@@ -320,8 +320,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
-        if (msg instanceof AsByteBuf) {
-            return writeBytes(in, ((AsByteBuf) msg).asByteBuf());
+        if (msg instanceof ByteBufConvertible) {
+            return writeBytes(in, ((ByteBufConvertible) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
@@ -363,8 +363,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof AsByteBuf) {
-            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 

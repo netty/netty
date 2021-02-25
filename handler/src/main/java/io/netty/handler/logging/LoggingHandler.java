@@ -15,7 +15,7 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandler;
@@ -315,8 +315,8 @@ public class LoggingHandler implements ChannelHandler {
      * @param arg       the argument of the event
      */
     protected String format(ChannelHandlerContext ctx, String eventName, Object arg) {
-        if (arg instanceof AsByteBuf) {
-            return formatByteBuf(ctx, eventName, ((AsByteBuf) arg).asByteBuf());
+        if (arg instanceof ByteBufConvertible) {
+            return formatByteBuf(ctx, eventName, ((ByteBufConvertible) arg).asByteBuf());
         } else if (arg instanceof ByteBufHolder) {
             return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
         } else {

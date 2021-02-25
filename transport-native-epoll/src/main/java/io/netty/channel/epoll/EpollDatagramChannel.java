@@ -15,7 +15,7 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -358,7 +358,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = ((AsByteBuf) msg).asByteBuf();
+            data = ((ByteBufConvertible) msg).asByteBuf();
             remoteAddress = null;
         }
 
@@ -379,18 +379,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
-        if (msg instanceof AsByteBuf) {
-            ByteBuf buf = ((AsByteBuf) msg).asByteBuf();
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof AsByteBuf &&
+            if (e.content() instanceof ByteBufConvertible &&
                 (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
-                ByteBuf content = ((AsByteBuf) e.content()).asByteBuf();
+                ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
                         new DefaultAddressedEnvelope<>(
                                 newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -111,15 +111,15 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
-        if (msg instanceof AsByteBuf) {
-            final ByteBuf potentialEmptyBuf = ((AsByteBuf) msg).asByteBuf();
+        if (msg instanceof ByteBufConvertible) {
+            final ByteBuf potentialEmptyBuf = ((ByteBufConvertible) msg).asByteBuf();
             if (!potentialEmptyBuf.isReadable()) {
                 out.add(potentialEmptyBuf.retain());
                 return;
             }
         }
 
-        if (msg instanceof HttpContent || msg instanceof AsByteBuf || msg instanceof FileRegion) {
+        if (msg instanceof HttpContent || msg instanceof ByteBufConvertible || msg instanceof FileRegion) {
             switch (state) {
                 case ST_INIT:
                     throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
@@ -245,12 +245,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof HttpObject || msg instanceof AsByteBuf || msg instanceof FileRegion;
+        return msg instanceof HttpObject || msg instanceof ByteBufConvertible || msg instanceof FileRegion;
     }
 
     private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).asByteBuf().retain();
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().retain();
         }
         if (msg instanceof HttpContent) {
             return ((HttpContent) msg).content().retain();
@@ -265,8 +265,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof HttpContent) {
             return ((HttpContent) msg).content().readableBytes();
         }
-        if (msg instanceof AsByteBuf) {
-            return ((AsByteBuf) msg).asByteBuf().readableBytes();
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();

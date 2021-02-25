@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-import io.netty.buffer.AsByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
@@ -36,8 +36,8 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
 
         @Override
         public int size(Object msg) {
-            if (msg instanceof AsByteBuf) {
-                return ((AsByteBuf) msg).asByteBuf().readableBytes();
+            if (msg instanceof ByteBufConvertible) {
+                return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
             }
             if (msg instanceof ByteBufHolder) {
                 return ((ByteBufHolder) msg).content().readableBytes();

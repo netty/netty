@@ -236,7 +236,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, AsByteBuf {
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, ByteBufConvertible {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.

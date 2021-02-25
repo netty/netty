@@ -17,8 +17,7 @@ package io.netty.channel.group;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.AsByteBuf;
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -236,8 +235,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
-        if (message instanceof AsByteBuf) {
-            return ((AsByteBuf) message).asByteBuf().retainedDuplicate();
+        if (message instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) message).asByteBuf().retainedDuplicate();
         } else if (message instanceof ByteBufHolder) {
             return ((ByteBufHolder) message).retainedDuplicate();
         } else {
