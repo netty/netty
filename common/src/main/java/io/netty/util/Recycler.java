@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 import static java.lang.Math.max;
@@ -209,8 +210,16 @@ public abstract class Recycler<T> {
 
     public interface Handle<T> extends ObjectPool.Handle<T>  { }
 
+    @SuppressWarnings("unchecked")
     private static final class DefaultHandle<T> implements Handle<T> {
-        int lastRecycledId;
+        private static final AtomicIntegerFieldUpdater<DefaultHandle<?>> LAST_RECYCLED_ID_UPDATER;
+        static {
+            AtomicIntegerFieldUpdater<?> updater = AtomicIntegerFieldUpdater.newUpdater(
+                    DefaultHandle.class, "lastRecycledId");
+            LAST_RECYCLED_ID_UPDATER = (AtomicIntegerFieldUpdater<DefaultHandle<?>>) updater;
+        }
+
+        volatile int lastRecycledId;
         int recycleId;
 
         boolean hasBeenRecycled;
@@ -234,6 +243,12 @@ public abstract class Recycler<T> {
             }
 
             stack.push(this);
+        }
+
+        public boolean compareAndSetLastRecycledId(int expectLastRecycledId, int updateLastRecycledId) {
+            // Use "weak…" because we do not need synchronize-with ordering, only atomicity.
+            // Also, spurious failures are fine, since no code should rely on recycling for correctness.
+            return LAST_RECYCLED_ID_UPDATER.weakCompareAndSet(this, expectLastRecycledId, updateLastRecycledId);
         }
     }
 
@@ -371,11 +386,15 @@ public abstract class Recycler<T> {
 
         void reclaimAllSpaceAndUnlink() {
             head.reclaimAllSpaceAndUnlink();
-            this.next = null;
+            next = null;
         }
 
         void add(DefaultHandle<?> handle) {
-            handle.lastRecycledId = id;
+            if (!handle.compareAndSetLastRecycledId(0, id)) {
+                // Separate threads could be racing to add the handle to each their own WeakOrderQueue.
+                // We only add the handle to the queue if we win the race and observe that lastRecycledId is zero.
+                return;
+            }
 
             // While we also enforce the recycling ratio when we transfer objects from the WeakOrderQueue to the Stack
             // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
@@ -649,10 +668,10 @@ public abstract class Recycler<T> {
         }
 
         private void pushNow(DefaultHandle<?> item) {
-            if ((item.recycleId | item.lastRecycledId) != 0) {
+            if (item.recycleId != 0 || !item.compareAndSetLastRecycledId(0, OWN_THREAD_ID)) {
                 throw new IllegalStateException("recycled already");
             }
-            item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
+            item.recycleId = OWN_THREAD_ID;
 
             int size = this.size;
             if (size >= maxCapacity || dropHandle(item)) {
