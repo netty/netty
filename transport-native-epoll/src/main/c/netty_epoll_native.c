@@ -40,6 +40,9 @@
 #include <linux/net.h>
 #include <sys/syscall.h>
 
+// Needed for UDP_SEGMENT
+#include <netinet/udp.h>
+
 #include "netty_epoll_linuxsocket.h"
 #include "netty_unix_buffer.h"
 #include "netty_unix_errors.h"
@@ -61,6 +64,11 @@
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
 #define TCP_FASTOPEN 23
+#endif
+
+// Allow to compile on systems with older kernels.
+#ifndef UDP_SEGMENT
+#define UDP_SEGMENT	103
 #endif
 
 // optional
@@ -103,6 +111,7 @@ struct mmsghdr {
 // Those are initialized in the init(...) method and cached for performance reasons
 static jfieldID packetAddrFieldId = NULL;
 static jfieldID packetAddrLenFieldId = NULL;
+static jfieldID packetSegmentSizeFieldId = NULL;
 static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
@@ -320,17 +329,27 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
 static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
     struct sockaddr_storage addr[len];
+    char controls[len][CMSG_SPACE(sizeof(uint16_t))];
+
     socklen_t addrSize;
     int i;
 
     memset(msg, 0, sizeof(msg));
 
     for (i = 0; i < len; i++) {
-
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
         jint addrLen = (*env)->GetIntField(env, packet, packetAddrLenFieldId);
-
+        jint packetSegmentSize = (*env)->GetIntField(env, packet, packetSegmentSizeFieldId);
+        if (packetSegmentSize > 0) {
+            msg[i].msg_hdr.msg_control = controls[i];
+            msg[i].msg_hdr.msg_controllen = sizeof(controls[i]);
+            struct cmsghdr *cm = CMSG_FIRSTHDR(&msg[i].msg_hdr);
+            cm->cmsg_level = SOL_UDP;
+            cm->cmsg_type = UDP_SEGMENT;
+            cm->cmsg_len = CMSG_LEN(sizeof(uint16_t));
+            *((uint16_t *) CMSG_DATA(cm)) = packetSegmentSize;
+        }
         if (addrLen != 0) {
             jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
             jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
@@ -421,6 +440,8 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
               (*env)->SetIntField(env, packet, packetScopeIdFieldId, ip6addr->sin6_scope_id);
               (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ip6addr->sin6_port));
         }
+        // TODO: Support this also for recvmmsg
+        (*env)->SetIntField(env, packet, packetSegmentSizeFieldId, 0);
     }
 
     return (jint) res;
@@ -446,6 +467,17 @@ static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass claz
         }
     }
     return JNI_TRUE;
+}
+
+static jboolean netty_epoll_native_isSupportingUdpSegment(JNIEnv* env, jclass clazz) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        return JNI_FALSE;
+    }
+    int gso_size = 512;
+    int ret = setsockopt(fd, SOL_UDP, UDP_SEGMENT, &gso_size, sizeof(gso_size));
+    close(fd);
+    return ret == -1 ? JNI_FALSE : JNI_TRUE;
 }
 
 static jboolean netty_epoll_native_isSupportingRecvmmsg(JNIEnv* env, jclass clazz) {
@@ -567,6 +599,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
   { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
   { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 },
+  { "isSupportingUdpSegment", "()Z", (void *) netty_epoll_native_isSupportingUdpSegment },
   { "registerUnix", "()I", (void *) netty_epoll_native_registerUnix },
 
 };
@@ -655,6 +688,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
 
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrFieldId, "addr", "[B", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrLenFieldId, "addrLen", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetSegmentSizeFieldId, "segmentSize", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetScopeIdFieldId, "scopeId", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetPortFieldId, "port", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetMemoryAddressFieldId, "memoryAddress", "J", done);
@@ -682,6 +716,7 @@ done:
         }
         packetAddrFieldId = NULL;
         packetAddrLenFieldId = NULL;
+        packetSegmentSizeFieldId = NULL;
         packetScopeIdFieldId = NULL;
         packetPortFieldId = NULL;
         packetMemoryAddressFieldId = NULL;
@@ -704,6 +739,7 @@ static void netty_epoll_native_JNI_OnUnload(JNIEnv* env, const char* packagePref
 
     packetAddrFieldId = NULL;
     packetAddrLenFieldId = NULL;
+    packetSegmentSizeFieldId = NULL;
     packetScopeIdFieldId = NULL;
     packetPortFieldId = NULL;
     packetMemoryAddressFieldId = NULL;

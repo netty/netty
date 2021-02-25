@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public final class DatagramPacket
+public class DatagramPacket
         extends DefaultAddressedEnvelope<ByteBuf, InetSocketAddress> implements ByteBufHolder {
 
     /**

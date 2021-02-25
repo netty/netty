@@ -96,7 +96,7 @@ public final class Native {
 
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
     static final boolean IS_SUPPORTING_RECVMMSG = isSupportingRecvmmsg();
-
+    static final boolean IS_SUPPORTING_UDP_SEGMENT = isSupportingUdpSegment();
     public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
@@ -109,6 +109,7 @@ public final class Native {
         return new FileDescriptor(timerFd());
     }
 
+    private static native boolean isSupportingUdpSegment();
     private static native int eventFd();
     private static native int timerFd();
     public static native void eventFdWrite(int fd, long value);
