@@ -270,9 +270,6 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setValue(String value) throws IOException {
-        if (value != null) {
-            checkSize(value.getBytes().length);
-        }
         attribute.setValue(value);
     }
 
