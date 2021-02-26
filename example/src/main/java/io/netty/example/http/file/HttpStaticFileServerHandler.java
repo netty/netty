@@ -121,7 +121,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         if (!GET.equals(request.method())) {
-            this.sendError(ctx, METHOD_NOT_ALLOWED);
+            sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
@@ -129,21 +129,21 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         final String uri = request.uri();
         final String path = sanitizeUri(uri);
         if (path == null) {
-            this.sendError(ctx, FORBIDDEN);
+            sendError(ctx, FORBIDDEN);
             return;
         }
 
         File file = new File(path);
         if (file.isHidden() || !file.exists()) {
-            this.sendError(ctx, NOT_FOUND);
+            sendError(ctx, NOT_FOUND);
             return;
         }
 
         if (file.isDirectory()) {
             if (uri.endsWith("/")) {
-                this.sendListing(ctx, file, uri);
+                sendListing(ctx, file, uri);
             } else {
-                this.sendRedirect(ctx, uri + '/');
+                sendRedirect(ctx, uri + '/');
             }
             return;
         }
@@ -164,7 +164,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
             long fileLastModifiedSeconds = file.lastModified() / 1000;
             if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
-                this.sendNotModified(ctx);
+                sendNotModified(ctx);
                 return;
             }
         }
@@ -259,9 +259,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Simplistic dumb security check.
         // You will have to do something serious in the production environment.
         if (uri.contains(File.separator + '.') ||
-            uri.contains('.' + File.separator) ||
-            uri.charAt(0) == '.' || uri.charAt(uri.length() - 1) == '.' ||
-            INSECURE_URI.matcher(uri).matches()) {
+                uri.contains('.' + File.separator) ||
+                uri.charAt(0) == '.' || uri.charAt(uri.length() - 1) == '.' ||
+                INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
 
@@ -273,18 +273,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     private void sendListing(ChannelHandlerContext ctx, File dir, String dirPath) {
         StringBuilder buf = new StringBuilder()
-            .append("<!DOCTYPE html>\r\n")
-            .append("<html><head><meta charset='utf-8' /><title>")
-            .append("Listing of: ")
-            .append(dirPath)
-            .append("</title></head><body>\r\n")
+                .append("<!DOCTYPE html>\r\n")
+                .append("<html><head><meta charset='utf-8' /><title>")
+                .append("Listing of: ")
+                .append(dirPath)
+                .append("</title></head><body>\r\n")
 
-            .append("<h3>Listing of: ")
-            .append(dirPath)
-            .append("</h3>\r\n")
+                .append("<h3>Listing of: ")
+                .append(dirPath)
+                .append("</h3>\r\n")
 
-            .append("<ul>")
-            .append("<li><a href=\"../\">..</a></li>\r\n");
+                .append("<ul>")
+                .append("<li><a href=\"../\">..</a></li>\r\n");
 
         File[] files = dir.listFiles();
         if (files != null) {
@@ -299,10 +299,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 }
 
                 buf.append("<li><a href=\"")
-                .append(name)
-                .append("\">")
-                .append(name)
-                .append("</a></li>\r\n");
+                        .append(name)
+                        .append("\">")
+                        .append(name)
+                        .append("</a></li>\r\n");
             }
         }
 
@@ -314,14 +314,14 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, buffer);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
-        this.sendAndCleanupConnection(ctx, response);
+        sendAndCleanupConnection(ctx, response);
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND, Unpooled.EMPTY_BUFFER);
         response.headers().set(HttpHeaderNames.LOCATION, newUri);
 
-        this.sendAndCleanupConnection(ctx, response);
+        sendAndCleanupConnection(ctx, response);
     }
 
     private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
@@ -329,7 +329,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
-        this.sendAndCleanupConnection(ctx, response);
+        sendAndCleanupConnection(ctx, response);
     }
 
     /**
@@ -342,7 +342,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED, Unpooled.EMPTY_BUFFER);
         setDateHeader(response);
 
-        this.sendAndCleanupConnection(ctx, response);
+        sendAndCleanupConnection(ctx, response);
     }
 
     /**
