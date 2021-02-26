@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -268,9 +269,9 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
+        if (msg instanceof ByteBufConvertible) {
             try {
-                ByteBuf data = (ByteBuf) msg;
+                ByteBuf data = ((ByteBufConvertible) msg).asByteBuf();
                 first = cumulation == null;
                 if (first) {
                     cumulation = data;

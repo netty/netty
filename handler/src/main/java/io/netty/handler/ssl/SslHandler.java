@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -760,7 +761,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (!(msg instanceof ByteBuf)) {
+        if (!(msg instanceof ByteBufConvertible)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
             ReferenceCountUtil.safeRelease(msg);
             promise.setFailure(exception);
@@ -768,7 +769,7 @@ public class SslHandler extends ByteToMessageDecoder {
             ReferenceCountUtil.safeRelease(msg);
             promise.setFailure(newPendingWritesNullException());
         } else {
-            pendingUnencryptedWrites.add((ByteBuf) msg, promise);
+            pendingUnencryptedWrites.add(((ByteBufConvertible) msg).asByteBuf(), promise);
         }
     }
 

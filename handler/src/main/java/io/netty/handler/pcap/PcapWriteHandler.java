@@ -15,6 +15,7 @@
  */
 package io.netty.handler.pcap;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
@@ -163,7 +164,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
             ByteBuf byteBuf = byteBufAllocator.buffer();
             try {
-                this.pCapWriter = new PcapWriter(this.outputStream, byteBuf);
+                pCapWriter = new PcapWriter(outputStream, byteBuf);
             } catch (IOException ex) {
                 ctx.channel().close();
                 ctx.fireExceptionCaught(ex);
@@ -172,7 +173,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 byteBuf.release();
             }
         } else {
-            this.pCapWriter = new PcapWriter(this.outputStream);
+            pCapWriter = new PcapWriter(outputStream);
         }
 
         // If Channel belongs to `SocketChannel` then we're handling TCP.
@@ -261,16 +262,16 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                         else set {@code false}
      */
     private void handleTCP(ChannelHandlerContext ctx, Object msg, boolean isWriteOperation) {
-        if (msg instanceof ByteBuf) {
+        if (msg instanceof ByteBufConvertible) {
 
             // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
-            if (((ByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
+            if (((ByteBufConvertible) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
                 logger.debug("Discarding Zero Byte TCP Packet. isWriteOperation {}", isWriteOperation);
                 return;
             }
 
             ByteBufAllocator byteBufAllocator = ctx.alloc();
-            ByteBuf packet = ((ByteBuf) msg).duplicate();
+            ByteBuf packet = ((ByteBufConvertible) msg).asByteBuf().duplicate();
             ByteBuf tcpBuf = byteBufAllocator.buffer();
             int bytes = packet.readableBytes();
 
@@ -408,15 +409,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
                 UDPPacket.writePacket(udpBuf, datagramPacket.content(), srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
-            } else if (msg instanceof ByteBuf && ((DatagramChannel) ctx.channel()).isConnected()) {
+            } else if (msg instanceof ByteBufConvertible && ((DatagramChannel) ctx.channel()).isConnected()) {
 
                 // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
-                if (((ByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
+                if (((ByteBufConvertible) msg).asByteBuf().readableBytes() == 0 && !captureZeroByte) {
                     logger.debug("Discarding Zero Byte UDP Packet");
                     return;
                 }
 
-                ByteBuf byteBuf = ((ByteBuf) msg).duplicate();
+                ByteBuf byteBuf = ((ByteBufConvertible) msg).asByteBuf().duplicate();
 
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
                         byteBuf.readableBytes(), srcAddr, dstAddr);
