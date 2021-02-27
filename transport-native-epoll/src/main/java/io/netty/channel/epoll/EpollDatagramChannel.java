@@ -297,7 +297,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             try {
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
-                if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1) {
+                if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1 ||
+                        // We only handle UDP_SEGMENT in sendmmsg.
+                        in.current() instanceof SegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
                     array.add(in, isConnected());
                     int cnt = array.count();
@@ -371,6 +373,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof SegmentedDatagramPacket) {
+            if (!Native.IS_SUPPORTING_UDP_SEGMENT) {
+                throw new UnsupportedOperationException(
+                        "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
+            }
+            SegmentedDatagramPacket packet = (SegmentedDatagramPacket) msg;
+            ByteBuf content = packet.content();
+            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                    packet.replace(newDirectBuffer(packet, content)) : msg;
+        }
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
             ByteBuf content = packet.content();
