@@ -68,7 +68,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
         try {
             cb.handler(new SimpleChannelInboundHandler() {
                 @Override
-                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
                     // Nothing will be sent.
                 }
             });
@@ -82,7 +82,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
             AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
             sc = sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
                 @Override
-                public void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+                public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) {
                     if (packet.content().readableBytes() == segmentSize) {
                         latch.countDown();
                     }
