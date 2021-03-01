@@ -144,6 +144,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean recvStreamPending;
     private boolean streamReadable;
     private boolean inRecv;
+    private boolean inConnectionSend;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -969,43 +970,49 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * {@link Channel#flush()} at some point.
      */
     private boolean connectionSend() {
-        if (isConnDestroyed()) {
+        if (isConnDestroyed() || inConnectionSend) {
             return false;
         }
 
-        long connAddr = connection.address();
-        boolean packetWasWritten = false;
-        for (;;) {
-            ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
-            int writerIndex = out.writerIndex();
-            int written = Quiche.quiche_conn_send(
-                    connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes());
+        inConnectionSend = true;
 
-            try {
-                if (Quiche.throwIfError(written)) {
+        try {
+            long connAddr = connection.address();
+            boolean packetWasWritten = false;
+            for (;;) {
+                ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+                int writerIndex = out.writerIndex();
+                int written = Quiche.quiche_conn_send(
+                        connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes());
+
+                try {
+                    if (Quiche.throwIfError(written)) {
+                        out.release();
+                        break;
+                    }
+                } catch (Exception e) {
                     out.release();
+                    pipeline().fireExceptionCaught(e);
                     break;
                 }
-            } catch (Exception e) {
-                out.release();
-                pipeline().fireExceptionCaught(e);
-                break;
-            }
 
-            if (written == 0) {
-                // No need to create a new datagram packet. Just release and try again.
-                out.release();
-                continue;
+                if (written == 0) {
+                    // No need to create a new datagram packet. Just release and try again.
+                    out.release();
+                    continue;
+                }
+                out.writerIndex(writerIndex + written);
+                parent().write(new DatagramPacket(out, remote));
+                packetWasWritten = true;
             }
-            out.writerIndex(writerIndex + written);
-            parent().write(new DatagramPacket(out, remote));
-            packetWasWritten = true;
+            if (packetWasWritten) {
+                timeoutHandler.scheduleTimeout();
+                return true;
+            }
+            return false;
+        } finally {
+            inConnectionSend = false;
         }
-        if (packetWasWritten) {
-            timeoutHandler.scheduleTimeout();
-            return true;
-        }
-        return false;
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
