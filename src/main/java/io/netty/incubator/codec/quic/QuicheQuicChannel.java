@@ -1416,7 +1416,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         nanos, TimeUnit.NANOSECONDS);
             } else {
                 long remaining = timeoutFuture.getDelay(TimeUnit.NANOSECONDS);
-                if (remaining <= 0 || remaining > nanos) {
+                if (remaining <= 0) {
+                    // This means the timer already elapsed. In this case just cancel the future and call run()
+                    // directly. This will ensure we correctly call quiche_conn_on_timeout() etc.
+                    cancel();
+                    run();
+                } else if (remaining > nanos) {
+                    // The new timeout is smaller then what was scheduled before. Let's cancel the old timeout
+                    // and schedule a new one.
                     cancel();
                     timeoutFuture = eventLoop().schedule(this, nanos, TimeUnit.NANOSECONDS);
                 }
