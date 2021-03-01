@@ -411,6 +411,8 @@
                         <env key="CFLAGS" value="${extraCflags}" />
                         <env key="CXXFLAGS" value="${extraCxxflags}" />
                         <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                        <!-- Lets enable frame-pointers so we can profile better -->
+                        <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                       </exec>
                     </else>
                   </if>
