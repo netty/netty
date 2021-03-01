@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.internal.tcnative.SSLSession;
 import io.netty.internal.tcnative.SSLSessionCache;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
@@ -58,7 +59,7 @@ class OpenSslSessionCache implements SSLSessionCache {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<OpenSslSessionId, NativeSslSession> eldest) {
                     int maxSize = maximumCacheSize.get();
-                    if (maxSize >= 0 && this.size() > maxSize) {
+                    if (maxSize >= 0 && size() > maxSize) {
                         removeSessionWithId(eldest.getKey());
                     }
                     // We always need to return false as we modify the map directly.
@@ -235,17 +236,15 @@ class OpenSslSessionCache implements SSLSessionCache {
     /**
      * Return the {@link OpenSslSession} which is cached for the given id.
      */
-    final OpenSslSession getSession(OpenSslSessionId id) {
-        synchronized (this) {
-            NativeSslSession session = sessions.get(id);
-            if (session != null && !session.isValid()) {
-                // The session is not valid anymore, let's remove it and just signal back that there is no session
-                // with the given ID in the cache anymore. This also takes care of calling SSL_SESSION_free(...)
-                removeSessionWithId(session.sessionId());
-                return null;
-            }
-            return session;
+    final synchronized OpenSslSession getSession(OpenSslSessionId id) {
+        NativeSslSession session = sessions.get(id);
+        if (session != null && !session.isValid()) {
+            // The session is not valid anymore, let's remove it and just signal back that there is no session
+            // with the given ID in the cache anymore. This also takes care of calling SSL_SESSION_free(...)
+            removeSessionWithId(session.sessionId());
+            return null;
         }
+        return session;
     }
 
     /**
@@ -312,7 +311,7 @@ class OpenSslSessionCache implements SSLSessionCache {
 
         boolean shouldBeSingleUse() {
             assert !freed;
-            return io.netty.internal.tcnative.SSLSession.shouldBeSingleUse(session);
+            return SSLSession.shouldBeSingleUse(session);
         }
 
         long session() {
@@ -322,12 +321,12 @@ class OpenSslSessionCache implements SSLSessionCache {
 
         boolean upRef() {
             assert !freed;
-            return io.netty.internal.tcnative.SSLSession.upRef(session);
+            return SSLSession.upRef(session);
         }
 
         synchronized void free() {
             close();
-            io.netty.internal.tcnative.SSLSession.free(session);
+            SSLSession.free(session);
         }
 
         void close() {
@@ -380,7 +379,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
 
         void updateLastAccessedTime() {
-            this.lastAccessedTime = System.currentTimeMillis();
+            lastAccessedTime = System.currentTimeMillis();
         }
 
         @Override
