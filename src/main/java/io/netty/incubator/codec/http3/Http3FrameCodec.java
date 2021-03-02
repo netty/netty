@@ -343,7 +343,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     private static void writeDataFrame(
             ChannelHandlerContext ctx, Http3DataFrame frame, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
+        ByteBuf out = ctx.alloc().directBuffer(16);
         writeVariableLengthInteger(out, frame.type());
         writeVariableLengthInteger(out, frame.content().readableBytes());
         ByteBuf content = frame.content().retain();
@@ -436,7 +436,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id, ChannelPromise promise) {
-        ByteBuf out = ctx.alloc().directBuffer();
+        ByteBuf out = ctx.alloc().directBuffer(24);
         writeVariableLengthInteger(out, type);
         writeVariableLengthInteger(out, numBytesForVariableLengthInteger(id));
         writeVariableLengthInteger(out, id);
