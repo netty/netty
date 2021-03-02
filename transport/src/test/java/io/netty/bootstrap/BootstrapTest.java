@@ -35,6 +35,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.AbstractAddressResolver;
@@ -96,6 +97,25 @@ public class BootstrapTest {
         bootstrapA.attr(key, "value2");
         assertEquals(key, attributesArray[0].getKey());
         assertEquals(value, attributesArray[0].getValue());
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChannelInit() throws InterruptedException {
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        new Bootstrap()
+                .group(groupA)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .attr(key, "value")
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                    }
+                })
+                .bind(LocalAddress.ANY).sync();
     }
 
     @Test(timeout = 10000)

@@ -21,18 +21,22 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.AttributeKey;
 import org.junit.Test;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -136,5 +140,38 @@ public class ServerBootstrapTest {
             }
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws InterruptedException {
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        final AtomicBoolean requestServed = new AtomicBoolean();
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .childAttr(key, "value")
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                        requestServed.set(true);
+                    }
+                });
+        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
+
+        Bootstrap cb = new Bootstrap();
+        cb.group(group)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
+        serverChannel.close().syncUninterruptibly();
+        clientChannel.close().syncUninterruptibly();
+        group.shutdownGracefully();
+        assertTrue(requestServed.get());
     }
 }
