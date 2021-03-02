@@ -257,10 +257,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private void initChild(final Channel child) {
             assert child.eventLoop().inEventLoop();
             try {
-                child.pipeline().addLast(childHandler);
-
                 setChannelOptions(child, childOptions, logger);
                 setAttributes(child, childAttrs);
+
+                child.pipeline().addLast(childHandler);
 
                 child.register().addListener((ChannelFutureListener) future -> {
                     if (!future.isSuccess()) {
