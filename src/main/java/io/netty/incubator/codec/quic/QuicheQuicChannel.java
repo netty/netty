@@ -16,7 +16,6 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -145,6 +144,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean streamReadable;
     private boolean inRecv;
     private boolean inConnectionSend;
+    private boolean inHandleWritableStreams;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
@@ -715,115 +715,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         Quiche.notifyPromise(res, promise);
     }
 
-    StreamSendResult streamSendMultiple(long streamId, ByteBufAllocator allocator,
-                                        ChannelOutboundBuffer streamOutboundBuffer, Runnable finSent) throws Exception {
-        boolean sendSomething = false;
-        try {
-            for (;;) {
-                Object current =  streamOutboundBuffer.current();
-                if (current == null) {
-                    break;
-                }
-                final ByteBuf buffer;
-                final boolean fin;
-                if (current instanceof ByteBuf) {
-                    buffer = (ByteBuf) current;
-                    fin = false;
-                } else {
-                    QuicStreamFrame streamFrame = (QuicStreamFrame) current;
-                    buffer = streamFrame.content();
-                    fin = streamFrame.hasFin();
-                }
-                int readable = buffer.readableBytes();
-                if (readable == 0 && !fin) {
-                    // Skip empty buffers, but only if its not a FIN.
-                    streamOutboundBuffer.remove();
-                    continue;
-                }
-
-                final int res;
-                if (!buffer.isDirect()) {
-                    ByteBuf tmpBuffer = allocator.directBuffer(readable);
-                    try {
-                        tmpBuffer.writeBytes(buffer, buffer.readerIndex(), readable);
-                        res = streamSend(streamId, tmpBuffer, fin);
-                    } finally {
-                        tmpBuffer.release();
-                    }
-                } else if (buffer.nioBufferCount() > 1) {
-                    ByteBuffer[] nioBuffers  = buffer.nioBuffers();
-                    int lastIdx = nioBuffers.length - 1;
-                    for (int i = 0; i < lastIdx; i++) {
-                        ByteBuffer nioBuffer = nioBuffers[i];
-                        while (nioBuffer.hasRemaining()) {
-                            int localRes = streamSend(streamId, nioBuffer, false);
-                            if (Quiche.throwIfError(localRes) || localRes == 0) {
-                                // stream has no capacity left stop trying to send.
-                                return StreamSendResult.NO_SPACE;
-                            }
-                            nioBuffer.position(nioBuffer.position() + localRes);
-
-                            sendSomething = true;
-                            streamOutboundBuffer.removeBytes(localRes);
-                        }
-                    }
-                    res = streamSend(streamId, nioBuffers[lastIdx], fin);
-                } else {
-                    res = streamSend(streamId, buffer, fin);
-                }
-
-                if (Quiche.throwIfError(res)) {
-                    // stream has no capacity left stop trying to send.
-                    return StreamSendResult.NO_SPACE;
-                }
-
-                if (res == 0) {
-                    // If readable == 0 we know it was because of a FIN as otherwise we would have skipped the write
-                    // in the first place.
-                    if (readable == 0) {
-                        sendSomething = true;
-                        return handleFin(streamOutboundBuffer, -1, finSent);
-                    }
-                    // We couldn't send the data as there was not enough space.
-                    return StreamSendResult.NO_SPACE;
-                }
-                sendSomething = true;
-                if (fin) {
-                    return handleFin(streamOutboundBuffer, res, finSent);
-                }
-                streamOutboundBuffer.removeBytes(res);
-            }
-            return StreamSendResult.DONE;
-        } finally {
-            // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
-            // now or we will do so once we see the channelReadComplete event.
-            //
-            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
-            if (sendSomething && connectionSend()) {
-                flushParent();
-            }
-        }
-    }
-
-    private static StreamSendResult handleFin(ChannelOutboundBuffer streamOutboundBuffer, int res, Runnable finSent) {
-        // We need to let the caller know we did sent a FIN before we actually remove the bytes from the
-        // outbound buffer. This is required as removeBytes(...) will notify the promise of the writes
-        // which may try to send a FIN again which would produce a FINAL_SIZE error.
-        finSent.run();
-
-        if (res == -1) {
-            // -1 means we did write an empty frame with a FIN.
-            streamOutboundBuffer.remove();
-        } else {
-            streamOutboundBuffer.removeBytes(res);
-        }
-        return StreamSendResult.FIN;
-    }
-
     void streamSendFin(long streamId) throws Exception {
         try {
             // Just write an empty buffer and set fin to true.
-            Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, true));
+            Quiche.throwIfError(streamSend0(streamId, Unpooled.EMPTY_BUFFER, true));
         } finally {
             // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
             // now or we will do so once we see the channelReadComplete event.
@@ -835,12 +730,47 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private int streamSend(long streamId, ByteBuf buffer, boolean fin) throws Exception {
+    int streamSend(long streamId, ByteBuf buffer, boolean fin) throws ClosedChannelException {
+        if (buffer.nioBufferCount() == 1) {
+            return streamSend0(streamId, buffer, fin);
+        }
+        ByteBuffer[] nioBuffers  = buffer.nioBuffers();
+        int lastIdx = nioBuffers.length - 1;
+        int res = 0;
+        for (int i = 0; i < lastIdx; i++) {
+            ByteBuffer nioBuffer = nioBuffers[i];
+            while (nioBuffer.hasRemaining()) {
+                int localRes = streamSend(streamId, nioBuffer, false);
+                if (localRes <= 0) {
+                    return res;
+                }
+                res += localRes;
+
+                nioBuffer.position(nioBuffer.position() + localRes);
+            }
+        }
+        int localRes = streamSend(streamId, nioBuffers[lastIdx], fin);
+        if (localRes > 0) {
+            res += localRes;
+        }
+        return res;
+    }
+
+    void connectionSendAndFlush() {
+        if (inFireChannelReadCompleteQueue || inHandleWritableStreams) {
+            return;
+        }
+        if (connectionSend()) {
+            flushParent();
+        }
+    }
+
+    private int streamSend0(long streamId, ByteBuf buffer, boolean fin) throws ClosedChannelException {
         return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
                 Quiche.memoryAddress(buffer) + buffer.readerIndex(), buffer.readableBytes(), fin);
     }
 
-    private int streamSend(long streamId, ByteBuffer buffer, boolean fin) throws Exception {
+    private int streamSend(long streamId, ByteBuffer buffer, boolean fin) throws ClosedChannelException {
         return Quiche.quiche_conn_stream_send(connectionAddressChecked(), streamId,
                 Quiche.memoryAddress(buffer) + buffer.position(), buffer.remaining(), fin);
     }
@@ -888,45 +818,50 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (isConnDestroyed() || pending == 0) {
             return false;
         }
-        long connAddr = connection.address();
-        boolean mayNeedWrite = false;
-        if (Quiche.quiche_conn_is_established(connAddr) ||
-                Quiche.quiche_conn_is_in_early_data(connAddr)) {
-            // We only want to process the number of channels that were in the queue when we entered
-            // handleWritableStreams(). Otherwise we may would loop forever as a channel may add itself again
-            // if the write was again partial.
-            for (int i = 0; i < pending; i++) {
-                Long streamId = flushPendingQueue.poll();
-                if (streamId == null) {
-                    break;
-                }
-                // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
-                // to notice that we can not write again.
-                int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
-                if (capacity == 0) {
-                    // Still not writable, put back in the queue.
-                    flushPendingQueue.add(streamId);
-                } else {
-                    long sid = streamId;
-                    QuicheQuicStreamChannel channel = streams.get(sid);
-                    if (channel != null) {
-                        if (capacity > 0) {
-                            mayNeedWrite = true;
-                            channel.writable();
-                        } else {
-                            if (!Quiche.quiche_conn_stream_finished(connAddr, sid)) {
-                                // Only fire an exception if the error was not caused because the stream is considered
-                                // finished.
-                                channel.pipeline().fireExceptionCaught(Quiche.newException(capacity));
+        inHandleWritableStreams = true;
+        try {
+            long connAddr = connection.address();
+            boolean mayNeedWrite = false;
+            if (Quiche.quiche_conn_is_established(connAddr) ||
+                    Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                // We only want to process the number of channels that were in the queue when we entered
+                // handleWritableStreams(). Otherwise we may would loop forever as a channel may add itself again
+                // if the write was again partial.
+                for (int i = 0; i < pending; i++) {
+                    Long streamId = flushPendingQueue.poll();
+                    if (streamId == null) {
+                        break;
+                    }
+                    // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
+                    // to notice that we can not write again.
+                    int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
+                    if (capacity == 0) {
+                        // Still not writable, put back in the queue.
+                        flushPendingQueue.add(streamId);
+                    } else {
+                        long sid = streamId;
+                        QuicheQuicStreamChannel channel = streams.get(sid);
+                        if (channel != null) {
+                            if (capacity > 0) {
+                                mayNeedWrite = true;
+                                channel.writable(capacity);
+                            } else {
+                                if (!Quiche.quiche_conn_stream_finished(connAddr, sid)) {
+                                    // Only fire an exception if the error was not caused because the stream is
+                                    // considered finished.
+                                    channel.pipeline().fireExceptionCaught(Quiche.newException(capacity));
+                                }
+                                // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
+                                channel.forceClose();
                             }
-                            // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
-                            channel.forceClose();
                         }
                     }
                 }
             }
+            return mayNeedWrite;
+        } finally {
+            inHandleWritableStreams = false;
         }
-        return mayNeedWrite;
     }
 
     /**
@@ -1021,7 +956,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                            Promise<QuicStreamChannel> promise) {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {
-                Quiche.throwIfError(streamSend(streamId, Unpooled.EMPTY_BUFFER, false));
+                Quiche.throwIfError(streamSend0(streamId, Unpooled.EMPTY_BUFFER, false));
             } catch (Exception e) {
                 promise.setFailure(e);
                 return;

@@ -18,55 +18,78 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
+import io.netty.channel.DefaultChannelId;
+import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.PendingWriteQueue;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.function.Supplier;
+import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * {@link QuicStreamChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
  */
-final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStreamChannel {
+final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicStreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicStreamChannel.class);
+    private final QuicheQuicChannel parent;
+    private final ChannelId id;
+    private final ChannelPipeline pipeline;
+    private final QuicStreamChannelUnsafe unsafe;
+    private final ChannelPromise closePromise;
+    private final PendingWriteQueue queue;
 
     private final QuicStreamChannelConfig config;
     private final QuicStreamAddress address;
-    private final Runnable finUpdater = new Runnable() {
-        @Override
-        public void run() {
-            finSent = true;
-            outputShutdown = true;
-        }
-    };
 
     private boolean readable;
     private boolean readPending;
-    private boolean flushPending;
     private boolean inRecv;
+    private boolean inWriteQueued;
     private boolean finReceived;
     private boolean finSent;
 
+    private volatile boolean registered;
+    private volatile boolean writable = true;
     private volatile boolean active = true;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
     private volatile QuicStreamPriority priority;
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
-        super(parent);
+        this.parent = parent;
+        this.id = DefaultChannelId.newInstance();
+        unsafe = new QuicStreamChannelUnsafe();
+        this.pipeline = new DefaultChannelPipeline(this) {
+            // TODO: add some overrides maybe ?
+        };
         config = new QuicheQuicStreamChannelConfig(this);
+        // Add a noop handler to the pipeline so we can construct the PendingWriteQueue.
+        this.pipeline.addLast(new ChannelHandlerAdapter() { });
+        queue = new PendingWriteQueue(pipeline.firstContext());
         this.address = new QuicStreamAddress(streamId);
-
+        this.closePromise = newPromise();
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for
         // these to be read.
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {
@@ -76,12 +99,12 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public QuicStreamAddress localAddress() {
-        return (QuicStreamAddress) super.localAddress();
+        return address;
     }
 
     @Override
     public QuicStreamAddress remoteAddress() {
-        return (QuicStreamAddress) super.remoteAddress();
+        return address;
     }
 
     @Override
@@ -147,7 +170,7 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public QuicheQuicChannel parent() {
-        return (QuicheQuicChannel) super.parent();
+        return parent;
     }
 
     private void shutdownInput0(ChannelPromise channelPromise) {
@@ -225,36 +248,6 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         closeIfDone();
     }
 
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new QuicStreamChannelUnsafe();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop eventLoop) {
-        return eventLoop == parent().eventLoop();
-    }
-
-    @Override
-    protected SocketAddress localAddress0() {
-        return address;
-    }
-
-    @Override
-    protected SocketAddress remoteAddress0() {
-        return address;
-    }
-
-    @Override
-    protected void doBind(SocketAddress socketAddress) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
-    }
-
     private void sendFinIfNeeded() throws Exception {
         if (!finSent) {
             finSent = true;
@@ -262,92 +255,9 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         }
     }
 
-    @Override
-    protected void doClose() throws Exception {
-        active = false;
-        try {
-            sendFinIfNeeded();
-        } finally {
-            if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
-                inputShutdown = true;
-                outputShutdown = true;
-                // If its an unidirectional stream and was created locally it is safe to close the stream now as we will
-                // never receive data from the other side.
-                parent().streamClosed(streamId());
-            } else {
-                removeStreamFromParent();
-            }
-        }
-    }
-
     private void closeIfDone() {
         if (finSent && (finReceived || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
             unsafe().close(unsafe().voidPromise());
-        }
-    }
-
-    @Override
-    protected void doBeginRead() {
-        readPending = true;
-        if (readable) {
-            ((QuicStreamChannelUnsafe) unsafe()).recv();
-        }
-    }
-
-    @Override
-    protected Object filterOutboundMessage(Object msg) {
-        if (!(msg instanceof ByteBuf || msg instanceof QuicStreamFrame)) {
-            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
-        }
-        return msg;
-    }
-
-    @Override
-    protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
-        // reset first as streamSendMultiple may notify futures.
-        flushPending = false;
-        if (finSent) {
-            failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
-                    "Fin was sent already"));
-            return;
-        }
-        if (type() == QuicStreamType.UNIDIRECTIONAL && !isLocalCreated()) {
-            failOutboundBuffer(channelOutboundBuffer, () -> new UnsupportedOperationException(
-                    "Writes on non-local created streams that are unidirectional are not supported"));
-            return;
-        }
-
-        QuicheQuicChannel.StreamSendResult result = parent()
-                .streamSendMultiple(streamId(), alloc(), channelOutboundBuffer, finUpdater);
-        switch (result) {
-            case NO_SPACE:
-                parent().streamHasPendingWrites(streamId());
-                flushPending = true;
-                break;
-            case DONE:
-                // Did sent everything without any FIN.
-                break;
-            case FIN:
-                failOutboundBuffer(channelOutboundBuffer, () -> new ChannelOutputShutdownException(
-                        "Fin was sent already"));
-                break;
-            default:
-                throw new Error();
-        }
-    }
-
-    private void failOutboundBuffer(ChannelOutboundBuffer outboundBuffer, Supplier<Exception> exceptionSupplier) {
-        if (outboundBuffer.isEmpty()) {
-            // nothing to do.
-            return;
-        }
-
-        Exception exception = exceptionSupplier.get();
-        for (;;) {
-            if (!outboundBuffer.remove(exception)) {
-                // failed all writes.
-                return;
-            }
         }
     }
 
@@ -361,13 +271,13 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
 
     @Override
     public QuicStreamChannel flush() {
-        super.flush();
+        pipeline.flush();
         return this;
     }
 
     @Override
     public QuicStreamChannel read() {
-        super.read();
+        pipeline.read();
         return this;
     }
 
@@ -391,11 +301,171 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         return METADATA;
     }
 
+    @Override
+    public ChannelId id() {
+        return id;
+    }
+
+    @Override
+    public EventLoop eventLoop() {
+        return parent.eventLoop();
+    }
+
+    @Override
+    public boolean isRegistered() {
+        return registered;
+    }
+
+    @Override
+    public ChannelFuture closeFuture() {
+        return closePromise;
+    }
+
+    @Override
+    public boolean isWritable() {
+        return writable;
+    }
+
+    @Override
+    public long bytesBeforeUnwritable() {
+        return 0;
+    }
+
+    @Override
+    public long bytesBeforeWritable() {
+        return 0;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
+    }
+
+    @Override
+    public ChannelPipeline pipeline() {
+        return pipeline;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return config.getAllocator();
+    }
+
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress) {
+        return pipeline.bind(localAddress);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        return pipeline.connect(remoteAddress);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return pipeline.connect(remoteAddress, localAddress);
+    }
+
+    @Override
+    public ChannelFuture disconnect() {
+        return pipeline.disconnect();
+    }
+
+    @Override
+    public ChannelFuture close() {
+        return pipeline.close();
+    }
+
+    @Override
+    public ChannelFuture deregister() {
+        return pipeline.deregister();
+    }
+
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.bind(localAddress, promise);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, promise);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return pipeline.disconnect(promise);
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return pipeline.close(promise);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
+    }
+
+    @Override
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
+    }
+
+    @Override
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline.write(msg, promise);
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        return pipeline.writeAndFlush(msg, promise);
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg) {
+        return pipeline.writeAndFlush(msg);
+    }
+
+    @Override
+    public ChannelPromise newPromise() {
+        return pipeline.newPromise();
+    }
+
+    @Override
+    public ChannelProgressivePromise newProgressivePromise() {
+        return pipeline.newProgressivePromise();
+    }
+
+    @Override
+    public ChannelFuture newSucceededFuture() {
+        return pipeline.newProgressivePromise();
+    }
+
+    @Override
+    public ChannelFuture newFailedFuture(Throwable cause) {
+        return pipeline.newFailedFuture(cause);
+    }
+
+    @Override
+    public ChannelPromise voidPromise() {
+        return pipeline.voidPromise();
+    }
+
+    @Override
+    public int compareTo(Channel o) {
+        return id.compareTo(o.id());
+    }
+
     /**
      * Stream is writable.
      */
-    void writable() {
-        ((QuicStreamChannelUnsafe) unsafe()).flushIfPending();
+    void writable(@SuppressWarnings("unused") int capacity) {
+        ((QuicStreamChannelUnsafe) unsafe()).writeQueued();
     }
 
     /**
@@ -415,41 +485,333 @@ final class QuicheQuicStreamChannel extends AbstractChannel implements QuicStrea
         unsafe().close(unsafe().voidPromise());
     }
 
-    private final class QuicStreamChannelUnsafe extends AbstractUnsafe {
+    private final class QuicStreamChannelUnsafe implements Unsafe {
+        private RecvByteBufAllocator.Handle recvHandle;
 
+        private final ChannelPromise voidPromise = new VoidChannelPromise(
+                QuicheQuicStreamChannel.this, false);
         @Override
-        public void connect(SocketAddress socketAddress, SocketAddress socketAddress1, ChannelPromise channelPromise) {
-            channelPromise.setFailure(new UnsupportedOperationException());
+        public void connect(SocketAddress remote, SocketAddress local, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+            if (recvHandle == null) {
+                recvHandle = config.getRecvByteBufAllocator().newHandle();
+            }
+            return recvHandle;
         }
 
         @Override
-        protected void flush0() {
-            if (flushPending) {
-                // We already have a flush pending that needs to be done once the stream becomes writable again.
+        public SocketAddress localAddress() {
+            return address;
+        }
+
+        @Override
+        public SocketAddress remoteAddress() {
+            return address;
+        }
+
+        @Override
+        public void register(EventLoop eventLoop, ChannelPromise promise) {
+            if (registered) {
+                promise.setFailure(new IllegalStateException());
                 return;
             }
+            if (eventLoop != parent.eventLoop()) {
+                promise.setFailure(new IllegalArgumentException());
+                return;
+            }
+            registered = true;
+            promise.setSuccess();
+            pipeline.fireChannelRegistered();
+            pipeline.fireChannelActive();
+        }
+
+        @Override
+        public void bind(SocketAddress localAddress, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
+        public void disconnect(ChannelPromise promise) {
+            close(promise);
+        }
+
+        @Override
+        public void close(ChannelPromise promise) {
+            if (!active || closePromise.isDone()) {
+                if (promise.isVoid()) {
+                    return;
+                }
+                closePromise.addListener(new ChannelPromiseNotifier(promise));
+                return;
+            }
+            active = false;
+            try {
+                // Close the channel and fail the queued messages in all cases.
+                sendFinIfNeeded();
+            } catch (Exception ignore) {
+                // Just ignore
+            } finally {
+                queue.removeAndFailAll(new ClosedChannelException());
+
+                promise.trySuccess();
+                closePromise.trySuccess();
+                if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
+                    inputShutdown = true;
+                    outputShutdown = true;
+                    // If its an unidirectional stream and was created locally it is safe to close the stream now as
+                    // we will never receive data from the other side.
+                    parent().streamClosed(streamId());
+                } else {
+                    removeStreamFromParent();
+                }
+            }
+            if (inWriteQueued) {
+                invokeLater(() -> deregister(voidPromise(), true));
+            } else {
+                deregister(voidPromise(), true);
+            }
+        }
+
+        private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
+            if (!registered) {
+                promise.trySuccess();
+                return;
+            }
+
+            // As a user may call deregister() from within any method while doing processing in the ChannelPipeline,
+            // we need to ensure we do the actual deregister operation later. This is needed as for example,
+            // we may be in the ByteToMessageDecoder.callDecode(...) method and so still try to do processing in
+            // the old EventLoop while the user already registered the Channel to a new EventLoop. Without delay,
+            // the deregister operation this could lead to have a handler invoked by different EventLoop and so
+            // threads.
+            //
+            // See:
+            // https://github.com/netty/netty/issues/4435
+            invokeLater(() -> {
+                if (fireChannelInactive) {
+                    pipeline.fireChannelInactive();
+                }
+                // Some transports like local and AIO does not allow the deregistration of
+                // an open channel.  Their doDeregister() calls close(). Consequently,
+                // close() calls deregister() again - no need to fire channelUnregistered, so check
+                // if it was registered.
+                if (registered) {
+                    registered = false;
+                    pipeline.fireChannelUnregistered();
+                }
+                promise.setSuccess();
+            });
+        }
+
+        private void invokeLater(Runnable task) {
+            try {
+                // This method is used by outbound operation implementations to trigger an inbound event later.
+                // They do not trigger an inbound event immediately because an outbound operation might have been
+                // triggered by another inbound event handler method.  If fired immediately, the call stack
+                // will look like this for example:
+                //
+                //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+                //   -> handlerA.ctx.close()
+                //      -> channel.unsafe.close()
+                //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+                //
+                // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+                eventLoop().execute(task);
+            } catch (RejectedExecutionException e) {
+                LOGGER.warn("Can't invoke task later as EventLoop rejected it", e);
+            }
+        }
+
+        @Override
+        public void closeForcibly() {
+            close(unsafe().voidPromise());
+        }
+
+        @Override
+        public void deregister(ChannelPromise promise) {
+            deregister(promise, false);
+        }
+
+        @Override
+        public void beginRead() {
+            readPending = true;
+            if (readable) {
+                ((QuicStreamChannelUnsafe) unsafe()).recv();
+            }
+        }
+
+        private void closeIfNeeded(boolean wasFinSent) {
+            // Let's check if we should close the channel now.
+            // If it's a unidirectional channel we can close it as there will be no fin that we can read
+            // from the remote peer. If its an bidirectional channel we should only close the channel if we
+            // also received the fin from the remote peer.
+            if (!wasFinSent && QuicheQuicStreamChannel.this.finSent
+                    && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
+                // close the channel now
+                close(voidPromise());
+            }
+        }
+
+        void writeQueued() {
+            boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
+            inWriteQueued = true;
+            try {
+                for (;;) {
+                    Object msg = queue.current();
+                    if (msg == null) {
+                        break;
+                    }
+                    try {
+                        if (!write0(msg)) {
+                            return;
+                        }
+                    } catch (Exception e) {
+                        queue.remove().setFailure(e);
+                        continue;
+                    }
+                    queue.remove().setSuccess();
+                }
+                if (!writable) {
+                    writable = true;
+                    pipeline.fireChannelWritabilityChanged();
+                }
+            } finally {
+                closeIfNeeded(wasFinSent);
+                inWriteQueued = false;
+            }
+        }
+
+        @Override
+        public void write(Object msg, ChannelPromise promise) {
+            if (msg instanceof ByteBuf) {
+                ByteBuf buffer = (ByteBuf)  msg;
+                if (!buffer.isDirect()) {
+                    ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                    tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    buffer.release();
+                    msg = tmpBuffer;
+                }
+            } else if (msg instanceof QuicStreamFrame) {
+                QuicStreamFrame frame = (QuicStreamFrame) msg;
+                ByteBuf buffer = frame.content();
+                if (!buffer.isDirect()) {
+                    ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                    tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    buffer.release();
+                    msg = frame.replace(tmpBuffer);
+                }
+            } else {
+                ReferenceCountUtil.release(msg);
+                promise.setFailure(new UnsupportedOperationException(
+                        "unsupported message type: " + StringUtil.simpleClassName(msg)));
+                return;
+            }
+
+            if (!queue.isEmpty()) {
+                // Something is queued already.
+                queue.add(msg, promise);
+                if (finSent) {
+                    ChannelOutputShutdownException e = new ChannelOutputShutdownException(
+                            "Fin was sent already");
+                    queue.removeAndFail(e);
+                }
+                return;
+            }
+
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
             try {
-                super.flush0();
+                if (write0(msg)) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setSuccess();
+                } else {
+                    queue.add(msg, promise);
+                    if (writable) {
+                        writable = false;
+                        pipeline.fireChannelWritabilityChanged();
+                    }
+                }
+            } catch (Exception e) {
+                ReferenceCountUtil.release(msg);
+                promise.setFailure(e);
             } finally {
-                // Let's check if we should close the channel now.
-                // If it's a unidirectional channel we can close it as there will be no fin that we can read
-                // from the remote peer. If its an bidirectional channel we should only close the channel if we
-                // also received the fin from the remote peer.
-                if (!wasFinSent && QuicheQuicStreamChannel.this.finSent
-                        && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
-                    // close the channel now
-                    close(voidPromise());
+                closeIfNeeded(wasFinSent);
+            }
+        }
+
+        private boolean write0(Object msg) throws Exception {
+            if (type() == QuicStreamType.UNIDIRECTIONAL && !isLocalCreated()) {
+                throw new UnsupportedOperationException(
+                        "Writes on non-local created streams that are unidirectional are not supported");
+            }
+            if (finSent) {
+                throw new ChannelOutputShutdownException("Fin was sent already");
+            }
+
+            final boolean fin;
+            ByteBuf buffer;
+            if (msg instanceof ByteBuf) {
+                fin = false;
+                buffer = (ByteBuf) msg;
+            } else {
+                QuicStreamFrame frame = (QuicStreamFrame) msg;
+                fin = frame.hasFin();
+                buffer = frame.content();
+            }
+
+            if (!fin && !buffer.isReadable()) {
+                return true;
+            }
+
+            boolean sendSomething = false;
+            try {
+                do {
+                    int res = parent().streamSend(streamId(), buffer, fin);
+                    if (Quiche.throwIfError(res) || res == 0) {
+                        parent.streamHasPendingWrites(streamId());
+                        return false;
+                    }
+                    sendSomething = true;
+                    buffer.skipBytes(res);
+                } while (buffer.isReadable());
+
+                if (fin) {
+                    finSent = true;
+                    outputShutdown = true;
+                }
+                return true;
+            } finally {
+                // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
+                // now or we will do so once we see the channelReadComplete event.
+                //
+                // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send
+                if (sendSomething) {
+                    parent.connectionSendAndFlush();
                 }
             }
         }
 
-        void flushIfPending() {
-            if (flushPending) {
-                // We had a flush pending, reset it and try to flush again.
-                flushPending = false;
-                super.flush();
-            }
+        @Override
+        public void flush() {
+            // NOOP.
+        }
+
+        @Override
+        public ChannelPromise voidPromise() {
+            return voidPromise;
+        }
+
+        @Override
+        public ChannelOutboundBuffer outboundBuffer() {
+            return null;
         }
 
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
