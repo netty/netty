@@ -1198,6 +1198,7 @@ public class SslHandlerTest {
                     assertEquals(expected, buffer);
                 } finally {
                     expected.release();
+                    buffer.release();
                 }
             } else {
                 throw (Throwable) obj;
