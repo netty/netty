@@ -262,7 +262,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 }
 
                 if (endOfInput) {
-                    // We meed to remove the element from the queue before we call writeAndFlush() as this operation
+                    // We need to remove the element from the queue before we call writeAndFlush() as this operation
                     // may cause an action that also touches the queue.
                     queue.remove();
                 }
