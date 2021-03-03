@@ -214,7 +214,19 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         public void operationComplete(ChannelFuture future) throws Exception {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
-            removeWriteTimeoutTask(this);
+
+            // Check if its safe to modify the "doubly-linked-list" that we maintain. If its not we will schedule the
+            // modification so its picked up by the executor..
+            if (ctx.executor().inEventLoop()) {
+                removeWriteTimeoutTask(this);
+            } else {
+                // So let's just pass outself to the executor which will then take care of remove this task
+                // from the doubly-linked list. Schedule ourself is fine as the promise itself is done.
+                //
+                // This fixes https://github.com/netty/netty/issues/11053
+                assert promise.isDone();
+                ctx.executor().execute(this);
+            }
         }
     }
 }
