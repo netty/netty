@@ -275,10 +275,11 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     ChannelFuture init(Channel channel) {
         ChannelPromise promise = channel.newPromise();
         ChannelPipeline p = channel.pipeline();
-        p.addLast(config.handler());
 
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
+
+        p.addLast(config.handler());
 
         return promise.setSuccess();
     }

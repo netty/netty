@@ -106,6 +106,25 @@ public class BootstrapTest {
         assertEquals(value, attributesArray[0].getValue());
     }
 
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChannelInit() throws InterruptedException {
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        new Bootstrap()
+                .group(groupA)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .attr(key, "value")
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                    }
+                })
+                .bind(LocalAddress.ANY).sync();
+    }
+
     @Test(timeout = 10000)
     public void testBindDeadLock() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
