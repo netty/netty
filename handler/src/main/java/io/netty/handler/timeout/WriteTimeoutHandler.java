@@ -114,9 +114,11 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        assert ctx.executor().inEventLoop();
         WriteTimeoutTask task = lastTask;
         lastTask = null;
         while (task != null) {
+            assert task.ctx.executor().inEventLoop();
             task.scheduledFuture.cancel(false);
             WriteTimeoutTask prev = task.prev;
             task.prev = null;
@@ -139,6 +141,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void addWriteTimeoutTask(WriteTimeoutTask task) {
+        assert task.ctx.executor().inEventLoop();
         if (lastTask != null) {
             lastTask.next = task;
             task.prev = lastTask;
