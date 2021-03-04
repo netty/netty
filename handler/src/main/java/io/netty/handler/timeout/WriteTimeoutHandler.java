@@ -147,6 +147,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void removeWriteTimeoutTask(WriteTimeoutTask task) {
+        assert task.ctx.executor().inEventLoop();
         if (task == lastTask) {
             // task is the tail of list
             assert task.next == null;
