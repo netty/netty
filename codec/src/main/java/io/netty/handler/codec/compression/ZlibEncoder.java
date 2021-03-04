@@ -29,6 +29,10 @@ public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
         super(false);
     }
 
+    protected ZlibEncoder(boolean preferDirectBuffers) {
+        super(preferDirectBuffers);
+    }
+
     /**
      * Returns {@code true} if and only if the end of the compressed stream
      * has been reached.
