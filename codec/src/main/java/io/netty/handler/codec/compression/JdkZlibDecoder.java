@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -233,15 +234,24 @@ public class JdkZlibDecoder extends ZlibDecoder {
         try {
             boolean readFooter = false;
             while (!inflater.needsInput()) {
-                byte[] outArray = decompressed.array();
                 int writerIndex = decompressed.writerIndex();
-                int outIndex = decompressed.arrayOffset() + writerIndex;
                 int writable = decompressed.writableBytes();
-                int outputLength = inflater.inflate(outArray, outIndex, writable);
+                int outputLength;
+                if (decompressed.hasArray()) {
+                    byte[] outArray = decompressed.array();
+                    int outIndex = decompressed.arrayOffset() + writerIndex;
+                    outputLength = inflater.inflate(outArray, outIndex, writable);
+                } else if (decompressed.nioBufferCount() == 1) {
+                    ByteBuffer buffer = decompressed.internalNioBuffer(writerIndex, writable);
+                    outputLength = inflater.inflate(buffer);
+                } else {
+                    throw new IllegalStateException(
+                            "Decompress buffer must have array or exactly 1 NIO buffer: " + decompressed);
+                }
                 if (outputLength > 0) {
                     decompressed.writerIndex(writerIndex + outputLength);
                     if (crc != null) {
-                        crc.update(outArray, outIndex, outputLength);
+                        crc.update(decompressed, writerIndex, outputLength);
                     }
                 } else  if (inflater.needsDictionary()) {
                     if (dictionary == null) {

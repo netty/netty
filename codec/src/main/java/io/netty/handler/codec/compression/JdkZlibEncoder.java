@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
@@ -81,6 +82,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         this(wrapper, 6);
     }
 
+    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+        this(wrapper, compressionLevel, false);
+    }
+
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}
      * and the specified wrapper.
@@ -89,10 +94,12 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
+     * @param preferDirectBuffers {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
+     *                              decompression, or {@code false} if heap allocated {@link ByteBuf}s should be used.
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel, boolean preferDirectBuffers) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -251,7 +258,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                     // no op
             }
         }
-        return ctx.alloc().heapBuffer(sizeEstimate);
+        return ctx.alloc().buffer(sizeEstimate);
     }
 
     @Override
@@ -308,13 +315,28 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     private void deflate(ByteBuf out) {
-        int numBytes;
-        do {
-            int writerIndex = out.writerIndex();
-            numBytes = deflater.deflate(
-                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
-            out.writerIndex(writerIndex + numBytes);
-        } while (numBytes > 0);
+        if (out.hasArray()) {
+            int numBytes;
+            do {
+                int writerIndex = out.writerIndex();
+                numBytes = deflater.deflate(
+                        out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
+                out.writerIndex(writerIndex + numBytes);
+            } while (numBytes > 0);
+        } else if (out.nioBufferCount() == 1) {
+            // Use internalNioBuffer because nioBuffer is allowed to copy,
+            // which is fine for reading but not for writing.
+            int numBytes;
+            do {
+                int writerIndex = out.writerIndex();
+                ByteBuffer buffer = out.internalNioBuffer(writerIndex, out.writableBytes());
+                numBytes = deflater.deflate(buffer, Deflater.SYNC_FLUSH);
+                out.writerIndex(writerIndex + numBytes);
+            } while (numBytes > 0);
+        } else {
+            throw new IllegalArgumentException(
+                    "Don't know how to deflate buffer without array or NIO buffer count of 1: " + out);
+        }
     }
 
     @Override
