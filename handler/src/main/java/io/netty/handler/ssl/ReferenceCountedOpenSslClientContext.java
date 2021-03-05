@@ -166,9 +166,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 throw new SSLException("unable to setup trustmanager", e);
             }
             OpenSslClientSessionContext context = new OpenSslClientSessionContext(thiz, keyMaterialProvider);
-
-            // Enable session caching by default
-            context.setSessionCacheEnabled(true);
+            context.setSessionCacheEnabled(CLIENT_ENABLE_SESSION_CACHE);
             if (sessionCacheSize > 0) {
                 context.setSessionCacheSize((int) Math.min(sessionCacheSize, Integer.MAX_VALUE));
             }

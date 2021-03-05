@@ -186,7 +186,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             OpenSslServerSessionContext sessionContext = new OpenSslServerSessionContext(thiz, keyMaterialProvider);
             sessionContext.setSessionIdContext(ID);
             // Enable session caching by default
-            sessionContext.setSessionCacheEnabled(true);
+            sessionContext.setSessionCacheEnabled(SERVER_ENABLE_SESSION_CACHE);
             if (sessionCacheSize > 0) {
                 sessionContext.setSessionCacheSize((int) Math.min(sessionCacheSize, Integer.MAX_VALUE));
             }
