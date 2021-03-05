@@ -105,7 +105,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
-
     static final boolean SERVER_ENABLE_SESSION_CACHE =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheServer", true);
     // session caching is disabled by default on the client side due a JDK bug:
