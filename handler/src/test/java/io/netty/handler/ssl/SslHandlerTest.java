@@ -1143,6 +1143,10 @@ public class SslHandlerTest {
                 .protocols(protocol)
                 .build();
 
+        // Explicit enable session cache as it's disabled by default atm.
+        ((OpenSslContext) sslClientCtx).sessionContext()
+                .setSessionCacheEnabled(true);
+
         final SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(provider)
