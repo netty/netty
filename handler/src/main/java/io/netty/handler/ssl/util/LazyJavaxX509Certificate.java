@@ -101,6 +101,14 @@ public final class LazyJavaxX509Certificate extends X509Certificate {
         return bytes.clone();
     }
 
+    /**
+     * Return the underyling {@code byte[]} without cloning it first. This {@code byte[]} <strong>must</strong> never
+     * be mutated.
+     */
+    byte[] getBytes() {
+        return bytes;
+    }
+
     @Override
     public void verify(PublicKey key)
             throws CertificateException, NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException,

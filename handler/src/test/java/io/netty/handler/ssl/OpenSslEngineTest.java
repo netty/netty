@@ -1419,7 +1419,41 @@ public class OpenSslEngineTest extends SSLEngineTest {
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {
             ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
         }
         return context;
+    }
+
+    @Test
+    @Override
+    public void testSessionCache() throws Exception {
+        super.testSessionCache();
+        assertSessionContext(clientSslCtx);
+        assertSessionContext(serverSslCtx);
+    }
+
+    private static void assertSessionContext(SslContext context) {
+        if (context == null) {
+            return;
+        }
+        OpenSslSessionContext serverSessionCtx = (OpenSslSessionContext) context.sessionContext();
+        assertTrue(serverSessionCtx.isSessionCacheEnabled());
+        if (serverSessionCtx.getIds().hasMoreElements()) {
+            serverSessionCtx.setSessionCacheEnabled(false);
+            assertFalse(serverSessionCtx.getIds().hasMoreElements());
+            assertFalse(serverSessionCtx.isSessionCacheEnabled());
+        }
+    }
+
+    @Override
+    protected void assertSessionReusedForEngine(SSLEngine clientEngine, SSLEngine serverEngine, boolean reuse) {
+        assertEquals(reuse, unwrapEngine(clientEngine).isSessionReused());
+        assertEquals(reuse, unwrapEngine(serverEngine).isSessionReused());
+    }
+
+    @Override
+    protected boolean isSessionMaybeReused(SSLEngine engine) {
+        return unwrapEngine(engine).isSessionReused();
     }
 }

@@ -105,6 +105,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
+    static final boolean SERVER_ENABLE_SESSION_CACHE =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheServer", true);
+    // session caching is disabled by default on the client side due a JDK bug:
+    // https://mail.openjdk.java.net/pipermail/security-dev/2021-March/024758.html
+    static final boolean CLIENT_ENABLE_SESSION_CACHE =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheClient", false);
     /**
      * The OpenSSL SSL_CTX object.
      *
@@ -112,8 +118,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     protected long ctx;
     private final List<String> unmodifiableCiphers;
-    private final long sessionCacheSize;
-    private final long sessionTimeout;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
 
@@ -194,8 +198,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean tlsFalseStart;
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                                   long sessionTimeout, int mode, Certificate[] keyCertChain,
+                                   OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                                    boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
@@ -345,22 +348,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
 
-            /* Set session cache size, if specified */
-            if (sessionCacheSize <= 0) {
-                // Get the default session cache size using SSLContext.setSessionCacheSize()
-                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-            }
-            this.sessionCacheSize = sessionCacheSize;
-            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-
-            /* Set session timeout, if specified */
-            if (sessionTimeout <= 0) {
-                // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-            }
-            this.sessionTimeout = sessionTimeout;
-            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
             }
@@ -391,16 +378,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     public final List<String> cipherSuites() {
         return unmodifiableCiphers;
-    }
-
-    @Override
-    public final long sessionCacheSize() {
-        return sessionCacheSize;
-    }
-
-    @Override
-    public final long sessionTimeout() {
-        return sessionTimeout;
     }
 
     @Override

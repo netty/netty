@@ -346,7 +346,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls, enableOcsp, options);
 
         // Create a new SSL_CTX and configure it.
@@ -354,7 +354,8 @@ public final class OpenSslServerContext extends OpenSslContext {
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                                               sessionCacheSize, sessionTimeout);
             success = true;
         } finally {
             if (!success) {
