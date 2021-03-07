@@ -158,6 +158,8 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {
             ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
         }
         return context;
     }
