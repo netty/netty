@@ -20,8 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
 
-import java.net.Socket;
-
 /**
  * A QUIC stream.
  */
@@ -31,7 +29,57 @@ public interface QuicStreamChannel extends DuplexChannel {
      * Should be added to a {@link ChannelFuture} when the FIN should be sent to the remote peer and no more
      * writes will happen.
      */
-    ChannelFutureListener SHUTDOWN_OUTPUT = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
+    ChannelFutureListener WRITE_FIN = f -> f.channel().writeAndFlush(QuicStreamFrame.EMPTY_FIN);
+
+    /**
+     * @deprecated use {@link #WRITE_FIN}
+     */
+    @Deprecated
+    ChannelFutureListener SHUTDOWN_OUTPUT = WRITE_FIN;
+
+    @Override
+    default ChannelFuture shutdownInput() {
+        return shutdownInput(0);
+    }
+
+    @Override
+    default ChannelFuture shutdownInput(ChannelPromise promise) {
+        return shutdownInput(0, promise);
+    }
+
+    @Override
+    default ChannelFuture shutdownOutput() {
+        return shutdownOutput(0);
+    }
+
+    @Override
+    default ChannelFuture shutdownOutput(ChannelPromise promise) {
+        return shutdownOutput(0, promise);
+    }
+
+    @Override
+    default ChannelFuture shutdown() {
+        return shutdown(newPromise());
+    }
+
+    /**
+     * Shortcut for calling {@link #shutdownInput(int)} and {@link #shutdownInput(int)}.
+     *
+     * @param error the error to send.
+     * @return the future that is notified on completion.
+     */
+    default ChannelFuture shutdown(int error) {
+        return shutdown(error, newPromise());
+    }
+
+    /**
+     * Shortcut for calling {@link #shutdownInput(int, ChannelPromise)} and {@link #shutdownInput(int, ChannelPromise)}.
+     *
+     * @param error the error to send.
+     * @param promise will be notified on completion.
+     * @return the future that is notified on completion.
+     */
+    ChannelFuture shutdown(int error, ChannelPromise promise);
 
     /**
      * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
@@ -40,7 +88,9 @@ public interface QuicStreamChannel extends DuplexChannel {
      * @param error the error to send.
      * @return the future that is notified on completion.
      */
-    ChannelFuture shutdownInput(int error);
+    default ChannelFuture shutdownInput(int error) {
+        return shutdownInput(error, newPromise());
+    }
 
     /**
      * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
@@ -59,7 +109,9 @@ public interface QuicStreamChannel extends DuplexChannel {
      * @param error the error to send.
      * @return the future that is notified on completion.
      */
-    ChannelFuture shutdownOutput(int error);
+    default ChannelFuture shutdownOutput(int error) {
+        return shutdownOutput(error, newPromise());
+    }
 
     /**
      * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will

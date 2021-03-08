@@ -154,21 +154,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public ChannelFuture shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(ChannelPromise channelPromise) {
-        return shutdownInput(0, channelPromise);
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(int error) {
-        return shutdownInput(0);
-    }
-
-    @Override
     public ChannelFuture shutdownInput(int error, ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             shutdownInput0(error, promise);
@@ -176,11 +161,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             eventLoop().execute(() -> shutdownInput0(error, promise));
         }
         return promise;
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(int error) {
-        return shutdownOutput(error, newPromise());
     }
 
     @Override
@@ -200,7 +180,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdownInput0(int err, ChannelPromise channelPromise) {
         inputShutdown = true;
-        parent().streamShutdownRead(streamId(), err, channelPromise);
+        parent().streamShutdown(streamId(), true, false, err, channelPromise);
         closeIfDone();
     }
 
@@ -209,37 +189,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return outputShutdown;
     }
 
-    @Override
-    public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(ChannelPromise channelPromise) {
-        if (eventLoop().inEventLoop()) {
-            shutdownOutput0(channelPromise);
-        } else {
-            eventLoop().execute(() -> shutdownOutput0(channelPromise));
-        }
-        return channelPromise;
-    }
-
-    private void shutdownOutput0(ChannelPromise channelPromise) {
-        try {
-            // Just send a FIN to shutdown the output as we don't want to drop the already queued packets in the
-            // quic connection for this stream.
-            sendFinIfNeeded();
-        } catch (Throwable e) {
-            channelPromise.setFailure(e);
-            return;
-        }
-        channelPromise.setSuccess();
-        outputShutdown = true;
-        closeIfDone();
-    }
-
     private void shutdownOutput0(int error, ChannelPromise channelPromise) {
-        parent().streamShutdownWrite(streamId(), error, channelPromise);
+        parent().streamShutdown(streamId(), false, true, error, channelPromise);
         outputShutdown = true;
         closeIfDone();
     }
@@ -250,32 +201,25 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public ChannelFuture shutdown() {
-        return shutdown(newPromise());
+    public ChannelFuture shutdown(ChannelPromise channelPromise) {
+        return shutdown(0, channelPromise);
     }
 
     @Override
-    public ChannelFuture shutdown(ChannelPromise channelPromise) {
+    public ChannelFuture shutdown(int error, ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
-            shutdown0(channelPromise);
+            shutdown0(error, promise);
         } else {
-            eventLoop().execute(() -> shutdown0(channelPromise));
+            eventLoop().execute(() -> shutdown0(error, promise));
         }
-        return channelPromise;
+        return promise;
     }
 
-    private void shutdown0(ChannelPromise channelPromise) {
-        try {
-            // Just send a FIN to shutdown the output as we don't want to drop the already queued packets in the
-            // quic connection for this stream.
-            sendFinIfNeeded();
-        } catch (Throwable e) {
-            channelPromise.setFailure(e);
-            return;
-        }
+    private void shutdown0(int error, ChannelPromise channelPromise) {
+
         inputShutdown = true;
         outputShutdown = true;
-        parent().streamShutdownRead(streamId(), 0, channelPromise);
+        parent().streamShutdown(streamId(), true, true, error, channelPromise);
         closeIfDone();
     }
 

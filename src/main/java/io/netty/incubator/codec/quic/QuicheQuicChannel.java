@@ -676,15 +676,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return (streamId & 0x2) == 0 ? QuicStreamType.BIDIRECTIONAL : QuicStreamType.UNIDIRECTIONAL;
     }
 
-    void streamShutdownRead(long streamId, int err, ChannelPromise promise) {
-        streamShutdown0(streamId, true, false, err, promise);
-    }
-
-    void streamShutdownWrite(long streamId, int err, ChannelPromise promise) {
-        streamShutdown0(streamId, false, true, err, promise);
-    }
-
-    private void streamShutdown0(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
+    void streamShutdown(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
         final long connectionAddress;
         try {
             connectionAddress = connectionAddressChecked();

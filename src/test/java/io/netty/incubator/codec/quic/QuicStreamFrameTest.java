@@ -77,7 +77,7 @@ public class QuicStreamFrameTest extends AbstractQuicTest {
                 public void channelActive(ChannelHandlerContext ctx)  {
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                            .addListener(QuicStreamChannel.WRITE_FIN);
                 }
             });
         }

@@ -17,11 +17,82 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 
 /**
  * A QUIC STREAM_FRAME.
  */
 public interface QuicStreamFrame extends ByteBufHolder {
+
+    /**
+     * An empty {@link QuicStreamFrame} that has the {@code FIN} flag set.
+     */
+    QuicStreamFrame EMPTY_FIN = new QuicStreamFrame() {
+        @Override
+        public boolean hasFin() {
+            return true;
+        }
+
+        @Override
+        public QuicStreamFrame copy() {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame duplicate() {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame retainedDuplicate() {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame replace(ByteBuf content) {
+            return new DefaultQuicStreamFrame(content, hasFin());
+        }
+
+        @Override
+        public QuicStreamFrame retain() {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame retain(int increment) {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame touch() {
+            return this;
+        }
+
+        @Override
+        public QuicStreamFrame touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public ByteBuf content() {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        @Override
+        public int refCnt() {
+            return 1;
+        }
+
+        @Override
+        public boolean release() {
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            return false;
+        }
+    };
 
     /**
      * Returns {@code true} if the frame has the FIN set, which means it notifies the remote peer that
