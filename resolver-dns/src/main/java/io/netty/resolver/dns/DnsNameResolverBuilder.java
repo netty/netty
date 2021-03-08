@@ -52,7 +52,6 @@ public final class DnsNameResolverBuilder {
     private boolean completeOncePreferredResolved;
     private boolean recursionDesired = true;
     private int maxQueriesPerResolve = -1;
-    private boolean traceEnabled;
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;

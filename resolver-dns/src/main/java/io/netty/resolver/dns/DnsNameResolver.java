@@ -380,7 +380,7 @@ public class DnsNameResolver extends InetNameResolver {
             boolean completeOncePreferredResolved) {
         this(eventLoop, channelFactory, socketChannelFactory, resolveCache, cnameCache, authoritativeDnsServerCache,
                 null, dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes,
-                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
+                recursionDesired, maxQueriesPerResolve, maxPayloadSize, optResourceEnabled,
                 hostsFileEntriesResolver, dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn,
                 completeOncePreferredResolved);
     }
@@ -398,7 +398,6 @@ public class DnsNameResolver extends InetNameResolver {
             ResolvedAddressTypes resolvedAddressTypes,
             boolean recursionDesired,
             int maxQueriesPerResolve,
-            boolean traceEnabled,
             int maxPayloadSize,
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
