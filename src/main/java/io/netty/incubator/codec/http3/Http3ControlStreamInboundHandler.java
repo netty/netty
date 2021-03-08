@@ -54,6 +54,17 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
     }
 
     @Override
+    void frameTypeUnexpected(ChannelHandlerContext ctx, Object frame) {
+        if (!firstFrameRead && !(frame instanceof Http3SettingsFrame)) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
+                    "Missing settings frame.", forwardControlFrames());
+            ReferenceCountUtil.release(frame);
+            return;
+        }
+        super.frameTypeUnexpected(ctx, frame);
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Http3ControlStreamFrame frame) {
         final boolean firstFrame;
         if (!firstFrameRead) {

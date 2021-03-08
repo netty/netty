@@ -91,13 +91,18 @@ public class Http3ControlStreamInboundHandlerTest extends
         testInvalidFirstFrame(new DefaultHttp3CancelPushFrame(0));
     }
 
-    private void testInvalidFirstFrame(Http3ControlStreamFrame controlStreamFrame) {
+    @Test
+    public void testInvalidFirstFrameNonControlFrame() {
+        testInvalidFirstFrame(() -> 9999);
+    }
+
+    private void testInvalidFirstFrame(Http3Frame frame) {
         QuicChannel parent = mockParent();
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
                 new Http3ControlStreamInboundHandler(
                         server, forwardControlFrames ? new ChannelInboundHandlerAdapter() : null));
 
-        writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, controlStreamFrame);
+        writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
         verifyClose(Http3ErrorCode.H3_MISSING_SETTINGS, parent);
 
         assertFalse(channel.finish());
@@ -188,17 +193,22 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     private void writeInvalidFrame(Http3ErrorCode expectedCode, EmbeddedChannel channel,
-                                   Http3ControlStreamFrame controlStreamFrame) {
+                                   Http3Frame frame) {
         if (forwardControlFrames) {
             try {
-                channel.writeInbound(controlStreamFrame);
+                channel.writeInbound(frame);
                 fail();
             } catch (Exception e) {
                 assertException(expectedCode, e);
             }
         } else {
-            assertFalse(channel.writeInbound(controlStreamFrame));
+            assertFalse(channel.writeInbound(frame));
         }
-        assertFrameReleased(controlStreamFrame);
+        assertFrameReleased(frame);
+    }
+
+    @Override
+    protected Http3ErrorCode inboundErrorCodeInvalid() {
+        return Http3ErrorCode.H3_MISSING_SETTINGS;
     }
 }

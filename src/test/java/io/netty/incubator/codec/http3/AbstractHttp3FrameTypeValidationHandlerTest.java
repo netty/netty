@@ -69,18 +69,23 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         QuicChannel parent = mockParent();
         EmbeddedChannel channel = newChannel(parent, newHandler());
 
+        Http3ErrorCode errorCode = inboundErrorCodeInvalid();
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
             try {
                 channel.writeInbound(invalid);
                 fail();
             } catch (Exception e) {
-                assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
+                assertException(errorCode, e);
             }
             assertFrameReleased(invalid);
         }
-        verifyClose(invalidFrames.size(), Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        verifyClose(invalidFrames.size(), errorCode, parent);
         assertFalse(channel.finish());
+    }
+
+    protected Http3ErrorCode inboundErrorCodeInvalid() {
+        return Http3ErrorCode.H3_FRAME_UNEXPECTED;
     }
 
     @Test
