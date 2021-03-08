@@ -75,24 +75,23 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
-    <boringsslBranch>chromium-stable</boringsslBranch>
     <boringsslSourceDir>${project.build.directory}/boringssl-source</boringsslSourceDir>
     <boringsslBuildDir>${boringsslSourceDir}/build</boringsslBuildDir>
     <boringsslHomeDir>${project.build.directory}/boringssl</boringsslHomeDir>
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
+    <!-- Follow what is used in quiche for now -->
+    <!-- https://github.com/cloudflare/quiche/tree/master/deps -->
+    <boringsslBranch>master</boringsslBranch>
+    <boringsslCommitSha>a2278d4d2cabe73f6663e3299ea7808edfa306b9</boringsslCommitSha>
 
-    <!--
-      See https://boringssl.googlesource.com/boringssl/+/refs/heads/chromium-stable for the latest commit
-    -->
-    <boringsslCommitSha>3743aafdacff2f7b083615a043a37101f740fa53</boringsslCommitSha>
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
     <quicheHomeBuildDir>${quicheHomeDir}/build</quicheHomeBuildDir>
     <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>5092e4d1e8ae2773a56eddda6a8205f5e65b4b37</quicheCommitSha>
+    <quicheCommitSha>53b10f60ef1c9d27c898a04b131cea0e57e22867</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
