@@ -15,11 +15,12 @@
  */
 package io.netty.incubator.codec.quic;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
+
+import java.net.Socket;
 
 /**
  * A QUIC stream.
@@ -31,6 +32,44 @@ public interface QuicStreamChannel extends DuplexChannel {
      * writes will happen.
      */
     ChannelFutureListener SHUTDOWN_OUTPUT = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
+
+    /**
+     * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
+     * be send to the remote peer and all data received will be discarded.
+     *
+     * @param error the error to send.
+     * @return the future that is notified on completion.
+     */
+    ChannelFuture shutdownInput(int error);
+
+    /**
+     * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
+     * be send to the remote peer and all data received will be discarded.
+     *
+     * @param error the error to send.
+     * @param promise will be notified on completion.
+     * @return the future that is notified on completion.
+     */
+    ChannelFuture shutdownInput(int error, ChannelPromise promise);
+
+    /**
+     * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
+     * be send to the remote peer and all data that is not sent yet will be discarded.
+     *
+     * @param error the error to send.
+     * @return the future that is notified on completion.
+     */
+    ChannelFuture shutdownOutput(int error);
+
+    /**
+     * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
+     * be send to the remote peer and all data that is not sent yet will be discarded.
+     *
+     * @param error the error to send.
+     * @param promise will be notified on completion.
+     * @return the future that is notified on completion.
+     */
+    ChannelFuture shutdownOutput(int error, ChannelPromise promise);
 
     @Override
     QuicStreamAddress localAddress();
