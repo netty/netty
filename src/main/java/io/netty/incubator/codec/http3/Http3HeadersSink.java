@@ -32,6 +32,8 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     private boolean exceededMaxLength;
     private Http3HeadersValidationException validationException;
     private HeaderType previousType;
+    private boolean request;
+    private int pseudoHeadersCount;
 
     Http3HeadersSink(Http3Headers headers, long maxHeaderListSize, boolean validate) {
         this.headers = headers;
@@ -46,8 +48,30 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         if (exceededMaxLength) {
             throw new Http3Exception(Http3ErrorCode.H3_EXCESSIVE_LOAD,
                     String.format("Header size exceeded max allowed size (%d)", maxHeaderListSize));
-        } else if (validationException != null) {
+        }
+        if (validationException != null) {
             throw validationException;
+        }
+        if (validate) {
+            // Validate that all mandatory pseudo-headers are included.
+            if (request) {
+                // For requests we must include:
+                // - :method
+                // - :scheme
+                // - :authority
+                // - :path
+                if (pseudoHeadersCount != 4) {
+                    // There can't be any duplicates for pseudy header names.
+                    throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                }
+            } else {
+                // For responses we must include:
+                // - :status
+                if (pseudoHeadersCount != 1) {
+                    // There can't be any duplicates for pseudy header names.
+                    throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                }
+            }
         }
     }
 
@@ -63,7 +87,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
         if (validate) {
             try {
-                previousType = validate(headers, name, previousType);
+                 validate(headers, name);
             } catch (Http3HeadersValidationException ex) {
                 validationException = ex;
                 return;
@@ -73,9 +97,9 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         headers.add(name, value);
     }
 
-    private static HeaderType validate(Http3Headers headers, CharSequence name, HeaderType previousHeaderType) {
+    private void validate(Http3Headers headers, CharSequence name) {
         if (hasPseudoHeaderFormat(name)) {
-            if (previousHeaderType == HeaderType.REGULAR_HEADER) {
+            if (previousType == HeaderType.REGULAR_HEADER) {
                 throw new Http3HeadersValidationException(
                         String.format("Pseudo-header field '%s' found after regular header.", name));
             }
@@ -88,7 +112,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
             final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
-            if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
+            if (previousType != null && currentHeaderType != previousType) {
                 throw new Http3HeadersValidationException("Mix of request and response pseudo-headers.");
             }
 
@@ -97,10 +121,12 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                 throw new Http3HeadersValidationException(
                         String.format("Pseudo-header field '%s' exists already.", name));
             }
-            return currentHeaderType;
+            pseudoHeadersCount++;
+            request = pseudoHeader.isRequestOnly();
+            previousType = currentHeaderType;
+        } else {
+            previousType = HeaderType.REGULAR_HEADER;
         }
-
-        return HeaderType.REGULAR_HEADER;
     }
 
     private enum HeaderType {

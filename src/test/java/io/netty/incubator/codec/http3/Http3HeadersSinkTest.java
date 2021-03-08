@@ -23,9 +23,7 @@ public class Http3HeadersSinkTest {
     @Test
     public void testHeaderSizeExceeded() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 32, false);
-        sink.accept("name", "value");
-        sink.accept("someothername", "someothervalue");
-
+        addMandatoryPseudoHeaders(sink, false);
         try {
             sink.finish();
             Assert.fail();
@@ -38,8 +36,7 @@ public class Http3HeadersSinkTest {
     public void testHeaderSizeNotExceed() throws Exception {
         Http3Headers headers = new DefaultHttp3Headers();
         Http3HeadersSink sink = new Http3HeadersSink(headers, 64, false);
-        sink.accept("name", "value");
-        Assert.assertEquals("value", headers.get("name"));
+        addMandatoryPseudoHeaders(sink, false);
         sink.finish();
     }
 
@@ -67,20 +64,52 @@ public class Http3HeadersSinkTest {
     }
 
     @Test
-    public void testValidPseudoHeader() throws Exception {
+    public void testValidPseudoHeadersRequest() throws Exception {
         Http3Headers headers = new DefaultHttp3Headers();
         Http3HeadersSink sink = new Http3HeadersSink(headers, 512, true);
-        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        addMandatoryPseudoHeaders(sink, true);
         sink.finish();
-        Assert.assertEquals("value", headers.get(Http3Headers.PseudoHeaderName.AUTHORITY.value()));
+    }
+
+    @Test
+    public void testValidPseudoHeadersResponse() throws Exception {
+        Http3Headers headers = new DefaultHttp3Headers();
+        Http3HeadersSink sink = new Http3HeadersSink(headers, 512, true);
+        addMandatoryPseudoHeaders(sink, false);
+        sink.finish();
     }
 
     @Test(expected = Http3HeadersValidationException.class)
     public void testDuplicatePseudoHeader() throws Http3Exception {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
-        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        addMandatoryPseudoHeaders(sink, false);
         sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
         sink.finish();
     }
 
+    @Test(expected = Http3HeadersValidationException.class)
+    public void testMandatoryPseudoHeaderMissingRequest() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.finish();
+    }
+
+    @Test(expected = Http3HeadersValidationException.class)
+    public void testMandatoryPseudoHeaderMissingResponse() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
+        sink.finish();
+    }
+
+    private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {
+        if (req) {
+            sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
+            sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
+            sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+            sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        } else {
+            sink.accept(Http3Headers.PseudoHeaderName.STATUS.value(), "200");
+        }
+    }
 }

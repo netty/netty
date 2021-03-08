@@ -338,6 +338,7 @@ public class Http3FrameCodecTest {
         headers.add(":authority", "netty.quic"); // name only
         headers.add(":path", "/"); // name & value
         headers.add(":method", "GET"); // name & value with few options per name
+        headers.add(":scheme", "https");
         headers.add("x-qpack-draft", "19");
     }
 
