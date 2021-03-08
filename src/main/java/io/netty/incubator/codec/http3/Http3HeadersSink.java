@@ -63,7 +63,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
         if (validate) {
             try {
-                previousType = validate(name, previousType);
+                previousType = validate(headers, name, previousType);
             } catch (Http3HeadersValidationException ex) {
                 validationException = ex;
                 return;
@@ -73,7 +73,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         headers.add(name, value);
     }
 
-    private static HeaderType validate(CharSequence name, HeaderType previousHeaderType) {
+    private static HeaderType validate(Http3Headers headers, CharSequence name, HeaderType previousHeaderType) {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw new Http3HeadersValidationException(
@@ -92,6 +92,11 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                 throw new Http3HeadersValidationException("Mix of request and response pseudo-headers.");
             }
 
+            if (headers.contains(name)) {
+                // There can't be any duplicates for pseudy header names.
+                throw new Http3HeadersValidationException(
+                        String.format("Pseudo-header field '%s' exists already.", name));
+            }
             return currentHeaderType;
         }
 

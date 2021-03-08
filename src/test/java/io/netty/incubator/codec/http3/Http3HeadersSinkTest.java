@@ -74,4 +74,13 @@ public class Http3HeadersSinkTest {
         sink.finish();
         Assert.assertEquals("value", headers.get(Http3Headers.PseudoHeaderName.AUTHORITY.value()));
     }
+
+    @Test(expected = Http3HeadersValidationException.class)
+    public void testDuplicatePseudoHeader() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        sink.finish();
+    }
+
 }
