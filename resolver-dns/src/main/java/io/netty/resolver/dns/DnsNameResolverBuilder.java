@@ -25,6 +25,7 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +43,7 @@ public final class DnsNameResolverBuilder {
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private SocketAddress localAddress;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
@@ -198,6 +200,16 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder authoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
+        return this;
+    }
+
+    /**
+     * Configure the address that will be used to bind too. If `null` the default will be used.
+     * @param localAddress the bind address
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder localAddress(SocketAddress localAddress) {
+        this.localAddress = localAddress;
         return this;
     }
 
@@ -480,6 +492,7 @@ public final class DnsNameResolverBuilder {
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
+                localAddress,
                 dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
                 resolvedAddressTypes,
