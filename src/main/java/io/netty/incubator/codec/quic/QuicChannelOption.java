@@ -36,6 +36,13 @@ public final class QuicChannelOption<T> extends ChannelOption<T> {
      */
     public static final ChannelOption<QLogConfiguration> QLOG = valueOf(QuicChannelOption.class, "QLOG");
 
+    /**
+     * Use <a href="https://blog.cloudflare.com/accelerating-udp-packet-transmission-for-quic/">GSO</a>
+     * for QUIC packets if possible. If the number is bigger then 1 we will try to use segments.
+     */
+    public static final ChannelOption<Integer> UDP_SEGMENTS =
+            valueOf(QuicChannelOption.class, "QUIC_UDP_SEGMENTS");
+
     @SuppressWarnings({ "deprecation" })
     private QuicChannelOption() {
         super(null);

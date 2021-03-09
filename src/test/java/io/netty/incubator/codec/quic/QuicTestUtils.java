@@ -19,6 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -46,7 +49,8 @@ final class QuicTestUtils {
     private QuicTestUtils() {
     }
 
-    private static final EventLoopGroup GROUP = new NioEventLoopGroup();
+    private static final EventLoopGroup GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() :
+            new NioEventLoopGroup();
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -63,7 +67,7 @@ final class QuicTestUtils {
 
     static Channel newClient(QuicClientCodecBuilder builder) throws Exception {
         return new Bootstrap().group(GROUP)
-                .channel(NioDatagramChannel.class)
+                .channel(Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(builder.build())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
@@ -117,7 +121,7 @@ final class QuicTestUtils {
         ChannelHandler codec = serverBuilder.build();
         Bootstrap bs = new Bootstrap();
         return bs.group(GROUP)
-                .channel(NioDatagramChannel.class)
+                .channel(Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class)
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(codec)
                 .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));

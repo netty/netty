@@ -70,7 +70,7 @@
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
-    <netty.version>4.1.59.Final</netty.version>
+    <netty.version>4.1.60.Final</netty.version>
     <netty.build.version>28</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
@@ -816,6 +816,18 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>
       <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${netty.version}</version>
+      <classifier>linux-x86_64</classifier>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

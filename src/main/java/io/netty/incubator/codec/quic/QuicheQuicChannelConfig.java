@@ -31,6 +31,8 @@ import java.util.Map;
 final class QuicheQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
 
     private volatile QLogConfiguration qLogConfiguration;
+    // Try to use UDP_SEGMENT by default if possible
+    private volatile int udpSegment = 10;
 
     QuicheQuicChannelConfig(Channel channel) {
         super(channel);
@@ -38,7 +40,8 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), QuicChannelOption.QLOG);
+        return getOptions(super.getOptions(),
+                QuicChannelOption.QLOG, QuicChannelOption.UDP_SEGMENTS);
     }
 
     @SuppressWarnings("unchecked")
@@ -47,6 +50,9 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
         if (option == QuicChannelOption.QLOG) {
             return (T) getQLogConfiguration();
         }
+        if (option == QuicChannelOption.UDP_SEGMENTS) {
+            return (T) Integer.valueOf(getUdpSegments());
+        }
         return super.getOption(option);
     }
 
@@ -54,6 +60,10 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         if (option == QuicChannelOption.QLOG) {
             setQLogConfiguration((QLogConfiguration) value);
+            return true;
+        }
+        if (option == QuicChannelOption.UDP_SEGMENTS) {
+            setUdpSegments((Integer) value);
             return true;
         }
         return super.setOption(option, value);
@@ -135,5 +145,13 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
             throw new IllegalStateException("QLOG can only be enabled before the Channel was registered");
         }
         this.qLogConfiguration = qLogConfiguration;
+    }
+
+    int getUdpSegments() {
+        return udpSegment;
+    }
+
+    private void setUdpSegments(int udpSegment) {
+        this.udpSegment = udpSegment;
     }
 }
