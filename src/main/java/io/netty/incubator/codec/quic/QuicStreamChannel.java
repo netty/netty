@@ -26,10 +26,20 @@ import io.netty.channel.socket.DuplexChannel;
 public interface QuicStreamChannel extends DuplexChannel {
 
     /**
-     * Should be added to a {@link ChannelFuture} when the FIN should be sent to the remote peer and no more
+     * Should be added to a {@link ChannelFuture} when the {@code FIN} should be sent to the remote peer and no more
      * writes will happen.
+     *
+     * <strong>Important:</strong> The FIN will not be propagated through the {@link io.netty.channel.ChannelPipeline}
+     * to make it easier to reuse this {@link ChannelFutureListener} with all kind of different handlers that sit on top
+     * of {@code QUIC}. If you want to ensure the {@code FIN} is propagated through the
+     * {@link io.netty.channel.ChannelPipeline} as a write just write a {@link QuicStreamFrame} directly with the
+     * {@code FIN} set.
      */
-    ChannelFutureListener WRITE_FIN = f -> f.channel().writeAndFlush(QuicStreamFrame.EMPTY_FIN);
+    ChannelFutureListener WRITE_FIN = f -> {
+        Unsafe unsafe = f.channel().unsafe();
+        unsafe.write(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
+        unsafe.flush();
+    };
 
     /**
      * @deprecated use {@link #WRITE_FIN}
