@@ -931,7 +931,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static class HeaderParser implements ByteProcessor {
         private final AppendableCharSequence seq;
         private final int maxLength;
-        protected int size;
+        int size;
 
         HeaderParser(AppendableCharSequence seq, int maxLength) {
             this.seq = seq;

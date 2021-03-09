@@ -24,12 +24,12 @@ import io.netty.handler.codec.DecoderResult;
  * HttpMessageDecoderResult}. It may simply produce a regular {@link DecoderResult}. This result is intended for
  * successful {@link HttpMessage} decoder results.
  */
-public class HttpMessageDecoderResult extends DecoderResult {
+public final class HttpMessageDecoderResult extends DecoderResult {
 
     private final int initialLineLength;
     private final int headerSize;
 
-    protected HttpMessageDecoderResult(int initialLineLength, int headerSize) {
+    HttpMessageDecoderResult(int initialLineLength, int headerSize) {
         super(SIGNAL_SUCCESS);
         this.initialLineLength = initialLineLength;
         this.headerSize = headerSize;
