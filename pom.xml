@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-quic</artifactId>
-  <version>0.0.8.Final-SNAPSHOT</version>
+  <version>0.0.8.Final</version>
   <name>Netty/Incubator/Codec/Quic</name>
   <packaging>jar</packaging>
   <url>https://netty.io/</url>
@@ -51,7 +51,7 @@
     <url>https://github.com/netty/netty-incubator-codec-quic</url>
     <connection>scm:git:git://github.com/netty/netty-incubator-codec-quic.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty-incubator-codec-quic.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-incubator-codec-quic-0.0.8.Final</tag>
   </scm>
 
   <developers>
@@ -396,7 +396,7 @@
                     <equals arg1="${os.detected.name}" arg2="windows" />
                     <then>
                       <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg line='build --features "ffi qlog" --release' />
+                        <arg line="build --features &quot;ffi qlog&quot; --release" />
                         <arg value="${cargoTarget}" />
                         <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                         <env key="DEBUG" value="true" />
@@ -406,7 +406,7 @@
                    </then>
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg line='build --features "ffi qlog" --release' />
+                        <arg line="build --features &quot;ffi qlog&quot; --release" />
                         <env key="CFLAGS" value="${extraCflags}" />
                         <env key="CXXFLAGS" value="${extraCxxflags}" />
                         <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
