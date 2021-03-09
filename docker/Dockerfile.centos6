@@ -8,7 +8,7 @@ ENV NINJA_VERSION 1.7.2
 ENV GO_VERSION 1.9.3
 
 # Update as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=http:\/\/vault.centos.org\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/vault.centos.org\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # We want to have git 2.x for the maven scm plugin
 RUN yum install -y http://opensource.wandisco.com/centos/6/git/x86_64/wandisco-git-release-6-1.noarch.rpm
@@ -37,10 +37,10 @@ RUN wget -q https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-Li
 
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
 
-RUN wget -q http://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
+RUN wget -q https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
 
-RUN wget -q http://linuxsoft.cern.ch/cern/scl/RPM-GPG-KEY-cern && mv RPM-GPG-KEY-cern /etc/pki/rpm-gpg/
-RUN wget -q http://linuxsoft.cern.ch/cern/scl/slc6-scl.repo && mv slc6-scl.repo /etc/yum.repos.d
+RUN wget -q https://linuxsoft.cern.ch/cern/scl/RPM-GPG-KEY-cern && mv RPM-GPG-KEY-cern /etc/pki/rpm-gpg/
+RUN wget -q https://linuxsoft.cern.ch/cern/scl/slc6-scl.repo && mv slc6-scl.repo /etc/yum.repos.d
 RUN yum install -y devtoolset-3-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-3/enable' >> ~/.bashrc
 
