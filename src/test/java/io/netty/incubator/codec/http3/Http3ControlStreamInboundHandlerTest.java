@@ -206,6 +206,14 @@ public class Http3ControlStreamInboundHandlerTest extends
         }
         assertFrameReleased(frame);
     }
+    @Test
+    public void testSecondSettingsFrameFails() {
+        QuicChannel parent = mockParent();
+        EmbeddedChannel channel = newInitChannel(parent);
+        writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3SettingsFrame());
+        verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        assertFalse(channel.finish());
+    }
 
     @Override
     protected Http3ErrorCode inboundErrorCodeInvalid() {

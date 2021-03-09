@@ -66,22 +66,23 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Http3ControlStreamFrame frame) {
-        final boolean firstFrame;
-        if (!firstFrameRead) {
-            firstFrameRead = true;
-            firstFrame = true;
-        } else {
-            firstFrame = false;
-        }
-        if (firstFrame && !(frame instanceof Http3SettingsFrame)) {
+        boolean isSettingsFrame = frame instanceof Http3SettingsFrame;
+        if (!firstFrameRead && !isSettingsFrame) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
                     "Missing settings frame.", forwardControlFrames());
             ReferenceCountUtil.release(frame);
             return;
         }
+        if (firstFrameRead && isSettingsFrame) {
+            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                    "Second settings frame received.", forwardControlFrames());
+            ReferenceCountUtil.release(frame);
+            return;
+        }
+        firstFrameRead = true;
 
         final boolean valid;
-        if (frame instanceof Http3SettingsFrame) {
+        if (isSettingsFrame) {
             valid = handleHttp3SettingsFrame(ctx, (Http3SettingsFrame) frame);
         } else if (frame instanceof Http3GoAwayFrame) {
             valid = handleHttp3GoAwayFrame(ctx, (Http3GoAwayFrame) frame);
