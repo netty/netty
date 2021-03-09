@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -85,11 +84,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             // TODO: add some overrides maybe ?
         };
         config = new QuicheQuicStreamChannelConfig(this);
-        // Add a noop handler to the pipeline so we can construct the PendingWriteQueue.
-        this.pipeline.addLast(new ChannelHandlerAdapter() { });
-        queue = new PendingWriteQueue(pipeline.firstContext());
         this.address = new QuicStreamAddress(streamId);
         this.closePromise = newPromise();
+        queue = new PendingWriteQueue(this);
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for
         // these to be read.
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {
