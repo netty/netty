@@ -306,9 +306,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             return false;
         } catch (Http3HeadersValidationException e) {
             ctx.fireExceptionCaught(e);
-            // We should close the stream.
+            // We should shutdown the stream with an error.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1.3
-            ctx.close();
+            Http3CodecUtils.streamError(ctx, Http3ErrorCode.H3_MESSAGE_ERROR);
             return false;
         }
         return true;
