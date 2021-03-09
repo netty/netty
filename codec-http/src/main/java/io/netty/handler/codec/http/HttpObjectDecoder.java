@@ -629,6 +629,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         name = null;
         value = null;
 
+        // Done parsing initial line and headers. Set decoder result.
+        HttpMessageDecoderResult decoderResult = new HttpMessageDecoderResult(lineParser.size, headerParser.size);
+        message.setDecoderResult(decoderResult);
+
         List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
 
         if (!contentLengthFields.isEmpty()) {
@@ -927,7 +931,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static class HeaderParser implements ByteProcessor {
         private final AppendableCharSequence seq;
         private final int maxLength;
-        private int size;
+        protected int size;
 
         HeaderParser(AppendableCharSequence seq, int maxLength) {
             this.seq = seq;

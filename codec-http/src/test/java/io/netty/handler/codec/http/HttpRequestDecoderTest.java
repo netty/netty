@@ -17,9 +17,12 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.List;
@@ -476,6 +479,23 @@ public class HttpRequestDecoderTest {
         assertFalse(request.headers().contains("Content-Length"));
         LastHttpContent c = channel.readInbound();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testHttpMessageDecoderResult() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Content-Length: 11\r\n" +
+                "Connection: close\r\n\r\n" +
+                "Lorem ipsum";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertThat(request.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) request.decoderResult();
+        assertThat(decoderResult.initialLineLength(), is(23));
+        assertThat(decoderResult.headerSize(), is(35));
+        assertThat(decoderResult.size(), is(58));
     }
 
     private static void testInvalidHeaders0(String requestStr) {
