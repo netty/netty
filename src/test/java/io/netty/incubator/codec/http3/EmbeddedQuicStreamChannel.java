@@ -20,8 +20,10 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
+import io.netty.channel.EventLoop;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -32,9 +34,11 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamAddress;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannelConfig;
+import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.incubator.codec.quic.QuicStreamPriority;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
+import java.net.SocketAddress;
 import java.util.Map;
 
 final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStreamChannel {
@@ -135,32 +139,27 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public ChannelFuture shutdownInput() {
-        inputShutdown = true;
-        return newSucceededFuture();
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(ChannelPromise promise) {
-        inputShutdown = true;
-        return promise.setSuccess();
-    }
-
-    @Override
     public boolean isOutputShutdown() {
         return outputShutdown;
     }
 
     @Override
-    public ChannelFuture shutdownOutput() {
+    public ChannelFuture shutdown(int i, ChannelPromise channelPromise) {
+        inputShutdown = true;
         outputShutdown = true;
-        return newSucceededFuture();
+        return channelPromise.setSuccess();
     }
 
     @Override
-    public ChannelFuture shutdownOutput(ChannelPromise promise) {
+    public ChannelFuture shutdownInput(int i, ChannelPromise channelPromise) {
+        inputShutdown = true;
+        return channelPromise.setSuccess();
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput(int i, ChannelPromise channelPromise) {
         outputShutdown = true;
-        return promise.setSuccess();
+        return channelPromise.setSuccess();
     }
 
     @Override
@@ -169,17 +168,100 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public ChannelFuture shutdown() {
-        inputShutdown = true;
-        outputShutdown = true;
-        return newSucceededFuture();
-    }
-
-    @Override
     public ChannelFuture shutdown(ChannelPromise promise) {
         inputShutdown = true;
         outputShutdown = true;
         return promise.setSuccess();
+    }
+
+    private Unsafe unsafe;
+
+    @Override
+    public Unsafe unsafe() {
+        if (unsafe == null) {
+            Unsafe superUnsafe = super.unsafe();
+            unsafe = new Unsafe() {
+                @Override
+                public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+                    return superUnsafe.recvBufAllocHandle();
+                }
+
+                @Override
+                public SocketAddress localAddress() {
+                    return superUnsafe.localAddress();
+                }
+
+                @Override
+                public SocketAddress remoteAddress() {
+                    return superUnsafe.remoteAddress();
+                }
+
+                @Override
+                public void register(EventLoop eventLoop, ChannelPromise promise) {
+                    superUnsafe.register(eventLoop, promise);
+                }
+
+                @Override
+                public void bind(SocketAddress localAddress, ChannelPromise promise) {
+                    superUnsafe.bind(localAddress, promise);
+                }
+
+                @Override
+                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                    superUnsafe.connect(remoteAddress, localAddress, promise);
+                }
+
+                @Override
+                public void disconnect(ChannelPromise promise) {
+                    superUnsafe.disconnect(promise);
+                }
+
+                @Override
+                public void close(ChannelPromise promise) {
+                    superUnsafe.close(promise);
+                }
+
+                @Override
+                public void closeForcibly() {
+                    superUnsafe.closeForcibly();
+                }
+
+                @Override
+                public void deregister(ChannelPromise promise) {
+                    superUnsafe.deregister(promise);
+                }
+
+                @Override
+                public void beginRead() {
+                    superUnsafe.beginRead();
+                }
+
+                @Override
+                public void write(Object msg, ChannelPromise promise) {
+                    if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
+                        // Mimic the API.
+                        promise = promise.unvoid().addListener(f -> outputShutdown = true);
+                    }
+                    superUnsafe.write(msg, promise);
+                }
+
+                @Override
+                public void flush() {
+                    superUnsafe.flush();
+                }
+
+                @Override
+                public ChannelPromise voidPromise() {
+                    return superUnsafe.voidPromise();
+                }
+
+                @Override
+                public ChannelOutboundBuffer outboundBuffer() {
+                    return superUnsafe.outboundBuffer();
+                }
+            };
+        }
+        return unsafe;
     }
 
     private static final class EmbeddedQuicStreamChannelConfig implements QuicStreamChannelConfig {

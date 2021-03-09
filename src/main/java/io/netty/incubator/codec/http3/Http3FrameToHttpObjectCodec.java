@@ -157,19 +157,19 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             boolean hasTrailers = !last.trailingHeaders().isEmpty();
 
             if (future != null && !readable && !hasTrailers) {
-                future.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                future.addListener(QuicStreamChannel.WRITE_FIN);
                 last.release();
             } else {
                 if (readable && !hasTrailers) {
-                    ctx.write(new DefaultHttp3DataFrame(last.content())).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    ctx.write(new DefaultHttp3DataFrame(last.content())).addListener(QuicStreamChannel.WRITE_FIN);
                 } else if (!readable) {
                     Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.WRITE_FIN);
                     last.release();
                 } else {
                     ctx.write(new DefaultHttp3DataFrame(last.content()));
                     Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.WRITE_FIN);
                 }
             }
         } else if (msg instanceof HttpContent) {

@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 
+import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headersFrame.headers().status().toString(), is("200"));
         assertTrue(ch.isOutputShutdown());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -105,7 +106,7 @@ public class Http3FrameToHttpObjectCodecTest {
         }
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -124,7 +125,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
         assertTrue(ch.isOutputShutdown());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -151,7 +152,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
         assertTrue(ch.isOutputShutdown());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -198,7 +199,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertTrue(emptyFrame.headers().isEmpty());
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -217,7 +218,7 @@ public class Http3FrameToHttpObjectCodecTest {
         }
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -241,7 +242,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
         assertTrue(ch.isOutputShutdown());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -382,7 +383,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.path().toString(), is("/hello/world"));
         assertTrue(ch.isOutputShutdown());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -408,7 +409,7 @@ public class Http3FrameToHttpObjectCodecTest {
         }
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -433,7 +434,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -466,7 +467,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -516,7 +517,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertTrue(emptyFrame.headers().isEmpty());
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -535,7 +536,7 @@ public class Http3FrameToHttpObjectCodecTest {
         }
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -551,7 +552,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
@@ -575,7 +576,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
 
         assertTrue(ch.isOutputShutdown());
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertThat(ch.readOutbound(), is(QuicStreamFrame.EMPTY_FIN));
         assertFalse(ch.finish());
     }
 
