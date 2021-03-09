@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.StringUtil.COMMA;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -630,49 +629,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         value = null;
 
         List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-
         if (!contentLengthFields.isEmpty()) {
+            HttpVersion version = message.protocolVersion();
+            boolean isHttp10OrEarlier = version.majorVersion() < 1 || (version.majorVersion() == 1
+                    && version.minorVersion() == 0);
             // Guard against multiple Content-Length headers as stated in
             // https://tools.ietf.org/html/rfc7230#section-3.3.2:
-            //
-            // If a message is received that has multiple Content-Length header
-            //   fields with field-values consisting of the same decimal value, or a
-            //   single Content-Length header field with a field value containing a
-            //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
-            //   indicating that duplicate Content-Length header fields have been
-            //   generated or combined by an upstream message processor, then the
-            //   recipient MUST either reject the message as invalid or replace the
-            //   duplicated field-values with a single valid Content-Length field
-            //   containing that decimal value prior to determining the message body
-            //   length or forwarding the message.
-            boolean multipleContentLengths =
-                    contentLengthFields.size() > 1 || contentLengthFields.get(0).indexOf(COMMA) >= 0;
-            if (multipleContentLengths && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                if (allowDuplicateContentLengths) {
-                    // Find and enforce that all Content-Length values are the same
-                    String firstValue = null;
-                    for (String field : contentLengthFields) {
-                        String[] tokens = COMMA_PATTERN.split(field, -1);
-                        for (String token : tokens) {
-                            String trimmed = token.trim();
-                            if (firstValue == null) {
-                                firstValue = trimmed;
-                            } else if (!trimmed.equals(firstValue)) {
-                                throw new IllegalArgumentException(
-                                        "Multiple Content-Length values found: " + contentLengthFields);
-                            }
-                        }
-                    }
-                    // Replace the duplicated field-values with a single valid Content-Length field
-                    headers.set(HttpHeaderNames.CONTENT_LENGTH, firstValue);
-                    contentLength = Long.parseLong(firstValue);
-                } else {
-                    // Reject the message as invalid
-                    throw new IllegalArgumentException(
-                            "Multiple Content-Length values found: " + contentLengthFields);
-                }
-            } else {
-                contentLength = Long.parseLong(contentLengthFields.get(0));
+            contentLength = HttpUtil.normalizeAndGetContentLength(contentLengthFields,
+                    isHttp10OrEarlier, allowDuplicateContentLengths);
+            if (contentLength != -1) {
+                headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
             }
         }
 
