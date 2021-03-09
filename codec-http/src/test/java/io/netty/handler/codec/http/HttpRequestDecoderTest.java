@@ -496,6 +496,8 @@ public class HttpRequestDecoderTest {
         assertThat(decoderResult.initialLineLength(), is(23));
         assertThat(decoderResult.headerSize(), is(35));
         assertThat(decoderResult.size(), is(58));
+        HttpContent c = channel.readInbound();
+        assertFalse(channel.finish());
     }
 
     private static void testInvalidHeaders0(String requestStr) {
