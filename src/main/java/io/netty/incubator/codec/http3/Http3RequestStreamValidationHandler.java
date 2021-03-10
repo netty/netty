@@ -21,6 +21,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -76,9 +77,11 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                         throw new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
                                 "te header field included with invalid value: " + value);
                     }
-                    CharSequence contentLengthValue = headersFrame.headers().get(HttpHeaderNames.CONTENT_LENGTH);
-                    if (contentLengthValue != null) {
-                        expectedLength = Long.parseLong(contentLengthValue.toString());
+                    long length = HttpUtil.normalizeAndGetContentLength(headersFrame.headers()
+                            .getAll(HttpHeaderNames.CONTENT_LENGTH), false, true);
+                    if (length != -1) {
+                        headersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, length);
+                        expectedLength = length;
                     }
                 } else if (!server) {
                     head = HttpMethod.HEAD.asciiName().equals(headersFrame.headers().method());
