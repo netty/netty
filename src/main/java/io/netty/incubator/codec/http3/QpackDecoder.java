@@ -129,7 +129,7 @@ final class QpackDecoder {
     }
 
     private static CharSequence getIndexedName(int index) throws QpackException {
-        if (index <= QpackStaticTable.length) {
+        if (index < QpackStaticTable.length) {
             final QpackHeaderField field = QpackStaticTable.getField(index);
             return field.name;
         }
@@ -137,7 +137,7 @@ final class QpackDecoder {
     }
 
     private static QpackHeaderField getIndexedHeader(int index) throws QpackException {
-        if (index <= QpackStaticTable.length) {
+        if (index < QpackStaticTable.length) {
             return QpackStaticTable.getField(index);
         }
         throw HEADER_ILLEGAL_INDEX_VALUE;
