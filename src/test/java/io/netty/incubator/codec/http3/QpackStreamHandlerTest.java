@@ -35,7 +35,7 @@ public class QpackStreamHandlerTest {
         QuicChannel parent = mockParent();
         Mockito.when(parent.isActive()).thenReturn(true);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, QpackStreamHandler.INSTANCE);
+                false, new QpackDecoderHandler());
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
     }
@@ -45,7 +45,7 @@ public class QpackStreamHandlerTest {
         QuicChannel parent = mockParent();
         Mockito.when(parent.isActive()).thenReturn(false);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, QpackStreamHandler.INSTANCE);
+                false, new QpackDecoderHandler());
         assertFalse(channel.finish());
     }
 
@@ -54,7 +54,7 @@ public class QpackStreamHandlerTest {
         QuicChannel parent = mockParent();
         Mockito.when(parent.isActive()).thenReturn(false);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, QpackStreamHandler.INSTANCE);
+                false, new QpackDecoderHandler());
         ByteBuf buffer = Unpooled.buffer();
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());

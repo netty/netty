@@ -189,7 +189,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     @Test
     public void testQpackDecoderStream() {
-        testStreamSetup(HTTP3_QPACK_DECODER_STREAM_TYPE, QpackStreamHandler.class, false);
+        testStreamSetup(HTTP3_QPACK_DECODER_STREAM_TYPE, QpackDecoderHandler.class, false);
     }
 
     private void testStreamSetup(long type, Class<? extends ChannelHandler> clazz, boolean hasCodec) {
