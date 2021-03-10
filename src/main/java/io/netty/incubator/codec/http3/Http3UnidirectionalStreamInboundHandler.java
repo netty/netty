@@ -154,7 +154,9 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     private void initQpackEncoderStream(ChannelHandlerContext ctx) {
         if (ensureStreamNotExistsYet(ctx, QPACK_ENCODER_STREAM)) {
             // Just drop stuff on the floor as we dont support dynamic table atm.
-            ctx.pipeline().replace(this, null, QpackStreamHandler.INSTANCE);
+            ctx.pipeline().replace(this, null,
+                    new QpackEncoderHandler(remoteControlStreamHandler.localSettings()
+                            .get(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY)));
         } else {
             // Only one stream is allowed.
             // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2

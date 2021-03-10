@@ -184,7 +184,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     @Test
     public void testQpackEncoderStream() {
-        testStreamSetup(HTTP3_QPACK_ENCODER_STREAM_TYPE, QpackStreamHandler.class, false);
+        testStreamSetup(HTTP3_QPACK_ENCODER_STREAM_TYPE, QpackEncoderHandler.class, false);
     }
 
     @Test

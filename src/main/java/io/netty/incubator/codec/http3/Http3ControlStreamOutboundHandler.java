@@ -40,6 +40,15 @@ final class Http3ControlStreamOutboundHandler
     }
 
     /**
+     * Returns the local settings that were sent on the control stream.
+     *
+     * @return the local {@link Http3SettingsFrame}.
+     */
+    Http3SettingsFrame localSettings() {
+        return localSettings;
+    }
+
+    /**
      * Returns the last id that was sent in a MAX_PUSH_ID frame or {@code null} if none was sent yet.
      *
      * @return the id.
@@ -60,7 +69,8 @@ final class Http3ControlStreamOutboundHandler
         // we did write the type via a ByteBuf.
         ctx.pipeline().addFirst(codec);
         // If writing of the local settings fails let's just teardown the connection.
-        ctx.writeAndFlush(localSettings).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        ctx.writeAndFlush(DefaultHttp3SettingsFrame.copyOf(localSettings))
+                .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         ctx.fireChannelActive();
     }

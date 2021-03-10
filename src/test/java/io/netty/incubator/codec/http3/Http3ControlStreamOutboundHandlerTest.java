@@ -134,7 +134,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
         buffer.release();
 
         Http3SettingsFrame settings = channel.readOutbound();
-        assertSame(settingsFrame, settings);
+        assertEquals(settingsFrame, settings);
 
         assertNull(channel.readOutbound());
         return channel;

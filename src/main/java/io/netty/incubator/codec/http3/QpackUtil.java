@@ -15,11 +15,50 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.ConstantTimeUtils;
 import io.netty.util.internal.PlatformDependent;
 
 final class QpackUtil {
+    /**
+     * Decode the integer or return {@code -1} if not enough bytes are readable.
+     * This method increases the readerIndex when the integer could be decoded.
+     *
+     * @param in the input {@link ByteBuf}
+     * @param prefixLength the prefix length
+     * @return the integer or {@code -1} if not enough readable bytes are in the {@link ByteBuf).
+     */
+    static long decodePrefixedInteger(ByteBuf in, int prefixLength) {
+        int readerIndex = in.readerIndex();
+        int writerIndex = in.writerIndex();
+        if (readerIndex == writerIndex) {
+            return -1;
+        }
+
+        int nbits = (1 << prefixLength) - 1;
+        int first = in.readByte() & nbits;
+        if (first < nbits) {
+            return first;
+        }
+
+        int idx = readerIndex + 1;
+        long i = first;
+        int factor = 0;
+        byte next;
+        do {
+            if (idx == writerIndex) {
+                in.readerIndex(readerIndex);
+                return -1;
+            }
+            next = in.getByte(idx++);
+            i += (next & 0x7f) << factor;
+            factor += 7;
+        } while ((next & 0x80) == 0x80);
+        in.readerIndex(idx);
+        return i;
+    }
+
     /**
      * Compare two {@link CharSequence} objects without leaking timing information.
      * <p>

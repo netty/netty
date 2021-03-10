@@ -39,11 +39,11 @@ final class QpackDecoder {
     public void decode(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
         // Required Insert Count
         // https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-4.5.1.1
-        decodePrefixedInteger(in, 8);
+        QpackUtil.decodePrefixedInteger(in, 8);
 
         // Delta Base
         // https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-4.5.1.2
-        decodePrefixedInteger(in, 7);
+        QpackUtil.decodePrefixedInteger(in, 7);
 
         while (in.isReadable()) {
             byte b = in.getByte(in.readerIndex());
@@ -62,28 +62,10 @@ final class QpackDecoder {
         }
     }
 
-    private static long decodePrefixedInteger(ByteBuf in, int prefixLength) {
-        int nbits = (1 << prefixLength) - 1;
-        int first = in.readByte() & nbits;
-        if (first < nbits) {
-            return first;
-        }
-
-        long i = first;
-        int factor = 0;
-        byte next;
-        do {
-            next = in.readByte();
-            i += (next & 0x7f) << factor;
-            factor += 7;
-        } while ((next & 0x80) == 0x80);
-
-        return i;
-    }
-
     private static void decodeIndexed(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
         if ((in.getByte(in.readerIndex()) & 0x40) == 0x40) {
-            final int staticIndex = (int) decodePrefixedInteger(in, 6);
+            final int staticIndex = (int) QpackUtil.decodePrefixedInteger(in, 6);
+            assert staticIndex >= 0;
             final QpackHeaderField field = getIndexedHeader(staticIndex);
             sink.accept(field.name, field.value);
         } else {
@@ -94,7 +76,8 @@ final class QpackDecoder {
     private void decodeLiteralWithNameReference(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink)
             throws QpackException {
         if ((in.getByte(in.readerIndex()) & 0x10) == 0x10) {
-            final int staticNameIndex = (int) decodePrefixedInteger(in, 4);
+            final int staticNameIndex = (int) QpackUtil.decodePrefixedInteger(in, 4);
+            assert staticNameIndex >= 0;
             final CharSequence name = getIndexedName(staticNameIndex);
             final CharSequence value = decodePrefixedStringLiteral(in);
             sink.accept(name, value);
@@ -115,7 +98,8 @@ final class QpackDecoder {
 
     private CharSequence decodePrefixedStringLiteral(ByteBuf in, byte mask, int prefix) throws QpackException {
         final boolean huffmanEncoded = (in.getByte(in.readerIndex()) & mask) == mask;
-        final int length = (int) decodePrefixedInteger(in, prefix);
+        final int length = (int) QpackUtil.decodePrefixedInteger(in, prefix);
+        assert length >= 0;
         return decodeStringLiteral(in, length, huffmanEncoded);
     }
 
