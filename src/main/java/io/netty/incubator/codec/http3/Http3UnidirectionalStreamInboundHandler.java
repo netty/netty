@@ -25,8 +25,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.LongFunction;
-import java.util.function.Supplier;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
@@ -41,16 +41,16 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
     private static final AttributeKey<Boolean> QPACK_DECODER_STREAM = AttributeKey.valueOf("H3_QPACK_DECODER_STREAM");
     private static final AttributeKey<Boolean> QPACK_ENCODER_STREAM = AttributeKey.valueOf("H3_QPACK_ENCODER_STREAM");
 
-    private final Supplier<? extends ChannelHandler> codecSupplier;
+    private final Function<Http3FrameTypeValidator, ? extends ChannelHandler> codecFactory;
     private final Http3ControlStreamInboundHandler localControlStreamHandler;
     private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
-    Http3UnidirectionalStreamInboundHandler(Supplier<? extends ChannelHandler> codecSupplier,
+    Http3UnidirectionalStreamInboundHandler(Function<Http3FrameTypeValidator, ? extends ChannelHandler> codecFactory,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
                                             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
                                             LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
-        this.codecSupplier = codecSupplier;
+        this.codecFactory = codecFactory;
         this.localControlStreamHandler = localControlStreamHandler;
         this.remoteControlStreamHandler = remoteControlStreamHandler;
         if (unknownStreamHandlerFactory == null) {
@@ -104,7 +104,8 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         if (ctx.channel().parent().attr(REMOTE_CONTROL_STREAM).setIfAbsent(true) == null) {
             ctx.pipeline().addLast(localControlStreamHandler);
             // Replace this handler with the codec now.
-            ctx.pipeline().replace(this, null, codecSupplier.get());
+            ctx.pipeline().replace(this, null,
+                    codecFactory.apply(Http3ControlStreamFrameTypeValidator.INSTANCE));
         } else {
             // Only one control stream is allowed.
             // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1

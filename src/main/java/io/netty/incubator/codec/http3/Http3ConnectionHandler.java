@@ -22,14 +22,14 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
+import java.util.function.Function;
 import java.util.function.LongFunction;
-import java.util.function.Supplier;
 
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
-    private final Supplier<Http3FrameCodec> codecSupplier;
+    private final Function<Http3FrameTypeValidator, Http3FrameCodec> codecFactory;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
     private final Http3ControlStreamInboundHandler localControlStreamHandler;
     private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
@@ -64,9 +64,10 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         // As we not support the dynamic table at the moment lets override whatever the user specified and set
         // the capacity to 0.
         localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
-        codecSupplier = Http3FrameCodec.newSupplier(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
+        codecFactory = Http3FrameCodec.newFactory(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
-        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings, codecSupplier.get());
+        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
+                codecFactory.apply(Http3FrameTypeValidator.NO_VALIDATION));
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
@@ -103,7 +104,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @return a new codec.
      */
     public final ChannelHandler newCodec() {
-        return codecSupplier.get();
+        return codecFactory.apply(Http3RequestStreamFrameTypeValidator.INSTANCE);
     }
 
     final Http3RequestStreamValidationHandler newRequestStreamValidationHandler() {
@@ -137,7 +138,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                     break;
                 case UNIDIRECTIONAL:
                     channel.pipeline().addLast(
-                            new Http3UnidirectionalStreamInboundHandler(codecSupplier,
+                            new Http3UnidirectionalStreamInboundHandler(codecFactory,
                                     localControlStreamHandler, remoteControlStreamHandler,
                                     unknownInboundStreamHandlerFactory));
                     break;

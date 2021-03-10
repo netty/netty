@@ -21,8 +21,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -502,7 +500,7 @@ public class Http3FrameCodecTest {
     }
 
     private static Http3FrameCodec newCodec() {
-        return new Http3FrameCodec(new QpackDecoder(), MAX_HEADER_SIZE,
+        return new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, new QpackDecoder(), MAX_HEADER_SIZE,
                 new QpackEncoder());
     }
 }

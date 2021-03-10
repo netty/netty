@@ -29,7 +29,7 @@ import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
@@ -50,24 +50,28 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLength
  * Decodes / encodes {@link Http3Frame}s.
  */
 final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutboundHandler {
-
+    private final Http3FrameTypeValidator validator;
     private final long maxHeaderListSize;
     private final QpackDecoder qpackDecoder;
     private final QpackEncoder qpackEncoder;
 
+    private boolean firstFrame = true;
+    private boolean error;
     private long type = -1;
     private int payLoadLength = -1;
 
-    static Supplier<Http3FrameCodec> newSupplier(QpackDecoder qpackDecoder,
+    static Function<Http3FrameTypeValidator, Http3FrameCodec> newFactory(QpackDecoder qpackDecoder,
                                                  long maxHeaderListSize, QpackEncoder qpackEncoder) {
-        ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
         ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
+        ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
 
         // QPACK decoder and encoder are shared between streams in a connection.
-        return () ->  new Http3FrameCodec(qpackDecoder, maxHeaderListSize, qpackEncoder);
+        return v -> new Http3FrameCodec(v, qpackDecoder, maxHeaderListSize, qpackEncoder);
     }
 
-    Http3FrameCodec(QpackDecoder qpackDecoder, long maxHeaderListSize, QpackEncoder qpackEncoder) {
+    Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
+                    long maxHeaderListSize, QpackEncoder qpackEncoder) {
+        this.validator = ObjectUtil.checkNotNull(validator, "validator");
         this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
         this.maxHeaderListSize = ObjectUtil.checkPositive(maxHeaderListSize, "maxHeaderListSize");
         this.qpackEncoder = ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
@@ -86,9 +90,23 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         super.channelRead(ctx, buffer);
     }
 
+    private void connectionError(ChannelHandlerContext ctx, Http3ErrorCode code, String msg, boolean fireException) {
+        error = true;
+        Http3CodecUtils.connectionError(ctx, code, msg, fireException);
+    }
+
+    private void connectionError(ChannelHandlerContext ctx, Http3Exception exception, boolean fireException) {
+        error = true;
+        Http3CodecUtils.connectionError(ctx, exception, fireException);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (!in.isReadable()) {
+            return;
+        }
+        if (error) {
+            in.skipBytes(in.readableBytes());
             return;
         }
         if (type == -1) {
@@ -96,13 +114,22 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             if (in.readableBytes() < typeLen) {
                 return;
             }
-            type = readVariableLengthInteger(in, typeLen);
-            if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
+            long localType = readVariableLengthInteger(in, typeLen);
+            if (Http3CodecUtils.isReservedHttp2FrameType(localType)) {
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
                         "Reserved type for HTTP/2 received.", true);
                 return;
             }
+            try {
+                // Validate if the type is valid for the current stream first.
+                validator.validate(localType, firstFrame);
+            } catch (Http3Exception e) {
+                connectionError(ctx, e, true);
+                return;
+            }
+            type = localType;
+            firstFrame = false;
             if (!in.isReadable()) {
                 return;
             }
@@ -115,7 +142,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             }
             long len = readVariableLengthInteger(in, payloadLen);
             if (len > Integer.MAX_VALUE) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_EXCESSIVE_LOAD,
+                connectionError(ctx, Http3ErrorCode.H3_EXCESSIVE_LOAD,
                         "Received an invalid frame len.", true);
                 return;
             }
@@ -141,7 +168,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         if (longType > Integer.MAX_VALUE && !Http3CodecUtils.isReservedFrameType(longType)) {
             return skipBytes(in, payLoadLength);
         }
-        int type  = (int) longType;
+        int type = (int) longType;
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.1
         switch (type) {
             case HTTP3_DATA_FRAME_TYPE:
@@ -246,18 +273,18 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         }
     }
 
-    private static boolean enforceMaxPayloadLength(
+    private boolean enforceMaxPayloadLength(
             ChannelHandlerContext ctx, ByteBuf in, int type, int payLoadLength,
             long maxPayLoadLength, Http3ErrorCode error) {
         if (payLoadLength > maxPayLoadLength) {
-            Http3CodecUtils.connectionError(ctx, error,
+            connectionError(ctx, error,
                     "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.', true);
             return false;
         }
         return in.readableBytes() >= payLoadLength;
     }
 
-    private static Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
+    private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -265,7 +292,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                 // This must be treated as a connection error
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4.1
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
+                connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
                         "Received a settings key that is reserved for HTTP/2.", true);
                 return null;
             }
@@ -277,7 +304,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             if (settingsFrame.put(key, value) != null) {
                 // This must be treated as a connection error
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
+                connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
                         "Received a duplicate settings key.", true);
                 return null;
             }
@@ -297,14 +324,15 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             // Throws exception if detected any problem so far
             sink.finish();
         } catch (Http3Exception e) {
-            Http3CodecUtils.connectionError(ctx, e, true);
+            connectionError(ctx, e.errorCode(), e.getMessage(), true);
             return false;
         } catch (QpackException e) {
             // Must be treated as a connection error.
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
+            connectionError(ctx, Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
                     "Decompression of header block failed.", true);
             return false;
         } catch (Http3HeadersValidationException e) {
+            error = true;
             ctx.fireExceptionCaught(e);
             // We should shutdown the stream with an error.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1.3
@@ -443,7 +471,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         ctx.write(out, promise);
     }
 
-    private static void writeUnknownFrame(
+    private void writeUnknownFrame(
             ChannelHandlerContext ctx, Http3UnknownFrame frame, ChannelPromise promise) {
         long type = frame.type();
         if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
@@ -451,7 +479,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     "Reserved type for HTTP/2 send.");
             promise.setFailure(exception);
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-            Http3CodecUtils.connectionError(ctx, exception, false);
+            connectionError(ctx, exception.errorCode(), exception.getMessage(), false);
             return;
         }
         if (!Http3CodecUtils.isReservedFrameType(type)) {
