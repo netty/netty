@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -221,7 +222,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         }
 
         @Override
-        V runTask() throws Exception {
+        V runTask() throws Throwable {
             V result =  super.runTask();
             if (result == null && wasCallable) {
                 // If this RunnableScheduledFutureTask wraps a RunnableScheduledFuture that wraps a Callable we need
@@ -229,7 +230,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
                 //
                 // See https://github.com/netty/netty/issues/11072
                 assert future.isDone();
-                return future.get();
+                try {
+                    return future.get();
+                } catch (ExecutionException e) {
+                    // unwrap exception.
+                    throw e.getCause();
+                }
             }
             return result;
         }

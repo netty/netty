@@ -76,7 +76,7 @@ public class UnorderedThreadPoolEventExecutorTest {
     }
 
     @Test
-    public void testGetReturnsCorrectValue() throws Exception {
+    public void testGetReturnsCorrectValueOnSuccess() throws Exception {
         UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
         try {
             final String expected = "expected";
@@ -88,6 +88,24 @@ public class UnorderedThreadPoolEventExecutorTest {
             });
 
             Assert.assertEquals(expected, f.get());
+        } finally {
+            executor.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testGetReturnsCorrectValueOnFailure() throws Exception {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        try {
+            final RuntimeException cause = new RuntimeException();
+            Future<String> f = executor.submit(new Callable<String>() {
+                @Override
+                public String call() {
+                    throw cause;
+                }
+            });
+
+            Assert.assertSame(cause, f.await().cause());
         } finally {
             executor.shutdownGracefully();
         }
