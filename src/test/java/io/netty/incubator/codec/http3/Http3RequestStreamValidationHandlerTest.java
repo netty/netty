@@ -104,7 +104,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testInvalidFrameSequenceStartOutbound() {
-        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(newHandler());
 
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         try {
@@ -119,7 +119,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testInvalidFrameSequenceEndOutbound() {
-        EmbeddedChannel channel = new EmbeddedChannel(newHandler());
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(newHandler());
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -149,7 +149,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testGoawayReceivedBeforeWritingHeaders() {
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newClientValidator(() -> true));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -168,7 +168,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     @Test
     public void testGoawayReceivedAfterWritingHeaders() {
         AtomicBoolean goAway = new AtomicBoolean();
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newClientValidator(goAway::get));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -185,7 +185,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     @Test
     public void testClientHeadRequestWithContentLength() {
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newClientValidator(() -> false));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -222,7 +222,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     private static void testClientNonHeadRequestWithContentLength(boolean noData, boolean trailers) {
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newClientValidator(() -> false));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -270,7 +270,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     private static void testServerWithContentLength(boolean noData, boolean trailers) {
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newServerValidator());
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         headersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, 10);
@@ -315,7 +315,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     private static void testHeadersFrame(Http3HeadersFrame headersFrame, Http3ErrorCode code) {
-        EmbeddedChannel channel = new EmbeddedChannel(
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
                 Http3RequestStreamValidationHandler.newServerValidator());
         try {
             assertTrue(channel.writeInbound(headersFrame));
@@ -327,7 +327,9 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
                 throw cause;
             }
             assertException(code, cause);
+            assertEquals((Integer) code.code, channel.outputShutdownError());
         }
-        channel.finishAndReleaseAll();
+        // Only expect produced messages when there was no error.
+        assertEquals(code == null, channel.finishAndReleaseAll());
     }
 }

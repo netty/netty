@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -152,7 +153,8 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
             } catch (Http3Exception e) {
                 ReferenceCountUtil.release(frame);
                 ctx.fireExceptionCaught(e);
-                ctx.close();
+                Http3CodecUtils.streamError(ctx, e.errorCode());
+                return;
             }
         } else if (!server) {
             // Only supported on the server.
@@ -170,7 +172,7 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                 verifyContentLength(0, true);
             } catch (Http3Exception e) {
                 ctx.fireExceptionCaught(e);
-                ctx.close();
+                Http3CodecUtils.streamError(ctx, e.errorCode());
                 return;
             }
         }

@@ -46,8 +46,8 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     private final QuicStreamType type;
     private final long id;
     private QuicStreamChannelConfig config;
-    private boolean inputShutdown;
-    private boolean outputShutdown;
+    private Integer inputShutdown;
+    private Integer outputShutdown;
 
     EmbeddedQuicStreamChannel(ChannelHandler... handlers) {
         this(null, false, QuicStreamType.BIDIRECTIONAL, 0, handlers);
@@ -135,43 +135,57 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
 
     @Override
     public boolean isInputShutdown() {
-        return inputShutdown;
+        return inputShutdown != null;
     }
 
     @Override
     public boolean isOutputShutdown() {
-        return outputShutdown;
+        return outputShutdown != null;
     }
 
     @Override
     public ChannelFuture shutdown(int i, ChannelPromise channelPromise) {
-        inputShutdown = true;
-        outputShutdown = true;
+        if (inputShutdown == null) {
+            inputShutdown = i;
+        }
+        if (outputShutdown == null) {
+            outputShutdown = i;
+        }
         return channelPromise.setSuccess();
     }
 
     @Override
     public ChannelFuture shutdownInput(int i, ChannelPromise channelPromise) {
-        inputShutdown = true;
+        if (inputShutdown == null) {
+            inputShutdown = i;
+        }
         return channelPromise.setSuccess();
     }
 
     @Override
     public ChannelFuture shutdownOutput(int i, ChannelPromise channelPromise) {
-        outputShutdown = true;
+        if (outputShutdown == null) {
+            outputShutdown = i;
+        }
         return channelPromise.setSuccess();
     }
 
     @Override
     public boolean isShutdown() {
-        return outputShutdown;
+        return isInputShutdown() && isOutputShutdown();
     }
 
     @Override
     public ChannelFuture shutdown(ChannelPromise promise) {
-        inputShutdown = true;
-        outputShutdown = true;
-        return promise.setSuccess();
+        return shutdown(0, promise);
+    }
+
+    Integer outputShutdownError() {
+        return outputShutdown;
+    }
+
+    Integer inputShutdownError() {
+        return inputShutdown;
     }
 
     private Unsafe unsafe;
@@ -240,7 +254,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 public void write(Object msg, ChannelPromise promise) {
                     if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                         // Mimic the API.
-                        promise = promise.unvoid().addListener(f -> outputShutdown = true);
+                        promise = promise.unvoid().addListener(f -> outputShutdown = 0);
                     }
                     superUnsafe.write(msg, promise);
                 }
