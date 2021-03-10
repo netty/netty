@@ -19,9 +19,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -167,8 +169,9 @@ public class Http3ControlStreamInboundHandlerTest extends
         assertFalse(channel.finish());
     }
 
-    private EmbeddedChannel newInitChannel(QuicChannel parent) {
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
+    private EmbeddedQuicStreamChannel newInitChannel(QuicChannel parent) {
+        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(
+                parent, false, QuicStreamType.BIDIRECTIONAL, 0,
                 new Http3ControlStreamInboundHandler(server,
                         forwardControlFrames ? new ChannelInboundHandlerAdapter() : null));
 
@@ -212,6 +215,16 @@ public class Http3ControlStreamInboundHandlerTest extends
         EmbeddedChannel channel = newInitChannel(parent);
         writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3SettingsFrame());
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testControlStreamClosed() {
+        QuicChannel parent = mockParent();
+        Mockito.when(parent.isActive()).thenReturn(true);
+        EmbeddedQuicStreamChannel channel = newInitChannel(parent);
+        channel.writeInboundFin();
+        verifyClose(Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
         assertFalse(channel.finish());
     }
 

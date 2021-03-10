@@ -17,6 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.ReferenceCountUtil;
 
 final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
@@ -165,5 +166,14 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
     public boolean isSharable() {
         // Not sharable as it keeps state.
         return false;
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        if (evt instanceof ChannelInputShutdownEvent) {
+            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+            Http3CodecUtils.criticalStreamClosed(ctx);
+        }
+        ctx.fireUserEventTriggered(evt);
     }
 }
