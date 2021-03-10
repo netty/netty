@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -95,10 +96,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
-        if (prototype == null) {
-            throw new NullPointerException("prototype");
-        }
-        this.prototype = prototype.getDefaultInstanceForType();
+        this.prototype = ObjectUtil.checkNotNull(prototype, "prototype").getDefaultInstanceForType();
         this.extensionRegistry = extensionRegistry;
     }
 

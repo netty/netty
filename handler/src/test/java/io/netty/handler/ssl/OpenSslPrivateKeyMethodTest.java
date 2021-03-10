@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -66,10 +66,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -151,15 +151,13 @@ public class OpenSslPrivateKeyMethodTest {
 
         final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(kmf)
+       return SslContextBuilder.forServer(kmf)
                 .sslProvider(SslProvider.OPENSSL)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
                 .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .option(OpenSslContextOption.PRIVATE_KEY_METHOD, method)
                 .build();
-
-        ((OpenSslContext) sslServerContext).setPrivateKeyMethod(method);
-        return sslServerContext;
     }
 
     private SslContext buildClientContext()  throws Exception {

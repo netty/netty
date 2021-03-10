@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,23 +33,26 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final boolean completeEarlyIfPossible;
 
-    DnsAddressResolveContext(DnsNameResolver parent, String hostname, DnsRecord[] additionals,
-                             DnsServerAddressStream nameServerAddrs, DnsCache resolveCache,
+    DnsAddressResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
+                             String hostname, DnsRecord[] additionals,
+                             DnsServerAddressStream nameServerAddrs, int allowedQueries, DnsCache resolveCache,
                              AuthoritativeDnsServerCache authoritativeDnsServerCache,
                              boolean completeEarlyIfPossible) {
-        super(parent, hostname, DnsRecord.CLASS_IN, parent.resolveRecordTypes(), additionals, nameServerAddrs);
+        super(parent, originalPromise, hostname, DnsRecord.CLASS_IN,
+              parent.resolveRecordTypes(), additionals, nameServerAddrs, allowedQueries);
         this.resolveCache = resolveCache;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
         this.completeEarlyIfPossible = completeEarlyIfPossible;
     }
 
     @Override
-    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, String hostname,
+    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+                                                      String hostname,
                                                       int dnsClass, DnsRecordType[] expectedTypes,
                                                       DnsRecord[] additionals,
-                                                      DnsServerAddressStream nameServerAddrs) {
-        return new DnsAddressResolveContext(parent, hostname, additionals, nameServerAddrs, resolveCache,
-                authoritativeDnsServerCache, completeEarlyIfPossible);
+                                                      DnsServerAddressStream nameServerAddrs, int allowedQueries) {
+        return new DnsAddressResolveContext(parent, originalPromise, hostname, additionals, nameServerAddrs,
+                allowedQueries, resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
     }
 
     @Override

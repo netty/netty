@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,8 +58,8 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
 /**
- * This is a very simple example for a HTTPS client that uses OCSP stapling.
- * The client connects to a HTTPS server that has OCSP stapling enabled and
+ * This is a very simple example for an HTTPS client that uses OCSP stapling.
+ * The client connects to an HTTPS server that has OCSP stapling enabled and
  * then uses BC to parse and validate it.
  */
 public class OcspClientExample {

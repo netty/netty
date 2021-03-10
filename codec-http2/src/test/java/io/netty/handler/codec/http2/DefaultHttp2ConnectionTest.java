@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -368,6 +368,18 @@ public class DefaultHttp2ConnectionTest {
     @Test(expected = Http2NoMoreStreamIdsException.class)
     public void clientLocalIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
         incrementAndGetStreamShouldRespectOverflow(client.local(), MAX_VALUE);
+    }
+
+    @Test
+    public void clientLocalCreateStreamExhaustedSpace() throws Http2Exception {
+        client.local().createStream(MAX_VALUE, true);
+        try {
+            client.local().createStream(MAX_VALUE, true);
+            fail();
+        } catch (Http2Exception expected) {
+            assertEquals(Http2Error.REFUSED_STREAM, expected.error());
+            assertEquals(Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN, expected.shutdownHint());
+        }
     }
 
     @Test(expected = Http2Exception.class)

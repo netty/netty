@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -79,7 +80,7 @@ public class JdkSslContext extends SslContext {
         DEFAULT_PROVIDER = context.getProvider();
 
         SSLEngine engine = context.createSSLEngine();
-        DEFAULT_PROTOCOLS = defaultProtocols(engine);
+        DEFAULT_PROTOCOLS = defaultProtocols(context, engine);
 
         SUPPORTED_CIPHERS = Collections.unmodifiableSet(supportedCiphers(engine));
         DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers(engine, SUPPORTED_CIPHERS));
@@ -98,19 +99,19 @@ public class JdkSslContext extends SslContext {
         }
     }
 
-    private static String[] defaultProtocols(SSLEngine engine) {
-        // Choose the sensible default list of protocols.
-        final String[] supportedProtocols = engine.getSupportedProtocols();
+    private static String[] defaultProtocols(SSLContext context, SSLEngine engine) {
+        // Choose the sensible default list of protocols that respects JDK flags, eg. jdk.tls.client.protocols
+        final String[] supportedProtocols = context.getDefaultSSLParameters().getProtocols();
         Set<String> supportedProtocolsSet = new HashSet<String>(supportedProtocols.length);
         Collections.addAll(supportedProtocolsSet, supportedProtocols);
         List<String> protocols = new ArrayList<String>();
         addIfSupported(
                 supportedProtocolsSet, protocols,
-                // Do not include TLSv1.3 for now by default.
-                SslUtils.PROTOCOL_TLS_V1_2, SslUtils.PROTOCOL_TLS_V1_1, SslUtils.PROTOCOL_TLS_V1);
+                SslUtils.PROTOCOL_TLS_V1_3, SslUtils.PROTOCOL_TLS_V1_2,
+                SslUtils.PROTOCOL_TLS_V1_1, SslUtils.PROTOCOL_TLS_V1);
 
         if (!protocols.isEmpty()) {
-            return protocols.toArray(new String[0]);
+            return protocols.toArray(EmptyArrays.EMPTY_STRINGS);
         }
         return engine.getEnabledProtocols();
     }
@@ -126,7 +127,7 @@ public class JdkSslContext extends SslContext {
             // prefix instead of the "TLS_" prefix (as defined in the JSSE cipher suite names [1]). According to IBM's
             // documentation [2] the "SSL_" prefix is "interchangeable" with the "TLS_" prefix.
             // See the IBM forum discussion [3] and issue on IBM's JVM [4] for more details.
-            //[1] http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#ciphersuites
+            //[1] https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#ciphersuites
             //[2] https://www.ibm.com/support/knowledgecenter/en/SSYKE2_8.0.0/com.ibm.java.security.component.80.doc/
             // security-component/jsse2Docs/ciphersuites.html
             //[3] https://www.ibm.com/developerworks/community/forums/html/topic?id=9b5a56a9-fa46-4031-b33b-df91e28d77c2
@@ -261,7 +262,7 @@ public class JdkSslContext extends SslContext {
             SSLEngine engine = sslContext.createSSLEngine();
             try {
                 if (protocols == null) {
-                    this.protocols = defaultProtocols(engine);
+                    this.protocols = defaultProtocols(sslContext, engine);
                 } else {
                     this.protocols = protocols;
                 }
@@ -313,16 +314,6 @@ public class JdkSslContext extends SslContext {
     @Override
     public final List<String> cipherSuites() {
         return unmodifiableCipherSuites;
-    }
-
-    @Override
-    public final long sessionCacheSize() {
-        return sessionContext().getSessionCacheSize();
-    }
-
-    @Override
-    public final long sessionTimeout() {
-        return sessionContext().getSessionTimeout();
     }
 
     @Override

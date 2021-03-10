@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 
 import java.security.cert.Certificate;
+import java.util.Map;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -28,20 +29,21 @@ import javax.net.ssl.SSLException;
  */
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
-                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp)
+                   int mode, Certificate[] keyCertChain,
+                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, apnCfg, sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false);
+        super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
+                clientAuth, protocols, startTls, enableOcsp, false, options);
     }
 
-    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                   long sessionTimeout, int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth, String[] protocols, boolean startTls,
-                   boolean enableOcsp) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, mode, keyCertChain, clientAuth, protocols,
-                startTls, enableOcsp, false);
+    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
+                   int mode, Certificate[] keyCertChain,
+                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, mode, keyCertChain,
+                clientAuth, protocols, startTls, enableOcsp, false, options);
     }
 
     @Override

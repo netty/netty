@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -20,12 +20,14 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -34,12 +36,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.EventExecutor;
 import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Tests for {@link DefaultHttp2LocalFlowController}.
@@ -66,13 +71,26 @@ public class DefaultHttp2LocalFlowControllerTest {
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
-
-        when(ctx.newPromise()).thenReturn(promise);
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
-        when(ctx.executor()).thenReturn(executor);
+        setupChannelHandlerContext(false);
         when(executor.inEventLoop()).thenReturn(true);
 
         initController(false);
+    }
+
+    private void setupChannelHandlerContext(boolean allowFlush) {
+        reset(ctx);
+        when(ctx.newPromise()).thenReturn(promise);
+        if (allowFlush) {
+            when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
+                @Override
+                public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
+                    return ctx;
+                }
+            });
+        } else {
+            when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        }
+        when(ctx.executor()).thenReturn(executor);
     }
 
     @Test
@@ -136,6 +154,46 @@ public class DefaultHttp2LocalFlowControllerTest {
         assertTrue(consumeBytes(STREAM_ID, dataSize));
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
         verifyWindowUpdateNotSent(STREAM_ID);
+    }
+
+    @Test
+    public void windowUpdateShouldNotBeSentAfterStreamIsClosedForUnconsumedBytes() throws Http2Exception {
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
+
+        // Don't set end-of-stream on the frame as we want to verify that we not return the unconsumed bytes in this
+        // case once the stream was closed,
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+        verifyWindowUpdateNotSent(STREAM_ID);
+
+        // Close the stream
+        Http2Stream stream = connection.stream(STREAM_ID);
+        stream.close();
+        assertEquals(State.CLOSED, stream.state());
+        assertNull(connection.stream(STREAM_ID));
+
+        // The window update for the connection should made it through but not the update for the already closed
+        // stream
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
+        verifyWindowUpdateNotSent(STREAM_ID);
+    }
+
+    @Test
+    public void windowUpdateShouldBeWrittenWhenStreamIsClosedAndFlushed() throws Http2Exception {
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
+
+        setupChannelHandlerContext(true);
+
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+        verifyWindowUpdateNotSent(STREAM_ID);
+
+        connection.stream(STREAM_ID).close();
+
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
+
+        // Verify we saw one flush.
+        verify(ctx).flush();
     }
 
     @Test

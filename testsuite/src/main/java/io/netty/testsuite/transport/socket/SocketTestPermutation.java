@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -113,6 +113,22 @@ public class SocketTestPermutation {
         return list;
     }
 
+    public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socketWithFastOpen() {
+        // Make the list of ServerBootstrap factories.
+        List<BootstrapFactory<ServerBootstrap>> sbfs = serverSocket();
+
+        // Make the list of Bootstrap factories.
+        List<BootstrapFactory<Bootstrap>> cbfs = clientSocketWithFastOpen();
+
+        // Populate the combinations
+        List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list = combo(sbfs, cbfs);
+
+        // Remove the OIO-OIO case which often leads to a dead lock by its nature.
+        list.remove(list.size() - 1);
+
+        return list;
+    }
+
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
@@ -181,6 +197,10 @@ public class SocketTestPermutation {
                     }
                 }
         );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
+        return clientSocket();
     }
 
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {

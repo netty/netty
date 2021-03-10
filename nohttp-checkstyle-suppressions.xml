@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright 2020 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN" "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+
+  <!-- For demo and testing purposes -->
+  <suppress message="http://example.com" checks="NoHttp"/>
+  <suppress message="http://aurl.com;port=" checks="NoHttp"/>
+  <suppress message="http://domain1.com" checks="NoHttp"/>
+  <suppress message="http://domain1.com/cors.html" checks="NoHttp"/>
+  <suppress message="http://foo.com" checks="NoHttp"/>
+  <suppress message="http://www.site.ru/index.html" checks="NoHttp"/>
+  <suppress message="http://aurl.com" files=".+Test.+" checks="NoHttp"/>
+  <suppress message="http://www.acme.com" files=".+Test.+" checks="NoHttp"/>
+  <suppress message="http://www.acme.com/acme" files=".+\.xml" checks="NoHttp"/>
+
+  <!-- Suppress warnings for URLs to old projects that don't have HTTPS links -->
+  <suppress files="NOTICE\.txt" lines="34,35,43,59,102,199" checks="NoHttp"/>
+
+  <!-- Those links don't support HTTPS or not reachable -->
+  <suppress message="http://www.faqs.org" checks="NoHttp"/>
+  <suppress message="http://autobahn.ws" checks="NoHttp"/>
+  <suppress message="http://beepcore.org/" checks="NoHttp"/>
+  <suppress message="http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html" checks="NoHttp"/>
+  <suppress message="http://entropyware.info/shcodec/index.html" checks="NoHttp"/>
+  <suppress message="http://foo.com/images;num=10?query=name;value=123" checks="NoHttp"/>
+  <suppress message="http://iharder.sourceforge.net/current/java/base64/" checks="NoHttp"/>
+  <suppress message="http://jira.codehaus.org/browse/MSOURCES-13" checks="NoHttp"/>
+  <suppress message="http://jmesnil.net/" checks="NoHttp"/>
+  <suppress message="http://oldhome.schmorp.de/marc/liblzf.html" checks="NoHttp"/>
+  <suppress message="http://status.com" checks="NoHttp"/>
+  <suppress message="http://www-di.inf.puc-rio.br/~laber/public/spire98.ps" checks="NoHttp"/>
+  <suppress message="http://www.javaconcurrencyinpractice.com/annotations/doc/" checks="NoHttp"/>
+  <suppress message="http://www.jmesnil.net/stomp-websocket/doc/" checks="NoHttp"/>
+  <suppress message="http://www.oid-info.com/get/2.16.840.1.101.3.4.2.1" checks="NoHttp"/>
+  <suppress message="http://www.soap-service.by/foo/add" checks="NoHttp"/>
+  <suppress message="http://www.tavendo.de/autobahn/testsuite.html" checks="NoHttp"/>
+  <suppress message="http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ThreadLocalRandom.java" checks="NoHttp"/>
+
+  <!-- Need to use http as the maven release plugin will fail otherwise
+       See https://issues.apache.org/jira/browse/HBASE-24014 -->
+  <suppress message="http://www.w3.org/2001/XMLSchema-instance" checks="NoHttp"/>
+  <suppress message="http://maven.apache.org/POM/4.0.0" checks="NoHttp"/>
+
+  <!-- These files are generated during the build and not under git -->
+  <suppress files="testsuite-shading[/\\]dependency-reduced-pom\.xml" checks="NoHttp"/>
+  <suppress files="common[/\\]dependency-reduced-pom\.xml" checks="NoHttp"/>
+</suppressions>

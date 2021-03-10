@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -81,6 +81,32 @@ public class DefaultAttributeMapTest {
         attr2.set(2);
         assertSame(2, attr2.get());
         assertNotSame(attr, attr2);
+    }
+
+    @Test
+    public void testHasAttrRemoved() {
+        AttributeKey<Integer>[] keys = new AttributeKey[20];
+        for (int i = 0; i < 20; i++) {
+            keys[i] = AttributeKey.valueOf(Integer.toString(i));
+        }
+        for (int i = 10; i < 20; i++) {
+            map.attr(keys[i]);
+        }
+        for (int i = 0; i < 10; i++) {
+            map.attr(keys[i]);
+        }
+        for (int i = 10; i < 20; i++) {
+            AttributeKey<Integer> key = AttributeKey.valueOf(Integer.toString(i));
+            assertTrue(map.hasAttr(key));
+            map.attr(key).remove();
+            assertFalse(map.hasAttr(key));
+        }
+        for (int i = 0; i < 10; i++) {
+            AttributeKey<Integer> key = AttributeKey.valueOf(Integer.toString(i));
+            assertTrue(map.hasAttr(key));
+            map.attr(key).remove();
+            assertFalse(map.hasAttr(key));
+        }
     }
 
     @Test

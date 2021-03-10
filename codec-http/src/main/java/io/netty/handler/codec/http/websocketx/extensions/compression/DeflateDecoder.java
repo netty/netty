@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -136,8 +136,12 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         // Correctly handle empty frames
         // See https://github.com/netty/netty/issues/4348
         if (!emptyDeflateBlock && readable && compositeDecompressedContent.numComponents() <= 0) {
-            compositeDecompressedContent.release();
-            throw new CodecException("cannot read uncompressed buffer");
+            // Sometimes after fragmentation the last frame
+            // May contain left-over data that doesn't affect decompression
+            if (!(msg instanceof ContinuationWebSocketFrame)) {
+                compositeDecompressedContent.release();
+                throw new CodecException("cannot read uncompressed buffer");
+            }
         }
 
         if (msg.isFinalFragment() && noContext) {
@@ -150,16 +154,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
     private void cleanup() {
         if (decoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            if (decoder.finish()) {
-                for (;;) {
-                    ByteBuf buf = decoder.readOutbound();
-                    if (buf == null) {
-                        break;
-                    }
-                    // Release the buffer
-                    buf.release();
-                }
-            }
+            decoder.finishAndReleaseAll();
             decoder = null;
         }
     }

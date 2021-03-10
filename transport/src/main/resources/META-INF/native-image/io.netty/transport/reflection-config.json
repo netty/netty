@@ -4,5 +4,30 @@
       "methods": [
         { "name": "<init>", "parameterTypes": [] }
       ]
+    },
+    {
+      "name": "sun.nio.ch.SelectorImpl",
+      "fields": [
+        { "name": "selectedKeys",  "allowUnsafeAccess" : true},
+        { "name": "publicSelectedKeys",  "allowUnsafeAccess" : true}
+      ]
+    },
+    {
+        "name": "java.lang.management.ManagementFactory",
+        "methods": [
+            {
+                "name": "getRuntimeMXBean",
+                "parameterTypes": []
+            }
+        ]
+    },
+    {
+        "name": "java.lang.management.RuntimeMXBean",
+        "methods": [
+            {
+                "name": "getName",
+                "parameterTypes": []
+            }
+        ]
     }
 ]

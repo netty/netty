@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-*   http://www.apache.org/licenses/LICENSE-2.0
+*   https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,6 +33,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -253,6 +254,12 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                         fail();
                     } catch (SSLPeerUnverifiedException e) {
                         // expected
+                    } catch (UnsupportedOperationException e) {
+                        // Starting from Java15 this method throws UnsupportedOperationException as it was
+                        // deprecated before and getPeerCertificates() should be used
+                        if (PlatformDependent.javaVersion() < 15) {
+                            throw e;
+                        }
                     }
                     try {
                         session.getPeerPrincipal();

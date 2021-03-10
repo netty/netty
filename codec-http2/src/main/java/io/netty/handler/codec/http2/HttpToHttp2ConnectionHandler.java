@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
@@ -38,6 +39,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private final boolean validateHeaders;
     private int currentStreamId;
+    private HttpScheme httpScheme;
 
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                            Http2Settings initialSettings, boolean validateHeaders) {
@@ -48,8 +50,15 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                            Http2Settings initialSettings, boolean validateHeaders,
                                            boolean decoupleCloseAndGoAway) {
+        this(decoder, encoder, initialSettings, validateHeaders, decoupleCloseAndGoAway, null);
+    }
+
+    protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                           Http2Settings initialSettings, boolean validateHeaders,
+                                           boolean decoupleCloseAndGoAway, HttpScheme httpScheme) {
         super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
         this.validateHeaders = validateHeaders;
+        this.httpScheme = httpScheme;
     }
 
     /**
@@ -87,6 +96,12 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 // Provide the user the opportunity to specify the streamId
                 currentStreamId = getStreamId(httpMsg.headers());
 
+                // Add HttpScheme if it's defined in constructor and header does not contain it.
+                if (httpScheme != null &&
+                        !httpMsg.headers().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text())) {
+                    httpMsg.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), httpScheme.name());
+                }
+
                 // Convert and write the headers.
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
@@ -110,8 +125,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 // Write the data
                 final ByteBuf content = ((HttpContent) msg).content();
                 endStream = isLastContent && trailers.isEmpty();
-                release = false;
                 encoder.writeData(ctx, currentStreamId, content, 0, endStream, promiseAggregator.newPromise());
+                release = false;
 
                 if (!trailers.isEmpty()) {
                     // Write trailing headers.

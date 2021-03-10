@@ -3,7 +3,7 @@
  *
  * The Netty Project licenses this file to the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,9 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -24,12 +26,13 @@ import java.nio.ByteBuffer;
 
 class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
+    private static final ObjectPool<PooledHeapByteBuf> RECYCLER = ObjectPool.newPool(
+            new ObjectCreator<PooledHeapByteBuf>() {
         @Override
-        protected PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
+        public PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
             return new PooledHeapByteBuf(handle, 0);
         }
-    };
+    });
 
     static PooledHeapByteBuf newInstance(int maxCapacity) {
         PooledHeapByteBuf buf = RECYCLER.get();
@@ -37,7 +40,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         return buf;
     }
 
-    PooledHeapByteBuf(Recycler.Handle<? extends PooledHeapByteBuf> recyclerHandle, int maxCapacity) {
+    PooledHeapByteBuf(Handle<? extends PooledHeapByteBuf> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 

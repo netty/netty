@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -50,9 +50,13 @@ import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
- * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
- * logged. When run from the command-line, sends a single HEADERS frame to the server and gets back
+ * An HTTP2 client that allows you to send HTTP2 frames to a server using HTTP1-style approaches
+ * (via {@link io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter}). Inbound and outbound
+ * frames are logged.
+ * When run from the command-line, sends a single HEADERS frame to the server and gets back
  * a "Hello World" response.
+ * See the ./http2/helloworld/frame/client/ example for a HTTP2 client example which does not use
+ * HTTP1-style objects and patterns.
  */
 public final class Http2Client {
 

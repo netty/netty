@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -101,7 +101,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
+     * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
      * share the same wire protocol.
      * </p>
      *
@@ -136,7 +136,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
-            throw new WebSocketHandshakeException("not a WebSocket request: missing key");
+            throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
 
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
@@ -153,9 +153,9 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
-        res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+        res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                     .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
         String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
@@ -165,7 +165,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                 }
             } else {
-                res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }
         }
         return res;

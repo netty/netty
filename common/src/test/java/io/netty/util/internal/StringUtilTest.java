@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,9 @@ import java.util.Collections;
 
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
+import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
+import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
+import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 import static io.netty.util.internal.StringUtil.substringAfter;
 import static io.netty.util.internal.StringUtil.toHexString;
@@ -29,12 +32,12 @@ import static io.netty.util.internal.StringUtil.toHexStringPadded;
 import static io.netty.util.internal.StringUtil.unescapeCsv;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class StringUtilTest {
@@ -549,4 +552,43 @@ public class StringUtilTest {
                      StringUtil.join(",", Arrays.asList("a", "b", "c", null, "d")).toString());
     }
 
+    @Test
+    public void testIsNullOrEmpty() {
+        assertTrue(isNullOrEmpty(null));
+        assertTrue(isNullOrEmpty(""));
+        assertTrue(isNullOrEmpty(StringUtil.EMPTY_STRING));
+        assertFalse(isNullOrEmpty(" "));
+        assertFalse(isNullOrEmpty("\t"));
+        assertFalse(isNullOrEmpty("\n"));
+        assertFalse(isNullOrEmpty("foo"));
+        assertFalse(isNullOrEmpty(NEWLINE));
+    }
+
+    @Test
+    public void testIndexOfWhiteSpace() {
+        assertEquals(-1, indexOfWhiteSpace("", 0));
+        assertEquals(0, indexOfWhiteSpace(" ", 0));
+        assertEquals(-1, indexOfWhiteSpace(" ", 1));
+        assertEquals(0, indexOfWhiteSpace("\n", 0));
+        assertEquals(-1, indexOfWhiteSpace("\n", 1));
+        assertEquals(0, indexOfWhiteSpace("\t", 0));
+        assertEquals(-1, indexOfWhiteSpace("\t", 1));
+        assertEquals(3, indexOfWhiteSpace("foo\r\nbar", 1));
+        assertEquals(-1, indexOfWhiteSpace("foo\r\nbar", 10));
+        assertEquals(7, indexOfWhiteSpace("foo\tbar\r\n", 6));
+        assertEquals(-1, indexOfWhiteSpace("foo\tbar\r\n", Integer.MAX_VALUE));
+    }
+
+    @Test
+    public void testIndexOfNonWhiteSpace() {
+        assertEquals(-1, indexOfNonWhiteSpace("", 0));
+        assertEquals(-1, indexOfNonWhiteSpace(" ", 0));
+        assertEquals(-1, indexOfNonWhiteSpace(" \t", 0));
+        assertEquals(-1, indexOfNonWhiteSpace(" \t\r\n", 0));
+        assertEquals(2, indexOfNonWhiteSpace(" \tfoo\r\n", 0));
+        assertEquals(2, indexOfNonWhiteSpace(" \tfoo\r\n", 1));
+        assertEquals(4, indexOfNonWhiteSpace(" \tfoo\r\n", 4));
+        assertEquals(-1, indexOfNonWhiteSpace(" \tfoo\r\n", 10));
+        assertEquals(-1, indexOfNonWhiteSpace(" \tfoo\r\n", Integer.MAX_VALUE));
+    }
 }

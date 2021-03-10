@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,8 +36,9 @@ public class WebSocketUtf8FrameValidatorTest {
 
     private void assertCorruptedFrameExceptionHandling(byte[] data) {
         EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
+        TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
         try {
-            channel.writeInbound(new TextWebSocketFrame(Unpooled.copiedBuffer(data)));
+            channel.writeInbound(frame);
             Assert.fail();
         } catch (CorruptedFrameException e) {
             // expected exception
@@ -51,5 +52,6 @@ public class WebSocketUtf8FrameValidatorTest {
             buf.release();
         }
         Assert.assertNull(channel.readOutbound());
+        Assert.assertEquals(0, frame.refCnt());
     }
 }

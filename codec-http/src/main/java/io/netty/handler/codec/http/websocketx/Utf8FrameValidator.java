@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,42 +35,47 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
         if (msg instanceof WebSocketFrame) {
             WebSocketFrame frame = (WebSocketFrame) msg;
 
-            // Processing for possible fragmented messages for text and binary
-            // frames
-            if (((WebSocketFrame) msg).isFinalFragment()) {
-                // Final frame of the sequence. Apparently ping frames are
-                // allowed in the middle of a fragmented message
-                if (!(frame instanceof PingWebSocketFrame)) {
-                    fragmentedFramesCount = 0;
+            try {
+                // Processing for possible fragmented messages for text and binary
+                // frames
+                if (((WebSocketFrame) msg).isFinalFragment()) {
+                    // Final frame of the sequence. Apparently ping frames are
+                    // allowed in the middle of a fragmented message
+                    if (!(frame instanceof PingWebSocketFrame)) {
+                        fragmentedFramesCount = 0;
 
-                    // Check text for UTF8 correctness
-                    if ((frame instanceof TextWebSocketFrame) ||
-                            (utf8Validator != null && utf8Validator.isChecking())) {
-                        // Check UTF-8 correctness for this payload
-                        checkUTF8String(frame.content());
+                        // Check text for UTF8 correctness
+                        if ((frame instanceof TextWebSocketFrame) ||
+                                (utf8Validator != null && utf8Validator.isChecking())) {
+                            // Check UTF-8 correctness for this payload
+                            checkUTF8String(frame.content());
 
-                        // This does a second check to make sure UTF-8
-                        // correctness for entire text message
-                        utf8Validator.finish();
-                    }
-                }
-            } else {
-                // Not final frame so we can expect more frames in the
-                // fragmented sequence
-                if (fragmentedFramesCount == 0) {
-                    // First text or binary frame for a fragmented set
-                    if (frame instanceof TextWebSocketFrame) {
-                        checkUTF8String(frame.content());
+                            // This does a second check to make sure UTF-8
+                            // correctness for entire text message
+                            utf8Validator.finish();
+                        }
                     }
                 } else {
-                    // Subsequent frames - only check if init frame is text
-                    if (utf8Validator != null && utf8Validator.isChecking()) {
-                        checkUTF8String(frame.content());
+                    // Not final frame so we can expect more frames in the
+                    // fragmented sequence
+                    if (fragmentedFramesCount == 0) {
+                        // First text or binary frame for a fragmented set
+                        if (frame instanceof TextWebSocketFrame) {
+                            checkUTF8String(frame.content());
+                        }
+                    } else {
+                        // Subsequent frames - only check if init frame is text
+                        if (utf8Validator != null && utf8Validator.isChecking()) {
+                            checkUTF8String(frame.content());
+                        }
                     }
-                }
 
-                // Increment counter
-                fragmentedFramesCount++;
+                    // Increment counter
+                    fragmentedFramesCount++;
+                }
+            } catch (CorruptedWebSocketFrameException e) {
+                frame.release();
+                throw e;
             }
         }
 

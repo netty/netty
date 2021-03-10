@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -142,9 +142,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             }
             responseContent.append("\r\n\r\n");
 
-            // if GET Method: should not try to create a HttpPostRequestDecoder
+            // if GET Method: should not try to create an HttpPostRequestDecoder
             if (HttpMethod.GET.equals(request.method())) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
+                // GET Method: should not try to create an HttpPostRequestDecoder
                 // So stop here
                 responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
                 // Not now: LastHttpContent will be sent writeResponse(ctx.channel());

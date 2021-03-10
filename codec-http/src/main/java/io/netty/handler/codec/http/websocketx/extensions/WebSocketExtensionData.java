@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http.websocketx.extensions;
+
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Collections;
 import java.util.Map;
@@ -29,14 +31,9 @@ public final class WebSocketExtensionData {
     private final Map<String, String> parameters;
 
     public WebSocketExtensionData(String name, Map<String, String> parameters) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (parameters == null) {
-            throw new NullPointerException("parameters");
-        }
-        this.name = name;
-        this.parameters = Collections.unmodifiableMap(parameters);
+        this.name = ObjectUtil.checkNotNull(name, "name");
+        this.parameters = Collections.unmodifiableMap(
+                ObjectUtil.checkNotNull(parameters, "parameters"));
     }
 
     /**

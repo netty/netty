@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -40,9 +41,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     private long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     protected AbstractHttpData(String name, Charset charset, long size) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        ObjectUtil.checkNotNull(name, "name");
 
         name = REPLACE_PATTERN.matcher(name).replaceAll(" ");
         name = STRIP_PATTERN.matcher(name).replaceAll("");
@@ -96,10 +95,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
 
     @Override
     public void setCharset(Charset charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.charset = charset;
+        this.charset = ObjectUtil.checkNotNull(charset, "charset");
     }
 
     @Override

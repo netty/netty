@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -27,43 +28,51 @@ import java.util.List;
  */
 public class MqttSubAckPayload {
 
-    private final List<Integer> grantedQoSLevels;
+    private final List<Integer> reasonCodes;
 
-    public MqttSubAckPayload(int... grantedQoSLevels) {
-        if (grantedQoSLevels == null) {
-            throw new NullPointerException("grantedQoSLevels");
-        }
+    public MqttSubAckPayload(int... reasonCodes) {
+        ObjectUtil.checkNotNull(reasonCodes, "reasonCodes");
 
-        List<Integer> list = new ArrayList<Integer>(grantedQoSLevels.length);
-        for (int v: grantedQoSLevels) {
+        List<Integer> list = new ArrayList<Integer>(reasonCodes.length);
+        for (int v: reasonCodes) {
             list.add(v);
         }
-        this.grantedQoSLevels = Collections.unmodifiableList(list);
+        this.reasonCodes = Collections.unmodifiableList(list);
     }
 
-    public MqttSubAckPayload(Iterable<Integer> grantedQoSLevels) {
-        if (grantedQoSLevels == null) {
-            throw new NullPointerException("grantedQoSLevels");
-        }
+    public MqttSubAckPayload(Iterable<Integer> reasonCodes) {
+        ObjectUtil.checkNotNull(reasonCodes, "reasonCodes");
         List<Integer> list = new ArrayList<Integer>();
-        for (Integer v: grantedQoSLevels) {
+        for (Integer v: reasonCodes) {
             if (v == null) {
                 break;
             }
             list.add(v);
         }
-        this.grantedQoSLevels = Collections.unmodifiableList(list);
+        this.reasonCodes = Collections.unmodifiableList(list);
     }
 
     public List<Integer> grantedQoSLevels() {
-        return grantedQoSLevels;
+        List<Integer> qosLevels = new ArrayList<Integer>(reasonCodes.size());
+        for (int code: reasonCodes) {
+            if (code > MqttQoS.EXACTLY_ONCE.value()) {
+                qosLevels.add(MqttQoS.FAILURE.value());
+            } else {
+                qosLevels.add(code);
+            }
+        }
+        return qosLevels;
+    }
+
+    public List<Integer> reasonCodes() {
+        return reasonCodes;
     }
 
     @Override
     public String toString() {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
-            .append("grantedQoSLevels=").append(grantedQoSLevels)
+            .append("reasonCodes=").append(reasonCodes)
             .append(']')
             .toString();
     }

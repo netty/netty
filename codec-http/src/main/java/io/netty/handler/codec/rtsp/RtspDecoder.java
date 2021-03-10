@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -70,16 +70,6 @@ public class RtspDecoder extends HttpObjectDecoder {
      * Regex used on first line in message to detect if it is a response.
      */
     private static final Pattern versionPattern = Pattern.compile("RTSP/\\d\\.\\d");
-
-    /**
-     * Constant for default max initial line length.
-     */
-    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
-
-    /**
-     * Constant for default max header size.
-     */
-    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
 
     /**
      * Constant for default max content length.

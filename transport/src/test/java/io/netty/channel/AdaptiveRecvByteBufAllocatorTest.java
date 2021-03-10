@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -52,6 +52,26 @@ public class AdaptiveRecvByteBufAllocatorTest {
 
         handle.reset(config);
         allocReadExpected(handle, alloc, 8388608);
+    }
+
+    @Test
+    public void memoryAllocationIntervalsTest() {
+        computingNext(512, 512);
+        computingNext(8192, 1110);
+        computingNext(8192, 1200);
+        computingNext(4096, 1300);
+        computingNext(4096, 1500);
+        computingNext(2048, 1700);
+        computingNext(2048, 1550);
+        computingNext(2048, 2000);
+        computingNext(2048, 1900);
+    }
+
+    private void computingNext(long expectedSize, int actualReadBytes) {
+        assertEquals(expectedSize, handle.guess());
+        handle.reset(config);
+        handle.lastBytesRead(actualReadBytes);
+        handle.readComplete();
     }
 
     @Test

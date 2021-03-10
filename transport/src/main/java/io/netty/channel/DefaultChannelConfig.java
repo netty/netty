@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -101,9 +102,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("unchecked")
     @Override
     public boolean setOptions(Map<ChannelOption<?>, ?> options) {
-        if (options == null) {
-            throw new NullPointerException("options");
-        }
+        ObjectUtil.checkNotNull(options, "options");
 
         boolean setAllOptions = true;
         for (Entry<ChannelOption<?>, ?> e: options.entrySet()) {
@@ -118,9 +117,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
@@ -198,10 +195,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     protected <T> void validate(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
-        option.validate(value);
+        ObjectUtil.checkNotNull(option, "option").validate(value);
     }
 
     @Override
@@ -279,10 +273,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAllocator(ByteBufAllocator allocator) {
-        if (allocator == null) {
-            throw new NullPointerException("allocator");
-        }
-        this.allocator = allocator;
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
         return this;
     }
 
@@ -410,10 +401,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        if (estimator == null) {
-            throw new NullPointerException("estimator");
-        }
-        msgSizeEstimator = estimator;
+        this.msgSizeEstimator = ObjectUtil.checkNotNull(estimator, "estimator");
         return this;
     }
 

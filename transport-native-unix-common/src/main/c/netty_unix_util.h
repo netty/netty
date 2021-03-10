@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,8 @@
 #include <jni.h>
 #include <stdint.h>
 #include <time.h>
+#include "netty_jni_util.h"
+
 
 #if defined(__MACH__) && !defined(CLOCK_REALTIME)
 #define NETTY_USE_MACH_INSTEAD_OF_CLOCK
@@ -35,21 +37,6 @@ typedef int clockid_t;
 #endif
 
 #endif /* __MACH__ */
-
-/**
- * Return a new string (caller must free this string) which is equivalent to <pre>prefix + str</pre>.
- *
- * Caller must free the return value!
- */
-char* netty_unix_util_prepend(const char* prefix, const char* str);
-
-char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2);
-
-/**
- * The expected format of the library name is "lib<>$libraryName" where the <> portion is what we will return.
- * If status != JNI_ERR then the caller MUST call free on the return value.
- */
-char* netty_unix_util_parse_package_prefix(const char* libraryPathName, const char* libraryName, jint* status);
 
 /**
  * Get a clock which can be used to measure execution time.
@@ -78,10 +65,5 @@ uint64_t netty_unix_util_timespec_elapsed_ns(const struct timespec* begin, const
  * Returns true if there is underflow.
  */
 jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos);
-
-/**
- * Return type is as defined in http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
- */
-jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods);
 
 #endif /* NETTY_UNIX_UTIL_H_ */

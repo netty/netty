@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,7 +26,6 @@ import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,7 +37,6 @@ import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 /**
  * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
  */
-@UnstableApi
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     private final DnsNameResolverBuilder dnsResolverBuilder;
@@ -53,14 +51,14 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this(new DnsNameResolverBuilder());
+        this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this(new DnsNameResolverBuilder());
+        this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
     }
 
@@ -75,7 +73,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
         // we don't really need to pass channelFactory and nameServerProvider separately,
         // but still keep this to ensure backward compatibility with (potentially) override methods
-        return newResolver((EventLoop) executor,
+        EventLoop loop = dnsResolverBuilder.eventLoop;
+        return newResolver(loop == null ? (EventLoop) executor : loop,
                 dnsResolverBuilder.channelFactory(),
                 dnsResolverBuilder.nameServerProvider());
     }
@@ -105,9 +104,11 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                                                         ChannelFactory<? extends DatagramChannel> channelFactory,
                                                         DnsServerAddressStreamProvider nameServerProvider)
             throws Exception {
+        DnsNameResolverBuilder builder = dnsResolverBuilder.copy();
+
         // once again, channelFactory and nameServerProvider are most probably set in builder already,
         // but I do reassign them again to avoid corner cases with override methods
-        return dnsResolverBuilder.eventLoop(eventLoop)
+        return builder.eventLoop(eventLoop)
                 .channelFactory(channelFactory)
                 .nameServerProvider(nameServerProvider)
                 .build();

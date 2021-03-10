@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -92,9 +92,6 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 }
 
                 if (out.isEmpty()) {
-                    out.recycle();
-                    out = null;
-
                     throw new EncoderException(
                             StringUtil.simpleClassName(this) + " must produce at least one message.");
                 }
@@ -107,19 +104,22 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
             throw new EncoderException(t);
         } finally {
             if (out != null) {
-                final int sizeMinusOne = out.size() - 1;
-                if (sizeMinusOne == 0) {
-                    ctx.write(out.getUnsafe(0), promise);
-                } else if (sizeMinusOne > 0) {
-                    // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
-                    // See https://github.com/netty/netty/issues/2525
-                    if (promise == ctx.voidPromise()) {
-                        writeVoidPromise(ctx, out);
-                    } else {
-                        writePromiseCombiner(ctx, out, promise);
+                try {
+                    final int sizeMinusOne = out.size() - 1;
+                    if (sizeMinusOne == 0) {
+                        ctx.write(out.getUnsafe(0), promise);
+                    } else if (sizeMinusOne > 0) {
+                        // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
+                        // See https://github.com/netty/netty/issues/2525
+                        if (promise == ctx.voidPromise()) {
+                            writeVoidPromise(ctx, out);
+                        } else {
+                            writePromiseCombiner(ctx, out, promise);
+                        }
                     }
+                } finally {
+                    out.recycle();
                 }
-                out.recycle();
             }
         }
     }

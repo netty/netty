@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class HttpContentDecoderTest {
@@ -561,6 +562,78 @@ public class HttpContentDecoderTest {
         }
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
+    }
+
+    @Test
+    public void testTransferCodingGZIP() {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
+                "Transfer-Encoding: gzip\r\n" +
+                "\r\n";
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        channel.writeInbound(Unpooled.copiedBuffer(requestStr.getBytes()));
+        channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD));
+
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertFalse(request.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+
+        HttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isSuccess());
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+
+        LastHttpContent lastHttpContent = channel.readInbound();
+        assertTrue(lastHttpContent.decoderResult().isSuccess());
+        lastHttpContent.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish());
+        channel.releaseInbound();
+    }
+
+    @Test
+    public void testTransferCodingGZIPAndChunked() {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Type: application/x-www-form-urlencoded\r\n" +
+                "Trailer: My-Trailer\r\n" +
+                "Transfer-Encoding: gzip, chunked\r\n" +
+                "\r\n";
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        String chunkLength = Integer.toHexString(GZ_HELLO_WORLD.length);
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(chunkLength + "\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("\r\n".getBytes(CharsetUtil.US_ASCII))));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("0\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("My-Trailer: 42\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertTrue(request.headers().containsValue(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true));
+        assertFalse(request.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+
+        HttpContent chunk1 = channel.readInbound();
+        assertTrue(chunk1.decoderResult().isSuccess());
+        assertEquals(HELLO_WORLD, chunk1.content().toString(CharsetUtil.US_ASCII));
+        chunk1.release();
+
+        LastHttpContent chunk2 = channel.readInbound();
+        assertTrue(chunk2.decoderResult().isSuccess());
+        assertEquals("42", chunk2.trailingHeaders().get("My-Trailer"));
+        chunk2.release();
+
+        assertFalse(channel.finish());
+        channel.releaseInbound();
     }
 
     private static byte[] gzDecompress(byte[] input) {

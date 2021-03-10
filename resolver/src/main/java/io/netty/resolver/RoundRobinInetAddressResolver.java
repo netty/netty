@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -35,7 +34,6 @@ import java.util.List;
  * if multiple are returned by the {@link NameResolver}.
  * Use {@link #asAddressResolver()} to create a {@link InetSocketAddress} resolver
  */
-@UnstableApi
 public class RoundRobinInetAddressResolver extends InetNameResolver {
     private final NameResolver<InetAddress> nameResolver;
 

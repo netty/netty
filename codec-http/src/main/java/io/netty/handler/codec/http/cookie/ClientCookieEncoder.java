@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
  * only name=value pairs are sent.
  *
  * Note that multiple cookies are supposed to be sent at once in a single "Cookie" header.
@@ -91,7 +91,8 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * Sort cookies into decreasing order of path length, breaking ties by sorting into increasing chronological
      * order of creation time, as recommended by RFC 6265.
      */
-    private static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
+    // package-private for testing only.
+    static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
         @Override
         public int compare(Cookie c1, Cookie c2) {
             String path1 = c1.path();
@@ -103,13 +104,10 @@ public final class ClientCookieEncoder extends CookieEncoder {
             // limited use.
             int len1 = path1 == null ? Integer.MAX_VALUE : path1.length();
             int len2 = path2 == null ? Integer.MAX_VALUE : path2.length();
-            int diff = len2 - len1;
-            if (diff != 0) {
-                return diff;
-            }
-            // Rely on Java's sort stability to retain creation order in cases where
+
+            // Rely on Arrays.sort's stability to retain creation order in cases where
             // cookies have same path length.
-            return -1;
+            return len2 - len1;
         }
     };
 

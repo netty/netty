@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
@@ -119,6 +120,31 @@ public class ChannelOutboundBufferTest {
             } else {
                 assertNull(buffers[i]);
             }
+        }
+        release(buffer);
+        buf.release();
+    }
+
+    @Test
+    public void testNioBuffersMaxCount() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+
+        CompositeByteBuf comp = compositeBuffer(256);
+        ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
+        for (int i = 0; i < 65; i++) {
+            comp.addComponent(true, buf.copy());
+        }
+        assertEquals(65, comp.nioBufferCount());
+        buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
+        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        buffer.addFlush();
+        final int maxCount = 10;    // less than comp.nioBufferCount()
+        ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
+        assertTrue("Should not be greater than maxCount", buffer.nioBufferCount() <= maxCount);
+        for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+            assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
         }
         release(buffer);
         buf.release();

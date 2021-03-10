@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -192,7 +193,7 @@ public class EpollSpliceTest {
     @Test(timeout = 10000)
     public void spliceToFile() throws Throwable {
         EventLoopGroup group = new EpollEventLoopGroup(1);
-        File file = File.createTempFile("netty-splice", null);
+        File file = PlatformDependent.createTempFile("netty-splice", null, null);
         file.deleteOnExit();
 
         SpliceHandler sh = new SpliceHandler(file);

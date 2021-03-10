@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -31,10 +32,11 @@ import java.util.List;
 
 /**
  * Provide a way to use {@code TLSv1.3} with Java versions prior to 11 by adding a
- * <a href="http://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html>workaround</a> for the
+ * <a href="https://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html>workaround</a> for the
  * default {@link X509ExtendedTrustManager} implementations provided by the JDK that can not handle a protocol version
  * of {@code TLSv1.3}.
  */
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManager {
 
     private final X509ExtendedTrustManager tm;
@@ -44,7 +46,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
     }
 
     static X509ExtendedTrustManager wrap(X509ExtendedTrustManager tm) {
-        if (PlatformDependent.javaVersion() < 11 && OpenSsl.isTlsv13Supported()) {
+        if (!SslProvider.isTlsv13Supported(SslProvider.JDK) && SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
             return new OpenSslTlsv13X509ExtendedTrustManager(tm);
         }
         return tm;

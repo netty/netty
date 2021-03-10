@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,6 +31,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 class HpackHeaderField {
@@ -57,23 +58,8 @@ class HpackHeaderField {
         return name.length() + value.length() + HEADER_ENTRY_OVERHEAD;
     }
 
-    @Override
-    public final int hashCode() {
-        // TODO(nmittler): Netty's build rules require this. Probably need a better implementation.
-        return super.hashCode();
-    }
-
-    @Override
-    public final boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
-        if (!(obj instanceof HpackHeaderField)) {
-            return false;
-        }
-        HpackHeaderField other = (HpackHeaderField) obj;
-        // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
-        return (HpackUtil.equalsConstantTime(name, other.name) & HpackUtil.equalsConstantTime(value, other.value)) != 0;
+    public final boolean equalsForTest(HpackHeaderField other) {
+        return equalsVariableTime(name, other.name) && equalsVariableTime(value, other.value);
     }
 
     @Override

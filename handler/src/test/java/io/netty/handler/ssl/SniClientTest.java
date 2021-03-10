@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -113,7 +113,8 @@ public class SniClientTest {
                 KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
                         SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
                         SslContext.buildKeyManagerFactory(
-                                new X509Certificate[] { cert.cert() }, cert.key(), null, null, null);
+                                new X509Certificate[] { cert.cert() }, null,
+                                cert.key(), null, null, null);
 
                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)

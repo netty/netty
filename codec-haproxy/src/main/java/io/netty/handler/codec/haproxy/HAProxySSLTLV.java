@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,8 @@
 package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,7 +37,19 @@ public final class HAProxySSLTLV extends HAProxyTLV {
      * Creates a new HAProxySSLTLV
      *
      * @param verify the verification result as defined in the specification for the pp2_tlv_ssl struct (see
-     * http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt)
+     * https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
+     * @param clientBitField the bitfield with client information
+     * @param tlvs the encapsulated {@link HAProxyTLV}s
+     */
+    public HAProxySSLTLV(final int verify, final byte clientBitField, final List<HAProxyTLV> tlvs) {
+        this(verify, clientBitField, tlvs, Unpooled.EMPTY_BUFFER);
+    }
+
+    /**
+     * Creates a new HAProxySSLTLV
+     *
+     * @param verify the verification result as defined in the specification for the pp2_tlv_ssl struct (see
+     * https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
      * @param clientBitField the bitfield with client information
      * @param tlvs the encapsulated {@link HAProxyTLV}s
      * @param rawContent the raw TLV content
@@ -70,6 +84,13 @@ public final class HAProxySSLTLV extends HAProxyTLV {
     }
 
     /**
+     * Returns the client bit field
+     */
+    public byte client() {
+        return clientBitField;
+    }
+
+    /**
      * Returns the verification result
      */
     public int verify() {
@@ -83,4 +104,22 @@ public final class HAProxySSLTLV extends HAProxyTLV {
         return tlvs;
     }
 
+    @Override
+    int contentNumBytes() {
+        int tlvNumBytes = 0;
+        for (int i = 0; i < tlvs.size(); i++) {
+            tlvNumBytes += tlvs.get(i).totalNumBytes();
+        }
+        return 5 + tlvNumBytes; // clientBit(1) + verify(4) + tlvs
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) +
+               "(type: " + type() +
+               ", typeByteValue: " + typeByteValue() +
+               ", client: " + client() +
+               ", verify: " + verify() +
+               ", numEncapsulatedTlvs: " + tlvs.size() + ')';
+    }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,20 +43,24 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     private final InternalLogLevel level;
 
     public Http2FrameLogger(LogLevel level) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
     }
 
     public Http2FrameLogger(LogLevel level, String name) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(name));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(checkNotNull(name, "name")));
     }
 
     public Http2FrameLogger(LogLevel level, Class<?> clazz) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(clazz));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(checkNotNull(clazz, "clazz")));
     }
 
     private Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        this.level = checkNotNull(level, "level");
-        this.logger = checkNotNull(logger, "logger");
+        this.level = level;
+        this.logger = logger;
+    }
+
+    private static InternalLogLevel checkAndConvertLevel(LogLevel level) {
+        return checkNotNull(level, "level").toInternalLevel();
     }
 
     public boolean isEnabled() {

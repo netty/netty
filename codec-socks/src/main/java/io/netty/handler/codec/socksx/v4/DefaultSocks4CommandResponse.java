@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.handler.codec.socksx.v4;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -45,9 +46,6 @@ public class DefaultSocks4CommandResponse extends AbstractSocks4Message implemen
      * @param dstPort the {@code DSTPORT} field of the response
      */
     public DefaultSocks4CommandResponse(Socks4CommandStatus status, String dstAddr, int dstPort) {
-        if (status == null) {
-            throw new NullPointerException("cmdStatus");
-        }
         if (dstAddr != null) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {
                 throw new IllegalArgumentException(
@@ -58,7 +56,7 @@ public class DefaultSocks4CommandResponse extends AbstractSocks4Message implemen
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
         }
 
-        this.status = status;
+        this.status = ObjectUtil.checkNotNull(status, "cmdStatus");
         this.dstAddr = dstAddr;
         this.dstPort = dstPort;
     }

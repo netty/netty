@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -43,7 +42,6 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * A parser for hosts files.
  */
-@UnstableApi
 public final class HostsFileParser {
 
     private static final String WINDOWS_DEFAULT_SYSTEM_ROOT = "C:\\Windows";
@@ -129,10 +127,15 @@ public final class HostsFileParser {
         checkNotNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
             for (Charset charset: charsets) {
-                HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
-                        new FileInputStream(file), charset)));
-                if (entries != HostsFileEntries.EMPTY) {
-                    return entries;
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(file), charset));
+                try {
+                    HostsFileEntries entries = parse(reader);
+                    if (entries != HostsFileEntries.EMPTY) {
+                        return entries;
+                    }
+                } finally {
+                    reader.close();
                 }
             }
         }

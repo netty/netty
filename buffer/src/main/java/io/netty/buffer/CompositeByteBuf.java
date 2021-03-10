@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 
 import java.io.IOException;
@@ -61,14 +62,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, int initSize) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+
+        this.alloc = ObjectUtil.checkNotNull(alloc, "alloc");
         if (maxNumComponents < 1) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 1)");
         }
-        this.alloc = alloc;
+
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
         components = newCompArray(initSize, maxNumComponents);
@@ -267,6 +267,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
+    private static void checkForOverflow(int capacity, int readableBytes) {
+        if (capacity + readableBytes < 0) {
+            throw new IllegalArgumentException("Can't increase by " + readableBytes + " as capacity(" + capacity + ")" +
+                    " would overflow " + Integer.MAX_VALUE);
+        }
+    }
+
     /**
      * Precondition is that {@code buffer != null}.
      */
@@ -279,6 +286,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             // No need to consolidate - just add a component to the list.
             Component c = newComponent(ensureAccessible(buffer), 0);
             int readableBytes = c.length();
+
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            checkForOverflow(capacity(), readableBytes);
 
             addComp(cIndex, c);
             wasAdded = true;
@@ -360,6 +371,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private CompositeByteBuf addComponents0(boolean increaseWriterIndex,
             final int cIndex, ByteBuf[] buffers, int arrOffset) {
         final int len = buffers.length, count = len - arrOffset;
+
+        int readableBytes = 0;
+        int capacity = capacity();
+        for (int i = 0; i < buffers.length; i++) {
+            readableBytes += buffers[i].readableBytes();
+
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            checkForOverflow(capacity, readableBytes);
+        }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
         try {
@@ -455,7 +476,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             consolidateIfNeeded();
             return this;
         }
-        final CompositeByteBuf from = (CompositeByteBuf) buffer;
+        final CompositeByteBuf from;
+        if (buffer instanceof WrappedCompositeByteBuf) {
+            from = (CompositeByteBuf) buffer.unwrap();
+        } else {
+            from = (CompositeByteBuf) buffer;
+        }
         from.checkIndex(ridx, widx - ridx);
         final Component[] fromComponents = from.components;
         final int compCountBefore = componentCount;

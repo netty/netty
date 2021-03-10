@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,6 +65,16 @@ final class HpackUtil {
         return ConstantTimeUtils.equalsConstantTime(s1, s2);
     }
 
+    /**
+     * Compare two {@link CharSequence}s.
+     * @param s1 the first value.
+     * @param s2 the second value.
+     * @return {@code false} if not equal. {@code true} if equal.
+     */
+    static boolean equalsVariableTime(CharSequence s1, CharSequence s2) {
+        return AsciiString.contentEquals(s1, s2);
+    }
+
     // Section 6.2. Literal Header Field Representation
     enum IndexType {
         INCREMENTAL, // Section 6.2.1. Literal Header Field with Incremental Indexing
@@ -73,7 +83,7 @@ final class HpackUtil {
     }
 
     // Appendix B: Huffman Codes
-    // http://tools.ietf.org/html/rfc7541#appendix-B
+    // https://tools.ietf.org/html/rfc7541#appendix-B
     static final int[] HUFFMAN_CODES = {
             0x1ff8,
             0x7fffd8,

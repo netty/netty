@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.IntSupplier;
@@ -31,8 +32,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
-import org.hamcrest.core.IsInstanceOf;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -42,6 +41,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -49,6 +49,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
@@ -221,7 +223,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
-            assertThat(error.get(), IsInstanceOf.instanceOf(RejectedExecutionException.class));
+            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
             error.set(null);
         }
     }
@@ -267,9 +269,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Ignore
-    @Test
-    public void testChannelsRegistered()  {
+    @Test(timeout = 3000L)
+    public void testChannelsRegistered() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
 
@@ -277,17 +278,34 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             final Channel ch1 = new NioServerSocketChannel();
             final Channel ch2 = new NioServerSocketChannel();
 
-            assertEquals(0, loop.registeredChannels());
+            assertEquals(0, registeredChannels(loop));
 
             assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
             assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
-            assertEquals(2, loop.registeredChannels());
+            assertEquals(2, registeredChannels(loop));
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
-            assertEquals(1, loop.registeredChannels());
+
+            int registered;
+            // As SelectionKeys are removed in a lazy fashion in the JDK implementation we may need to query a few
+            // times before we see the right number of registered chanels.
+            while ((registered = registeredChannels(loop)) == 2) {
+                Thread.sleep(50);
+            }
+            assertEquals(1, registered);
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    // Only reliable if run from event loop
+    private static int registeredChannels(final SingleThreadEventLoop loop) throws Exception {
+        return loop.submit(new Callable<Integer>() {
+            @Override
+            public Integer call() {
+                return loop.registeredChannels();
+            }
+        }).get(1, TimeUnit.SECONDS);
     }
 
     @Test

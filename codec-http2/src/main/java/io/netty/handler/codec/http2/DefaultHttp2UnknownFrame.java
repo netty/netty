@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -80,7 +80,7 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
 
     @Override
     public DefaultHttp2UnknownFrame replace(ByteBuf content) {
-        return new DefaultHttp2UnknownFrame(frameType, flags, content).stream(stream());
+        return new DefaultHttp2UnknownFrame(frameType, flags, content).stream(stream);
     }
 
     @Override
@@ -97,8 +97,8 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(this) + "(frameType=" + frameType() + ", stream=" + stream() +
-                ", flags=" + flags() + ", content=" + contentToString() + ')';
+        return StringUtil.simpleClassName(this) + "(frameType=" + frameType + ", stream=" + stream +
+               ", flags=" + flags + ", content=" + contentToString() + ')';
     }
 
     @Override
@@ -119,18 +119,20 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
             return false;
         }
         DefaultHttp2UnknownFrame other = (DefaultHttp2UnknownFrame) o;
-        return super.equals(other) && flags().equals(other.flags())
-                && frameType() == other.frameType() && (stream() == null && other.stream() == null) ||
-                stream().equals(other.stream());
+        Http2FrameStream otherStream = other.stream();
+        return (stream == otherStream || otherStream != null && otherStream.equals(stream))
+               && flags.equals(other.flags())
+               && frameType == other.frameType()
+               && super.equals(other);
     }
 
     @Override
     public int hashCode() {
         int hash = super.hashCode();
-        hash = hash * 31 + frameType();
-        hash = hash * 31 + flags().hashCode();
-        if (stream() != null) {
-            hash = hash * 31 + stream().hashCode();
+        hash = hash * 31 + frameType;
+        hash = hash * 31 + flags.hashCode();
+        if (stream != null) {
+            hash = hash * 31 + stream.hashCode();
         }
 
         return hash;

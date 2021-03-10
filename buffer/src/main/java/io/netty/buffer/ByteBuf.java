@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,7 +43,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Random Access Indexing</h3>
  *
  * Just like an ordinary primitive byte array, {@link ByteBuf} uses
- * <a href="http://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
+ * <a href="https://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
  * It means the index of the first byte is always {@code 0} and the index of the last byte is
  * always {@link #capacity() capacity - 1}.  For example, to iterate all bytes of a buffer, you
  * can do the following, regardless of its internal implementation:
@@ -274,7 +274,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBufAllocator alloc();
 
     /**
-     * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
+     * Returns the <a href="https://en.wikipedia.org/wiki/Endianness">endianness</a>
      * of this buffer.
      *
      * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
@@ -2060,11 +2060,14 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
-     * buffer.  The search takes place from the specified {@code fromIndex}
-     * (inclusive)  to the specified {@code toIndex} (exclusive).
+     * buffer. The search takes place from the specified {@code fromIndex}
+     * (inclusive) to the specified {@code toIndex} (exclusive).
      * <p>
      * If {@code fromIndex} is greater than {@code toIndex}, the search is
-     * performed in a reversed order.
+     * performed in a reversed order from {@code fromIndex} (exclusive)
+     * down to {@code toIndex} (inclusive).
+     * <p>
+     * Note that the lower index is always included and higher always excluded.
      * <p>
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
@@ -2379,6 +2382,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if this buffer does not support accessing the low-level memory address
      */
     public abstract long memoryAddress();
+
+    /**
+     * Returns {@code true} if this {@link ByteBuf} implementation is backed by a single memory region.
+     * Composite buffer implementations must return false even if they currently hold &le; 1 components.
+     * For buffers that return {@code true}, it's guaranteed that a successful call to {@link #discardReadBytes()}
+     * will increase the value of {@link #maxFastWritableBytes()} by the current {@code readerIndex}.
+     * <p>
+     * This method will return {@code false} by default, and a {@code false} return value does not necessarily
+     * mean that the implementation is composite or that it is <i>not</i> backed by a single memory region.
+     */
+    public boolean isContiguous() {
+        return false;
+    }
 
     /**
      * Decodes this buffer's readable bytes into a string with the specified

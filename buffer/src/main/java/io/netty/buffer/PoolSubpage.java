@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,18 @@
 
 package io.netty.buffer;
 
+import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
+import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
+import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
+import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
+import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
+
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
-    private final int memoryMapIdx;
+    private final int pageShifts;
     private final int runOffset;
-    private final int pageSize;
+    private final int runSize;
     private final long[] bitmap;
 
     PoolSubpage<T> prev;
@@ -38,29 +44,26 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /** Special constructor that creates a linked list head */
-    PoolSubpage(int pageSize) {
+    PoolSubpage() {
         chunk = null;
-        memoryMapIdx = -1;
+        pageShifts = -1;
         runOffset = -1;
         elemSize = -1;
-        this.pageSize = pageSize;
+        runSize = -1;
         bitmap = null;
     }
 
-    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
         this.chunk = chunk;
-        this.memoryMapIdx = memoryMapIdx;
+        this.pageShifts = pageShifts;
         this.runOffset = runOffset;
-        this.pageSize = pageSize;
-        bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
-        init(head, elemSize);
-    }
-
-    void init(PoolSubpage<T> head, int elemSize) {
-        doNotDestroy = true;
+        this.runSize = runSize;
         this.elemSize = elemSize;
+        bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
+
+        doNotDestroy = true;
         if (elemSize != 0) {
-            maxNumElems = numAvail = pageSize / elemSize;
+            maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
             bitmapLength = maxNumElems >>> 6;
             if ((maxNumElems & 63) != 0) {
@@ -78,10 +81,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
      * Returns the bitmap index of the subpage allocation.
      */
     long allocate() {
-        if (elemSize == 0) {
-            return toHandle(0);
-        }
-
         if (numAvail == 0 || !doNotDestroy) {
             return -1;
         }
@@ -116,7 +115,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
         if (numAvail ++ == 0) {
             addToPool(head);
-            return true;
+            /* When maxNumElems == 1, the maximum numAvail is also 1.
+             * Each of these PoolSubpages will go in here when they do free operation.
+             * If they return true directly from here, then the rest of the code will be unreachable
+             * and they will not actually be recycled. So return true only on maxNumElems > 1. */
+            if (maxNumElems > 1) {
+                return true;
+            }
         }
 
         if (numAvail != maxNumElems) {
@@ -195,7 +200,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     private long toHandle(int bitmapIdx) {
-        return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
+        int pages = runSize >> pageShifts;
+        return (long) runOffset << RUN_OFFSET_SHIFT
+               | (long) pages << SIZE_SHIFT
+               | 1L << IS_USED_SHIFT
+               | 1L << IS_SUBPAGE_SHIFT
+               | bitmapIdx;
     }
 
     @Override
@@ -226,11 +236,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         }
 
         if (!doNotDestroy) {
-            return "(" + memoryMapIdx + ": not in use)";
+            return "(" + runOffset + ": not in use)";
         }
 
-        return "(" + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
-                ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+        return "(" + runOffset + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
+                ", offset: " + runOffset + ", length: " + runSize + ", elemSize: " + elemSize + ')';
     }
 
     @Override
@@ -271,7 +281,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int pageSize() {
-        return pageSize;
+        return 1 << pageShifts;
     }
 
     void destroy() {

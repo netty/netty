@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class ProtocolDetectionResult<T> {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    private static final ProtocolDetectionResult NEEDS_MORE_DATE =
+    private static final ProtocolDetectionResult NEEDS_MORE_DATA =
             new ProtocolDetectionResult(ProtocolDetectionState.NEEDS_MORE_DATA, null);
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private static final ProtocolDetectionResult INVALID =
@@ -39,7 +39,7 @@ public final class ProtocolDetectionResult<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> ProtocolDetectionResult<T> needsMoreData() {
-        return NEEDS_MORE_DATE;
+        return NEEDS_MORE_DATA;
     }
 
     /**

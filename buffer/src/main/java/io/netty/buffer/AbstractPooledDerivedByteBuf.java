@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler.Handle;
-import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.ObjectPool.Handle;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -124,6 +123,11 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     @Override
+    public boolean isContiguous() {
+        return unwrap().isContiguous();
+    }
+
+    @Override
     public final int nioBufferCount() {
         return unwrap().nioBufferCount();
     }
@@ -153,11 +157,16 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     private static final class PooledNonRetainedDuplicateByteBuf extends UnpooledDuplicatedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
+        private final ByteBuf referenceCountDelegate;
 
-        PooledNonRetainedDuplicateByteBuf(ReferenceCounted referenceCountDelegate, AbstractByteBuf buffer) {
+        PooledNonRetainedDuplicateByteBuf(ByteBuf referenceCountDelegate, AbstractByteBuf buffer) {
             super(buffer);
             this.referenceCountDelegate = referenceCountDelegate;
+        }
+
+        @Override
+        boolean isAccessible0() {
+            return referenceCountDelegate.isAccessible();
         }
 
         @Override
@@ -229,12 +238,17 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     private static final class PooledNonRetainedSlicedByteBuf extends UnpooledSlicedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
+        private final ByteBuf referenceCountDelegate;
 
-        PooledNonRetainedSlicedByteBuf(ReferenceCounted referenceCountDelegate,
+        PooledNonRetainedSlicedByteBuf(ByteBuf referenceCountDelegate,
                                        AbstractByteBuf buffer, int index, int length) {
             super(buffer, index, length);
             this.referenceCountDelegate = referenceCountDelegate;
+        }
+
+        @Override
+        boolean isAccessible0() {
+            return referenceCountDelegate.isAccessible();
         }
 
         @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,8 +38,8 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Override
-    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
-        return new JdkZlibDecoder(wrapper);
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, int maxAllocation) {
+        return new JdkZlibDecoder(wrapper, maxAllocation);
     }
 
     @Test(expected = DecompressionException.class)
@@ -77,6 +77,36 @@ public class JdkZlibTest extends ZlibTest {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
 
             assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
+            Queue<Object> messages = chDecoderGZip.inboundMessages();
+            assertEquals(2, messages.size());
+
+            for (String s : Arrays.asList("a", "b")) {
+                ByteBuf msg = (ByteBuf) messages.poll();
+                assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                ReferenceCountUtil.release(msg);
+            }
+        } finally {
+            assertFalse(chDecoderGZip.finish());
+            chDecoderGZip.close();
+        }
+    }
+
+    @Test
+    public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+
+        try {
+            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+
+            // Let's feed the input byte by byte to simulate fragmentation.
+            ByteBuf buf = Unpooled.copiedBuffer(bytes);
+            boolean written = false;
+            while (buf.isReadable()) {
+                written |= chDecoderGZip.writeInbound(buf.readRetainedSlice(1));
+            }
+            buf.release();
+
+            assertTrue(written);
             Queue<Object> messages = chDecoderGZip.inboundMessages();
             assertEquals(2, messages.size());
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,7 +58,8 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
             final ByteBuf buffer = ctx.alloc().buffer();
             try {
                 req.command().encode(buffer);
-                writeParameters(req.parameters(), buffer);
+                boolean notEmpty = req.command() != SmtpCommand.EMPTY;
+                writeParameters(req.parameters(), buffer, notEmpty);
                 ByteBufUtil.writeShortBE(buffer, CRLF_SHORT);
                 out.add(buffer);
                 release = false;
@@ -85,11 +86,13 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
         }
     }
 
-    private static void writeParameters(List<CharSequence> parameters, ByteBuf out) {
+    private static void writeParameters(List<CharSequence> parameters, ByteBuf out, boolean commandNotEmpty) {
         if (parameters.isEmpty()) {
             return;
         }
-        out.writeByte(SP);
+        if (commandNotEmpty) {
+            out.writeByte(SP);
+        }
         if (parameters instanceof RandomAccess) {
             final int sizeMinusOne = parameters.size() - 1;
             for (int i = 0; i < sizeMinusOne; i++) {

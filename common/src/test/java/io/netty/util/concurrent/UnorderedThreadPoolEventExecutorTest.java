@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class UnorderedThreadPoolEventExecutorTest {
 
@@ -51,6 +52,24 @@ public class UnorderedThreadPoolEventExecutorTest {
                 Assert.assertTrue(executor.getQueue().isEmpty());
             }
         } finally {
+            executor.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void scheduledAtFixedRateMustRunTaskRepeatedly() throws InterruptedException {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        final CountDownLatch latch = new CountDownLatch(3);
+        Future<?> future = executor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                latch.countDown();
+            }
+        }, 1, 1, TimeUnit.MILLISECONDS);
+        try {
+            latch.await();
+        } finally {
+            future.cancel(true);
             executor.shutdownGracefully();
         }
     }

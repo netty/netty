@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.internal.ObjectUtil;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -42,27 +43,21 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     }
 
     public void addValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        ObjectUtil.checkNotNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(buf);
         size += buf.readableBytes();
     }
 
     public void addValue(String value, int rank) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        ObjectUtil.checkNotNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(rank, buf);
         size += buf.readableBytes();
     }
 
     public void setValue(String value, int rank) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        ObjectUtil.checkNotNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         ByteBuf old = this.value.set(rank, buf);
         if (old != null) {

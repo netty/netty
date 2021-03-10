@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,33 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import org.junit.Test;
 
 import java.net.URI;
 
+import static org.junit.Assert.assertEquals;
+
 public class WebSocketClientHandshaker07Test extends WebSocketClientHandshakerTest {
+
+    @Test
+    public void testHostHeaderPreserved() {
+        URI uri = URI.create("ws://localhost:9999");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null,
+                new DefaultHttpHeaders().set(HttpHeaderNames.HOST, "test.netty.io"), false);
+
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/", request.uri());
+            assertEquals("test.netty.io", request.headers().get(HttpHeaderNames.HOST));
+        } finally {
+            request.release();
+        }
+    }
+
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
                                                       boolean absoluteUpgradeUrl) {

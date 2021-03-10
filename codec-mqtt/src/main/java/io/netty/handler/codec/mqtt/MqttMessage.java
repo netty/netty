@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,17 @@ public class MqttMessage {
     private final Object variableHeader;
     private final Object payload;
     private final DecoderResult decoderResult;
+
+    // Constants for fixed-header only message types with all flags set to 0 (see
+    // https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Table_2.2_-)
+    public static final MqttMessage PINGREQ = new MqttMessage(new MqttFixedHeader(MqttMessageType.PINGREQ, false,
+            MqttQoS.AT_MOST_ONCE, false, 0));
+
+    public static final MqttMessage PINGRESP = new MqttMessage(new MqttFixedHeader(MqttMessageType.PINGRESP, false,
+            MqttQoS.AT_MOST_ONCE, false, 0));
+
+    public static final MqttMessage DISCONNECT = new MqttMessage(new MqttFixedHeader(MqttMessageType.DISCONNECT, false,
+            MqttQoS.AT_MOST_ONCE, false, 0));
 
     public MqttMessage(MqttFixedHeader mqttFixedHeader) {
         this(mqttFixedHeader, null, null);

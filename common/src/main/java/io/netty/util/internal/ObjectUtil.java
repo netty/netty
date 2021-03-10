@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -50,11 +50,11 @@ public final class ObjectUtil {
      * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static long checkPositive(long i, String name) {
-        if (i <= 0) {
-            throw new IllegalArgumentException(name + ": " + i + " (expected: > 0)");
+    public static long checkPositive(long l, String name) {
+        if (l <= 0) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: > 0)");
         }
-        return i;
+        return l;
     }
 
     /**
@@ -72,11 +72,33 @@ public final class ObjectUtil {
      * Checks that the given argument is positive or zero. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static long checkPositiveOrZero(long i, String name) {
-        if (i < 0) {
-            throw new IllegalArgumentException(name + ": " + i + " (expected: >= 0)");
+    public static long checkPositiveOrZero(long l, String name) {
+        if (l < 0) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: >= 0)");
+        }
+        return l;
+    }
+
+    /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static int checkInRange(int i, int start, int end, String name) {
+        if (i < start || i > end) {
+            throw new IllegalArgumentException(name + ": " + i + " (expected: " + start + "-" + end + ")");
         }
         return i;
+    }
+
+    /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static long checkInRange(long l, long start, long end, String name) {
+        if (l < start || l > end) {
+            throw new IllegalArgumentException(name + ": " + l + " (expected: " + start + "-" + end + ")");
+        }
+        return l;
     }
 
     /**

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -31,7 +32,10 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Test;
 
 import java.net.URI;
@@ -217,6 +221,30 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
+    public void testUpgradeUrlWithoutPath() {
+        URI uri = URI.create("ws://localhost:9999");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void testUpgradeUrlWithoutPathWithQuery() {
+        URI uri = URI.create("ws://localhost:9999?a=b%20c");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/?a=b%20c", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
     public void testAbsoluteUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true);
@@ -339,7 +367,9 @@ public abstract class WebSocketClientHandshakerTest {
 
         // add values for the headers that are reserved for use in the websockets handshake
         for (CharSequence header : getHandshakeRequiredHeaderNames()) {
-            inputHeaders.add(header, bogusHeaderValue);
+            if (!HttpHeaderNames.HOST.equals(header)) {
+                inputHeaders.add(header, bogusHeaderValue);
+            }
         }
         inputHeaders.add(getProtocolHeaderName(), bogusSubProtocol);
 
@@ -360,4 +390,24 @@ public abstract class WebSocketClientHandshakerTest {
 
         request.release();
     }
+
+    @Test
+    public void testWebSocketClientHandshakeException() {
+        URI uri = URI.create("ws://localhost:9999/exception");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false);
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
+        response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "realm = access token required");
+
+        try {
+            handshaker.finishHandshake(null, response);
+        } catch (WebSocketClientHandshakeException exception) {
+            assertEquals("Invalid handshake response getStatus: 401 Unauthorized", exception.getMessage());
+            assertEquals(HttpResponseStatus.UNAUTHORIZED, exception.response().status());
+            assertTrue(exception.response().headers().contains(HttpHeaderNames.WWW_AUTHENTICATE,
+                                                               "realm = access token required", false));
+        } finally {
+            response.release();
+        }
+    }
 }
+

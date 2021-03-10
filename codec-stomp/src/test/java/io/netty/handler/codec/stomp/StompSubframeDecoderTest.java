@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,15 +22,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.handler.codec.stomp.StompTestConstants.FRAME_WITH_INVALID_HEADER;
-import static io.netty.util.CharsetUtil.US_ASCII;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static io.netty.handler.codec.stomp.StompTestConstants.*;
+import static io.netty.util.CharsetUtil.*;
+import static org.junit.Assert.*;
 
 public class StompSubframeDecoderTest {
 
@@ -165,7 +159,7 @@ public class StompSubframeDecoderTest {
 
     @Test
     public void testValidateHeadersDecodingDisabled() {
-        ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(US_ASCII));
+        ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
         assertTrue(channel.writeInbound(invalidIncoming));
 
         StompHeadersSubframe frame = channel.readInbound();
@@ -185,7 +179,7 @@ public class StompSubframeDecoderTest {
     public void testValidateHeadersDecodingEnabled() {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
-        ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(US_ASCII));
+        ByteBuf invalidIncoming = Unpooled.wrappedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
         assertTrue(channel.writeInbound(invalidIncoming));
 
         StompHeadersSubframe frame = channel.readInbound();
@@ -193,5 +187,38 @@ public class StompSubframeDecoderTest {
         assertTrue(frame.decoderResult().isFailure());
         assertEquals("a header value or name contains a prohibited character ':', current-time:2000-01-01T00:00:00",
                 frame.decoderResult().cause().getMessage());
+    }
+
+    @Test
+    public void testNotValidFrameWithEmptyHeaderName() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf invalidIncoming = Unpooled.wrappedBuffer(FRAME_WITH_EMPTY_HEADER_NAME.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(invalidIncoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertTrue(frame.decoderResult().isFailure());
+        assertEquals("received an invalid header line ':header-value'",
+                     frame.decoderResult().cause().getMessage());
+    }
+
+    @Test
+    public void testUtf8FrameDecoding() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(SEND_FRAME_UTF8.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+        assertEquals("/queue/№11±♛нетти♕", headersSubFrame.headers().getAsString("destination"));
+        assertTrue(headersSubFrame.headers().contains("content-type"));
+
+        StompContentSubframe contentSubFrame = channel.readInbound();
+        assertNotNull(contentSubFrame);
+        assertEquals("body", contentSubFrame.content().toString(UTF_8));
+        assertTrue(contentSubFrame.release());
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -90,7 +90,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
                     sourcePrefixLength + " (expected: 0 >= " + addressBits + ')');
         }
 
-        // See http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
+        // See https://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
         final short addressNumber = (short) (bytes.length == 4 ?
                 InternetProtocolFamily.IPv4.addressNumber() : InternetProtocolFamily.IPv6.addressNumber());
         int payloadLength = calculateEcsAddressLength(sourcePrefixLength, lowOrderBitsToPreserve);

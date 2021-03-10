@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -24,6 +24,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
@@ -56,18 +57,9 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
                                             int memLevel) {
         super(delegate);
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
-        }
-        this.compressionLevel = compressionLevel;
-        this.windowBits = windowBits;
-        this.memLevel = memLevel;
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
 
         propertyKey = connection().newKey();
         connection().addListener(new Http2ConnectionAdapter() {
@@ -284,16 +276,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param compressor The compressor for {@code stream}
      */
     void cleanup(Http2Stream stream, EmbeddedChannel compressor) {
-        if (compressor.finish()) {
-            for (;;) {
-                final ByteBuf buf = compressor.readOutbound();
-                if (buf == null) {
-                    break;
-                }
-
-                buf.release();
-            }
-        }
+        compressor.finishAndReleaseAll();
         stream.removeProperty(propertyKey);
     }
 

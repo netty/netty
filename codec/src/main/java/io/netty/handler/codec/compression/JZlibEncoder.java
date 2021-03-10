@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.TimeUnit;
 
@@ -130,9 +131,7 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        ObjectUtil.checkNotNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -220,9 +219,8 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        ObjectUtil.checkNotNull(dictionary, "dictionary");
+
         int resultCode;
         resultCode = z.deflateInit(
                 compressionLevel, windowBits, memLevel,
@@ -385,7 +383,9 @@ public class JZlibEncoder extends ZlibEncoder {
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                 promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
                 return promise;
-            } else if (z.next_out_index != 0) {
+            } else if (z.next_out_index != 0) { // lgtm[java/constant-comparison]
+                // Suppressed a warning above to be on the safe side
+                // even if z.next_out_index seems to be always 0 here
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);
             } else {
                 footer = Unpooled.EMPTY_BUFFER;

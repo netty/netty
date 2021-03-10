@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
@@ -287,8 +288,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     /**
      * Prepare to encode the HTTP message content.
      *
-     * @param headers
-     *        the headers
+     * @param httpResponse
+     *        the http response
      * @param acceptEncoding
      *        the value of the {@code "Accept-Encoding"} header
      *
@@ -298,7 +299,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception;
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
@@ -362,15 +363,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         private final EmbeddedChannel contentEncoder;
 
         public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
-            if (targetContentEncoding == null) {
-                throw new NullPointerException("targetContentEncoding");
-            }
-            if (contentEncoder == null) {
-                throw new NullPointerException("contentEncoder");
-            }
-
-            this.targetContentEncoding = targetContentEncoding;
-            this.contentEncoder = contentEncoder;
+            this.targetContentEncoding = ObjectUtil.checkNotNull(targetContentEncoding, "targetContentEncoding");
+            this.contentEncoder = ObjectUtil.checkNotNull(contentEncoder, "contentEncoder");
         }
 
         public String targetContentEncoding() {

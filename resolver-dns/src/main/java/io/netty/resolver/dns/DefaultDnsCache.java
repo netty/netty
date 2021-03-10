@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,6 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.Collections;
@@ -32,7 +31,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * Default implementation of {@link DnsCache}, backed by a {@link ConcurrentMap}.
  * If any additional {@link DnsRecord} is used, no caching takes place.
  */
-@UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
     private final Cache<DefaultDnsCacheEntry> resolveCache = new Cache<DefaultDnsCacheEntry>() {

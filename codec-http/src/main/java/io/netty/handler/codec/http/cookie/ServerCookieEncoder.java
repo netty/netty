@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,12 +14,6 @@
  * under the License.
  */
 package io.netty.handler.codec.http.cookie;
-
-import static io.netty.handler.codec.http.cookie.CookieUtil.add;
-import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
@@ -34,8 +28,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.handler.codec.http.cookie.CookieUtil.add;
+import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
  * so some fields are sent (Version is typically ignored).
  *
  * As Netty's Cookie merges Expires and MaxAge into one single field, only Max-Age field is sent.
@@ -123,6 +123,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
         }
         if (cookie.isHttpOnly()) {
             add(buf, CookieHeaderNames.HTTPONLY);
+        }
+        if (cookie instanceof DefaultCookie) {
+            DefaultCookie c = (DefaultCookie) cookie;
+            if (c.sameSite() != null) {
+                add(buf, CookieHeaderNames.SAMESITE, c.sameSite().name());
+            }
         }
 
         return stripTrailingSeparator(buf);

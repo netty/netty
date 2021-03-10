@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,9 +20,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import javax.net.ssl.SSLException;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
@@ -79,32 +82,42 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
-
+            SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
-                SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvent.isSuccess()) {
                     SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                     if (sslHandler == null) {
-                        throw new IllegalStateException("cannot find a SslHandler in the pipeline (required for "
+                        throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
                                 + "application-level protocol negotiation)");
                     }
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    handshakeFailure(ctx, handshakeEvent.cause());
+                    // if the event is not produced because of an successful handshake we will receive the same
+                    // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
+                    // control over which exception we propagate down the ChannelPipeline.
+                    //
+                    // See https://github.com/netty/netty/issues/10342
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                ChannelPipeline pipeline = ctx.pipeline();
-                if (pipeline.context(this) != null) {
-                    pipeline.remove(this);
+                // Handshake failures are handled in exceptionCaught(...).
+                if (handshakeEvent.isSuccess()) {
+                    removeSelfIfPresent(ctx);
                 }
             }
         }
+
         ctx.fireUserEventTriggered(evt);
     }
 
+    private void removeSelfIfPresent(ChannelHandlerContext ctx) {
+        ChannelPipeline pipeline = ctx.pipeline();
+        if (pipeline.context(this) != null) {
+            pipeline.remove(this);
+        }
+    }
     /**
      * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline
      * for the negotiated application-level protocol.
@@ -125,6 +138,15 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        Throwable wrapped;
+        if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
+            try {
+                handshakeFailure(ctx, wrapped);
+                return;
+            } finally {
+                removeSelfIfPresent(ctx);
+            }
+        }
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
         ctx.fireExceptionCaught(cause);
         ctx.close();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public static final String postfix = ".tmp";
 
+    private final String baseDir;
+
+    private final boolean deleteOnExit;
+
     private String filename;
 
     private String contentType;
@@ -43,11 +48,19 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     private String contentTransferEncoding;
 
     public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
+            String contentTransferEncoding, Charset charset, long size, String baseDir, boolean deleteOnExit) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
         setContentTransferEncoding(contentTransferEncoding);
+        this.baseDir = baseDir == null ? baseDirectory : baseDir;
+        this.deleteOnExit = deleteOnExit;
+    }
+
+    public DiskFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size) {
+        this(name, filename, contentType, contentTransferEncoding,
+                charset, size, baseDirectory, deleteOnExitTemporaryFile);
     }
 
     @Override
@@ -62,10 +75,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setFilename(String filename) {
-        if (filename == null) {
-            throw new NullPointerException("filename");
-        }
-        this.filename = filename;
+        this.filename = ObjectUtil.checkNotNull(filename, "filename");
     }
 
     @Override
@@ -93,10 +103,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setContentType(String contentType) {
-        if (contentType == null) {
-            throw new NullPointerException("contentType");
-        }
-        this.contentType = contentType;
+        this.contentType = ObjectUtil.checkNotNull(contentType, "contentType");
     }
 
     @Override
@@ -137,12 +144,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     protected boolean deleteOnExit() {
-        return deleteOnExitTemporaryFile;
+        return deleteOnExit;
     }
 
     @Override
     protected String getBaseDirectory() {
-        return baseDirectory;
+        return baseDir;
     }
 
     @Override
@@ -195,7 +202,8 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public FileUpload replace(ByteBuf content) {
         DiskFileUpload upload = new DiskFileUpload(
-                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size,
+                baseDir, deleteOnExit);
         if (content != null) {
             try {
                 upload.setContent(content);

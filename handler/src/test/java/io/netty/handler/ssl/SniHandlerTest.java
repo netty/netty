@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,11 +18,11 @@ package io.netty.handler.ssl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -37,7 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -74,6 +76,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
+import org.mockito.Mockito;
 
 @RunWith(Parameterized.class)
 public class SniHandlerTest {
@@ -315,7 +318,7 @@ public class SniHandlerTest {
             try {
                 // Push the handshake message.
                 ch.writeInbound(Unpooled.wrappedBuffer(message));
-                // TODO(scott): This should fail becasue the engine should reject zero length records during handshake.
+                // TODO(scott): This should fail because the engine should reject zero length records during handshake.
                 // See https://github.com/netty/netty/issues/6348.
                 // fail();
             } catch (Exception e) {
@@ -338,6 +341,47 @@ public class SniHandlerTest {
             assertThat(handler.sslContext(), is(nettyContext));
         } finally {
             releaseAll(leanContext, leanContext2, nettyContext);
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testMajorVersionNot3() throws Exception {
+        SslContext nettyContext = makeSslContext(provider, false);
+
+        try {
+            DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext).build();
+
+            SniHandler handler = new SniHandler(mapping);
+            EmbeddedChannel ch = new EmbeddedChannel(handler);
+
+            // invalid
+            byte[] message = {22, 2, 0, 0, 0};
+            try {
+                // Push the handshake message.
+                ch.writeInbound(Unpooled.wrappedBuffer(message));
+                // TODO(scott): This should fail because the engine should reject zero length records during handshake.
+                // See https://github.com/netty/netty/issues/6348.
+                // fail();
+            } catch (Exception e) {
+                // expected
+            }
+
+            ch.close();
+
+            // Consume all the outbound data that may be produced by the SSLEngine.
+            for (;;) {
+                ByteBuf buf = ch.readOutbound();
+                if (buf == null) {
+                    break;
+                }
+                buf.release();
+            }
+
+            assertThat(ch.finish(), is(false));
+            assertThat(handler.hostname(), nullValue());
+            assertThat(handler.sslContext(), is(nettyContext));
+        } finally {
+            releaseAll(nettyContext);
         }
     }
 
@@ -464,6 +508,7 @@ public class SniHandlerTest {
 
                             boolean success = false;
                             try {
+                                assertEquals(1, ((ReferenceCountedOpenSslContext) sslContext).refCnt());
                                 // The SniHandler's replaceHandler() method allows us to implement custom behavior.
                                 // As an example, we want to release() the SslContext upon channelInactive() or rather
                                 // when the SslHandler closes it's SslEngine. If you take a close look at SslHandler
@@ -471,6 +516,7 @@ public class SniHandlerTest {
 
                                 SSLEngine sslEngine = sslContext.newEngine(ctx.alloc());
                                 try {
+                                    assertEquals(2, ((ReferenceCountedOpenSslContext) sslContext).refCnt());
                                     SslHandler customSslHandler = new CustomSslHandler(sslContext, sslEngine) {
                                         @Override
                                         public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
@@ -517,8 +563,9 @@ public class SniHandlerTest {
                     cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
                             .syncUninterruptibly();
 
-                    // Notice how the server's SslContext refCnt is 1
-                    assertEquals(1, ((ReferenceCounted) sslServerContext).refCnt());
+                    // Notice how the server's SslContext refCnt is 2 as it is incremented when the SSLEngine is created
+                    // and only decremented once it is destroyed.
+                    assertEquals(2, ((ReferenceCounted) sslServerContext).refCnt());
 
                     // The client disconnects
                     cc.close().syncUninterruptibly();
@@ -574,5 +621,80 @@ public class SniHandlerTest {
         for (SslContext ctx: contexts) {
             ReferenceCountUtil.release(ctx);
         }
+    }
+
+    @Test
+    public void testNonFragmented() throws Exception {
+        testWithFragmentSize(Integer.MAX_VALUE);
+    }
+    @Test
+    public void testFragmented() throws Exception {
+        testWithFragmentSize(50);
+    }
+
+    private void testWithFragmentSize(final int maxFragmentSize) throws Exception {
+        final String sni = "netty.io";
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(provider)
+                .build();
+        try {
+            @SuppressWarnings("unchecked") final EmbeddedChannel server = new EmbeddedChannel(
+                    new SniHandler(Mockito.mock(DomainNameMapping.class)) {
+                @Override
+                protected Future<SslContext> lookup(final ChannelHandlerContext ctx, final String hostname) {
+                    assertEquals(sni, hostname);
+                    return ctx.executor().newSucceededFuture(context);
+                }
+            });
+
+            final List<ByteBuf> buffers = clientHelloInMultipleFragments(provider, sni, maxFragmentSize);
+            for (ByteBuf buffer : buffers) {
+                server.writeInbound(buffer);
+            }
+            assertTrue(server.finishAndReleaseAll());
+        } finally {
+            releaseAll(context);
+            cert.delete();
+        }
+    }
+
+    private static List<ByteBuf> clientHelloInMultipleFragments(
+            SslProvider provider, String hostname, int maxTlsPlaintextSize) throws SSLException {
+        final EmbeddedChannel client = new EmbeddedChannel();
+        final SslContext ctx = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+        try {
+            final SslHandler sslHandler = ctx.newHandler(client.alloc(), hostname, -1);
+            client.pipeline().addLast(sslHandler);
+            final ByteBuf clientHello = client.readOutbound();
+            List<ByteBuf> buffers = split(clientHello, maxTlsPlaintextSize);
+            assertTrue(client.finishAndReleaseAll());
+            return buffers;
+        } finally {
+            releaseAll(ctx);
+        }
+    }
+
+    private static List<ByteBuf> split(ByteBuf clientHello, int maxSize) {
+        final int type = clientHello.readUnsignedByte();
+        final int version = clientHello.readUnsignedShort();
+        final int length = clientHello.readUnsignedShort();
+        assertEquals(length, clientHello.readableBytes());
+
+        final List<ByteBuf> result = new ArrayList<ByteBuf>();
+        while (clientHello.readableBytes() > 0) {
+            final int toRead = Math.min(maxSize, clientHello.readableBytes());
+            final ByteBuf bb = clientHello.alloc().buffer(SslUtils.SSL_RECORD_HEADER_LENGTH + toRead);
+            bb.writeByte(type);
+            bb.writeShort(version);
+            bb.writeShort(toRead);
+            bb.writeBytes(clientHello, toRead);
+            result.add(bb);
+        }
+        clientHello.release();
+        return result;
     }
 }

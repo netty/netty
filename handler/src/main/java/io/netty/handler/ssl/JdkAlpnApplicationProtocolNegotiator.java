@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 
@@ -28,7 +27,7 @@ import javax.net.ssl.SSLEngine;
 @Deprecated
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final boolean AVAILABLE = Conscrypt.isAvailable() ||
-                                             jdkAlpnSupported() ||
+                                             JdkAlpnSslUtils.supportsAlpn() ||
                                              JettyAlpnSslEngine.isAvailable();
 
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
@@ -122,7 +121,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
             throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
                     + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
                     + " For Jetty-ALPN, see "
-                    + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
+                    + "https://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
         }
     }
 
@@ -134,18 +133,23 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
                         : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
             }
-            if (jdkAlpnSupported()) {
-                return new Java9SslEngine(engine, applicationNegotiator, isServer);
+            // ALPN support was recently backported to Java8 as
+            // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8230977.
+            // Because of this lets not do a Java version runtime check but just depend on if the required methods are
+            // present
+            if (JdkAlpnSslUtils.supportsAlpn()) {
+                return new JdkAlpnSslEngine(engine, applicationNegotiator, isServer);
             }
             if (JettyAlpnSslEngine.isAvailable()) {
                 return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
                         : JettyAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
             }
-            throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
+            throw new UnsupportedOperationException("ALPN not supported. Unable to wrap SSLEngine of type '"
+                    + engine.getClass().getName() + "')");
         }
     }
 
-    static boolean jdkAlpnSupported() {
-        return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+    static boolean isAlpnSupported() {
+        return AVAILABLE;
     }
 }

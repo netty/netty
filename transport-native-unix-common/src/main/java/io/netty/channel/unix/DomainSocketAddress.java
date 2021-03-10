@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,22 +15,21 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.io.File;
 import java.net.SocketAddress;
 
 /**
  * A address for a
- * <a href="http://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
+ * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
  */
 public final class DomainSocketAddress extends SocketAddress {
     private static final long serialVersionUID = -6934618000832236893L;
     private final String socketPath;
 
     public DomainSocketAddress(String socketPath) {
-        if (socketPath == null) {
-            throw new NullPointerException("socketPath");
-        }
-        this.socketPath = socketPath;
+        this.socketPath = ObjectUtil.checkNotNull(socketPath, "socketPath");
     }
 
     public DomainSocketAddress(File file) {

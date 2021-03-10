@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +28,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
+    private final Handle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -42,7 +41,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private ByteBufAllocator allocator;
 
     @SuppressWarnings("unchecked")
-    protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
+    protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
         this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
@@ -155,6 +154,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);
+        } else {
+            tmpNioBuf.clear();
         }
         return tmpNioBuf;
     }
@@ -213,6 +214,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @Override
     public final ByteBuffer[] nioBuffers(int index, int length) {
         return new ByteBuffer[] { nioBuffer(index, length) };
+    }
+
+    @Override
+    public final boolean isContiguous() {
+        return true;
     }
 
     @Override

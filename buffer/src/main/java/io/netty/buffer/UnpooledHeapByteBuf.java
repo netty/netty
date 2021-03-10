@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -50,14 +50,12 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
-        checkNotNull(alloc, "alloc");
-
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
-        this.alloc = alloc;
+        this.alloc = checkNotNull(alloc, "alloc");
         setArray(allocateArray(initialCapacity));
         setIndex(0, 0);
     }
@@ -73,7 +71,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
         checkNotNull(alloc, "alloc");
         checkNotNull(initialArray, "initialArray");
-
         if (initialArray.length > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity(%d) > maxCapacity(%d)", initialArray.length, maxCapacity));
@@ -318,6 +315,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+    }
+
+    @Override
+    public final boolean isContiguous() {
+        return true;
     }
 
     @Override

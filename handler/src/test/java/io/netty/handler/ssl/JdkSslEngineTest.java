@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -79,10 +78,10 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 return null;
             }
         },
-        ALPN_JAVA9 {
+        ALPN_JAVA {
             @Override
             boolean isAvailable() {
-                return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+                return JdkAlpnSslUtils.supportsAlpn();
             }
 
             @Override
@@ -150,7 +149,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
 
-                if (PlatformDependent.javaVersion() >= 11) {
+                if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
                 }

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -36,7 +36,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
- * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
+ * An HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
  * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
 @UnstableApi
@@ -234,7 +234,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (decompressor != null) {
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
-            // header frames...just remove the content-length header
+            // header frames just remove the content-length header.
             headers.remove(CONTENT_LENGTH);
 
             // The first time that we initialize a decompressor, decorate the local flow controller to

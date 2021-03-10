@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.util;
 
+import io.netty.util.NetUtilInitializations.NetworkIfaceAndInetAddress;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -33,13 +33,9 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
 
 import static io.netty.util.AsciiString.indexOf;
 
@@ -47,7 +43,7 @@ import static io.netty.util.AsciiString.indexOf;
  * A class that holds a number of network-related constants.
  * <p/>
  * This class borrowed some of its methods from a  modified fork of the
- * <a href="http://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
+ * <a href="https://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
  * src/main/java/org/apache/harmony/luni/util/Inet6Util.java">Inet6Util class</a> which was part of Apache Harmony.
  */
 public final class NetUtil {
@@ -139,113 +135,15 @@ public final class NetUtil {
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
         logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
 
-        byte[] LOCALHOST4_BYTES = {127, 0, 0, 1};
-        byte[] LOCALHOST6_BYTES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-
         // Create IPv4 loopback address.
-        Inet4Address localhost4 = null;
-        try {
-            localhost4 = (Inet4Address) InetAddress.getByAddress("localhost", LOCALHOST4_BYTES);
-        } catch (Exception e) {
-            // We should not get here as long as the length of the address is correct.
-            PlatformDependent.throwException(e);
-        }
-        LOCALHOST4 = localhost4;
+        LOCALHOST4 = NetUtilInitializations.createLocalhost4();
 
         // Create IPv6 loopback address.
-        Inet6Address localhost6 = null;
-        try {
-            localhost6 = (Inet6Address) InetAddress.getByAddress("localhost", LOCALHOST6_BYTES);
-        } catch (Exception e) {
-            // We should not get here as long as the length of the address is correct.
-            PlatformDependent.throwException(e);
-        }
-        LOCALHOST6 = localhost6;
+        LOCALHOST6 = NetUtilInitializations.createLocalhost6();
 
-        // Retrieve the list of available network interfaces.
-        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            if (interfaces != null) {
-                while (interfaces.hasMoreElements()) {
-                    NetworkInterface iface = interfaces.nextElement();
-                    // Use the interface with proper INET addresses only.
-                    if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
-                        ifaces.add(iface);
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            logger.warn("Failed to retrieve the list of available network interfaces", e);
-        }
-
-        // Find the first loopback interface available from its INET address (127.0.0.1 or ::1)
-        // Note that we do not use NetworkInterface.isLoopback() in the first place because it takes long time
-        // on a certain environment. (e.g. Windows with -Djava.net.preferIPv4Stack=true)
-        NetworkInterface loopbackIface = null;
-        InetAddress loopbackAddr = null;
-        loop: for (NetworkInterface iface: ifaces) {
-            for (Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface); i.hasMoreElements();) {
-                InetAddress addr = i.nextElement();
-                if (addr.isLoopbackAddress()) {
-                    // Found
-                    loopbackIface = iface;
-                    loopbackAddr = addr;
-                    break loop;
-                }
-            }
-        }
-
-        // If failed to find the loopback interface from its INET address, fall back to isLoopback().
-        if (loopbackIface == null) {
-            try {
-                for (NetworkInterface iface: ifaces) {
-                    if (iface.isLoopback()) {
-                        Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface);
-                        if (i.hasMoreElements()) {
-                            // Found the one with INET address.
-                            loopbackIface = iface;
-                            loopbackAddr = i.nextElement();
-                            break;
-                        }
-                    }
-                }
-
-                if (loopbackIface == null) {
-                    logger.warn("Failed to find the loopback interface");
-                }
-            } catch (SocketException e) {
-                logger.warn("Failed to find the loopback interface", e);
-            }
-        }
-
-        if (loopbackIface != null) {
-            // Found the loopback interface with an INET address.
-            logger.debug(
-                    "Loopback interface: {} ({}, {})",
-                    loopbackIface.getName(), loopbackIface.getDisplayName(), loopbackAddr.getHostAddress());
-        } else {
-            // Could not find the loopback interface, but we can't leave LOCALHOST as null.
-            // Use LOCALHOST6 or LOCALHOST4, preferably the IPv6 one.
-            if (loopbackAddr == null) {
-                try {
-                    if (NetworkInterface.getByInetAddress(LOCALHOST6) != null) {
-                        logger.debug("Using hard-coded IPv6 localhost address: {}", localhost6);
-                        loopbackAddr = localhost6;
-                    }
-                } catch (Exception e) {
-                    // Ignore
-                } finally {
-                    if (loopbackAddr == null) {
-                        logger.debug("Using hard-coded IPv4 localhost address: {}", localhost4);
-                        loopbackAddr = localhost4;
-                    }
-                }
-            }
-        }
-
-        LOOPBACK_IF = loopbackIface;
-        LOCALHOST = loopbackAddr;
+        NetworkIfaceAndInetAddress loopback = NetUtilInitializations.determineLoopback(LOCALHOST4, LOCALHOST6);
+        LOOPBACK_IF = loopback.iface();
+        LOCALHOST = loopback.address();
 
         // As a SecurityManager may prevent reading the somaxconn file we wrap this in a privileged block.
         //
@@ -291,7 +189,10 @@ public final class NetUtil {
                         }
                     }
                 } catch (Exception e) {
-                    logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file, somaxconn, e);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}",
+                                file, somaxconn, e);
+                    }
                 } finally {
                     if (in != null) {
                         try {
@@ -315,12 +216,13 @@ public final class NetUtil {
     private static Integer sysctlGetInt(String sysctlKey) throws IOException {
         Process process = new ProcessBuilder("sysctl", sysctlKey).start();
         try {
-            InputStream is = process.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
+            // Suppress warnings about resource leaks since the buffered reader is closed below
+            InputStream is = process.getInputStream();  // lgtm[java/input-resource-leak
+            InputStreamReader isr = new InputStreamReader(is);  // lgtm[java/input-resource-leak
             BufferedReader br = new BufferedReader(isr);
             try {
                 String line = br.readLine();
-                if (line.startsWith(sysctlKey)) {
+                if (line != null && line.startsWith(sysctlKey)) {
                     for (int i = line.length() - 1; i > sysctlKey.length(); --i) {
                         if (!Character.isDigit(line.charAt(i))) {
                             return Integer.valueOf(line.substring(i + 1));
@@ -411,6 +313,18 @@ public final class NetUtil {
                 ipv4WordToByte(ip, i + 1, i = ip.indexOf('.', i + 2)),
                 ipv4WordToByte(ip, i + 1, ip.length())
         };
+    }
+
+    /**
+     * Convert {@link Inet4Address} into {@code int}
+     */
+    public static int ipv4AddressToInt(Inet4Address ipAddress) {
+        byte[] octets = ipAddress.getAddress();
+
+        return  (octets[0] & 0xff) << 24 |
+                (octets[1] & 0xff) << 16 |
+                (octets[2] & 0xff) << 8 |
+                 octets[3] & 0xff;
     }
 
     /**
@@ -703,7 +617,7 @@ public final class NetUtil {
      * <p>
      * The {@code ipv4Mapped} parameter specifies how IPv4 addresses should be treated.
      * "IPv4 mapped" format as
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
      * @param ip {@link CharSequence} IP address to be converted to a {@link Inet6Address}
      * @param ipv4Mapped
      * <ul>
@@ -729,7 +643,7 @@ public final class NetUtil {
      * <p>
      * The {@code ipv4Mapped} parameter specifies how IPv4 addresses should be treated.
      * "IPv4 mapped" format as
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> is supported.
      * @param ip {@link CharSequence} IP address to be converted to a {@link Inet6Address}
      * @param ipv4Mapped
      * <ul>
@@ -979,7 +893,7 @@ public final class NetUtil {
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>
      * <li>Inet6Address results adhere to
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * </ul>
      * <p>
      * The output does not include Scope ID.
@@ -995,11 +909,11 @@ public final class NetUtil {
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>
      * <li>Inet6Address results adhere to
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a> if
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a> if
      * {@code ipv4Mapped} is false.  If {@code ipv4Mapped} is true then "IPv4 mapped" format
-     * from <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> will be supported.
+     * from <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> will be supported.
      * The compressed result will always obey the compression rules defined in
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * </ul>
      * <p>
      * The output does not include Scope ID.
@@ -1007,9 +921,9 @@ public final class NetUtil {
      * @param ipv4Mapped
      * <ul>
      * <li>{@code true} to stray from strict rfc 5952 and support the "IPv4 mapped" format
-     * defined in <a href="http://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> while still
+     * defined in <a href="https://tools.ietf.org/html/rfc4291#section-2.5.5">rfc 4291 section 2</a> while still
      * following the updated guidelines in
-     * <a href="http://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
+     * <a href="https://tools.ietf.org/html/rfc5952#section-4">rfc 5952 section 4</a></li>
      * <li>{@code false} to strictly follow rfc 5952</li>
      * </ul>
      * @return {@code String} containing the text-formatted IP address

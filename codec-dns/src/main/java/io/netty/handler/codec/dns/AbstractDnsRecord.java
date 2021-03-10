@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -68,10 +69,21 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         // See:
         //   - https://github.com/netty/netty/issues/4937
         //   - https://github.com/netty/netty/issues/4935
-        this.name = appendTrailingDot(IDN.toASCII(checkNotNull(name, "name")));
+        this.name = appendTrailingDot(IDNtoASCII(name));
         this.type = checkNotNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
+    }
+
+    private static String IDNtoASCII(String name) {
+        checkNotNull(name, "name");
+        if (PlatformDependent.isAndroid() && DefaultDnsRecordDecoder.ROOT.equals(name)) {
+            // Prior Android 10 there was a bug that did not correctly parse ".".
+            //
+            // See https://github.com/netty/netty/issues/10034
+            return name;
+        }
+        return IDN.toASCII(name);
     }
 
     private static String appendTrailingDot(String name) {

@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,9 +24,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -37,7 +38,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * many events as they like for any given input. A channel's auto reading configuration doesn't usually
  * apply in these scenarios. This is causing problems in downstream {@link ChannelHandler}s that would
  * like to hold subsequent events while they're processing one event. It's a common problem with the
- * {@code HttpObjectDecoder} that will very often fire a {@code HttpRequest} that is immediately followed
+ * {@code HttpObjectDecoder} that will very often fire an {@code HttpRequest} that is immediately followed
  * by a {@code LastHttpContent} event.
  *
  * <pre>{@code
@@ -119,6 +120,15 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        if (!isQueueEmpty()) {
+            dequeue(ctx, queue.size());
+        }
+        destroy();
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
         ctx.fireChannelInactive();
@@ -154,9 +164,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Don't relay completion events from upstream as they
-        // make no sense in this context. See dequeue() where
-        // a new set of completion events is being produced.
+        if (isQueueEmpty()) {
+            ctx.fireChannelReadComplete();
+        } else {
+            // Don't relay completion events from upstream as they
+            // make no sense in this context. See dequeue() where
+            // a new set of completion events is being produced.
+        }
     }
 
     /**
@@ -213,12 +227,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
          */
         private static final int DEFAULT_NUM_ELEMENTS = 2;
 
-        private static final Recycler<RecyclableArrayDeque> RECYCLER = new Recycler<RecyclableArrayDeque>() {
+        private static final ObjectPool<RecyclableArrayDeque> RECYCLER = ObjectPool.newPool(
+                new ObjectCreator<RecyclableArrayDeque>() {
             @Override
-            protected RecyclableArrayDeque newObject(Handle<RecyclableArrayDeque> handle) {
+            public RecyclableArrayDeque newObject(Handle<RecyclableArrayDeque> handle) {
                 return new RecyclableArrayDeque(DEFAULT_NUM_ELEMENTS, handle);
             }
-        };
+        });
 
         public static RecyclableArrayDeque newInstance() {
             return RECYCLER.get();

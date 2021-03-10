@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -46,13 +46,21 @@ import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
  */
 public class Socket extends FileDescriptor {
 
-    public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
+    @Deprecated
+    public static final int UDS_SUN_PATH_SIZE = 100;
 
     protected final boolean ipv6;
 
     public Socket(int fd) {
         super(fd);
         this.ipv6 = isIPv6(fd);
+    }
+
+    /**
+     * Returns {@code true} if we should use IPv6 internally, {@code false} otherwise.
+     */
+    private boolean useIpv6(InetAddress address) {
+        return ipv6 || address instanceof Inet6Address;
     }
 
     public final void shutdown() throws IOException {
@@ -105,29 +113,10 @@ public class Socket extends FileDescriptor {
     }
 
     public final int sendTo(ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {
-        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
-        // to be called frequently
-        byte[] address;
-        int scopeId;
-        if (addr instanceof Inet6Address) {
-            address = addr.getAddress();
-            scopeId = ((Inet6Address) addr).getScopeId();
-        } else {
-            // convert to ipv4 mapped ipv6 address;
-            scopeId = 0;
-            address = ipv4MappedIpv6Address(addr.getAddress());
-        }
-        int res = sendTo(fd, ipv6, buf, pos, limit, address, scopeId, port);
-        if (res >= 0) {
-            return res;
-        }
-        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
-            throw new PortUnreachableException("sendTo failed");
-        }
-        return ioResult("sendTo", res);
+        return sendTo(buf, pos, limit, addr, port, false);
     }
 
-    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
+    public final int sendTo(ByteBuffer buf, int pos, int limit, InetAddress addr, int port, boolean fastOpen)
             throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
@@ -141,17 +130,30 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddress(fd, ipv6, memoryAddress, pos, limit, address, scopeId, port);
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendTo(fd, useIpv6(addr), buf, pos, limit, address, scopeId, port, flags);
         if (res >= 0) {
             return res;
         }
-        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
-            throw new PortUnreachableException("sendToAddress failed");
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
         }
-        return ioResult("sendToAddress", res);
+        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendTo failed");
+        }
+        return ioResult("sendTo", res);
     }
 
-    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
+    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
+            throws IOException {
+        return sendToAddress(memoryAddress, pos, limit, addr, port, false);
+    }
+
+    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port,
+                                   boolean fastOpen) throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
         byte[] address;
@@ -164,11 +166,52 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddresses(fd, ipv6, memoryAddress, length, address, scopeId, port);
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendToAddress(fd, useIpv6(addr), memoryAddress, pos, limit, address, scopeId, port, flags);
         if (res >= 0) {
             return res;
         }
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
+        }
+        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendToAddress failed");
+        }
+        return ioResult("sendToAddress", res);
+    }
 
+    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
+        return sendToAddresses(memoryAddress, length, addr, port, false);
+    }
+
+    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port, boolean fastOpen)
+            throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
+        byte[] address;
+        int scopeId;
+        if (addr instanceof Inet6Address) {
+            address = addr.getAddress();
+            scopeId = ((Inet6Address) addr).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            scopeId = 0;
+            address = ipv4MappedIpv6Address(addr.getAddress());
+        }
+        int flags = fastOpen ? msgFastopen() : 0;
+        int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port, flags);
+        if (res >= 0) {
+            return res;
+        }
+        if (res == ERRNO_EINPROGRESS_NEGATIVE && fastOpen) {
+            // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+            // In this case, our TCP connection will be established normally, but no data was transmitted at this time.
+            // We'll just transmit the data with normal writes later.
+            return 0;
+        }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddresses failed");
         }
@@ -215,8 +258,9 @@ public class Socket extends FileDescriptor {
         int res;
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
-            NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
-            res = connect(fd, ipv6, address.address, address.scopeId, inetSocketAddress.getPort());
+            InetAddress inetAddress = inetSocketAddress.getAddress();
+            NativeInetAddress address = NativeInetAddress.newInstance(inetAddress);
+            res = connect(fd, useIpv6(inetAddress), address.address, address.scopeId, inetSocketAddress.getPort());
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
             res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
@@ -255,8 +299,9 @@ public class Socket extends FileDescriptor {
     public final void bind(SocketAddress socketAddress) throws IOException {
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress addr = (InetSocketAddress) socketAddress;
-            NativeInetAddress address = NativeInetAddress.newInstance(addr.getAddress());
-            int res = bind(fd, ipv6, address.address, address.scopeId, addr.getPort());
+            InetAddress inetAddress = addr.getAddress();
+            NativeInetAddress address = NativeInetAddress.newInstance(inetAddress);
+            int res = bind(fd, useIpv6(inetAddress), address.address, address.scopeId, addr.getPort());
             if (res < 0) {
                 throw newIOException("bind", res);
             }
@@ -457,11 +502,16 @@ public class Socket extends FileDescriptor {
     private static native byte[] localAddress(int fd);
 
     private static native int sendTo(
-            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,
+            int flags);
+
     private static native int sendToAddress(
-            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port,
+            int flags);
+
     private static native int sendToAddresses(
-            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
+            int flags);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -469,6 +519,7 @@ public class Socket extends FileDescriptor {
             int fd, long memoryAddress, int pos, int limit) throws IOException;
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
+    private static native int msgFastopen();
 
     private static native int newSocketStreamFd(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);

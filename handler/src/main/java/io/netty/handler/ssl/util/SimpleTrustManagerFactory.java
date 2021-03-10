@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,9 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -72,9 +74,7 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
         CURRENT_SPI.get().init(this);
         CURRENT_SPI.remove();
 
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        ObjectUtil.checkNotNull(name, "name");
     }
 
     /**
@@ -136,16 +136,21 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
             if (trustManagers == null) {
                 trustManagers = parent.engineGetTrustManagers();
                 if (PlatformDependent.javaVersion() >= 7) {
-                    for (int i = 0; i < trustManagers.length; i++) {
-                        final TrustManager tm = trustManagers[i];
-                        if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
-                            trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
-                        }
-                    }
+                    wrapIfNeeded(trustManagers);
                 }
                 this.trustManagers = trustManagers;
             }
             return trustManagers.clone();
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private static void wrapIfNeeded(TrustManager[] trustManagers) {
+            for (int i = 0; i < trustManagers.length; i++) {
+                final TrustManager tm = trustManagers[i];
+                if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
+                    trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
+                }
+            }
         }
     }
 }

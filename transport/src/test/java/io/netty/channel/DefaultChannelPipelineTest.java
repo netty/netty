@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -60,6 +60,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
@@ -264,6 +265,61 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler2"), newHandler2);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReplaceHandlerChecksDuplicateNames() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler2);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "handler2", newHandler1);
+    }
+
+    @Test
+    public void testReplaceNameWithGenerated() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", null, newHandler1);
+        assertSame(pipeline.get("DefaultChannelPipelineTest$TestHandler#0"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+    }
+
+    @Test
+    public void testRenameChannelHandler() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler1);
+        pipeline.addLast("handler3", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+        assertSame(pipeline.get("handler2"), handler1);
+        assertSame(pipeline.get("handler3"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "newHandler1", newHandler1);
+        assertSame(pipeline.get("newHandler1"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+
+        ChannelHandler newHandler3 = newHandler();
+        pipeline.replace("handler3", "newHandler3", newHandler3);
+        assertSame(pipeline.get("newHandler3"), newHandler3);
+        assertNull(pipeline.get("handler3"));
+
+        ChannelHandler newHandler2 = newHandler();
+        pipeline.replace("handler2", "newHandler2", newHandler2);
+        assertSame(pipeline.get("newHandler2"), newHandler2);
+        assertNull(pipeline.get("handler2"));
+    }
+
     @Test
     public void testChannelHandlerContextNavigation() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
@@ -276,6 +332,87 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(lastHandlers);
 
         verifyContextNumber(pipeline, HANDLER_ARRAY_LEN * 2);
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireChannelReadComplete();
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInOtherHandlerAfterInvokedFromExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    ctx.fireChannelReadComplete();
+                }
+            }, new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireExceptionCaught(new Exception());
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
     }
 
     @Test

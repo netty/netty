@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -31,7 +32,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
  * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
- * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
+ * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
  * Since the original LZ4 block format does not contains size of compressed block and size of original data
@@ -136,10 +137,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        decompressor = factory.fastDecompressor();
+        decompressor = ObjectUtil.checkNotNull(factory, "factory").fastDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 

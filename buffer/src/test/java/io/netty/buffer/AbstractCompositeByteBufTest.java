@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
@@ -37,13 +38,13 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -57,10 +58,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        if (order == null) {
-            throw new NullPointerException("order");
-        }
-        this.order = order;
+        this.order = ObjectUtil.checkNotNull(order, "order");
     }
 
     @Override
@@ -90,7 +88,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             buffers.add(EMPTY_BUFFER);
         }
 
-        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0])).order(order);
+        ByteBuf buffer;
+        // Ensure that we are really testing a CompositeByteBuf
+        switch (buffers.size()) {
+            case 0:
+                buffer = compositeBuffer(Integer.MAX_VALUE);
+                break;
+            case 1:
+                buffer = compositeBuffer(Integer.MAX_VALUE).addComponent(buffers.get(0));
+                break;
+            default:
+                buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
+                break;
+        }
+        buffer = buffer.order(order);
 
         // Truncate to the requested capacity.
         buffer.capacity(length);
@@ -102,11 +113,22 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         return buffer;
     }
 
+    protected CompositeByteBuf newCompositeBuffer() {
+        return compositeBuffer();
+    }
+
     // Composite buffer does not waste bandwidth on discardReadBytes, but
     // the test will fail in strict mode.
     @Override
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return false;
+    }
+
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertFalse(buf.isContiguous());
+        buf.release();
     }
 
     /**
@@ -1118,8 +1140,17 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testAddFlattenedComponents() {
+        testAddFlattenedComponents(false);
+    }
+
+    @Test
+    public void testAddFlattenedComponentsWithWrappedComposite() {
+        testAddFlattenedComponents(true);
+    }
+
+    private void testAddFlattenedComponents(boolean addWrapped) {
         ByteBuf b1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
-        CompositeByteBuf newComposite = Unpooled.compositeBuffer()
+        CompositeByteBuf newComposite = newCompositeBuffer()
                 .addComponent(true, b1)
                 .addFlattenedComponents(true, b1.retain())
                 .addFlattenedComponents(true, Unpooled.EMPTY_BUFFER);
@@ -1142,7 +1173,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf s4 = s2.retainedSlice(0, 2);
         buffer.release();
 
-        ByteBuf compositeToAdd = Unpooled.compositeBuffer()
+        CompositeByteBuf compositeToAdd = compositeBuffer()
             .addComponent(s1)
             .addComponent(Unpooled.EMPTY_BUFFER)
             .addComponents(s2, s3, s4);
@@ -1155,6 +1186,9 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
         ByteBuf compositeCopy = compositeToAdd.copy();
 
+        if (addWrapped) {
+            compositeToAdd = new WrappedCompositeByteBuf(compositeToAdd);
+        }
         newComposite.addFlattenedComponents(true, compositeToAdd);
 
         // verify that added range matches
@@ -1183,7 +1217,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testIterator() {
-        CompositeByteBuf cbuf = compositeBuffer();
+        CompositeByteBuf cbuf = newCompositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
         cbuf.addComponent(EMPTY_BUFFER);
 
@@ -1205,7 +1239,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testEmptyIterator() {
-        CompositeByteBuf cbuf = compositeBuffer();
+        CompositeByteBuf cbuf = newCompositeBuffer();
 
         Iterator<ByteBuf> it = cbuf.iterator();
         assertFalse(it.hasNext());
@@ -1221,7 +1255,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test(expected = ConcurrentModificationException.class)
     public void testIteratorConcurrentModificationAdd() {
-        CompositeByteBuf cbuf = compositeBuffer();
+        CompositeByteBuf cbuf = newCompositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
 
         Iterator<ByteBuf> it = cbuf.iterator();
@@ -1237,7 +1271,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test(expected = ConcurrentModificationException.class)
     public void testIteratorConcurrentModificationRemove() {
-        CompositeByteBuf cbuf = compositeBuffer();
+        CompositeByteBuf cbuf = newCompositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
 
         Iterator<ByteBuf> it = cbuf.iterator();
@@ -1296,7 +1330,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf s3 = s2.readRetainedSlice(2); // 4
         ByteBuf s4 = s3.readRetainedSlice(2); // 5
 
-        ByteBuf composite = Unpooled.compositeBuffer()
+        ByteBuf composite = newCompositeBuffer()
             .addComponent(s1)
             .addComponents(s2, s3, s4)
             .order(ByteOrder.LITTLE_ENDIAN);
@@ -1321,7 +1355,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf b2 = Unpooled.buffer(2).writeShort(2);
 
         // composite takes ownership of s1 and s2
-        ByteBuf composite = Unpooled.compositeBuffer()
+        ByteBuf composite = newCompositeBuffer()
             .addComponents(b1, b2);
 
         assertEquals(4, composite.capacity());
@@ -1351,7 +1385,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf b2 = b1.retainedSlice(b1.readerIndex(), 2);
 
         // composite takes ownership of b1 and b2
-        ByteBuf composite = Unpooled.compositeBuffer()
+        ByteBuf composite = newCompositeBuffer()
             .addComponents(b1, b2);
 
         assertEquals(4, composite.capacity());
@@ -1407,12 +1441,12 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         testDecompose(310, 0, 0);
     }
 
-    private static void testDecompose(int offset, int length, int expectedListSize) {
+    private void testDecompose(int offset, int length, int expectedListSize) {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
         ByteBuf buf = wrappedBuffer(bytes);
 
-        CompositeByteBuf composite = compositeBuffer();
+        CompositeByteBuf composite = newCompositeBuffer();
         composite.addComponents(true,
                                 buf.retainedSlice(100, 200),
                                 buf.retainedSlice(300, 400),
@@ -1473,8 +1507,8 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         testDiscardCorrectlyUpdatesLastAccessed(false);
     }
 
-    private static void testDiscardCorrectlyUpdatesLastAccessed(boolean discardSome) {
-        CompositeByteBuf cbuf = compositeBuffer();
+    private void testDiscardCorrectlyUpdatesLastAccessed(boolean discardSome) {
+        CompositeByteBuf cbuf = newCompositeBuffer();
         List<ByteBuf> buffers = new ArrayList<ByteBuf>(4);
         for (int i = 0; i < 4; i++) {
             ByteBuf buf = buffer().writeInt(i);
@@ -1528,5 +1562,56 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             assertEquals(0, buffer.refCnt());
         }
         assertTrue(cbuf.release());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponent() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponent(duplicate);
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponentsViaVarargs() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponents(duplicate);
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponentsViaIterable() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponents(Collections.singletonList(duplicate));
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
     }
 }

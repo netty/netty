@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -64,35 +64,35 @@ public abstract class SslContextTest {
     }
 
     @Test
-    public void testSslServerWithEncryptedPrivateKey() throws SSLException {
+    public void testSslContextWithEncryptedPrivateKey() throws SSLException {
         File keyFile = ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
-        newServerContext(crtFile, keyFile, "12345");
+        newSslContext(crtFile, keyFile, "12345");
     }
 
     @Test
-    public void testSslServerWithEncryptedPrivateKey2() throws SSLException {
+    public void testSslContextWithEncryptedPrivateKey2() throws SSLException {
         File keyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
 
-        newServerContext(crtFile, keyFile, "12345");
+        newSslContext(crtFile, keyFile, "12345");
     }
 
     @Test
-    public void testSslServerWithUnencryptedPrivateKey() throws SSLException {
+    public void testSslContextWithUnencryptedPrivateKey() throws SSLException {
         File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
-        newServerContext(crtFile, keyFile, null);
+        newSslContext(crtFile, keyFile, null);
     }
 
     @Test(expected = SSLException.class)
-    public void testSslServerWithUnencryptedPrivateKeyEmptyPass() throws SSLException {
+    public void testSslContextWithUnencryptedPrivateKeyEmptyPass() throws SSLException {
         File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
-        newServerContext(crtFile, keyFile, "");
+        newSslContext(crtFile, keyFile, "");
     }
 
     @Test
@@ -112,14 +112,14 @@ public abstract class SslContextTest {
         File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
-        SslContext sslContext = newServerContext(crtFile, keyFile, null);
+        SslContext sslContext = newSslContext(crtFile, keyFile, null);
         assertFalse(sslContext.cipherSuites().contains(unsupportedCipher));
     }
 
     @Test(expected = CertificateException.class)
-    public void test() throws CertificateException {
+    public void testUnsupportedParams() throws CertificateException {
         SslContext.toX509Certificates(new File(getClass().getResource("ec_params_unsupported.pem").getFile()));
     }
 
-    protected abstract SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException;
+    protected abstract SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException;
 }

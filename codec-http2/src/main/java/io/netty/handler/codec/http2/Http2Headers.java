@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -136,27 +136,27 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
     Iterator<CharSequence> valueIterator(CharSequence name);
 
     /**
-     * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#METHOD} header
      */
     Http2Headers method(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#SCHEME} header if there is no such header
+     * Sets the {@link PseudoHeaderName#SCHEME} header
      */
     Http2Headers scheme(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#AUTHORITY} header
      */
     Http2Headers authority(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#PATH} header
      */
     Http2Headers path(CharSequence value);
 
     /**
-     * Sets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#STATUS} header
      */
     Http2Headers status(CharSequence value);
 

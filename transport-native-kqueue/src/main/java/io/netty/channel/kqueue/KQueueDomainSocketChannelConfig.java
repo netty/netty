@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,17 +20,24 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.unix.UnixChannelOption.*;
+import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 @UnstableApi
-public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig implements DomainSocketChannelConfig {
+public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
+        implements DomainSocketChannelConfig, DuplexChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
     private volatile boolean allowHalfClosure;
 
@@ -40,7 +47,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE, SO_SNDBUF, SO_RCVBUF);
     }
 
     @SuppressWarnings("unchecked")
@@ -51,6 +58,12 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
         if (option == ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
         }
         return super.getOption(option);
     }
@@ -63,6 +76,10 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
             setReadMode((DomainSocketReadMode) value);
         } else if (option == ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -147,10 +164,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public KQueueDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        if (mode == null) {
-            throw new NullPointerException("mode");
-        }
-        this.mode = mode;
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
         return this;
     }
 
@@ -159,16 +173,46 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         return mode;
     }
 
-    /**
-     * @see SocketChannelConfig#isAllowHalfClosure()
-     */
+    public int getSendBufferSize() {
+        try {
+            return ((KQueueDomainSocketChannel) channel).socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public KQueueDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        try {
+            ((KQueueDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int getReceiveBufferSize() {
+        try {
+            return ((KQueueDomainSocketChannel) channel).socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public KQueueDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            ((KQueueDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
-    /**
-     * @see SocketChannelConfig#setAllowHalfClosure(boolean)
-     */
+    @Override
     public KQueueDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
         return this;

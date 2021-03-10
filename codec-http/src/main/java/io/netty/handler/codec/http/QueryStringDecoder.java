@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,23 +16,22 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.*;
-import static io.netty.util.internal.StringUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.StringUtil.EMPTY_STRING;
+import static io.netty.util.internal.StringUtil.SPACE;
+import static io.netty.util.internal.StringUtil.decodeHexByte;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -68,6 +67,7 @@ public class QueryStringDecoder {
     private final Charset charset;
     private final String uri;
     private final int maxParams;
+    private final boolean semicolonIsNormalChar;
     private int pathEndIdx;
     private String path;
     private Map<String, List<String>> params;
@@ -109,9 +109,19 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
+        this(uri, charset, hasPath, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(String uri, Charset charset, boolean hasPath,
+                              int maxParams, boolean semicolonIsNormalChar) {
         this.uri = checkNotNull(uri, "uri");
         this.charset = checkNotNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
+        this.semicolonIsNormalChar = semicolonIsNormalChar;
 
         // `-1` means that path end index will be initialized lazily
         pathEndIdx = hasPath ? -1 : 0;
@@ -138,6 +148,14 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
+        this(uri, charset, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(URI uri, Charset charset, int maxParams, boolean semicolonIsNormalChar) {
         String rawPath = uri.getRawPath();
         if (rawPath == null) {
             rawPath = EMPTY_STRING;
@@ -147,6 +165,7 @@ public class QueryStringDecoder {
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
         this.charset = checkNotNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
+        this.semicolonIsNormalChar = semicolonIsNormalChar;
         pathEndIdx = rawPath.length();
     }
 
@@ -177,7 +196,7 @@ public class QueryStringDecoder {
      */
     public Map<String, List<String>> parameters() {
         if (params == null) {
-            params = decodeParams(uri, pathEndIdx(), charset, maxParams);
+            params = decodeParams(uri, pathEndIdx(), charset, maxParams, semicolonIsNormalChar);
         }
         return params;
     }
@@ -204,7 +223,8 @@ public class QueryStringDecoder {
         return pathEndIdx;
     }
 
-    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit) {
+    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
+                                                          boolean semicolonIsNormalChar) {
         int len = s.length();
         if (from >= len) {
             return Collections.emptyMap();
@@ -226,8 +246,12 @@ public class QueryStringDecoder {
                     valueStart = i + 1;
                 }
                 break;
-            case '&':
             case ';':
+                if (semicolonIsNormalChar) {
+                    continue;
+                }
+                // fall-through
+            case '&':
                 if (addParam(s, nameStart, valueStart, i, params, charset)) {
                     paramsLimit--;
                     if (paramsLimit == 0) {
@@ -266,7 +290,7 @@ public class QueryStringDecoder {
     }
 
     /**
-     * Decodes a bit of an URL encoded by a browser.
+     * Decodes a bit of a URL encoded by a browser.
      * <p>
      * This is equivalent to calling {@link #decodeComponent(String, Charset)}
      * with the UTF-8 charset (recommended to comply with RFC 3986, Section 2).
@@ -281,7 +305,7 @@ public class QueryStringDecoder {
     }
 
     /**
-     * Decodes a bit of an URL encoded by a browser.
+     * Decodes a bit of a URL encoded by a browser.
      * <p>
      * The string is expected to be encoded as per RFC 3986, Section 2.
      * This is the encoding used by JavaScript functions {@code encodeURI}
@@ -326,12 +350,10 @@ public class QueryStringDecoder {
             return s.substring(from, toExcluded);
         }
 
-        CharsetDecoder decoder = CharsetUtil.decoder(charset);
-
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        ByteBuffer byteBuf = ByteBuffer.allocate(decodedCapacity);
-        CharBuffer charBuf = CharBuffer.allocate(decodedCapacity);
+        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
+        int bufIdx;
 
         StringBuilder strBuf = new StringBuilder(len);
         strBuf.append(s, from, firstEscaped);
@@ -343,31 +365,17 @@ public class QueryStringDecoder {
                 continue;
             }
 
-            byteBuf.clear();
+            bufIdx = 0;
             do {
                 if (i + 3 > toExcluded) {
                     throw new IllegalArgumentException("unterminated escape sequence at index " + i + " of: " + s);
                 }
-                byteBuf.put(decodeHexByte(s, i + 1));
+                buf[bufIdx++] = decodeHexByte(s, i + 1);
                 i += 3;
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
 
-            byteBuf.flip();
-            charBuf.clear();
-            CoderResult result = decoder.reset().decode(byteBuf, charBuf, true);
-            try {
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-                result = decoder.flush(charBuf);
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-            } catch (CharacterCodingException ex) {
-                throw new IllegalStateException(ex);
-            }
-            strBuf.append(charBuf.flip());
+            strBuf.append(new String(buf, 0, bufIdx, charset));
         }
         return strBuf.toString();
     }

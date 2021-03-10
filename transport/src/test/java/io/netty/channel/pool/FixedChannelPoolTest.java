@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,11 +38,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.*;
+import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class FixedChannelPoolTest {
-    private static final String LOCAL_ADDR_ID = "test.id";
-
     private static EventLoopGroup group;
 
     @BeforeClass
@@ -59,7 +63,7 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testAcquire() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -97,6 +101,7 @@ public class FixedChannelPoolTest {
 
         sc.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+        pool.close();
     }
 
     @Test(expected = TimeoutException.class)
@@ -110,7 +115,7 @@ public class FixedChannelPoolTest {
     }
 
     private static void testAcquireTimeout(long timeoutMillis) throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -139,12 +144,13 @@ public class FixedChannelPoolTest {
         } finally {
             sc.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();
+            pool.close();
         }
     }
 
     @Test
     public void testAcquireNewConnection() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -172,6 +178,7 @@ public class FixedChannelPoolTest {
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+        pool.close();
     }
 
     /**
@@ -180,7 +187,7 @@ public class FixedChannelPoolTest {
      */
     @Test
     public void testAcquireNewConnectionWhen() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -209,11 +216,12 @@ public class FixedChannelPoolTest {
         assertNotSame(channel1, channel2);
         sc.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+        pool.close();
     }
 
     @Test(expected = IllegalStateException.class)
     public void testAcquireBoundQueue() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -243,12 +251,13 @@ public class FixedChannelPoolTest {
         } finally {
             sc.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();
+            pool.close();
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testReleaseDifferentPool() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -277,12 +286,14 @@ public class FixedChannelPoolTest {
         } finally {
             sc.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();
+            pool.close();
+            pool2.close();
         }
     }
 
     @Test
     public void testReleaseAfterClosePool() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group).channel(LocalChannel.class);
@@ -320,11 +331,12 @@ public class FixedChannelPoolTest {
         channel.closeFuture().syncUninterruptibly();
         assertFalse("Unexpected open channel", channel.isOpen());
         sc.close().syncUninterruptibly();
+        pool.close();
     }
 
     @Test
     public void testReleaseClosed() {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group).channel(LocalChannel.class);
@@ -348,11 +360,12 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
 
         sc.close().syncUninterruptibly();
+        pool.close();
     }
 
     @Test
     public void testCloseAsync() throws ExecutionException, InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group).channel(LocalChannel.class);

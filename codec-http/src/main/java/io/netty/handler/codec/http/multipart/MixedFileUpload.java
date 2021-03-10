@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,10 @@ import java.nio.charset.Charset;
  */
 public class MixedFileUpload implements FileUpload {
 
+    private final String baseDir;
+
+    private final boolean deleteOnExit;
+
     private FileUpload fileUpload;
 
     private final long limitSize;
@@ -37,6 +41,13 @@ public class MixedFileUpload implements FileUpload {
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
             long limitSize) {
+        this(name, filename, contentType, contentTransferEncoding,
+                charset, size, limitSize, DiskFileUpload.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
+    }
+
+    public MixedFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size,
+            long limitSize, String baseDir, boolean deleteOnExit) {
         this.limitSize = limitSize;
         if (size > this.limitSize) {
             fileUpload = new DiskFileUpload(name, filename, contentType,
@@ -46,6 +57,8 @@ public class MixedFileUpload implements FileUpload {
                     contentTransferEncoding, charset, size);
         }
         definedSize = size;
+        this.baseDir = baseDir;
+        this.deleteOnExit = deleteOnExit;
     }
 
     @Override
@@ -76,7 +89,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize);
+                        definedSize, baseDir, deleteOnExit);
                 diskFileUpload.setMaxSize(maxSize);
                 ByteBuf data = fileUpload.getByteBuf();
                 if (data != null && data.isReadable()) {
@@ -177,7 +190,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), memoryUpload.getFilename(), memoryUpload
                         .getContentType(), memoryUpload
                         .getContentTransferEncoding(), memoryUpload.getCharset(),
-                        definedSize);
+                        definedSize, baseDir, deleteOnExit);
                 fileUpload.setMaxSize(maxSize);
 
                 // release old upload
@@ -199,7 +212,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), memoryUpload.getFilename(), memoryUpload
                         .getContentType(), memoryUpload
                         .getContentTransferEncoding(), memoryUpload.getCharset(),
-                        definedSize);
+                        definedSize, baseDir, deleteOnExit);
                 fileUpload.setMaxSize(maxSize);
 
                 // release old upload
@@ -219,7 +232,7 @@ public class MixedFileUpload implements FileUpload {
                     .getName(), fileUpload.getFilename(), fileUpload
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
-                    definedSize);
+                    definedSize, baseDir, deleteOnExit);
             fileUpload.setMaxSize(maxSize);
 
             // release old upload

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,31 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -30,6 +47,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class HttpContentCompressorTest {
@@ -257,6 +275,104 @@ public class HttpContentCompressorTest {
         last.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testExecutorPreserveOrdering() throws Exception {
+        final EventLoopGroup compressorGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup localGroup = new DefaultEventLoopGroup(1);
+        Channel server = null;
+        Channel client = null;
+        try {
+            ServerBootstrap bootstrap = new ServerBootstrap()
+                .channel(LocalServerChannel.class)
+                .group(localGroup)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                @Override
+                protected void initChannel(LocalChannel ch) throws Exception {
+                    ch.pipeline()
+                        .addLast(new HttpServerCodec())
+                        .addLast(new HttpObjectAggregator(1024))
+                        .addLast(compressorGroup, new HttpContentCompressor())
+                        .addLast(new ChannelOutboundHandlerAdapter() {
+                            @Override
+                            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+                                throws Exception {
+                                super.write(ctx, msg, promise);
+                            }
+                        })
+                        .addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                if (msg instanceof FullHttpRequest) {
+                                    FullHttpResponse res =
+                                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                            Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+                                    ctx.writeAndFlush(res);
+                                    ReferenceCountUtil.release(msg);
+                                    return;
+                                }
+                                super.channelRead(ctx, msg);
+                            }
+                        });
+                }
+            });
+
+            LocalAddress address = new LocalAddress(UUID.randomUUID().toString());
+            server = bootstrap.bind(address).sync().channel();
+
+            final BlockingQueue<HttpObject> responses = new LinkedBlockingQueue<HttpObject>();
+
+            client = new Bootstrap()
+                .channel(LocalChannel.class)
+                .remoteAddress(address)
+                .group(localGroup)
+                .handler(new ChannelInitializer<LocalChannel>() {
+                @Override
+                protected void initChannel(LocalChannel ch) throws Exception {
+                    ch.pipeline().addLast(new HttpClientCodec()).addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            if (msg instanceof HttpObject) {
+                                responses.put((HttpObject) msg);
+                                return;
+                            }
+                            super.channelRead(ctx, msg);
+                        }
+                    });
+                }
+            }).connect().sync().channel();
+
+            client.writeAndFlush(newRequest()).sync();
+
+            assertEncodedResponse((HttpResponse) responses.poll(1, TimeUnit.SECONDS));
+            HttpContent c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
+            assertNotNull(c);
+            assertThat(ByteBufUtil.hexDump(c.content()),
+                is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+            c.release();
+
+            c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
+            assertNotNull(c);
+            assertThat(ByteBufUtil.hexDump(c.content()), is("0300c6865b260c000000"));
+            c.release();
+
+            LastHttpContent last = (LastHttpContent) responses.poll(1, TimeUnit.SECONDS);
+            assertNotNull(last);
+            assertThat(last.content().readableBytes(), is(0));
+            last.release();
+
+            assertNull(responses.poll(1, TimeUnit.SECONDS));
+        } finally {
+            if (client != null) {
+                client.close().sync();
+            }
+            if (server != null) {
+                server.close().sync();
+            }
+            compressorGroup.shutdownGracefully();
+            localGroup.shutdownGracefully();
+        }
     }
 
     /**
@@ -543,7 +659,10 @@ public class HttpContentCompressorTest {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(HttpResponse.class)));
 
-        HttpResponse res = (HttpResponse) o;
+        assertEncodedResponse((HttpResponse) o);
+    }
+
+    private static void assertEncodedResponse(HttpResponse res) {
         assertThat(res, is(not(instanceOf(HttpContent.class))));
         assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));

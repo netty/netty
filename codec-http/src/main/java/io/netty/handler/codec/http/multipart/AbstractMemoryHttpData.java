@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,9 +47,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        ObjectUtil.checkNotNull(buffer, "buffer");
         long localsize = buffer.readableBytes();
         checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
@@ -65,21 +64,26 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            throw new NullPointerException("inputStream");
-        }
-        ByteBuf buffer = buffer();
+        ObjectUtil.checkNotNull(inputStream, "inputStream");
+
         byte[] bytes = new byte[4096 * 4];
-        int read = inputStream.read(bytes);
+        ByteBuf buffer = buffer();
         int written = 0;
-        while (read > 0) {
-            buffer.writeBytes(bytes, 0, read);
-            written += read;
-            checkSize(written);
-            read = inputStream.read(bytes);
+        try {
+            int read = inputStream.read(bytes);
+            while (read > 0) {
+                buffer.writeBytes(bytes, 0, read);
+                written += read;
+                checkSize(written);
+                read = inputStream.read(bytes);
+            }
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
         }
         size = written;
         if (definedSize > 0 && definedSize < size) {
+            buffer.release();
             throw new IOException("Out of size: " + size + " > " + definedSize);
         }
         if (byteBuf != null) {
@@ -102,6 +106,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             size += localsize;
             if (byteBuf == null) {
                 byteBuf = buffer;
+            } else if (localsize == 0) {
+                // Nothing to add and byteBuf already exists
+                buffer.release();
             } else if (byteBuf instanceof CompositeByteBuf) {
                 CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
                 cbb.addComponent(true, buffer);
@@ -114,32 +121,36 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (last) {
             setCompleted();
         } else {
-            if (buffer == null) {
-                throw new NullPointerException("buffer");
-            }
+            ObjectUtil.checkNotNull(buffer, "buffer");
         }
     }
 
     @Override
     public void setContent(File file) throws IOException {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        ObjectUtil.checkNotNull(file, "file");
+
         long newsize = file.length();
         if (newsize > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("File too big to be loaded in memory");
         }
         checkSize(newsize);
         RandomAccessFile accessFile = new RandomAccessFile(file, "r");
-        FileChannel fileChannel = accessFile.getChannel();
-        byte[] array = new byte[(int) newsize];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-        int read = 0;
-        while (read < newsize) {
-            read += fileChannel.read(byteBuffer);
+        ByteBuffer byteBuffer;
+        try {
+            FileChannel fileChannel = accessFile.getChannel();
+            try {
+                byte[] array = new byte[(int) newsize];
+                byteBuffer = ByteBuffer.wrap(array);
+                int read = 0;
+                while (read < newsize) {
+                    read += fileChannel.read(byteBuffer);
+                }
+            } finally {
+                fileChannel.close();
+            }
+        } finally {
+            accessFile.close();
         }
-        fileChannel.close();
-        accessFile.close();
         byteBuffer.flip();
         if (byteBuf != null) {
             byteBuf.release();
@@ -220,9 +231,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public boolean renameTo(File dest) throws IOException {
-        if (dest == null) {
-            throw new NullPointerException("dest");
-        }
+        ObjectUtil.checkNotNull(dest, "dest");
         if (byteBuf == null) {
             // empty file
             if (!dest.createNewFile()) {
@@ -231,24 +240,29 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             return true;
         }
         int length = byteBuf.readableBytes();
+        long written = 0;
         RandomAccessFile accessFile = new RandomAccessFile(dest, "rw");
-        FileChannel fileChannel = accessFile.getChannel();
-        int written = 0;
-        if (byteBuf.nioBufferCount() == 1) {
-            ByteBuffer byteBuffer = byteBuf.nioBuffer();
-            while (written < length) {
-                written += fileChannel.write(byteBuffer);
+        try {
+            FileChannel fileChannel = accessFile.getChannel();
+            try {
+                if (byteBuf.nioBufferCount() == 1) {
+                    ByteBuffer byteBuffer = byteBuf.nioBuffer();
+                    while (written < length) {
+                        written += fileChannel.write(byteBuffer);
+                    }
+                } else {
+                    ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
+                    while (written < length) {
+                        written += fileChannel.write(byteBuffers);
+                    }
+                }
+                fileChannel.force(false);
+            } finally {
+                fileChannel.close();
             }
-        } else {
-            ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
-            while (written < length) {
-                written += fileChannel.write(byteBuffers);
-            }
+        } finally {
+            accessFile.close();
         }
-
-        fileChannel.force(false);
-        fileChannel.close();
-        accessFile.close();
         return written == length;
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,8 +27,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 public class GlobalEventExecutorTest {
 
@@ -106,6 +106,50 @@ public class GlobalEventExecutorTest {
         thread.join();
 
         assertEquals(group, capturedGroup.get());
+    }
+
+    @Test(timeout = 5000)
+    public void testTakeTask() throws Exception {
+        //add task
+        TestRunnable beforeTask = new TestRunnable(0);
+        e.execute(beforeTask);
+
+        //add scheduled task
+        TestRunnable scheduledTask = new TestRunnable(0);
+        ScheduledFuture<?> f = e.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
+
+        //add task
+        TestRunnable afterTask = new TestRunnable(0);
+        e.execute(afterTask);
+
+        f.sync();
+
+        assertThat(beforeTask.ran.get(), is(true));
+        assertThat(scheduledTask.ran.get(), is(true));
+        assertThat(afterTask.ran.get(), is(true));
+    }
+
+    @Test(timeout = 5000)
+    public void testTakeTaskAlwaysHasTask() throws Exception {
+        //for https://github.com/netty/netty/issues/1614
+        //add scheduled task
+        TestRunnable t = new TestRunnable(0);
+        final ScheduledFuture<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
+
+        //ensure always has at least one task in taskQueue
+        //check if scheduled tasks are triggered
+        e.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (!f.isDone()) {
+                    e.execute(this);
+                }
+            }
+        });
+
+        f.sync();
+
+        assertThat(t.ran.get(), is(true));
     }
 
     private static final class TestRunnable implements Runnable {

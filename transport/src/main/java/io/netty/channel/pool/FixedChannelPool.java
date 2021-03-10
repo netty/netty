@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -194,13 +194,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     @Override
                     public void onTimeout(AcquireTask task) {
                         // Fail the promise as we timed out.
-                        task.promise.setFailure(new TimeoutException(
-                                "Acquire operation took longer then configured maximum time") {
-                            @Override
-                            public synchronized Throwable fillInStackTrace() {
-                                return this;
-                            }
-                        });
+                        task.promise.setFailure(new AcquireTimeoutException());
                     }
                 };
                 break;
@@ -455,6 +449,7 @@ public class FixedChannelPool extends SimpleChannelPool {
      *
      * @return Future which represents completion of the close task
      */
+    @Override
     public Future<Void> closeAsync() {
         if (executor.inEventLoop()) {
             return close0();
@@ -510,5 +505,18 @@ public class FixedChannelPool extends SimpleChannelPool {
         }
 
         return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+    }
+
+    private static final class AcquireTimeoutException extends TimeoutException {
+
+        private AcquireTimeoutException() {
+            super("Acquire operation took longer then configured maximum time");
+        }
+
+        // Suppress a warning since the method doesn't need synchronization
+        @Override
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+            return this;
+        }
     }
 }

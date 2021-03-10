@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,6 +35,13 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
         }
         this.chars = chars;
         pos = chars.length;
+    }
+
+    public void setLength(int length) {
+        if (length < 0 || length > pos) {
+            throw new IllegalArgumentException("length: " + length + " (length: >= 0, <= " + pos + ')');
+        }
+        this.pos = length;
     }
 
     @Override
@@ -91,7 +98,8 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     @Override
     public AppendableCharSequence append(CharSequence csq, int start, int end) {
         if (csq.length() < end) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: csq.length() >= ("
+                    + end + "),but actual is (" + csq.length() + ")");
         }
         int length = end - start;
         if (length > chars.length - pos) {
@@ -131,7 +139,8 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     public String substring(int start, int end) {
         int length = end - start;
         if (start > pos || length > pos) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: start and length <= ("
+                    + pos + ")");
         }
         return new String(chars, start, length);
     }

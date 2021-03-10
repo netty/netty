@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -78,6 +78,18 @@ public class DefaultHttpHeaders extends HttpHeaders {
         this(true);
     }
 
+    /**
+     * <b>Warning!</b> Setting <code>validate</code> to <code>false</code> will mean that Netty won't
+     * validate & protect against user-supplied header values that are malicious.
+     * This can leave your server implementation vulnerable to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * When disabling this validation, it is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @param validate Should Netty validate Header values to ensure they aren't malicious.
+     */
     public DefaultHttpHeaders(boolean validate) {
         this(validate, nameValidator(validate));
     }
@@ -477,12 +489,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     }
                     break;
                 case 1:
-                    switch (character) {
-                        case '\n':
-                            return 2;
-                        default:
-                            throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
+                    if (character == '\n') {
+                        return 2;
                     }
+                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
                 case 2:
                     switch (character) {
                         case '\t':

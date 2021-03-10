@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 /**
@@ -35,10 +36,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      */
     FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     @Override

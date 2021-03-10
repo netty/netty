@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -102,7 +102,7 @@ final class HpackTestCase {
 
             List<HpackHeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
 
-            if (!expectedDynamicTable.equals(actualDynamicTable)) {
+            if (!headersEqual(expectedDynamicTable, actualDynamicTable)) {
                 throw new AssertionError(
                         "\nEXPECTED DYNAMIC TABLE:\n" + expectedDynamicTable +
                                 "\nACTUAL DYNAMIC TABLE:\n" + actualDynamicTable);
@@ -128,7 +128,7 @@ final class HpackTestCase {
                 expectedHeaders.add(new HpackHeaderField(h.name, h.value));
             }
 
-            if (!expectedHeaders.equals(actualHeaders)) {
+            if (!headersEqual(expectedHeaders, actualHeaders)) {
                 throw new AssertionError(
                         "\nEXPECTED:\n" + expectedHeaders +
                                 "\nACTUAL:\n" + actualHeaders);
@@ -141,7 +141,7 @@ final class HpackTestCase {
 
             List<HpackHeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
 
-            if (!expectedDynamicTable.equals(actualDynamicTable)) {
+            if (!headersEqual(expectedDynamicTable, actualDynamicTable)) {
                 throw new AssertionError(
                         "\nEXPECTED DYNAMIC TABLE:\n" + expectedDynamicTable +
                                 "\nACTUAL DYNAMIC TABLE:\n" + actualDynamicTable);
@@ -227,6 +227,18 @@ final class HpackTestCase {
             ret.append(s);
         }
         return ret.toString();
+    }
+
+    private static boolean headersEqual(List<HpackHeaderField> expected, List<HpackHeaderField> actual) {
+        if (expected.size() != actual.size()) {
+            return false;
+        }
+        for (int i = 0; i < expected.size(); i++) {
+            if (!expected.get(i).equalsForTest(actual.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static class HeaderBlock {

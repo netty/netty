@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,11 +39,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static io.netty.util.internal.StringUtil.NEWLINE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
@@ -217,7 +218,20 @@ public class LoggingHandlerTest {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
+
+        ByteBuf handledMsg = channel.readInbound();
+        assertThat(msg, is(sameInstance(handledMsg)));
+        handledMsg.release();
+        assertThat(channel.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void shouldLogByteBufDataReadWithSimpleFormat() throws Exception {
+        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, ByteBufFormat.SIMPLE));
+        channel.writeInbound(msg);
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
 
         ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -230,7 +244,7 @@ public class LoggingHandlerTest {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
 
         ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -248,7 +262,7 @@ public class LoggingHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$", true)));
 
         ByteBufHolder handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -270,10 +284,16 @@ public class LoggingHandlerTest {
     private static final class RegexLogMatcher implements ArgumentMatcher<ILoggingEvent> {
 
         private final String expected;
+        private final boolean shouldContainNewline;
         private String actualMsg;
 
         RegexLogMatcher(String expected) {
+            this(expected, false);
+        }
+
+        RegexLogMatcher(String expected, boolean shouldContainNewline) {
             this.expected = expected;
+            this.shouldContainNewline = shouldContainNewline;
         }
 
         @Override
@@ -281,7 +301,11 @@ public class LoggingHandlerTest {
         public boolean matches(ILoggingEvent actual) {
             // Match only the first line to skip the validation of hex-dump format.
             actualMsg = actual.getMessage().split("(?s)[\\r\\n]+")[0];
-            return actualMsg.matches(expected);
+            if (actualMsg.matches(expected)) {
+                // The presence of a newline implies a hex-dump was logged
+                return actual.getMessage().contains(NEWLINE) == shouldContainNewline;
+            }
+            return false;
         }
     }
 

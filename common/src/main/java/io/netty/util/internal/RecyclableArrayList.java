@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,8 @@
 
 package io.netty.util.internal;
 
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,12 +33,13 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
 
-    private static final Recycler<RecyclableArrayList> RECYCLER = new Recycler<RecyclableArrayList>() {
+    private static final ObjectPool<RecyclableArrayList> RECYCLER = ObjectPool.newPool(
+            new ObjectCreator<RecyclableArrayList>() {
         @Override
-        protected RecyclableArrayList newObject(Handle<RecyclableArrayList> handle) {
+        public RecyclableArrayList newObject(Handle<RecyclableArrayList> handle) {
             return new RecyclableArrayList(handle);
         }
-    };
+    });
 
     private boolean insertSinceRecycled;
 
@@ -110,10 +111,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     @Override
     public boolean add(Object element) {
-        if (element == null) {
-            throw new NullPointerException("element");
-        }
-        if (super.add(element)) {
+        if (super.add(ObjectUtil.checkNotNull(element, "element"))) {
             insertSinceRecycled = true;
             return true;
         }
@@ -122,19 +120,13 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     @Override
     public void add(int index, Object element) {
-        if (element == null) {
-            throw new NullPointerException("element");
-        }
-        super.add(index, element);
+        super.add(index, ObjectUtil.checkNotNull(element, "element"));
         insertSinceRecycled = true;
     }
 
     @Override
     public Object set(int index, Object element) {
-        if (element == null) {
-            throw new NullPointerException("element");
-        }
-        Object old = super.set(index, element);
+        Object old = super.set(index, ObjectUtil.checkNotNull(element, "element"));
         insertSinceRecycled = true;
         return old;
     }

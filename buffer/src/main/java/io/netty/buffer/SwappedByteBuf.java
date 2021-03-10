@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,10 +41,7 @@ public class SwappedByteBuf extends ByteBuf {
     private final ByteOrder order;
 
     public SwappedByteBuf(ByteBuf buf) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        this.buf = buf;
+        this.buf = ObjectUtil.checkNotNull(buf, "buf");
         if (buf.order() == ByteOrder.BIG_ENDIAN) {
             order = ByteOrder.LITTLE_ENDIAN;
         } else {
@@ -58,10 +56,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
-        if (endianness == order) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order) {
             return this;
         }
         return buf;
@@ -548,7 +543,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public short readShortLE() {
-        return buf.readShort();
+        return buf.readShortLE();
     }
 
     @Override
@@ -568,7 +563,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int readMediumLE() {
-        return buf.readMedium();
+        return buf.readMediumLE();
     }
 
     @Override
@@ -588,7 +583,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int readIntLE() {
-        return buf.readInt();
+        return buf.readIntLE();
     }
 
     @Override
@@ -608,7 +603,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public long readLongLE() {
-        return buf.readLong();
+        return buf.readLongLE();
     }
 
     @Override
@@ -724,7 +719,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeShortLE(int value) {
-        buf.writeShort((short) value);
+        buf.writeShortLE((short) value);
         return this;
     }
 
@@ -736,7 +731,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeMediumLE(int value) {
-        buf.writeMedium(value);
+        buf.writeMediumLE(value);
         return this;
     }
 
@@ -748,7 +743,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeIntLE(int value) {
-        buf.writeInt(value);
+        buf.writeIntLE(value);
         return this;
     }
 
@@ -760,7 +755,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeLongLE(long value) {
-        buf.writeLong(value);
+        buf.writeLongLE(value);
         return this;
     }
 
@@ -980,6 +975,11 @@ public class SwappedByteBuf extends ByteBuf {
     @Override
     public boolean hasMemoryAddress() {
         return buf.hasMemoryAddress();
+    }
+
+    @Override
+    public boolean isContiguous() {
+        return buf.isContiguous();
     }
 
     @Override

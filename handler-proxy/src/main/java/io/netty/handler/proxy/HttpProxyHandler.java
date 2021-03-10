@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,10 @@ package io.netty.handler.proxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -34,6 +37,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -43,7 +47,13 @@ public final class HttpProxyHandler extends ProxyHandler {
     private static final String PROTOCOL = "http";
     private static final String AUTH_BASIC = "basic";
 
-    private final HttpClientCodec codec = new HttpClientCodec();
+    // Wrapper for the HttpClientCodec to prevent it to be removed by other handlers by mistake (for example the
+    // WebSocket*Handshaker.
+    //
+    // See:
+    // - https://github.com/netty/netty/issues/5201
+    // - https://github.com/netty/netty/issues/5070
+    private final HttpClientCodecWrapper codecWrapper = new HttpClientCodecWrapper();
     private final String username;
     private final String password;
     private final CharSequence authorization;
@@ -86,22 +96,21 @@ public final class HttpProxyHandler extends ProxyHandler {
                             HttpHeaders headers,
                             boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("password");
-        }
-        this.username = username;
-        this.password = password;
+        this.username = ObjectUtil.checkNotNull(username, "username");
+        this.password = ObjectUtil.checkNotNull(password, "password");
 
         ByteBuf authz = Unpooled.copiedBuffer(username + ':' + password, CharsetUtil.UTF_8);
-        ByteBuf authzBase64 = Base64.encode(authz, false);
-
-        authorization = new AsciiString("Basic " + authzBase64.toString(CharsetUtil.US_ASCII));
-
-        authz.release();
-        authzBase64.release();
+        ByteBuf authzBase64;
+        try {
+            authzBase64 = Base64.encode(authz, false);
+        } finally {
+            authz.release();
+        }
+        try {
+            authorization = new AsciiString("Basic " + authzBase64.toString(CharsetUtil.US_ASCII));
+        } finally {
+            authzBase64.release();
+        }
 
         this.outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
@@ -129,17 +138,17 @@ public final class HttpProxyHandler extends ProxyHandler {
     protected void addCodec(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline p = ctx.pipeline();
         String name = ctx.name();
-        p.addBefore(name, null, codec);
+        p.addBefore(name, null, codecWrapper);
     }
 
     @Override
     protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
-        codec.removeOutboundHandler();
+        codecWrapper.codec.removeOutboundHandler();
     }
 
     @Override
     protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
-        codec.removeInboundHandler();
+        codecWrapper.codec.removeInboundHandler();
     }
 
     @Override
@@ -217,6 +226,107 @@ public final class HttpProxyHandler extends ProxyHandler {
          */
         public HttpHeaders headers() {
             return headers;
+        }
+    }
+
+    private static final class HttpClientCodecWrapper implements ChannelInboundHandler, ChannelOutboundHandler {
+        final HttpClientCodec codec = new HttpClientCodec();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            codec.handlerAdded(ctx);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            codec.handlerRemoved(ctx);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            codec.exceptionCaught(ctx, cause);
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            codec.channelRegistered(ctx);
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            codec.channelUnregistered(ctx);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            codec.channelActive(ctx);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            codec.channelInactive(ctx);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            codec.channelRead(ctx, msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            codec.channelReadComplete(ctx);
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            codec.userEventTriggered(ctx, evt);
+        }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            codec.channelWritabilityChanged(ctx);
+        }
+
+        @Override
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                         ChannelPromise promise) throws Exception {
+            codec.bind(ctx, localAddress, promise);
+        }
+
+        @Override
+        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelPromise promise) throws Exception {
+            codec.connect(ctx, remoteAddress, localAddress, promise);
+        }
+
+        @Override
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            codec.disconnect(ctx, promise);
+        }
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            codec.close(ctx, promise);
+        }
+
+        @Override
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            codec.deregister(ctx, promise);
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            codec.read(ctx);
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            codec.write(ctx, msg, promise);
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            codec.flush(ctx);
         }
     }
 }

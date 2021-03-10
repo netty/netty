@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -48,6 +49,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     private static final byte[] BYTES = {0, 1, 2, 3};
     private enum WrapType {
         NONE, DUP, SLICE, READ_ONLY
+    }
+
+    @Test
+    public void testBindWithPortOnly() throws Throwable {
+        run();
+    }
+
+    public void testBindWithPortOnly(Bootstrap sb, Bootstrap cb) throws Throwable {
+        Channel channel = null;
+        try {
+            cb.handler(new ChannelHandlerAdapter() { });
+            channel = cb.bind(0).sync().channel();
+        } finally {
+            closeChannel(channel);
+        }
     }
 
     @Test
@@ -298,9 +314,14 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
             assertTrue(cc.isConnected());
 
+            assertNotNull(cc.localAddress());
+            assertNotNull(cc.remoteAddress());
+
             // Test what happens when we call disconnect()
             cc.disconnect().syncUninterruptibly();
             assertFalse(cc.isConnected());
+            assertNotNull(cc.localAddress());
+            assertNull(cc.remoteAddress());
 
             ChannelFuture future = cc.writeAndFlush(
                     buf.retain().duplicate()).awaitUninterruptibly();
