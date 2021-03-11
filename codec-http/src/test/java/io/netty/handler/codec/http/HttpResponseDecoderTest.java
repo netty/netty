@@ -744,6 +744,7 @@ public class HttpResponseDecoderTest {
         assertThat(decoderResult.headerSize(), is(35));
         assertThat(decoderResult.totalSize(), is(50));
         HttpContent c = channel.readInbound();
+        c.release();
         assertFalse(channel.finish());
     }
 }
