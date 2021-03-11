@@ -41,6 +41,6 @@ final class NativeStaticallyReferencedJniMethods {
     static native int uioMaxIov();
     static native boolean isSupportingSendmmsg();
     static native boolean isSupportingRecvmmsg();
-    static native boolean isSupportingTcpFastopen();
+    static native int tcpFastopenMode();
     static native String kernelVersion();
 }

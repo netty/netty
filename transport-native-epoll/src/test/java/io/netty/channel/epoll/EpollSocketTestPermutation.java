@@ -31,18 +31,14 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
+import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
 
 class EpollSocketTestPermutation extends SocketTestPermutation {
 
@@ -52,11 +48,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
     static final EventLoopGroup EPOLL_WORKER_GROUP =
             new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollSocketTestPermutation.class);
-    // Constants describing if/how TCP Fast Open is allowed to work on Linux:
-    private static final int TFO_ENABLED_CLIENT = 1;
-    private static final int TFO_ENABLED_SERVER = 2;
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
@@ -88,7 +79,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                                             .channel(EpollServerSocketChannel.class);
             }
         });
-        if (isFastOpen()) {
+        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER) {
             toReturn.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
                 public ServerBootstrap newInstance() {
@@ -135,7 +126,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         List<BootstrapFactory<Bootstrap>> factories = clientSocket();
 
-        if (isFastOpen()) {
+        if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT) {
             int insertIndex = factories.size() - 1; // Keep NIO fixture last.
             factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
                 @Override
@@ -255,39 +246,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     }
                 }
         );
-    }
-
-    public boolean isFastOpen() {
-        int tfoEnabled = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                int fastopen = 0;
-                File file = new File("/proc/sys/net/ipv4/tcp_fastopen");
-                if (file.exists()) {
-                    BufferedReader in = null;
-                    try {
-                        in = new BufferedReader(new FileReader(file));
-                        fastopen = Integer.parseInt(in.readLine());
-                        logger.debug("{}: {}", file, fastopen);
-                    } catch (Exception e) {
-                        logger.debug("Failed to get TCP_FASTOPEN from: {}", file, e);
-                    } finally {
-                        if (in != null) {
-                            try {
-                                in.close();
-                            } catch (Exception e) {
-                                // Ignored.
-                            }
-                        }
-                    }
-                } else {
-                    logger.debug("{}: {} (non-existent)", file, fastopen);
-                }
-                return fastopen;
-            }
-        });
-        // TCP Fast Open needs to be enabled for both clients and servers, before we can test our intergration with it.
-        return tfoEnabled == TFO_ENABLED_CLIENT + TFO_ENABLED_SERVER;
     }
 
     public static DomainSocketAddress newSocketAddress() {

@@ -26,7 +26,19 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.*;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoECONNRESET;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEINPROGRESS;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEALREADY;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEISCONN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorENETUNREACH;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
 
 /**
  * <strong>Internal usage only!</strong>
@@ -107,21 +119,40 @@ public final class Errors {
         }
     }
 
-    public static void throwConnectException(String method, int err)
-            throws IOException {
+    static boolean handleConnectErrno(String method, int err) throws IOException {
+        if (err == ERRNO_EINPROGRESS_NEGATIVE || err == ERROR_EALREADY_NEGATIVE) {
+            // connect not complete yet need to wait for EPOLLOUT event.
+            // EALREADY has been observed when using tcp fast open on centos8.
+            return false;
+        }
+        throw newConnectException0(method, err);
+    }
+
+    /**
+     * @deprecated Use {@link #handleConnectErrno(String, int)}.
+     * @param method The native method name which caused the errno.
+     * @param err the negative value of the errno.
+     * @throws IOException The errno translated into an exception.
+     */
+    @Deprecated
+    public static void throwConnectException(String method, int err) throws IOException {
         if (err == ERROR_EALREADY_NEGATIVE) {
             throw new ConnectionPendingException();
         }
+        throw newConnectException0(method, err);
+    }
+
+    private static IOException newConnectException0(String method, int err) {
         if (err == ERROR_ENETUNREACH_NEGATIVE) {
-            throw new NoRouteToHostException();
+            return new NoRouteToHostException();
         }
         if (err == ERROR_EISCONN_NEGATIVE) {
             throw new AlreadyConnectedException();
         }
         if (err == ERRNO_ENOENT_NEGATIVE) {
-            throw new FileNotFoundException();
+            return new FileNotFoundException();
         }
-        throw new ConnectException(method + "(..) failed: " + ERRORS[-err]);
+        return new ConnectException(method + "(..) failed: " + ERRORS[-err]);
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {

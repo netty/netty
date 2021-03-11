@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
+import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
 
 /**
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -116,7 +117,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     boolean doConnect0(SocketAddress remote) throws Exception {
-        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.isTcpFastOpenConnect()) {
+        if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT && config.isTcpFastOpenConnect()) {
             ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
             outbound.addFlush();
             Object curr;

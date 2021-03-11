@@ -492,13 +492,10 @@ static jboolean netty_epoll_native_isSupportingRecvmmsg(JNIEnv* env, jclass claz
     return JNI_TRUE;
 }
 
-static jboolean netty_epoll_native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz) {
+static jint netty_epoll_native_tcpFastopenMode(JNIEnv* env, jclass clazz) {
     int fastopen = 0;
     getSysctlValue("/proc/sys/net/ipv4/tcp_fastopen", &fastopen);
-    if (fastopen > 0) {
-        return JNI_TRUE;
-    }
-    return JNI_FALSE;
+    return fastopen;
 }
 
 static jint netty_epoll_native_epollet(JNIEnv* env, jclass clazz) {
@@ -577,7 +574,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "tcpMd5SigMaxKeyLen", "()I", (void *) netty_epoll_native_tcpMd5SigMaxKeyLen },
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
   { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
-  { "isSupportingTcpFastopen", "()Z", (void *) netty_epoll_native_isSupportingTcpFastopen },
+  { "tcpFastopenMode", "()I", (void *) netty_epoll_native_tcpFastopenMode },
   { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);

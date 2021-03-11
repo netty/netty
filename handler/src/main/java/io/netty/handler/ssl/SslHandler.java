@@ -988,6 +988,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                     });
                     if (inUnwrap) {
+                        // We may be here because we read data and discovered the remote peer initiated a renegotiation
+                        // and this write is to complete the new handshake. The user may have previously done a
+                        // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
+                        // attempt to wrap application data here if any is pending.
+                        if (result.getHandshakeStatus() == HandshakeStatus.FINISHED &&
+                                !pendingUnencryptedWrites.isEmpty()) {
+                            wrap(ctx, true);
+                        }
                         needsFlush = true;
                     }
                     out = null;
@@ -1967,6 +1975,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // With TCP Fast Open, we write to the outbound buffer before the TCP connect is established.
             // The buffer will then be flushed as part of establishing the connection, saving us a round-trip.
             startHandshakeProcessing(active);
+            // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
+            // flush pending data in the outbound buffer later in channelActive().
+            needsFlush |= fastOpen && channel.unsafe().outboundBuffer().totalPendingWriteBytes() > 0;
         }
     }
 
@@ -1980,6 +1991,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 handshake(flushAtEnd);
             }
             applyHandshakeTimeout();
+        } else if (needsFlush) {
+            forceFlush(ctx);
         }
     }
 

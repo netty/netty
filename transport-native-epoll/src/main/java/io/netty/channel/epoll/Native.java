@@ -36,8 +36,8 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollo
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpFastopenMode;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpMd5SigMaxKeyLen;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
@@ -97,7 +97,27 @@ public final class Native {
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
     static final boolean IS_SUPPORTING_RECVMMSG = isSupportingRecvmmsg();
     static final boolean IS_SUPPORTING_UDP_SEGMENT = isSupportingUdpSegment();
-    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
+    private static final int TFO_ENABLED_CLIENT_MASK = 0x1;
+    private static final int TFO_ENABLED_SERVER_MASK = 0x2;
+    private static final int TCP_FASTOPEN_MODE = tcpFastopenMode();
+    /**
+     * <a href ="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">tcp_fastopen</a> client mode enabled
+     * state.
+     */
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT =
+            (TCP_FASTOPEN_MODE & TFO_ENABLED_CLIENT_MASK) == TFO_ENABLED_CLIENT_MASK;
+    /**
+     * <a href ="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">tcp_fastopen</a> server mode enabled
+     * state.
+     */
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER =
+            (TCP_FASTOPEN_MODE & TFO_ENABLED_SERVER_MASK) == TFO_ENABLED_SERVER_MASK;
+    /**
+     * @deprecated Use {@link #IS_SUPPORTING_TCP_FASTOPEN_CLIENT} or {@link #IS_SUPPORTING_TCP_FASTOPEN_SERVER}.
+     */
+    @Deprecated
+    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = IS_SUPPORTING_TCP_FASTOPEN_CLIENT ||
+            IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
 
