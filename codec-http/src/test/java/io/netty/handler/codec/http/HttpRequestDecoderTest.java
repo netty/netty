@@ -17,12 +17,10 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.List;
@@ -495,7 +493,7 @@ public class HttpRequestDecoderTest {
         HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) request.decoderResult();
         assertThat(decoderResult.initialLineLength(), is(23));
         assertThat(decoderResult.headerSize(), is(35));
-        assertThat(decoderResult.size(), is(58));
+        assertThat(decoderResult.totalSize(), is(58));
         HttpContent c = channel.readInbound();
         assertFalse(channel.finish());
     }

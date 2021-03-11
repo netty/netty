@@ -36,23 +36,23 @@ public final class HttpMessageDecoderResult extends DecoderResult {
     }
 
     /**
-     * The decoded initial line length, as controlled by {@code maxInitialLineLength}.
+     * The decoded initial line length (in bytes), as controlled by {@code maxInitialLineLength}.
      */
     public int initialLineLength() {
         return initialLineLength;
     }
 
     /**
-     * The decoded header size, as controlled by {@code maxHeaderSize}.
+     * The decoded header size (in bytes), as controlled by {@code maxHeaderSize}.
      */
     public int headerSize() {
         return headerSize;
     }
 
     /**
-     * The decoded initial line length plus the decoded header size.
+     * The decoded initial line length plus the decoded header size (in bytes).
      */
-    public int size() {
+    public int totalSize() {
         return initialLineLength + headerSize;
     }
 }
