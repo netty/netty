@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration version="2.0" label="Netty"
+               description="Configuration for Netty. Designed to use in conjunction with the regular JVM settings files."
+               provider="Netty">
+
+  <!-- Channel events -->
+  <event name="io.netty.channel.Bind">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Close">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Disconnect">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Connect">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelRegistered">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelUnregistered">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelWritabilityChanged">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelInactive">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelActive">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Deregister">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.UserEventTriggered">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ExceptionCaught">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-connect">0 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelRead">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-io">20 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.ChannelReadComplete">
+    <setting name="enabled" control="netty-enabled-all">false</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-io">20 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Flush">
+    <setting name="enabled" control="netty-enabled-all">false</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-io">20 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Read">
+    <setting name="enabled" control="netty-enabled-all">false</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-io">20 ms</setting>
+  </event>
+
+  <event name="io.netty.channel.Write">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+    <setting name="threshold" control="netty-threshold-io">20 ms</setting>
+  </event>
+
+  <!-- Leak events -->
+  <event name="io.netty.leakdetection.Leak">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+  </event>
+
+  <!-- Buffer allocation events -->
+  <event name="iio.netty.buffer.ByteBufferAllocation">
+    <setting name="enabled" control="netty-enabled-normal">true</setting>
+    <setting name="stackTrace">true</setting>
+  </event>
+
+  <!--
+      Contents of the control element is not read by the JVM, it's used
+      by Java Mission Control to change settings that carry the control attribute.
+  -->
+  <control>
+
+    <selection name="netty-level" default="normal" label="Netty">
+      <option label="Off" name="off">off</option>
+      <option label="Normal" name="normal">normal</option>
+      <option label="All" name="all">all</option>
+    </selection>
+
+    <condition name="netty-enabled-normal" true="true" false="false">
+      <or>
+        <test name="netty-level" operator="equal" value="normal"/>
+        <test name="netty-level" operator="equal" value="all"/>
+      </or>
+    </condition>
+
+    <condition name="netty-enabled-all" true="true" false="false">
+      <test name="netty-level" operator="equal" value="all"/>
+    </condition>
+
+    <text name="netty-threshold-connect" label="Netty Threshold Connect" contentType="timespan" minimum="0 s">0 ms</text>
+    <text name="netty-threshold-io" label="Netty Threshold I/O" contentType="timespan" minimum="0 s">20 ms</text>
+
+  </control>
+
+</configuration>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2019 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.1.61.Final-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>netty-jfr-microbench</artifactId>
+  <packaging>jar</packaging>
+  <description>
+    Microbenchmarks for the JFR instrumentation
+  </description>
+
+  <name>Netty/JFR Microbench</name>
+
+
+  <properties>
+    <maven.compiler.source>9</maven.compiler.source>
+    <maven.compiler.target>9</maven.compiler.target>
+    <!-- Skip tests by default; run only if -DskipTests=false is specified -->
+    <skipTests>true</skipTests>
+    <jmh.version>1.21</jmh.version>
+    <!-- This only be set when run on linux as on other platforms we just want to include the jar without native
+         code -->
+    <epoll.classifier />
+    <!-- This only be set when run on mac as on other platforms we just want to include the jar without native
+         code -->
+    <kqueue.classifier />
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-jfr</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-microbench</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <!-- Disable animal sniffer -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

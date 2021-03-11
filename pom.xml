@@ -120,6 +120,10 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <!-- JDK15 -->
@@ -142,6 +146,10 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
     <!-- JDK14 -->
     <profile>
@@ -163,6 +171,10 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
     <!-- JDK13 -->
     <profile>
@@ -184,6 +196,10 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <!-- JDK12 -->
@@ -209,6 +225,10 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <!-- JDK11 -->
@@ -231,6 +251,10 @@
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <!-- JDK10 -->
@@ -251,6 +275,10 @@
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
       </properties>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <!-- JDK9 -->
@@ -270,6 +298,10 @@
       <activation>
         <jdk>9</jdk>
       </activation>
+      <modules>
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
     </profile>
 
     <profile>
