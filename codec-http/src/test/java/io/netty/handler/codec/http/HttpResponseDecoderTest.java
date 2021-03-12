@@ -727,4 +727,24 @@ public class HttpResponseDecoderTest {
         assertEquals("netty.io", response.headers().get(HttpHeaderNames.HOST));
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testHttpMessageDecoderResult() {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 11\r\n" +
+                "Connection: close\r\n\r\n" +
+                "Lorem ipsum";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertThat(response.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) response.decoderResult();
+        assertThat(decoderResult.initialLineLength(), is(15));
+        assertThat(decoderResult.headerSize(), is(35));
+        assertThat(decoderResult.totalSize(), is(50));
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
 }
