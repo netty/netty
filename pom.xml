@@ -142,7 +142,6 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
-
     </profile>
     <!-- JDK14 -->
     <profile>
@@ -164,7 +163,6 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
-
     </profile>
     <!-- JDK13 -->
     <profile>
@@ -320,7 +318,6 @@
         <argLine.noUnsafe>-Dio.netty.noUnsafe=true</argLine.noUnsafe>
       </properties>
     </profile>
-
     <profile>
       <id>coverage</id>
       <properties>
@@ -463,7 +460,6 @@
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
-
     <module>bom</module>
   </modules>
 

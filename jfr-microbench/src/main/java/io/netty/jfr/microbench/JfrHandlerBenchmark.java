@@ -97,8 +97,7 @@ public class JfrHandlerBenchmark extends AbstractMicrobenchmark {
     private static final Exception exception = new RuntimeException("");
 
     @Param({
-            "io.netty.jfr.JfrChannelHandler",  "io.netty.jfr.JfrChannelHandlerEventsDisabled",
-            "io.netty.jfr.JfrChannelHandlerWithReusedEvents", "", "io.netty.handler.logging.LoggingHandler"
+            "io.netty.jfr.JfrChannelHandler", "", "io.netty.handler.logging.LoggingHandler"
     })
     public String channelHandlerClassName;
 

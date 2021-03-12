@@ -114,7 +114,7 @@
   </event>
 
   <!-- Buffer allocation events -->
-  <event name="iio.netty.buffer.ByteBufferAllocation">
+  <event name="io.netty.buffer.ByteBufferAllocation">
     <setting name="enabled" control="netty-enabled-normal">true</setting>
     <setting name="stackTrace">true</setting>
   </event>
