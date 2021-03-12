@@ -1802,6 +1802,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * Notify all the handshake futures about the successfully handshake
+     * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
+     * was fired. {@code false} otherwise.
      */
     private boolean setHandshakeSuccess() {
         if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
