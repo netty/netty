@@ -29,6 +29,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -1803,6 +1804,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the successfully handshake
      */
     private boolean setHandshakeSuccess() {
+        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
+            readDuringHandshake = false;
+            ctx.read();
+        }
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
         // NOT_HANDSHAKING which invokes setHandshakeSuccessIfStillHandshaking, and then wrapNonAppData also directly
@@ -1817,11 +1822,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         session.getCipherSuite());
             }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
-
-            if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
-                readDuringHandshake = false;
-                ctx.read();
-            }
             return true;
         }
         return false;
@@ -1970,7 +1970,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             startHandshakeProcessing(active);
             // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
             // flush pending data in the outbound buffer later in channelActive().
-            needsFlush |= fastOpen && channel.unsafe().outboundBuffer().totalPendingWriteBytes() > 0;
+            final ChannelOutboundBuffer outboundBuffer;
+            needsFlush |= fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
+                    outboundBuffer.totalPendingWriteBytes() > 0);
         }
     }
 
