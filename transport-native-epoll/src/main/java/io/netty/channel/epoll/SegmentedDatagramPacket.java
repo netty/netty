@@ -37,7 +37,7 @@ public final class SegmentedDatagramPacket extends DatagramPacket {
      * @param recipient     the recipient.
      */
     public SegmentedDatagramPacket(ByteBuf data, int segmentSize, InetSocketAddress recipient) {
-        super(checkByteBuf(data), recipient);
+        super(data, recipient);
         checkIsSupported();
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
@@ -51,7 +51,7 @@ public final class SegmentedDatagramPacket extends DatagramPacket {
      */
     public SegmentedDatagramPacket(ByteBuf data, int segmentSize,
                                    InetSocketAddress recipient, InetSocketAddress sender) {
-        super(checkByteBuf(data), recipient, sender);
+        super(data, recipient, sender);
         checkIsSupported();
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
@@ -116,13 +116,6 @@ public final class SegmentedDatagramPacket extends DatagramPacket {
     public SegmentedDatagramPacket touch(Object hint) {
         super.touch(hint);
         return this;
-    }
-
-    private static ByteBuf checkByteBuf(ByteBuf buffer) {
-        if (!buffer.isContiguous()) {
-            throw new IllegalArgumentException("Buffer needs to be continguous");
-        }
-        return buffer;
     }
 
     private static void checkIsSupported() {
