@@ -404,8 +404,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                             stream.setProperty(contentLengthKey, new ContentLength(cLength));
                         }
                     } catch (IllegalArgumentException e) {
-                        throw streamError(stream.id(), PROTOCOL_ERROR,
-                                "Multiple content-length headers received", e);
+                        throw streamError(stream.id(), PROTOCOL_ERROR, e,
+                                "Multiple content-length headers received");
                     }
                 }
             }
