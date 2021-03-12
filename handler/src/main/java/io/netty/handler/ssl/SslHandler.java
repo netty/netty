@@ -976,7 +976,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = allocateOutNetBuf(ctx, 2048, 1);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
-
+                HandshakeStatus status = result.getHandshakeStatus();
                 if (result.bytesProduced() > 0) {
                     ctx.write(out).addListener(new ChannelFutureListener() {
                         @Override
@@ -992,8 +992,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // and this write is to complete the new handshake. The user may have previously done a
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
                         // attempt to wrap application data here if any is pending.
-                        if (result.getHandshakeStatus() == HandshakeStatus.FINISHED &&
-                                !pendingUnencryptedWrites.isEmpty()) {
+                        if (status == HandshakeStatus.FINISHED && !pendingUnencryptedWrites.isEmpty()) {
                             wrap(ctx, true);
                         }
                         needsFlush = true;
@@ -1001,7 +1000,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = null;
                 }
 
-                HandshakeStatus status = result.getHandshakeStatus();
                 switch (status) {
                     case FINISHED:
                         setHandshakeSuccess();
@@ -1798,27 +1796,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *         marked as success by this method
      */
     private boolean setHandshakeSuccessIfStillHandshaking() {
-        if (!handshakePromise.isDone()) {
-            setHandshakeSuccess();
-            return true;
-        }
-        return false;
+        return setHandshakeSuccess();
     }
 
     /**
      * Notify all the handshake futures about the successfully handshake
      */
-    private void setHandshakeSuccess() {
-        boolean notified = handshakePromise.trySuccess(ctx.channel());
-        SSLSession session = engine.getSession();
-
-        // There seems to be a bug in the SSLEngineImpl that is part of the OpenJDK that results in returning
-        // HandshakeStatus.FINISHED multiple times which is not expected. This only happens in TLSv1.3 so lets
-        // ensure we only notify once in this case.
-        //
-        // This is safe as TLSv1.3 does not support renegotiation and so we should never see two handshake events.
-        if (notified || !SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
+    private boolean setHandshakeSuccess() {
+        // Our control flow may invoke this method multiple times for a single FINISHED event. For example
+        // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
+        // NOT_HANDSHAKING which invokes setHandshakeSuccessIfStillHandshaking, and then wrapNonAppData also directly
+        // invokes this method.
+        if (handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
+                SSLSession session = engine.getSession();
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
                         ctx.channel(),
@@ -1826,12 +1817,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         session.getCipherSuite());
             }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
-        }
 
-        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
-            readDuringHandshake = false;
-            ctx.read();
+            if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
+                readDuringHandshake = false;
+                ctx.read();
+            }
+            return true;
         }
+        return false;
     }
 
     /**
