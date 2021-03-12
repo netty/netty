@@ -273,6 +273,27 @@
         <jdk>9</jdk>
       </activation>
     </profile>
+    <profile>
+      <id>jdk9+</id>
+      <activation>
+        <jdk>[9,)</jdk>
+      </activation>
+      <modules>
+        <!-- Needs JDK9+ APIs to build-->
+        <module>jfr</module>
+        <module>jfr-microbench</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>jdk8</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+      </properties>
+    </profile>
 
     <profile>
       <id>boringssl</id>
@@ -299,6 +320,7 @@
         <argLine.noUnsafe>-Dio.netty.noUnsafe=true</argLine.noUnsafe>
       </properties>
     </profile>
+
     <profile>
       <id>coverage</id>
       <properties>
@@ -324,16 +346,6 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
-    <profile>
-      <id>jdk8</id>
-      <activation>
-        <jdk>[1.8,)</jdk>
-      </activation>
-      <properties>
-        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
-        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-      </properties>
     </profile>
     <profile>
       <!--
@@ -439,7 +451,6 @@
     <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
-    <module>jfr</module>
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
@@ -452,7 +463,7 @@
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
-    <module>jfr-microbench</module>
+
     <module>bom</module>
   </modules>
 

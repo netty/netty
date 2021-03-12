@@ -183,11 +183,6 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-jfr</artifactId>
-        <version>4.1.61.Final-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty-example</artifactId>
         <version>4.1.63.Final-SNAPSHOT</version>
       </dependency>
