@@ -120,15 +120,20 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     @Test
     public void testPushStreamNoMaxPushIdFrameSent() {
-        testPushStream(false);
+        testPushStream(-1);
     }
 
     @Test
     public void testPushStreamMaxPushIdFrameSentWithSmallerId() {
-        testPushStream(true);
+        testPushStream(0);
     }
 
-    private void testPushStream(boolean sendPushId) {
+    @Test
+    public void testPushStreamMaxPushIdFrameSentWithSameId() {
+        testPushStream(2);
+    }
+
+    private void testPushStream(long pushId) {
         QuicChannel parent = Http3TestUtils.mockParent();
         AttributeMap map = new DefaultAttributeMap();
         when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
@@ -147,8 +152,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
             ReferenceCountUtil.release(written);
         }
 
-        if (sendPushId) {
-            assertTrue(outboundControlChannel.writeOutbound(new DefaultHttp3MaxPushIdFrame(0)));
+        if (pushId >= 0) {
+            assertTrue(outboundControlChannel.writeOutbound(new DefaultHttp3MaxPushIdFrame(pushId)));
             Object push = outboundControlChannel.readOutbound();
             ReferenceCountUtil.release(push);
         }
@@ -168,10 +173,11 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         if (server) {
             Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
         } else {
-            ByteBuf b = Unpooled.buffer();
-            assertFalse(channel.writeInbound(b));
-            assertEquals(0, b.refCnt());
-            Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, (QuicChannel) channel.parent());
+            if (pushId <= 0) {
+                Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, (QuicChannel) channel.parent());
+            } else {
+               assertNotNull(channel.pipeline().context(CodecHandler.class));
+            }
         }
         assertFalse(channel.finish());
         assertFalse(outboundControlChannel.finish());

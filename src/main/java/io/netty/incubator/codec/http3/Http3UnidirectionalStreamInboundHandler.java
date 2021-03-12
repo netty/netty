@@ -137,11 +137,13 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
                         "Received push stream with id " + id + " while the max push id is " + maxPushId + '.', false);
             } else {
                 // TODO: Handle push streams correctly
+                ctx.pipeline().addLast(Http3PushStreamValidationHandler.INSTANCE);
                 // For now add a handler that will just release the frames so we dont leak.
                 ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
 
-                // Replace this handler with a handler that validates the frames on the stream.
-                ctx.pipeline().replace(this, null, Http3PushStreamValidationHandler.INSTANCE);
+                // Replace this handler with the codec which also validates that only valid frames will be decoded.
+                ctx.pipeline().replace(this, null,
+                        codecFactory.apply(Http3PushStreamFrameTypeValidator.NO_VALIDATION));
             }
         }
     }
