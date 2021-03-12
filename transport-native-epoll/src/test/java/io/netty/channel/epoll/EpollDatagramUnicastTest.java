@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -55,7 +56,20 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
         run();
     }
 
-    public void testSendSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb)
+    public void testSendSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testSendSegmentedDatagramPacket(sb, cb, false);
+    }
+
+    @Test
+    public void testSendSegmentedDatagramPacketComposite() throws Throwable {
+        run();
+    }
+
+    public void testSendSegmentedDatagramPacketComposite(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testSendSegmentedDatagramPacket(sb, cb, true);
+    }
+
+    private void testSendSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite)
             throws Throwable {
         if (!(cb.group() instanceof EpollEventLoopGroup)) {
             // Only supported for the native epoll transport.
@@ -66,19 +80,19 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
         Channel cc = null;
 
         try {
-            cb.handler(new SimpleChannelInboundHandler() {
+            cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
                 public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
                     // Nothing will be sent.
                 }
             });
 
-            final SocketAddress sender;
             cc = cb.bind(newSocketAddress()).sync().channel();
 
+            final int numBuffers = 16;
             final int segmentSize = 512;
-            int bufferCapacity = 16 * segmentSize;
-            final CountDownLatch latch = new CountDownLatch(bufferCapacity / segmentSize);
+            int bufferCapacity = numBuffers * segmentSize;
+            final CountDownLatch latch = new CountDownLatch(numBuffers);
             AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
             sc = sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
                 @Override
@@ -90,7 +104,17 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
             }).bind(newSocketAddress()).sync().channel();
 
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
-            ByteBuf buffer = Unpooled.directBuffer(bufferCapacity).writeZero(bufferCapacity);
+            final ByteBuf buffer;
+            if (composite) {
+                CompositeByteBuf compositeBuffer = Unpooled.compositeBuffer();
+                for (int i = 0; i < numBuffers; i++) {
+                    compositeBuffer.addComponent(true,
+                            Unpooled.directBuffer(segmentSize).writeZero(segmentSize));
+                }
+                buffer = compositeBuffer;
+            } else {
+                buffer = Unpooled.directBuffer(bufferCapacity).writeZero(bufferCapacity);
+            }
             cc.writeAndFlush(new SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
