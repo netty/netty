@@ -60,7 +60,6 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
         testSendSegmentedDatagramPacket(sb, cb, false);
     }
 
-
     @Test
     public void testSendSegmentedDatagramPacketComposite() throws Throwable {
         run();
