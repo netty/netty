@@ -55,7 +55,9 @@ public abstract class RenegotiateTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(context.newHandler(ch.alloc()));
+                            SslHandler handler = context.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 private boolean renegotiate;
 
@@ -79,9 +81,9 @@ public abstract class RenegotiateTest {
                                                 public void operationComplete(Future<Channel> future) throws Exception {
                                                     if (!future.isSuccess()) {
                                                         error.compareAndSet(null, future.cause());
-                                                        latch.countDown();
                                                         ctx.close();
                                                     }
+                                                    latch.countDown();
                                                 }
                                             });
                                         } else {
@@ -108,7 +110,9 @@ public abstract class RenegotiateTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
+                            SslHandler handler = clientContext.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(
