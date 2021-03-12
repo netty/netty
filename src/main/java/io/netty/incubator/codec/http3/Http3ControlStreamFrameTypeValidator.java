@@ -27,6 +27,7 @@ final class Http3ControlStreamFrameTypeValidator implements Http3FrameTypeValida
     @Override
     public void validate(long type, boolean first) throws Http3Exception {
         switch ((int) type) {
+            case Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE:
             case Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE:
             case Http3CodecUtils.HTTP3_DATA_FRAME_TYPE:
                 if (first) {
