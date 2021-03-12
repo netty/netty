@@ -82,21 +82,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         OK
     }
 
-    enum StreamSendResult {
-        /**
-         * Nothing more to sent and no FIN flag
-         */
-        DONE,
-        /**
-         * FIN flag sent.
-         */
-        FIN,
-        /**
-         * No more space, need to retry
-         */
-        NO_SPACE
-    }
-
     private static final class CloseData implements ChannelFutureListener {
         final boolean applicationClose;
         final int err;
