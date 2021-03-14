@@ -29,6 +29,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -976,7 +977,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = allocateOutNetBuf(ctx, 2048, 1);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
-
+                HandshakeStatus status = result.getHandshakeStatus();
                 if (result.bytesProduced() > 0) {
                     ctx.write(out).addListener(new ChannelFutureListener() {
                         @Override
@@ -988,12 +989,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                     });
                     if (inUnwrap) {
+                        // We may be here because we read data and discovered the remote peer initiated a renegotiation
+                        // and this write is to complete the new handshake. The user may have previously done a
+                        // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
+                        // attempt to wrap application data here if any is pending.
+                        if (status == HandshakeStatus.FINISHED && !pendingUnencryptedWrites.isEmpty()) {
+                            wrap(ctx, true);
+                        }
                         needsFlush = true;
                     }
                     out = null;
                 }
 
-                HandshakeStatus status = result.getHandshakeStatus();
                 switch (status) {
                     case FINISHED:
                         setHandshakeSuccess();
@@ -1790,27 +1797,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *         marked as success by this method
      */
     private boolean setHandshakeSuccessIfStillHandshaking() {
-        if (!handshakePromise.isDone()) {
-            setHandshakeSuccess();
-            return true;
-        }
-        return false;
+        return setHandshakeSuccess();
     }
 
     /**
      * Notify all the handshake futures about the successfully handshake
+     * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
+     * was fired. {@code false} otherwise.
      */
-    private void setHandshakeSuccess() {
-        boolean notified = handshakePromise.trySuccess(ctx.channel());
-        SSLSession session = engine.getSession();
-
-        // There seems to be a bug in the SSLEngineImpl that is part of the OpenJDK that results in returning
-        // HandshakeStatus.FINISHED multiple times which is not expected. This only happens in TLSv1.3 so lets
-        // ensure we only notify once in this case.
-        //
-        // This is safe as TLSv1.3 does not support renegotiation and so we should never see two handshake events.
-        if (notified || !SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
+    private boolean setHandshakeSuccess() {
+        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
+            readDuringHandshake = false;
+            ctx.read();
+        }
+        // Our control flow may invoke this method multiple times for a single FINISHED event. For example
+        // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
+        // NOT_HANDSHAKING which invokes setHandshakeSuccessIfStillHandshaking, and then wrapNonAppData also directly
+        // invokes this method.
+        if (handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
+                SSLSession session = engine.getSession();
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
                         ctx.channel(),
@@ -1818,12 +1824,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         session.getCipherSuite());
             }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+            return true;
         }
-
-        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
-            readDuringHandshake = false;
-            ctx.read();
-        }
+        return false;
     }
 
     /**
@@ -1967,6 +1970,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // With TCP Fast Open, we write to the outbound buffer before the TCP connect is established.
             // The buffer will then be flushed as part of establishing the connection, saving us a round-trip.
             startHandshakeProcessing(active);
+            // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
+            // flush pending data in the outbound buffer later in channelActive().
+            final ChannelOutboundBuffer outboundBuffer;
+            needsFlush |= fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
+                    outboundBuffer.totalPendingWriteBytes() > 0);
         }
     }
 
@@ -1980,6 +1988,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 handshake(flushAtEnd);
             }
             applyHandshakeTimeout();
+        } else if (needsFlush) {
+            forceFlush(ctx);
         }
     }
 

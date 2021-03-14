@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
+import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
 import static io.netty.channel.unix.NativeInetAddress.address;
 
 /**
@@ -68,8 +69,9 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
-        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {
-            socket.setTcpFastOpen(config.getTcpFastopen());
+        final int tcpFastopen;
+        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = config.getTcpFastopen()) > 0) {
+            socket.setTcpFastOpen(tcpFastopen);
         }
         socket.listen(config.getBacklog());
         active = true;
