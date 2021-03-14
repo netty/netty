@@ -276,7 +276,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                 in.remove(e);
             }
         }
-         
+
         // Whether all messages were written or not.
         writeFilter(in.isEmpty());
     }
