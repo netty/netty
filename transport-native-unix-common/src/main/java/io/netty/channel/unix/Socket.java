@@ -30,13 +30,12 @@ import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
-import static io.netty.channel.unix.Errors.ERROR_ECONNREFUSED_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
+import static io.netty.channel.unix.Errors.ERROR_ECONNREFUSED_NEGATIVE;
+import static io.netty.channel.unix.Errors.handleConnectErrno;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
-import static io.netty.channel.unix.Errors.throwConnectException;
-import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.udsSunPathSize;
 import static io.netty.channel.unix.NativeInetAddress.address;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 
@@ -268,11 +267,7 @@ public class Socket extends FileDescriptor {
             throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
         if (res < 0) {
-            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
-                // connect not complete yet need to wait for EPOLLOUT event
-                return false;
-            }
-            throwConnectException("connect", res);
+            return handleConnectErrno("connect", res);
         }
         return true;
     }
@@ -280,11 +275,7 @@ public class Socket extends FileDescriptor {
     public final boolean finishConnect() throws IOException {
         int res = finishConnect(fd);
         if (res < 0) {
-            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
-                // connect still in progress
-                return false;
-            }
-            throwConnectException("finishConnect", res);
+            return handleConnectErrno("finishConnect", res);
         }
         return true;
     }
@@ -292,7 +283,7 @@ public class Socket extends FileDescriptor {
     public final void disconnect() throws IOException {
         int res = disconnect(fd, ipv6);
         if (res < 0) {
-            throwConnectException("disconnect", res);
+            handleConnectErrno("disconnect", res);
         }
     }
 
