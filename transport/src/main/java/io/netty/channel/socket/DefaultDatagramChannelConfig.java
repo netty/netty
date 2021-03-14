@@ -426,4 +426,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         super.setMessageSizeEstimator(estimator);
         return this;
     }
+
+    @Override
+    public DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
 }

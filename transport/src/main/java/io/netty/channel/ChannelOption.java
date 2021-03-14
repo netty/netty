@@ -86,6 +86,8 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      */
     @Deprecated
     public static final ChannelOption<Integer> MAX_MESSAGES_PER_READ = valueOf("MAX_MESSAGES_PER_READ");
+    public static final ChannelOption<Integer> MAX_MESSAGES_PER_WRITE = valueOf("MAX_MESSAGES_PER_WRITE");
+
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT = valueOf("WRITE_SPIN_COUNT");
     /**
      * @deprecated Use {@link #WRITE_BUFFER_WATER_MARK}

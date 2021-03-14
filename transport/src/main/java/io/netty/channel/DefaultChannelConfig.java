@@ -29,6 +29,7 @@ import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
+import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP;
@@ -62,6 +63,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
+    private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
+
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
@@ -85,7 +88,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
-                SINGLE_EVENTEXECUTOR_PER_GROUP);
+                SINGLE_EVENTEXECUTOR_PER_GROUP, MAX_MESSAGES_PER_WRITE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -155,6 +158,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
             return (T) Boolean.valueOf(getPinEventExecutorPerGroup());
         }
+        if (option == MAX_MESSAGES_PER_WRITE) {
+            return (T) Integer.valueOf(getMaxMessagesPerWrite());
+        }
         return null;
     }
 
@@ -187,6 +193,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setMessageSizeEstimator((MessageSizeEstimator) value);
         } else if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
             setPinEventExecutorPerGroup((Boolean) value);
+        } else if (option == MAX_MESSAGES_PER_WRITE) {
+            setMaxMessagesPerWrite((Integer) value);
         } else {
             return false;
         }
@@ -245,6 +253,23 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalStateException("getRecvByteBufAllocator() must return an object of type " +
                     "MaxMessagesRecvByteBufAllocator", e);
         }
+    }
+
+    /**
+     * Get the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public int getMaxMessagesPerWrite() {
+        return maxMessagesPerWrite;
+    }
+
+     /**
+     * Set the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public ChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        this.maxMessagesPerWrite = ObjectUtil.checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
+        return this;
     }
 
     @Override
