@@ -34,22 +34,21 @@ public interface QuicStreamChannel extends DuplexChannel {
      * of {@code QUIC}. If you want to ensure the {@code FIN} is propagated through the
      * {@link io.netty.channel.ChannelPipeline} as a write just write a {@link QuicStreamFrame} directly with the
      * {@code FIN} set.
-     */
-    ChannelFutureListener WRITE_FIN = f -> {
-        Unsafe unsafe = f.channel().unsafe();
-        unsafe.write(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
-        unsafe.flush();
-    };
-
-    /**
-     * @deprecated use {@link #WRITE_FIN}
+     *
+     * @deprecated use {@link #SHUTDOWN_OUTPUT}
      */
     @Deprecated
+    ChannelFutureListener WRITE_FIN = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
+
+    /**
+     * Should be added to a {@link ChannelFuture} when the output should be cleanly shutdown via a {@code FIN}. No more
+     * writes will be allowed after this point.
+     */
     ChannelFutureListener SHUTDOWN_OUTPUT = WRITE_FIN;
 
     @Override
     default ChannelFuture shutdownInput() {
-        return shutdownInput(0);
+        return shutdownInput(newPromise());
     }
 
     @Override
@@ -59,12 +58,7 @@ public interface QuicStreamChannel extends DuplexChannel {
 
     @Override
     default ChannelFuture shutdownOutput() {
-        return shutdownOutput(0);
-    }
-
-    @Override
-    default ChannelFuture shutdownOutput(ChannelPromise promise) {
-        return shutdownOutput(0, promise);
+        return shutdownOutput(newPromise());
     }
 
     @Override
@@ -95,7 +89,7 @@ public interface QuicStreamChannel extends DuplexChannel {
      * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
      * be send to the remote peer and all data received will be discarded.
      *
-     * @param error the error to send.
+     * @param error the error to send as part of the {@code STOP_SENDING} frame.
      * @return the future that is notified on completion.
      */
     default ChannelFuture shutdownInput(int error) {
@@ -106,7 +100,7 @@ public interface QuicStreamChannel extends DuplexChannel {
      * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
      * be send to the remote peer and all data received will be discarded.
      *
-     * @param error the error to send.
+     * @param error the error to send as part of the {@code STOP_SENDING} frame.
      * @param promise will be notified on completion.
      * @return the future that is notified on completion.
      */
@@ -116,7 +110,11 @@ public interface QuicStreamChannel extends DuplexChannel {
      * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
      * be send to the remote peer and all data that is not sent yet will be discarded.
      *
-     * @param error the error to send.
+     * <strong>Important:</strong>If you want to shutdown the output without sending a {@code RESET_STREAM} frame you
+     * should use {@link #shutdownOutput()} which will shutdown the output by sending a {@code FIN} and so signal
+     * a clean shutdown.
+     *
+     * @param error the error to send as part of the {@code RESET_STREAM} frame.
      * @return the future that is notified on completion.
      */
     default ChannelFuture shutdownOutput(int error) {
@@ -127,7 +125,11 @@ public interface QuicStreamChannel extends DuplexChannel {
      * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
      * be send to the remote peer and all data that is not sent yet will be discarded.
      *
-     * @param error the error to send.
+     * <strong>Important:</strong>If you want to shutdown the output without sending a {@code RESET_STREAM} frame you
+     * should use {@link #shutdownOutput(ChannelPromise)} which will shutdown the output by sending a {@code FIN}
+     * and so signal a clean shutdown.
+     *
+     * @param error the error to send as part of the {@code RESET_STREAM} frame.
      * @param promise will be notified on completion.
      * @return the future that is notified on completion.
      */

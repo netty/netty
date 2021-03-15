@@ -151,6 +151,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
+    public ChannelFuture shutdownOutput(ChannelPromise promise) {
+        outputShutdown = true;
+        unsafe.write(QuicStreamFrame.EMPTY_FIN, promise);
+        unsafe.flush();
+        return promise;
+    }
+
+    @Override
     public ChannelFuture shutdownInput(int error, ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             shutdownInput0(error, promise);
@@ -199,7 +207,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     @Override
     public ChannelFuture shutdown(ChannelPromise channelPromise) {
-        return shutdown(0, channelPromise);
+        inputShutdown = true;
+        outputShutdown = true;
+        unsafe.write(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
+        unsafe.flush();
+        parent().streamShutdown(streamId(), true, false, 0, channelPromise);
+        closeIfDone();
+        return channelPromise;
     }
 
     @Override
