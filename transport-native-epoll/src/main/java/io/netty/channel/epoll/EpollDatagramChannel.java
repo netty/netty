@@ -301,7 +301,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         // We only handle UDP_SEGMENT in sendmmsg.
                         in.current() instanceof SegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
-                    array.add(in, isConnected());
+                    array.add(in, isConnected(), maxMessagesPerWrite);
                     int cnt = array.count();
 
                     if (cnt >= 1) {
@@ -309,7 +309,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         int offset = 0;
                         NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
 
-                        int send = socket.sendmmsg(packets, offset, Math.min(maxMessagesPerWrite, cnt));
+                        int send = socket.sendmmsg(packets, offset, cnt);
                         if (send == 0) {
                             // Did not write all messages.
                             break;
