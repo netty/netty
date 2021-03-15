@@ -91,10 +91,10 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
-                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class),
-                () -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class)
-        );
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
+        toReturn.add(() -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class));
+        toReturn.add(() -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class));
+        return toReturn;
     }
 
     @Override
@@ -103,13 +103,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
         if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT) {
             int insertIndex = factories.size() - 1; // Keep NIO fixture last.
-            factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
-                @Override
-                public Bootstrap newInstance() {
-                    return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
-                            .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
-                }
-            });
+            factories.add(insertIndex, () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
+                    .option(ChannelOption.TCP_FASTOPEN_CONNECT, true));
         }
         return clientSocket();
     }
