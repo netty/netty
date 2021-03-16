@@ -499,7 +499,7 @@ public class DnsNameResolver extends InetNameResolver {
             throw new IllegalStateException("Unable to create / register Channel", cause);
         }
         ch = future.channel();
-        ch.config().setRecvByteBufAllocator(FixedRecvByteBufAllocator.newDatagramRecvByteBufAllocator(maxPayloadSize));
+        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
         ch.closeFuture().addListener(new ChannelFutureListener() {
             @Override
