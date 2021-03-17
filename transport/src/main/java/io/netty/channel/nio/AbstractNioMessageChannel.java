@@ -133,13 +133,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
         final int interestOps = key.interestOps();
 
-        for (;;) {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
-                // Wrote all messages.
-                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-                }
                 break;
             }
             try {
@@ -152,20 +149,29 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
 
                 if (done) {
+                    maxMessagesPerWrite--;
                     in.remove();
                 } else {
-                    // Did not write all messages.
-                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                    }
                     break;
                 }
             } catch (Exception e) {
                 if (continueOnWriteError()) {
+                    maxMessagesPerWrite--;
                     in.remove(e);
                 } else {
                     throw e;
                 }
+            }
+        }
+        if (in.isEmpty()) {
+            // Wrote all messages.
+            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+            }
+        } else {
+            // Did not write all messages.
+            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                key.interestOps(interestOps | SelectionKey.OP_WRITE);
             }
         }
     }

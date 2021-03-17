@@ -80,8 +80,9 @@ final class NativeDatagramPacketArray {
         return true;
     }
 
-    void add(ChannelOutboundBuffer buffer, boolean connected) throws Exception {
+    void add(ChannelOutboundBuffer buffer, boolean connected, int maxMessagesPerWrite) throws Exception {
         processor.connected = connected;
+        processor.maxMessagesPerWrite = maxMessagesPerWrite;
         buffer.forEachFlushedMessage(processor);
     }
 
@@ -110,9 +111,11 @@ final class NativeDatagramPacketArray {
 
     private final class MyMessageProcessor implements MessageProcessor {
         private boolean connected;
+        private int maxMessagesPerWrite;
 
         @Override
         public boolean processMessage(Object msg) {
+            final boolean added;
             if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
@@ -125,11 +128,16 @@ final class NativeDatagramPacketArray {
                         segmentSize = seg;
                     }
                 }
-                return add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+            } else if (msg instanceof ByteBufConvertible && connected) {
+                    ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
+            } else {
+                added = false;
             }
-            if (msg instanceof ByteBufConvertible && connected) {
-                ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-                return add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
+            if (added) {
+                maxMessagesPerWrite--;
+                return maxMessagesPerWrite > 0;
             }
             return false;
         }

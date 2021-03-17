@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -28,6 +29,7 @@ import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
+import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
@@ -60,6 +62,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
+    private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
+
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
@@ -82,7 +86,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
+                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -149,6 +153,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == MESSAGE_SIZE_ESTIMATOR) {
             return (T) getMessageSizeEstimator();
         }
+        if (option == MAX_MESSAGES_PER_WRITE) {
+            return (T) Integer.valueOf(getMaxMessagesPerWrite());
+        }
         return null;
     }
 
@@ -179,6 +186,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
             setMessageSizeEstimator((MessageSizeEstimator) value);
+        } else if (option == MAX_MESSAGES_PER_WRITE) {
+            setMaxMessagesPerWrite((Integer) value);
         } else {
             return false;
         }
@@ -238,6 +247,23 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalStateException("getRecvByteBufAllocator() must return an object of type " +
                     "MaxMessagesRecvByteBufAllocator", e);
         }
+    }
+
+    /**
+     * Get the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public int getMaxMessagesPerWrite() {
+        return maxMessagesPerWrite;
+    }
+
+     /**
+     * Set the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public ChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        this.maxMessagesPerWrite = ObjectUtil.checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
+        return this;
     }
 
     @Override
