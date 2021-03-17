@@ -382,4 +382,10 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     public KQueueDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
+
+    @Override
+    public KQueueDatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
 }

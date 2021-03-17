@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -525,5 +526,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      */
     public int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
+    }
+
+    @Override
+    public EpollDatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
     }
 }

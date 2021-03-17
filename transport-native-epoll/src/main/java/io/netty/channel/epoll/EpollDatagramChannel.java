@@ -287,11 +287,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (;;) {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
-                clearFlag(Native.EPOLLOUT);
                 break;
             }
 
@@ -301,7 +301,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         // We only handle UDP_SEGMENT in sendmmsg.
                         in.current() instanceof SegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
-                    array.add(in, isConnected());
+                    array.add(in, isConnected(), maxMessagesPerWrite);
                     int cnt = array.count();
 
                     if (cnt >= 1) {
@@ -309,19 +309,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         int offset = 0;
                         NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
 
-                        while (cnt > 0) {
-                            int send = socket.sendmmsg(packets, offset, cnt);
-                            if (send == 0) {
-                                // Did not write all messages.
-                                setFlag(Native.EPOLLOUT);
-                                return;
-                            }
-                            for (int i = 0; i < send; i++) {
-                                in.remove();
-                            }
-                            cnt -= send;
-                            offset += send;
+                        int send = socket.sendmmsg(packets, offset, cnt);
+                        if (send == 0) {
+                            // Did not write all messages.
+                            break;
                         }
+                        for (int i = 0; i < send; i++) {
+                            in.remove();
+                        }
+                        maxMessagesPerWrite -= send;
                         continue;
                     }
                 }
@@ -335,17 +331,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                 if (done) {
                     in.remove();
+                    maxMessagesPerWrite --;
                 } else {
-                    // Did not write all messages.
-                    setFlag(Native.EPOLLOUT);
                     break;
                 }
             } catch (IOException e) {
+                maxMessagesPerWrite --;
                 // Continue on write error as a DatagramChannel can write to multiple remote peers
                 //
                 // See https://github.com/netty/netty/issues/2665
                 in.remove(e);
             }
+        }
+
+        if (in.isEmpty()) {
+            // Did write all messages.
+            clearFlag(Native.EPOLLOUT);
+        } else {
+            // Did not write all messages.
+            setFlag(Native.EPOLLOUT);
         }
     }
 

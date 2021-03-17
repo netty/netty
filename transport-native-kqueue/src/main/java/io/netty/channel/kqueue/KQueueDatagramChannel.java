@@ -245,11 +245,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (;;) {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
-                // Wrote all messages.
-                writeFilter(false);
                 break;
             }
 
@@ -264,18 +263,22 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 if (done) {
                     in.remove();
+                    maxMessagesPerWrite --;
                 } else {
-                    // Did not write all messages.
-                    writeFilter(true);
-                    break;
+                   break;
                 }
             } catch (IOException e) {
+                maxMessagesPerWrite --;
+
                 // Continue on write error as a DatagramChannel can write to multiple remote peers
                 //
                 // See https://github.com/netty/netty/issues/2665
                 in.remove(e);
             }
         }
+
+        // Whether all messages were written or not.
+        writeFilter(in.isEmpty());
     }
 
     private boolean doWriteMessage(Object msg) throws Exception {
