@@ -56,6 +56,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super.doBeginRead();
     }
 
+    protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
+        return allocHandle.continueReading();
+    }
+
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
 
         private final List<Object> readBuf = new ArrayList<>();
@@ -83,7 +87,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
 
                         allocHandle.incMessagesRead(localRead);
-                    } while (allocHandle.continueReading());
+                    } while (continueReading(allocHandle));
                 } catch (Throwable t) {
                     exception = t;
                 }
