@@ -20,6 +20,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: ${{ github.event.workflow_run.workflow_id }}
+          workflow_conclusion: completed
           commit: ${{ github.event.workflow_run.head_commit.id }}
           # File location set in ci-pr.yml and must be coordinated.
           name: test-results-${{ matrix.setup }}
