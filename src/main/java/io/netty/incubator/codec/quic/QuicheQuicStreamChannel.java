@@ -542,7 +542,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             } catch (Exception ignore) {
                 // Just ignore
             } finally {
-                queue.removeAndFailAll(new ClosedChannelException());
+                if (!queue.isEmpty()) {
+                    // Only fail if the queue is non-empty.
+                    queue.removeAndFailAll(new ClosedChannelException());
+                }
 
                 promise.trySuccess();
                 closePromise.trySuccess();
