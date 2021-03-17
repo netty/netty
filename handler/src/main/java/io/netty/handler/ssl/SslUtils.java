@@ -462,7 +462,8 @@ final class SslUtils {
                hostname.indexOf('.') > 0 &&
                !hostname.endsWith(".") &&
                !NetUtil.isValidIpV4Address(hostname) &&
-               !NetUtil.isValidIpV6Address(hostname);
+               !NetUtil.isValidIpV6Address(hostname) &&
+               !hostname.startsWith("/");
     }
 
     /**
