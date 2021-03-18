@@ -1614,4 +1614,24 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             compositeByteBuf.release();
         }
     }
+
+    @Test
+    public void sliceOfCompositeBufferMustThrowISEAfterDiscardBytes() {
+        CompositeByteBuf composite = compositeBuffer();
+        composite.addComponent(true, buffer(8).writeZero(8));
+
+        ByteBuf slice = composite.retainedSlice();
+        composite.skipBytes(slice.readableBytes());
+        composite.discardSomeReadBytes();
+
+        try {
+            slice.readByte();
+            fail("Expected readByte of discarded slice to throw.");
+        } catch (IllegalStateException ignore) {
+            // Good.
+        } finally {
+            slice.release();
+            composite.release();
+        }
+    }
 }
