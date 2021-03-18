@@ -255,7 +255,7 @@ public final class JfrChannelHandler extends ChannelDuplexHandler {
 
     @Category({ "Netty", "Channel" })
     @Enabled(true)
-    @Threshold("0 ms")
+    @Threshold("1 us")
     private abstract static class ChannelEvent extends Event {
         @Label("Channel")
         String channel;
