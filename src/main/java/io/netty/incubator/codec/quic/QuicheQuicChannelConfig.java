@@ -31,8 +31,8 @@ import java.util.Map;
 final class QuicheQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
 
     private volatile QLogConfiguration qLogConfiguration;
-    // Try to use UDP_SEGMENT by default if possible
-    private volatile int udpSegment = 10;
+    private volatile SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator =
+            SegmentedDatagramPacketAllocator.NONE;
 
     QuicheQuicChannelConfig(Channel channel) {
         super(channel);
@@ -41,7 +41,7 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(),
-                QuicChannelOption.QLOG, QuicChannelOption.UDP_SEGMENTS);
+                QuicChannelOption.QLOG, QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR);
     }
 
     @SuppressWarnings("unchecked")
@@ -50,8 +50,8 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
         if (option == QuicChannelOption.QLOG) {
             return (T) getQLogConfiguration();
         }
-        if (option == QuicChannelOption.UDP_SEGMENTS) {
-            return (T) Integer.valueOf(getUdpSegments());
+        if (option == QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR) {
+            return (T) getSegmentedDatagramPacketAllocator();
         }
         return super.getOption(option);
     }
@@ -62,8 +62,8 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
             setQLogConfiguration((QLogConfiguration) value);
             return true;
         }
-        if (option == QuicChannelOption.UDP_SEGMENTS) {
-            setUdpSegments((Integer) value);
+        if (option == QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR) {
+            setSegmentedDatagramPacketAllocator((SegmentedDatagramPacketAllocator) value);
             return true;
         }
         return super.setOption(option, value);
@@ -147,11 +147,12 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
         this.qLogConfiguration = qLogConfiguration;
     }
 
-    int getUdpSegments() {
-        return udpSegment;
+    SegmentedDatagramPacketAllocator getSegmentedDatagramPacketAllocator() {
+        return segmentedDatagramPacketAllocator;
     }
 
-    private void setUdpSegments(int udpSegment) {
-        this.udpSegment = udpSegment;
+    private void setSegmentedDatagramPacketAllocator(
+            SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
+        this.segmentedDatagramPacketAllocator = segmentedDatagramPacketAllocator;
     }
 }

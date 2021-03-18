@@ -38,10 +38,10 @@ public final class QuicChannelOption<T> extends ChannelOption<T> {
 
     /**
      * Use <a href="https://blog.cloudflare.com/accelerating-udp-packet-transmission-for-quic/">GSO</a>
-     * for QUIC packets if possible. If the number is bigger then 1 we will try to use segments.
+     * for QUIC packets if possible.
      */
-    public static final ChannelOption<Integer> UDP_SEGMENTS =
-            valueOf(QuicChannelOption.class, "QUIC_UDP_SEGMENTS");
+    public static final ChannelOption<SegmentedDatagramPacketAllocator> SEGMENTED_DATAGRAM_PACKET_ALLOCATOR =
+            valueOf(QuicChannelOption.class, "SEGMENTED_DATAGRAM_PACKET_ALLOCATOR");
 
     @SuppressWarnings({ "deprecation" })
     private QuicChannelOption() {

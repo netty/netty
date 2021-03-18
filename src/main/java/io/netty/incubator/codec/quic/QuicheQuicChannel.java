@@ -32,8 +32,6 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.SegmentedDatagramPacket;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
@@ -111,7 +109,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler = new TimeoutHandler();
     private final InetSocketAddress remote;
-    private final boolean supportsUdpSegment;
 
     private QuicheQuicConnection connection;
     private boolean inFireChannelReadCompleteQueue;
@@ -153,7 +150,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         super(parent);
-        this.supportsUdpSegment = SegmentedDatagramPacket.isSupported() && parent instanceof EpollDatagramChannel;
         config = new QuicheQuicChannelConfig(this);
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
@@ -877,8 +873,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return connection == null;
     }
 
-    private boolean connectionSendSegments(int maxSegments) {
-        final int bufferSize = maxSegments * Quic.MAX_DATAGRAM_SIZE;
+    private boolean connectionSendSegments(SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
+        final int bufferSize = segmentedDatagramPacketAllocator.maxNumSegments() * Quic.MAX_DATAGRAM_SIZE;
 
         long connAddr = connection.address();
         boolean packetWasWritten = false;
@@ -908,7 +904,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 int readable = out.readableBytes();
                 if (readable != 0) {
                     if (lastWritten != -1 && readable > lastWritten) {
-                        parent().write(new SegmentedDatagramPacket(out, lastWritten, remote));
+                        parent().write(segmentedDatagramPacketAllocator.newPacket(out, lastWritten, remote));
                     } else {
                         parent().write(new DatagramPacket(out, remote));
                     }
@@ -923,7 +919,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // The write was smaller then the write before. This means we can write all together as the
                 // last segment can be smaller then the other segments.
                 out.writerIndex(writerIndex + written);
-                parent().write(new SegmentedDatagramPacket(out, lastWritten, remote));
+                parent().write(segmentedDatagramPacketAllocator.newPacket(out, lastWritten, remote));
                 packetWasWritten = true;
 
                 out = alloc().directBuffer(bufferSize);
@@ -939,7 +935,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // As the last write was smaller then this write we first need to write what we had before as
                 // a segment can never be bigger then the previous segment. After this we will try to build a new
                 // chain of segments for the writes to follow.
-                parent().write(new SegmentedDatagramPacket(out, lastWritten, remote));
+                parent().write(segmentedDatagramPacketAllocator.newPacket(out, lastWritten, remote));
                 packetWasWritten = true;
 
                 out = newOut;
@@ -953,9 +949,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             // check if we either built the maximum number of segments for a write or if the ByteBuf is not writable
             // anymore. In this case lets write what we have and start a new chain of segments.
-            if (numSegments == maxSegments ||
+            if (numSegments == segmentedDatagramPacketAllocator.maxNumSegments() ||
                     !out.isWritable()) {
-                parent().write(new SegmentedDatagramPacket(out, lastWritten, remote));
+                parent().write(segmentedDatagramPacketAllocator.newPacket(out, lastWritten, remote));
                 packetWasWritten = true;
 
                 out = alloc().directBuffer(bufferSize);
@@ -1010,9 +1006,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         inConnectionSend = true;
         try {
             boolean packetWasWritten;
-            int segments = supportsUdpSegment ? config.getUdpSegments() : 0;
-            if (segments > 0) {
-                packetWasWritten = connectionSendSegments(segments);
+            SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator =
+                    config.getSegmentedDatagramPacketAllocator();
+            if (segmentedDatagramPacketAllocator.maxNumSegments() > 0) {
+                packetWasWritten = connectionSendSegments(segmentedDatagramPacketAllocator);
             } else {
                 packetWasWritten = connectionSendSimple();
             }
