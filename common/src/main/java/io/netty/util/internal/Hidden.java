@@ -24,7 +24,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Contains classes that must be have public visibility but are not public API.
+ * Contains classes that must have public visibility but are not public API.
  */
 class Hidden {
 
