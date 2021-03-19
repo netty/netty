@@ -71,7 +71,7 @@
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
     <netty.version>4.1.60.Final</netty.version>
-    <netty.build.version>28</netty.build.version>
+    <netty.build.version>29</netty.build.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
