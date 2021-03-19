@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 /**
  * Used to allocate datagram packets that use UDP_SEGMENT (GSO).
  */
+@FunctionalInterface
 public interface SegmentedDatagramPacketAllocator {
 
     /**
@@ -41,11 +42,14 @@ public interface SegmentedDatagramPacketAllocator {
     };
 
     /**
-     * The maximum number of segments to use per packet.
+     * The maximum number of segments to use per packet. By default this is {@code 10} but this may be overriden by
+     * the implementation of the interface.
      *
      * @return  the segments.
      */
-    int maxNumSegments();
+    default int maxNumSegments() {
+        return 10;
+    }
 
     /**
      * Return a new segmented {@link DatagramPacket}.
