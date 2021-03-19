@@ -33,10 +33,10 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
 
     QuicheQuicClientCodec(QuicheConfig config, Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                          int localConnIdLength) {
+                          int localConnIdLength, int maxBytesBeforeFlush) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
-        super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE);
+        super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE, maxBytesBeforeFlush);
         this.sslEngineProvider = sslEngineProvider;
     }
 

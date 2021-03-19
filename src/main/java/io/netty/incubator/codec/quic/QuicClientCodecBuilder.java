@@ -44,7 +44,7 @@ public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCod
     @Override
     protected ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                                   int localConnIdLength) {
-        return new QuicheQuicClientCodec(config, sslEngineProvider, localConnIdLength);
+                                   int localConnIdLength, int maxBytesBeforeFlush) {
+        return new QuicheQuicClientCodec(config, sslEngineProvider, localConnIdLength, maxBytesBeforeFlush);
     }
 }

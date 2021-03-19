@@ -18,6 +18,8 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -39,17 +41,21 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
     private final int maxTokenLength;
+    private final int maxBytesBeforeFlush;
 
+    private MessageSizeEstimator.Handle estimatorHandle;
     private QuicHeaderParser headerParser;
     private QuicHeaderParser.QuicHeaderProcessor parserCallback;
+    private int pendingBytes;
 
     protected final QuicheConfig config;
     protected final int localConnIdLength;
 
-    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength) {
+    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, int maxBytesBeforeFlush) {
         this.config = config;
         this.localConnIdLength = localConnIdLength;
         this.maxTokenLength = maxTokenLength;
+        this.maxBytesBeforeFlush = maxBytesBeforeFlush;
     }
 
     protected QuicheQuicChannel getChannel(ByteBuffer key) {
@@ -74,6 +80,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 }
             }
         };
+        estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
     }
 
     @Override
@@ -177,6 +184,36 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         }
 
         ctx.fireChannelWritabilityChanged();
+    }
+
+    @Override
+    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)  {
+        int size = estimatorHandle.size(msg);
+        if (size > 0) {
+            pendingBytes += size;
+        }
+        try {
+            ctx.write(msg, promise);
+        } finally {
+            // If the number of bytes pending exceeds the max batch size we should force a flush() and so ensure
+            // these are delivered in a timely manner and also make room in the outboundbuffer again that belongs
+            // to the underlying channel.
+            if (pendingBytes > maxBytesBeforeFlush) {
+                flushNow(ctx);
+            }
+        }
+    }
+
+    @Override
+    public final void flush(ChannelHandlerContext ctx) {
+        if (pendingBytes > 0) {
+            flushNow(ctx);
+        }
+    }
+
+    private void flushNow(ChannelHandlerContext ctx) {
+        pendingBytes = 0;
+        ctx.flush();
     }
 
     private static void removeIfClosed(Iterator<?> iterator, QuicheQuicChannel current) {

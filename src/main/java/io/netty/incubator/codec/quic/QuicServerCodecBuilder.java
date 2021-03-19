@@ -184,7 +184,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     @Override
     protected ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                                   int localConnIdLength) {
+                                   int localConnIdLength, int maxBytesBeforeFlush) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
@@ -193,8 +193,8 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
-        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, sslEngineProvider,
-                handler, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
+        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, maxBytesBeforeFlush,
+                sslEngineProvider, handler, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
     }
 }

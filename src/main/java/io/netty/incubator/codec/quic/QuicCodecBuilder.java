@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -30,6 +31,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <B> the type of the {@link QuicCodecBuilder}.
  */
 public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
+    private static final int DEFAULT_MAX_BYTES_BEFORE_FLUSH = 20 * Quic.MAX_DATAGRAM_SIZE;
     private final boolean server;
     private Boolean grease;
     private Long maxIdleTimeout;
@@ -48,6 +50,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
+    private int maxBytesBeforeFlush = DEFAULT_MAX_BYTES_BEFORE_FLUSH;
 
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
@@ -74,6 +77,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
+        this.maxBytesBeforeFlush = builder.maxBytesBeforeFlush;
     }
 
     /**
@@ -84,6 +88,19 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     @SuppressWarnings("unchecked")
     protected final B self() {
         return (B) this;
+    }
+
+    /**
+     * Sets the max number of bytes that were written before we force a flush of the data. While batching more bytes may
+     * help to reduce syscalls it may also make the latency worse. Only adjust the setting if you really know what you
+     * are doing.
+     *
+     * @param maxBytesBeforeFlush   the maximum number of bytes before a flush will be forced.
+     * @return                      the instance itself.
+     */
+    public final B maxBytesBeforeFlush(int maxBytesBeforeFlush) {
+        this.maxBytesBeforeFlush = ObjectUtil.checkPositive(maxBytesBeforeFlush, "maxBytesBeforeFlush");
+        return self();
     }
 
     /**
@@ -394,7 +411,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         validate();
         QuicheConfig config = createConfig();
         try {
-            return build(config, sslEngineProvider, localConnIdLength);
+            return build(config, sslEngineProvider, localConnIdLength, maxBytesBeforeFlush);
         } catch (Throwable cause) {
             config.free();
             throw cause;
@@ -418,5 +435,5 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     protected abstract ChannelHandler build(QuicheConfig config,
                                             Function<QuicChannel, ? extends QuicSslEngine> sslContextProvider,
-                                            int localConnIdLength);
+                                            int localConnIdLength, int maxBytesBeforeFlush);
 }
