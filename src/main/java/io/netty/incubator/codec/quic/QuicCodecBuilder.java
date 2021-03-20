@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -31,7 +32,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <B> the type of the {@link QuicCodecBuilder}.
  */
 public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
-    private static final int DEFAULT_MAX_BYTES_BEFORE_FLUSH = 20 * Quic.MAX_DATAGRAM_SIZE;
     private final boolean server;
     private Boolean grease;
     private Long maxIdleTimeout;
@@ -50,7 +50,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
-    private int maxBytesBeforeFlush = DEFAULT_MAX_BYTES_BEFORE_FLUSH;
+    private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
 
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
@@ -77,7 +77,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
-        this.maxBytesBeforeFlush = builder.maxBytesBeforeFlush;
+        this.flushStrategy = builder.flushStrategy;
     }
 
     /**
@@ -91,15 +91,14 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
-     * Sets the max number of bytes that were written before we force a flush of the data. While batching more bytes may
-     * help to reduce syscalls it may also make the latency worse. Only adjust the setting if you really know what you
-     * are doing.
+     * Sets the {@link FlushStrategy} that will be used to detect when an automatic flush
+     * should happen.
      *
-     * @param maxBytesBeforeFlush   the maximum number of bytes before a flush will be forced.
-     * @return                      the instance itself.
+     * @param flushStrategy   the strategy to use.
+     * @return                the instance itself.
      */
-    public final B maxBytesBeforeFlush(int maxBytesBeforeFlush) {
-        this.maxBytesBeforeFlush = ObjectUtil.checkPositive(maxBytesBeforeFlush, "maxBytesBeforeFlush");
+    public final B flushStrategy(FlushStrategy flushStrategy) {
+        this.flushStrategy = Objects.requireNonNull(flushStrategy, "flushStrategy");
         return self();
     }
 
@@ -411,7 +410,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         validate();
         QuicheConfig config = createConfig();
         try {
-            return build(config, sslEngineProvider, localConnIdLength, maxBytesBeforeFlush);
+            return build(config, sslEngineProvider, localConnIdLength, flushStrategy);
         } catch (Throwable cause) {
             config.free();
             throw cause;
@@ -431,9 +430,10 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * @param config                the {@link QuicheConfig} that should be used.
      * @param sslContextProvider    the context provider
      * @param localConnIdLength     the local connection id length.
+     * @param flushStrategy         the {@link FlushStrategy}  that should be used.
      * @return                      the {@link ChannelHandler} which acts as codec.
      */
     protected abstract ChannelHandler build(QuicheConfig config,
                                             Function<QuicChannel, ? extends QuicSslEngine> sslContextProvider,
-                                            int localConnIdLength, int maxBytesBeforeFlush);
+                                            int localConnIdLength, FlushStrategy flushStrategy);
 }

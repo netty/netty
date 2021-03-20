@@ -41,21 +41,22 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private final Map<ByteBuffer, QuicheQuicChannel> connections = new HashMap<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
     private final int maxTokenLength;
-    private final int maxBytesBeforeFlush;
+    private final FlushStrategy flushStrategy;
 
     private MessageSizeEstimator.Handle estimatorHandle;
     private QuicHeaderParser headerParser;
     private QuicHeaderParser.QuicHeaderProcessor parserCallback;
     private int pendingBytes;
+    private int pendingPackets;
 
     protected final QuicheConfig config;
     protected final int localConnIdLength;
 
-    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, int maxBytesBeforeFlush) {
+    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, FlushStrategy flushStrategy) {
         this.config = config;
         this.localConnIdLength = localConnIdLength;
         this.maxTokenLength = maxTokenLength;
-        this.maxBytesBeforeFlush = maxBytesBeforeFlush;
+        this.flushStrategy = flushStrategy;
     }
 
     protected QuicheQuicChannel getChannel(ByteBuffer key) {
@@ -191,14 +192,14 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         int size = estimatorHandle.size(msg);
         if (size > 0) {
             pendingBytes += size;
+            pendingPackets ++;
         }
         try {
             ctx.write(msg, promise);
         } finally {
-            // If the number of bytes pending exceeds the max batch size we should force a flush() and so ensure
-            // these are delivered in a timely manner and also make room in the outboundbuffer again that belongs
-            // to the underlying channel.
-            if (pendingBytes > maxBytesBeforeFlush) {
+            // Check if we should force a flush() and so ensure the packets are delivered in a timely
+            // manner and also make room in the outboundbuffer again that belongs to the underlying channel.
+            if (flushStrategy.shouldFlushNow(pendingPackets, pendingBytes)) {
                 flushNow(ctx);
             }
         }
@@ -213,6 +214,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     private void flushNow(ChannelHandlerContext ctx) {
         pendingBytes = 0;
+        pendingPackets = 0;
         ctx.flush();
     }
 

@@ -18,7 +18,6 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -33,10 +32,10 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
 
     QuicheQuicClientCodec(QuicheConfig config, Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                          int localConnIdLength, int maxBytesBeforeFlush) {
+                          int localConnIdLength, FlushStrategy flushStrategy) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
-        super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE, maxBytesBeforeFlush);
+        super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE, flushStrategy);
         this.sslEngineProvider = sslEngineProvider;
     }
 

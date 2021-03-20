@@ -54,7 +54,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           int localConnIdLength,
                           QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
-                          int maxBytesBeforeFlush,
+                          FlushStrategy flushStrategy,
                           Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
                           ChannelHandler handler,
                           Map.Entry<ChannelOption<?>, Object>[] optionsArray,
@@ -62,7 +62,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           ChannelHandler streamHandler,
                           Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                           Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        super(config, localConnIdLength, tokenHandler.maxTokenLength(), maxBytesBeforeFlush);
+        super(config, localConnIdLength, tokenHandler.maxTokenLength(), flushStrategy);
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         this.sslEngineProvider = sslEngineProvider;
