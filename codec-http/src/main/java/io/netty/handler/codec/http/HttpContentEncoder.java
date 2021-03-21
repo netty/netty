@@ -193,7 +193,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
                     res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-                    out.add(res);
+                    out.add(ReferenceCountUtil.retain(res));
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
                         // only break out the switch statement if we have not content to process
