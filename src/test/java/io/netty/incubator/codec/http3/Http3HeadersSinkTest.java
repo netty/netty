@@ -102,6 +102,24 @@ public class Http3HeadersSinkTest {
         sink.finish();
     }
 
+    @Test(expected = Http3HeadersValidationException.class)
+    public void testInvalidPseudoHeadersForConnect() throws Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "CONNECT");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        sink.finish();
+    }
+
+    @Test
+    public void testValidPseudoHeadersForConnect() throws Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "CONNECT");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        sink.finish();
+    }
+
     private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {
         if (req) {
             sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");

@@ -197,6 +197,15 @@ public final class HttpConversionUtil {
         return msg;
     }
 
+    private static String extractPath(CharSequence method, Http3Headers headers) {
+        if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
+            return "/";
+        } else {
+            return checkNotNull(headers.path(),
+                    "path header cannot be null in conversion to HTTP/1.x").toString();
+        }
+    }
+
     /**
      * Create a new object to contain the request data
      *
@@ -216,10 +225,9 @@ public final class HttpConversionUtil {
         // HTTP/3 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = checkNotNull(http3Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = checkNotNull(http3Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final String path = extractPath(method, http3Headers);
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
-                        .toString()), path.toString(), content, validateHttpHeaders);
+                        .toString()), path, content, validateHttpHeaders);
         try {
             addHttp3ToHttpHeaders(streamId, http3Headers, msg, false);
         } catch (Http3Exception e) {
@@ -250,10 +258,9 @@ public final class HttpConversionUtil {
         // HTTP/3 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = checkNotNull(http3Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = checkNotNull(http3Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final String path = extractPath(method, http3Headers);
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
-                path.toString(), validateHttpHeaders);
+                path, validateHttpHeaders);
         try {
             addHttp3ToHttpHeaders(streamId, http3Headers, msg.headers(), msg.protocolVersion(), false, true);
         } catch (Http3Exception e) {

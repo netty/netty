@@ -15,6 +15,10 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+
+import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
 
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.getPseudoHeader;
@@ -55,14 +59,30 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         if (validate) {
             // Validate that all mandatory pseudo-headers are included.
             if (request) {
-                // For requests we must include:
-                // - :method
-                // - :scheme
-                // - :authority
-                // - :path
-                if (pseudoHeadersCount != 4) {
+                CharSequence method = headers.method();
+                // fast-path
+                if (pseudoHeadersCount < 2) {
                     // There can't be any duplicates for pseudy header names.
                     throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                }
+                if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
+                    // For CONNECT we must only include:
+                    // - :method
+                    // - :authority
+                    if (pseudoHeadersCount != 2 || headers.authority() == null) {
+                        // There can't be any duplicates for pseudy header names.
+                        throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                    }
+                } else {
+                    // For requests we must include:
+                    // - :method
+                    // - :scheme
+                    // - :authority
+                    // - :path
+                    if (pseudoHeadersCount != 4) {
+                        // There can't be any duplicates for pseudy header names.
+                        throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                    }
                 }
             } else {
                 // For responses we must include:
