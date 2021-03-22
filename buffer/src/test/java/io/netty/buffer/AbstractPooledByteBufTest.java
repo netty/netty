@@ -125,4 +125,13 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         assertTrue(buf.isContiguous());
         buf.release();
     }
+
+    @Test
+    public void distinctBuffersMustNotOverlap() {
+        ByteBuf a = newBuffer(16384);
+        ByteBuf b = newBuffer(65536);
+        a.setByte(a.capacity() - 1, 1);
+        b.setByte(0, 2);
+        assertEquals(1, a.getByte(a.capacity() - 1));
+    }
 }
