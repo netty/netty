@@ -270,7 +270,9 @@ public final class HttpConversionUtil {
 
     private static String extractPath(CharSequence method, Http2Headers headers) {
         if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
-            return "/";
+            // See https://tools.ietf.org/html/rfc7231#section-4.3.6
+            return checkNotNull(headers.authority(),
+                    "authority header cannot be null in the conversion to HTTP/1.x").toString();
         } else {
             return checkNotNull(headers.path(),
                     "path header cannot be null in conversion to HTTP/1.x").toString();
