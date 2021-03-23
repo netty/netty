@@ -96,7 +96,7 @@ public final class Http3ServerExample {
                                                 ctx.write(headersFrame);
                                                 ctx.writeAndFlush(new DefaultHttp3DataFrame(
                                                         Unpooled.wrappedBuffer(CONTENT)))
-                                                        .addListener(QuicStreamChannel.WRITE_FIN);
+                                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                                             }
                                         });
                                     }

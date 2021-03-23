@@ -98,7 +98,7 @@ public final class Http3ClientExample {
             Http3HeadersFrame frame = new DefaultHttp3HeadersFrame();
             frame.headers().method("GET").path("/");
             streamChannel.writeAndFlush(frame)
-                    .addListener(QuicStreamChannel.WRITE_FIN).sync();
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT).sync();
 
             // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
             // After this is done we will close the underlying datagram channel.
