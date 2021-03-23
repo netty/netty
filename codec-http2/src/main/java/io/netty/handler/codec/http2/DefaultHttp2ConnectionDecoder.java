@@ -316,6 +316,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Call back the application and retrieve the number of bytes that have been
                 // immediately processed.
                 bytesToReturn = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+
+                if (endOfStream) {
+                    lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
+                }
+
                 return bytesToReturn;
             } catch (Http2Exception | RuntimeException e) {
                 // If an exception happened during delivery, the listener may have returned part
@@ -327,10 +332,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             } finally {
                 // If appropriate, return the processed bytes to the flow controller.
                 flowController.consumeBytes(stream, bytesToReturn);
-
-                if (endOfStream) {
-                    lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
-                }
             }
         }
 
@@ -404,16 +405,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             stream.headersReceived(isInformational);
-            try {
-                verifyContentLength(stream, 0, endOfStream);
-                encoder.flowController().updateDependencyTree(streamId, streamDependency, weight, exclusive);
-                listener.onHeadersRead(ctx, streamId, headers, streamDependency,
-                        weight, exclusive, padding, endOfStream);
-            } finally {
-                // If the headers completes this stream, close it.
-                if (endOfStream) {
-                    lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
-                }
+            verifyContentLength(stream, 0, endOfStream);
+            encoder.flowController().updateDependencyTree(streamId, streamDependency, weight, exclusive);
+            listener.onHeadersRead(ctx, streamId, headers, streamDependency,
+                    weight, exclusive, padding, endOfStream);
+            // If the headers completes this stream, close it.
+            if (endOfStream) {
+                lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
             }
         }
 
