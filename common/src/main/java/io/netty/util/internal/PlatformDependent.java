@@ -781,13 +781,17 @@ public final class PlatformDependent {
         }
         if (hasUnsafe()) {
             long address = directBufferAddress(buffer);
-            long aligned = Pow2.align(address, alignment);
+            long aligned = align(address, alignment);
             buffer.position((int) (aligned - address));
             return buffer.slice();
         }
         // We don't have enough information to be able to align any buffers.
         throw new UnsupportedOperationException("Cannot align direct buffer. " +
                 "Needs either Unsafe or ByteBuffer.alignSlice method available.");
+    }
+
+    public static long align(long value, int alignment) {
+        return Pow2.align(value, alignment);
     }
 
     private static void incrementMemoryCounter(int capacity) {

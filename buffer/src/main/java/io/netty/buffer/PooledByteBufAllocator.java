@@ -28,7 +28,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.util.Pow2;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -276,7 +275,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
 
             // Ensure page size is a whole multiple of the alignment, or bump it to the next whole multiple.
-            pageSize = (int) Pow2.align(pageSize, directMemoryCacheAlignment);
+            pageSize = (int) PlatformDependent.align(pageSize, directMemoryCacheAlignment);
         }
 
         chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
