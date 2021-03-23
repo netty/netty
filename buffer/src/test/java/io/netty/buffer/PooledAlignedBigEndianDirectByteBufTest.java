@@ -15,26 +15,39 @@
  */
 package io.netty.buffer;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
 import java.nio.ByteOrder;
 
 import static org.junit.Assert.assertSame;
 
 public class PooledAlignedBigEndianDirectByteBufTest extends PooledBigEndianDirectByteBufTest {
     private static final int directMemoryCacheAlignment = 1;
-    private static final PooledByteBufAllocator ALLOCATOR = new PooledByteBufAllocator(
-            true,
-            PooledByteBufAllocator.defaultNumHeapArena(),
-            PooledByteBufAllocator.defaultNumDirectArena(),
-            PooledByteBufAllocator.defaultPageSize(),
-            11,
-            PooledByteBufAllocator.defaultSmallCacheSize(),
-            64,
-            PooledByteBufAllocator.defaultUseCacheForAllThreads(),
-            directMemoryCacheAlignment);
+    private static PooledByteBufAllocator allocator;
+
+    @BeforeClass
+    public static void setUpAllocator() {
+        allocator = new PooledByteBufAllocator(
+                true,
+                PooledByteBufAllocator.defaultNumHeapArena(),
+                PooledByteBufAllocator.defaultNumDirectArena(),
+                PooledByteBufAllocator.defaultPageSize(),
+                11,
+                PooledByteBufAllocator.defaultSmallCacheSize(),
+                64,
+                PooledByteBufAllocator.defaultUseCacheForAllThreads(),
+                directMemoryCacheAlignment);
+    }
+
+    @AfterClass
+    public static void releaseAllocator() {
+        allocator = null;
+    }
 
     @Override
     protected ByteBuf alloc(int length, int maxCapacity) {
-        ByteBuf buffer = ALLOCATOR.directBuffer(length, maxCapacity);
+        ByteBuf buffer = allocator.directBuffer(length, maxCapacity);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         return buffer;
     }

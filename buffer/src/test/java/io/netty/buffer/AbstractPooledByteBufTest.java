@@ -132,6 +132,11 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         ByteBuf b = newBuffer(65536);
         a.setByte(a.capacity() - 1, 1);
         b.setByte(0, 2);
-        assertEquals(1, a.getByte(a.capacity() - 1));
+        try {
+            assertEquals(1, a.getByte(a.capacity() - 1));
+        } finally {
+            a.release();
+            b.release();
+        }
     }
 }

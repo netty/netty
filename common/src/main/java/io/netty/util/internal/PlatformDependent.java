@@ -781,8 +781,8 @@ public final class PlatformDependent {
         }
         if (hasUnsafe()) {
             long address = directBufferAddress(buffer);
-            int rem = (int) (address % alignment);
-            buffer.position(rem);
+            long aligned = Pow2.align(address, alignment);
+            buffer.position((int) (aligned - address));
             return buffer.slice();
         }
         // We don't have enough information to be able to align any buffers.
