@@ -63,15 +63,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     };
 
     static {
+        int defaultAlignment = SystemPropertyUtil.getInt(
+                "io.netty.allocator.directMemoryCacheAlignment", 0);
         int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
         Throwable pageSizeFallbackCause = null;
         try {
-            validateAndCalculatePageShifts(defaultPageSize);
+            validateAndCalculatePageShifts(defaultPageSize, defaultAlignment);
         } catch (Throwable t) {
             pageSizeFallbackCause = t;
             defaultPageSize = 8192;
+            defaultAlignment = 0;
         }
         DEFAULT_PAGE_SIZE = defaultPageSize;
+        DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = defaultAlignment;
 
         int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);
         Throwable maxOrderFallbackCause = null;
@@ -141,9 +145,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
                 "io.netty.allocator.useCacheForAllThreads", true);
-
-        DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(
-                "io.netty.allocator.directMemoryCacheAlignment", 0);
 
         // Use 1023 by default as we use an ArrayDeque as backing storage which will then allocate an internal array
         // of 1024 elements. Otherwise we would allocate 2048 and only use 1024 which is wasteful.
@@ -266,6 +267,17 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         threadCache = new PoolThreadLocalCache(useCacheForAllThreads);
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
+
+        if (directMemoryCacheAlignment != 0) {
+            if (!PlatformDependent.hasAlignDirectByteBuffer()) {
+                throw new UnsupportedOperationException("Buffer alignment is not supported. " +
+                        "Either Unsafe or ByteBuffer.alignSlice() must be available.");
+            }
+
+            // Ensure page size is a whole multiple of the alignment, or bump it to the next whole multiple.
+            pageSize = (int) PlatformDependent.align(pageSize, directMemoryCacheAlignment);
+        }
+
         chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         checkPositiveOrZero(nHeapArena, "nHeapArena");
@@ -281,7 +293,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     + directMemoryCacheAlignment + " (expected: power of two)");
         }
 
-        int pageShifts = validateAndCalculatePageShifts(pageSize);
+        int pageShifts = validateAndCalculatePageShifts(pageSize, directMemoryCacheAlignment);
 
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
@@ -321,13 +333,18 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return new PoolArena[size];
     }
 
-    private static int validateAndCalculatePageShifts(int pageSize) {
+    private static int validateAndCalculatePageShifts(int pageSize, int alignment) {
         if (pageSize < MIN_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + ")");
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + ')');
         }
 
         if ((pageSize & pageSize - 1) != 0) {
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2)");
+        }
+
+        if (pageSize < alignment) {
+            throw new IllegalArgumentException("Alignment cannot be greater than page size. " +
+                    "Alignment: " + alignment + ", page size: " + pageSize + '.');
         }
 
         // Logarithm base 2. At this point we know that pageSize is a power of two.

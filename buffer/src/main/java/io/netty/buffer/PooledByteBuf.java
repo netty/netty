@@ -52,7 +52,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
-        init0(chunk, null, 0, chunk.offset, length, length, null);
+        init0(chunk, null, 0, 0, length, length, null);
     }
 
     private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
