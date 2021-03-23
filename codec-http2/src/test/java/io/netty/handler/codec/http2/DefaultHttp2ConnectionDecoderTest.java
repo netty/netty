@@ -472,7 +472,6 @@ public class DefaultHttp2ConnectionDecoderTest {
         } catch (RuntimeException cause) {
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(stream), eq(data), eq(padding), eq(true));
-            verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
             assertEquals(0, localFlow.unconsumedBytes(stream));
         } finally {
