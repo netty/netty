@@ -141,9 +141,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     static final int RUN_OFFSET_SHIFT = SIZE_BIT_LENGTH + SIZE_SHIFT;
 
     final PoolArena<T> arena;
+    final Object base;
     final T memory;
     final boolean unpooled;
-    final int offset;
 
     /**
      * store the first page and last page of each avail run
@@ -181,14 +181,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     @SuppressWarnings("unchecked")
-    PoolChunk(PoolArena<T> arena, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx, int offset) {
+    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
         unpooled = false;
         this.arena = arena;
+        this.base = base;
         this.memory = memory;
         this.pageSize = pageSize;
         this.pageShifts = pageShifts;
         this.chunkSize = chunkSize;
-        this.offset = offset;
         freeBytes = chunkSize;
 
         runsAvail = newRunsAvailqueueArray(maxPageIdx);
@@ -204,11 +204,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     /** Creates a special chunk that is not pooled. */
-    PoolChunk(PoolArena<T> arena, T memory, int size, int offset) {
+    PoolChunk(PoolArena<T> arena, Object base, T memory, int size) {
         unpooled = true;
         this.arena = arena;
+        this.base = base;
         this.memory = memory;
-        this.offset = offset;
         pageSize = 0;
         pageShifts = 0;
         runsAvailMap = null;
@@ -569,9 +569,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
         assert s.doNotDestroy;
         assert reqCapacity <= s.elemSize;
 
-        buf.init(this, nioBuffer, handle,
-                 (runOffset << pageShifts) + bitmapIdx * s.elemSize + offset,
-                 reqCapacity, s.elemSize, threadCache);
+        int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
+        buf.init(this, nioBuffer, handle, offset, reqCapacity, s.elemSize, threadCache);
     }
 
     @Override

@@ -46,6 +46,7 @@ final class PlatformDependent0 {
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR_HANDLE;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final MethodHandle ALLOCATE_ARRAY_HANDLE;
+    private static final Method ALIGN_SLICE;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
 
@@ -351,6 +352,21 @@ final class PlatformDependent0 {
             ALLOCATE_ARRAY_HANDLE = allocateArrayHandle;
         }
 
+        if (javaVersion() > 9) {
+            ALIGN_SLICE = (Method) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            ALIGN_SLICE = null;
+        }
+
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR_HANDLE != null ? "available" : "unavailable");
     }
@@ -412,6 +428,20 @@ final class PlatformDependent0 {
         // Just use 1 to make it safe to use in all cases:
         // See: https://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
         return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
+    }
+
+    static boolean hasAlignSliceMethod() {
+        return ALIGN_SLICE != null;
+    }
+
+    static ByteBuffer alignSlice(ByteBuffer buffer, int alignment) {
+        try {
+            return (ByteBuffer) ALIGN_SLICE.invoke(buffer, alignment);
+        } catch (IllegalAccessException e) {
+            throw new Error(e);
+        } catch (InvocationTargetException e) {
+            throw new Error(e);
+        }
     }
 
     static boolean hasAllocateArrayMethod() {

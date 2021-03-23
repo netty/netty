@@ -104,26 +104,6 @@ public class PoolArenaTest {
     }
 
     @Test
-    public void testDirectArenaOffsetCacheLine() throws Exception {
-        assumeTrue(PlatformDependent.hasUnsafe());
-        int capacity = 5;
-        int alignment = 128;
-
-        for (int i = 0; i < 1000; i++) {
-            ByteBuffer bb = PlatformDependent.useDirectBufferNoCleaner()
-                    ? PlatformDependent.allocateDirectNoCleaner(capacity + alignment)
-                    : ByteBuffer.allocateDirect(capacity + alignment);
-
-            PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 512, 9, 512, alignment);
-            int offset = arena.offsetCacheLine(bb);
-            long address = PlatformDependent.directBufferAddress(bb);
-
-            Assert.assertEquals(0, (offset + address) & (alignment - 1));
-            PlatformDependent.freeDirectBuffer(bb);
-        }
-    }
-
-    @Test
     public void testAllocationCounter() {
         final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
                 true,   // preferDirect
