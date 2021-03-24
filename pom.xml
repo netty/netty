@@ -97,10 +97,12 @@
     <cargoTarget />
     <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
     <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
+    <extraCmakeFlags />
     <extraCflags />
     <extraCxxflags />
     <extraLdflags />
     <extraConfigureArg />
+    <extraConfigureArg2 />
     <!-- We need 10.12 as minimum to compile quiche and use it.
          Anything below will fail when trying to load quiche with:
          Symbol not found: ___isPlatformVersionAtLeast
@@ -108,6 +110,7 @@
     <macosxDeploymentTarget />
     <test.argLine>-D_</test.argLine>
     <bundleNativeCode />
+    <crossCompile />
   </properties>
   <profiles>
     <profile>
@@ -181,6 +184,34 @@
         <libquiche>libquiche.a</libquiche>
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-aarch64</id>
+      <properties>
+        <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
+        <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
+        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch_64</bundleNativeCode>
+        <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
+        <jni.classifier>linux-aarch_64</jni.classifier>
+        <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
+        <extraConfigureArg2>CC=aarch64-none-linux-gnu-gcc</extraConfigureArg2>
+        <extraCmakeFlags>-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=aarch64-none-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-none-linux-gnu-g++</extraCmakeFlags>
+        <!-- Don't run tests as we can't load the aarch64 lib on a x86_64 system -->
+        <skipTests>true</skipTests>
+        <crossCompile>true</crossCompile>
+        <quicheTarget>aarch64-unknown-linux-gnu</quicheTarget>
+        <cargoTarget>--target=${quicheTarget}</cargoTarget>
+        <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
       </properties>
     </profile>
     <profile>
@@ -317,6 +348,8 @@
                     <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
                     <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
                     <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                    <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                    <arg line="${extraCmakeFlags}" />
                     <arg value="-GNinja" />
                     <arg value="${boringsslSourceDir}" />
                   </exec>
@@ -403,7 +436,20 @@
                         <env key="OPT_LEVEL" value="3" />
                         <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                       </exec>
-                   </then>
+                    </then>
+                    <elseif>
+                     <equals arg1="${crossCompile}" arg2="true" />
+                      <then>
+                        <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                          <arg line="build --features &quot;ffi qlog&quot; --release" />
+                          <arg value="${cargoTarget}" />
+                          <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                          <!-- Lets enable frame-pointers so we can profile better -->
+                          <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
+                          <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
+                        </exec>
+                      </then>
+                    </elseif>
                     <else>
                       <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                         <arg line="build --features &quot;ffi qlog&quot; --release" />
@@ -731,6 +777,7 @@
               <libDirectory>${nativeLibOnlyDir}</libDirectory>
               <configureArgs>
                 <configureArg>${extraConfigureArg}</configureArg>
+                <configureArg>${extraConfigureArg2}</configureArg>
                 <configureArg>CFLAGS=${cflags}</configureArg>
                 <configureArg>LDFLAGS=${ldflags} ${extraLdflags}</configureArg>
                 <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
