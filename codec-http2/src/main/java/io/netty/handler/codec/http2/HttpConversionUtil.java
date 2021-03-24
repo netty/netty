@@ -268,6 +268,17 @@ public final class HttpConversionUtil {
         return toFullHttpRequest(streamId, http2Headers, alloc.buffer(), validateHttpHeaders);
     }
 
+    private static CharSequence extractPath(CharSequence method, Http2Headers headers) {
+        if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
+            // See https://tools.ietf.org/html/rfc7231#section-4.3.6
+            return requireNonNull(headers.authority(),
+                    "authority header cannot be null in the conversion to HTTP/1.x");
+        } else {
+            return requireNonNull(headers.path(),
+                    "path header cannot be null in conversion to HTTP/1.x");
+        }
+    }
+
     /**
      * Create a new object to contain the request data
      *
@@ -286,8 +297,7 @@ public final class HttpConversionUtil {
         // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = requireNonNull(http2Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = requireNonNull(http2Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final CharSequence path = extractPath(method, http2Headers);
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
                         .toString()), path.toString(), content, validateHttpHeaders);
         try {
@@ -319,8 +329,7 @@ public final class HttpConversionUtil {
         // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = requireNonNull(http2Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = requireNonNull(http2Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final CharSequence path = extractPath(method, http2Headers);
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
                 path.toString(), validateHttpHeaders);
         try {
