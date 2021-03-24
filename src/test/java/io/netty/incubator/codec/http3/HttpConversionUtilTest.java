@@ -44,11 +44,14 @@ public class HttpConversionUtilTest {
 
     @Test
     public void connectNoPath() throws Exception {
+        String authority = "netty.io:80";
         Http3Headers headers = new DefaultHttp3Headers();
+        headers.authority(authority);
         headers.method(HttpMethod.CONNECT.asciiName());
         HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
         assertNotNull(request);
-        assertEquals("/", request.uri());
+        assertEquals(authority, request.uri());
+        assertEquals(authority, request.headers().get(HOST));
     }
 
     @Test

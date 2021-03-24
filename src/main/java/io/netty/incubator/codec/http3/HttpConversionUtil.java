@@ -197,12 +197,14 @@ public final class HttpConversionUtil {
         return msg;
     }
 
-    private static String extractPath(CharSequence method, Http3Headers headers) {
+    private static CharSequence extractPath(CharSequence method, Http3Headers headers) {
         if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
-            return "/";
+            // See https://tools.ietf.org/html/rfc7231#section-4.3.6
+            return checkNotNull(headers.authority(),
+                    "authority header cannot be null in the conversion to HTTP/1.x");
         } else {
             return checkNotNull(headers.path(),
-                    "path header cannot be null in conversion to HTTP/1.x").toString();
+                    "path header cannot be null in conversion to HTTP/1.x");
         }
     }
 
@@ -225,9 +227,9 @@ public final class HttpConversionUtil {
         // HTTP/3 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = checkNotNull(http3Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final String path = extractPath(method, http3Headers);
+        final CharSequence path = extractPath(method, http3Headers);
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
-                        .toString()), path, content, validateHttpHeaders);
+                        .toString()), path.toString(), content, validateHttpHeaders);
         try {
             addHttp3ToHttpHeaders(streamId, http3Headers, msg, false);
         } catch (Http3Exception e) {
@@ -258,9 +260,9 @@ public final class HttpConversionUtil {
         // HTTP/3 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
         final CharSequence method = checkNotNull(http3Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final String path = extractPath(method, http3Headers);
+        final CharSequence path = extractPath(method, http3Headers);
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
-                path, validateHttpHeaders);
+                path.toString(), validateHttpHeaders);
         try {
             addHttp3ToHttpHeaders(streamId, http3Headers, msg.headers(), msg.protocolVersion(), false, true);
         } catch (Http3Exception e) {
