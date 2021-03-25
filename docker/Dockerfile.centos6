@@ -7,11 +7,8 @@ ENV CMAKE_VERSION $CMAKE_VERSION_BASE.2
 ENV NINJA_VERSION 1.7.2
 ENV GO_VERSION 1.9.3
 
-# Update as we need to use the vault now.
+# Update yum repos as we need to use the vault now.
 RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/vault.centos.org\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
-
-# We want to have git 2.x for the maven scm plugin
-RUN yum install -y http://opensource.wandisco.com/centos/6/git/x86_64/wandisco-git-release-6-1.noarch.rpm
 
 # install dependencies
 RUN yum install -y \
@@ -33,25 +30,17 @@ RUN yum install -y \
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
+RUN yum install -y centos-release-scl
+# Update repository urls as we need to use the vault now.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^# baseurl=http:\/\/mirror.centos.org\/centos\/6\//baseurl=https:\/\/vault.centos.org\/centos\/6\//g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/6\//baseurl=https:\/\/vault.centos.org\/centos\/6\//g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+
+RUN yum -y install devtoolset-7-gcc devtoolset-7-gcc-c++
+RUN echo 'source /opt/rh/devtoolset-7/enable' >> ~/.bashrc
+
 RUN wget -q https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-Linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-Linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-Linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-Linux-x86_64/bin:$PATH' >> ~/.bashrc
-
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
-
 RUN wget -q https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
-
-RUN wget -q https://linuxsoft.cern.ch/cern/scl/RPM-GPG-KEY-cern && mv RPM-GPG-KEY-cern /etc/pki/rpm-gpg/
-RUN wget -q https://linuxsoft.cern.ch/cern/scl/slc6-scl.repo && mv slc6-scl.repo /etc/yum.repos.d
-RUN yum install -y devtoolset-3-gcc-c++
-RUN echo 'source /opt/rh/devtoolset-3/enable' >> ~/.bashrc
-
-# This is workaround to be able to compile boringssl with -DOPENSSL_C11_ATOMIC as while we use a recent gcc installation it still needs some
-# help to define static_assert(...) as otherwise the compilation will fail due the system installed assert.h which missed this definition. 
-run mkdir ~/.include
-run echo '#include "/usr/include/assert.h"' >>  ~/.include/assert.h
-run echo '#define static_assert _Static_assert'  >>  ~/.include/assert.h
-run echo 'export C_INCLUDE_PATH="$HOME/.include/"' >>  ~/.bashrc
-# Needed to compile against old glibc
-run echo 'export LDFLAGS=-lrt' >>  ~/.bashrc
 
 ARG java_version=adopt@1.8.0-275
 ENV JAVA_VERSION $java_version
@@ -72,6 +61,15 @@ RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
 # Prepare our own build
 ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
 ENV JAVA_HOME /jdk/
+
+# This is workaround to be able to compile boringssl with -DOPENSSL_C11_ATOMIC as while we use a recent gcc installation it still needs some
+# help to define static_assert(...) as otherwise the compilation will fail due the system installed assert.h which missed this definition.
+RUN mkdir ~/.include
+RUN echo '#include "/usr/include/assert.h"' >>  ~/.include/assert.h
+RUN echo '#define static_assert _Static_assert'  >>  ~/.include/assert.h
+RUN echo 'export C_INCLUDE_PATH="$HOME/.include/"' >>  ~/.bashrc
+# Needed to compile against old glibc
+RUN echo 'export LDFLAGS=-lrt' >>  ~/.bashrc
 
 COPY ./pom.xml $SOURCE_DIR/pom.xml
 WORKDIR $SOURCE_DIR
