@@ -246,8 +246,8 @@
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
         <jni.platform>linux</jni.platform>
-        <exe.compiler>aarch64-linux-gnu-gcc</exe.compiler>
-        <exe.archiver>aarch64-linux-gnu-ar</exe.archiver>
+        <exe.compiler>aarch64-none-linux-gnu-gcc</exe.compiler>
+        <exe.archiver>arch64-none-linux-gnu-ar</exe.archiver>
       </properties>
       <build>
         <plugins>
