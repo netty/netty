@@ -456,7 +456,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.2.Final</version>
+        <version>0.0.3.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
