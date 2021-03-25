@@ -616,27 +616,27 @@ public final class PlatformDependent {
         PlatformDependent0.putByte(data, offset, value);
     }
 
-    public static void putShort(Object data, int offset, short value) {
+    public static void putShort(Object data, long offset, short value) {
         PlatformDependent0.putShort(data, offset, value);
     }
 
-    public static void putChar(Object data, int offset, char value) {
+    public static void putChar(Object data, long offset, char value) {
         PlatformDependent0.putChar(data, offset, value);
     }
 
-    public static void putInt(Object data, int offset, int value) {
+    public static void putInt(Object data, long offset, int value) {
         PlatformDependent0.putInt(data, offset, value);
     }
 
-    public static void putFloat(Object data, int offset, float value) {
+    public static void putFloat(Object data, long offset, float value) {
         PlatformDependent0.putFloat(data, offset, value);
     }
 
-    public static void putLong(Object data, int offset, long value) {
+    public static void putLong(Object data, long offset, long value) {
         PlatformDependent0.putLong(data, offset, value);
     }
 
-    public static void putDouble(Object data, int offset, double value) {
+    public static void putDouble(Object data, long offset, double value) {
         PlatformDependent0.putDouble(data, offset, value);
     }
 
