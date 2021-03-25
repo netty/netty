@@ -23,8 +23,8 @@
 #include "netty_quic_boringssl.h"
 #include "netty_quic.h"
 
-// Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
-#ifdef NETTY_BUILD_STATIC
+// Add define if NETTY_QUIC_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
+#ifdef NETTY_QUIC_BUILD_STATIC
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
@@ -36,6 +36,10 @@ static jclass    quiche_logger_class;
 static jmethodID quiche_logger_class_log;
 static jobject   quiche_logger;
 static JavaVM     *global_vm = NULL;
+static char* staticPackagePrefix = NULL;
+
+// Add extern declaration to let it compile with -std=c99 
+extern char* strdup(const char*);
 
 jint quic_get_java_env(JNIEnv **env)
 {
@@ -596,6 +600,9 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     }
     boringsslLoaded = 1;
 
+    if (packagePrefix) {
+        staticPackagePrefix = strdup(packagePrefix);
+    }
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
@@ -615,18 +622,20 @@ done:
     return ret;
 }
 
-static void netty_quiche_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    netty_boringssl_JNI_OnUnload(env, packagePrefix);
+static void netty_quiche_JNI_OnUnload(JNIEnv* env) {
+    netty_boringssl_JNI_OnUnload(env, staticPackagePrefix);
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
 
-    netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
-    netty_jni_util_unregister_natives(env, packagePrefix, QUICHE_CLASSNAME);
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, STATICALLY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, QUICHE_CLASSNAME);
 
     if (quiche_logger != NULL) {
         (*env)->DeleteGlobalRef(env, quiche_logger);
         quiche_logger = NULL;
     }
+    free(staticPackagePrefix);
+    staticPackagePrefix = NULL;
 }
 
 // Invoked by the JVM when statically linked
@@ -646,7 +655,7 @@ JNIEXPORT void JNI_OnUnload_netty_quiche(JavaVM* vm, void* reserved) {
     global_vm = NULL;
 }
 
-#ifndef NETTY_BUILD_STATIC
+#ifndef NETTY_QUIC_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     global_vm = vm;
     return netty_jni_util_JNI_OnLoad(vm, reserved, LIBRARYNAME, netty_quiche_JNI_OnLoad);
@@ -656,4 +665,4 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_quiche_JNI_OnUnload);
     global_vm = NULL;
 }
-#endif /* NETTY_BUILD_STATIC */
+#endif /* NETTY_QUIC_BUILD_STATIC */
