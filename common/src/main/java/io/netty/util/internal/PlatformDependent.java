@@ -416,8 +416,32 @@ public final class PlatformDependent {
         return PlatformDependent0.getObject(object, fieldOffset);
     }
 
+    public static byte getByte(Object object, long fieldOffset) {
+        return PlatformDependent0.getByte(object, fieldOffset);
+    }
+
+    public static short getShort(Object object, long fieldOffset) {
+        return PlatformDependent0.getShort(object, fieldOffset);
+    }
+
+    public static char getChar(Object object, long fieldOffset) {
+        return PlatformDependent0.getChar(object, fieldOffset);
+    }
+
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
+    }
+
+    public static float getFloat(Object object, long fieldOffset) {
+        return PlatformDependent0.getFloat(object, fieldOffset);
+    }
+
+    public static long getLong(Object object, long fieldOffset) {
+        return PlatformDependent0.getLong(object, fieldOffset);
+    }
+
+    public static double getDouble(Object object, long fieldOffset) {
+        return PlatformDependent0.getDouble(object, fieldOffset);
     }
 
     public static int getIntVolatile(long address) {
@@ -592,6 +616,30 @@ public final class PlatformDependent {
         PlatformDependent0.putByte(data, offset, value);
     }
 
+    public static void putShort(Object data, int offset, short value) {
+        PlatformDependent0.putShort(data, offset, value);
+    }
+
+    public static void putChar(Object data, int offset, char value) {
+        PlatformDependent0.putChar(data, offset, value);
+    }
+
+    public static void putInt(Object data, int offset, int value) {
+        PlatformDependent0.putInt(data, offset, value);
+    }
+
+    public static void putFloat(Object data, int offset, float value) {
+        PlatformDependent0.putFloat(data, offset, value);
+    }
+
+    public static void putLong(Object data, int offset, long value) {
+        PlatformDependent0.putLong(data, offset, value);
+    }
+
+    public static void putDouble(Object data, int offset, double value) {
+        PlatformDependent0.putDouble(data, offset, value);
+    }
+
     public static void putShort(byte[] data, int index, short value) {
         PlatformDependent0.putShort(data, index, value);
     }
@@ -625,12 +673,20 @@ public final class PlatformDependent {
                                       dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
+    public static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
+        PlatformDependent0.copyMemory(src, srcOffset, dst, dstOffset, length);
+    }
+
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
         PlatformDependent0.copyMemory(null, srcAddr, dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
     public static void setMemory(byte[] dst, int dstIndex, long bytes, byte value) {
         PlatformDependent0.setMemory(dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, bytes, value);
+    }
+
+    public static void setMemory(Object base, long offset, long length, byte value) {
+        PlatformDependent0.setMemory(base, offset, length, value);
     }
 
     public static void setMemory(long address, long bytes, byte value) {

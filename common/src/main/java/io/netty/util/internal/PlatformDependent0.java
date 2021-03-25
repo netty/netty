@@ -485,12 +485,32 @@ final class PlatformDependent0 {
         return UNSAFE.getObject(object, fieldOffset);
     }
 
+    static byte getByte(Object object, long fieldOffset) {
+        return UNSAFE.getByte(object, fieldOffset);
+    }
+
+    static short getShort(Object object, long fieldOffset) {
+        return UNSAFE.getShort(object, fieldOffset);
+    }
+
+    static char getChar(Object object, long fieldOffset) {
+        return UNSAFE.getChar(object, fieldOffset);
+    }
+
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
     }
 
-    private static long getLong(Object object, long fieldOffset) {
+    static float getFloat(Object object, long fieldOffset) {
+        return UNSAFE.getFloat(object, fieldOffset);
+    }
+
+    static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
+    }
+
+    static double getDouble(Object object, long fieldOffset) {
+        return UNSAFE.getDouble(object, fieldOffset);
     }
 
     static long objectFieldOffset(Field field) {
@@ -577,12 +597,36 @@ final class PlatformDependent0 {
         UNSAFE.putShort(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
+    static void putShort(Object data, long offset, short value) {
+        UNSAFE.putShort(data, offset, value);
+    }
+
+    static void putChar(Object data, long offset, char value) {
+        UNSAFE.putChar(data, offset, value);
+    }
+
     static void putInt(byte[] data, int index, int value) {
         UNSAFE.putInt(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
+    static void putInt(Object data, long offset, int value) {
+        UNSAFE.putInt(data, offset, value);
+    }
+
+    static void putFloat(Object data, long offset, float value) {
+        UNSAFE.putFloat(data, offset, value);
+    }
+
     static void putLong(byte[] data, int index, long value) {
         UNSAFE.putLong(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putLong(Object data, long offset, long value) {
+        UNSAFE.putLong(data, offset, value);
+    }
+
+    static void putDouble(Object data, long offset, double value) {
+        UNSAFE.putDouble(data, offset, value);
     }
 
     static void putObject(Object o, long offset, Object x) {
