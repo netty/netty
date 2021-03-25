@@ -307,6 +307,7 @@
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                     <configureArg>--host=aarch64-linux-gnu</configureArg>
+                    <configureArg>CC=aarch64-none-linux-gnu-gcc</configureArg>
                   </configureArgs>
                 </configuration>
                 <goals>
