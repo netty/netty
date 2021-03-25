@@ -16,8 +16,6 @@ services:
     volumes:
       - ~/.ssh:/root/.ssh:delegated
       - ~/.gnupg:/root/.gnupg:delegated
-      - ~/.gitconfig:/root/.gitconfig:delegated
-      - ~/.gitignore:/root/.gitignore:delegated
       - ..:/code:delegated
     working_dir: /code
 
