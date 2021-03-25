@@ -1,0 +1,76 @@
+name: Verify native library loading
+
+on:
+  push:
+    branches: [ main ]
+
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  install-jars-linux-aarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: pr-linux-x86_64-docker-cache-{hash}
+          restore-keys: |
+            pr-linux-x86_64-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose -f docker/docker-compose.centos-7.yaml build
+
+      - name: Build project and install jars
+        run: docker-compose -f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-install
+
+      - name: Upload the maven repository
+        uses: actions/upload-artifact@v2
+        with:
+          name: maven-repository
+          # We only need the netty jars.
+          path: ~/.m2/repository/io/netty/
+          if-no-files-found: error
+
+  load-native-linux-aarch64:
+    # The host should always be Linux
+    runs-on: ubuntu-latest
+    needs: [ install-jars-linux-aarch64 ]
+    steps:
+      - uses: actions/checkout@v2.1.0
+
+      - name: Download the maven repository
+        uses: actions/download-artifact@v2
+        with:
+          name:  maven-repository
+          path: /home/runner/jars
+
+      - uses: uraimo/run-on-arch-action@v2.0.9
+        name: Check native loading
+        id: runcmd
+        with:
+          arch: aarch64
+          distro: ubuntu18.04
+
+          # Not required, but speeds up builds by storing container images in
+          # a GitHub package registry.
+          githubToken: ${{ github.token }}
+
+          # Mount the .m2/repository
+          dockerRunArgs: |
+            --volume "/home/runner/jars:/root/jars"
+
+          # Install dependencies
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y openjdk-11-jdk
+
+          # Check if we can load the native code on aarch64
+          run: |
+            .github/scripts/check_load_native.sh /root/jars io.netty.incubator.codec.quic.Quic ensureAvailability
