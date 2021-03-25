@@ -42,7 +42,7 @@ jobs:
 
   build-linux-aarch64:
     runs-on: ubuntu-latest
-    name: linux-x86_64
+    name: linux-aarch64
     steps:
       - uses: actions/checkout@v2
 
