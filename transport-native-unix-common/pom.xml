@@ -247,7 +247,7 @@
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
         <jni.platform>linux</jni.platform>
         <exe.compiler>aarch64-none-linux-gnu-gcc</exe.compiler>
-        <exe.archiver>arch64-none-linux-gnu-ar</exe.archiver>
+        <exe.archiver>aarch64-none-linux-gnu-ar</exe.archiver>
       </properties>
       <build>
         <plugins>
