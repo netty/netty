@@ -1836,7 +1836,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         // Replace the first readable component with a new slice.
-        int trimmedBytes = readerIndex - c.offset;
+        int trimmedBytes = 0;
+        if (c != null) {
+            trimmedBytes = readerIndex - c.offset;
+        }
         c.offset = 0;
         c.endOffset -= readerIndex;
         c.srcAdjustment += readerIndex;
