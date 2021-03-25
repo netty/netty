@@ -722,13 +722,17 @@ done:
     return ret;
 }
 
-static void netty_epoll_native_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    netty_epoll_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
+static void netty_epoll_native_JNI_OnUnload(JNIEnv* env) {
+    netty_epoll_linuxsocket_JNI_OnUnLoad(env, staticPackagePrefix);
 
     if (register_unix_called == 1) {
         register_unix_called = 0;
         netty_unix_unregister(env, staticPackagePrefix);
     }
+
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, STATICALLY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, NATIVE_CLASSNAME);
+
     if (staticPackagePrefix != NULL) {
         free((void *) staticPackagePrefix);
         staticPackagePrefix = NULL;
@@ -741,9 +745,6 @@ static void netty_epoll_native_JNI_OnUnload(JNIEnv* env, const char* packagePref
     packetPortFieldId = NULL;
     packetMemoryAddressFieldId = NULL;
     packetCountFieldId = NULL;
-
-    netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
-    netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
 }
 
 // Invoked by the JVM when statically linked

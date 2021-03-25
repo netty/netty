@@ -36,6 +36,7 @@ static jclass dnsResolverClass = NULL;
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 static jmethodID dnsResolverMethodId = NULL;
+static char* staticPackagePrefix = NULL;
 
 // JNI Registered Methods Begin
 
@@ -150,10 +151,15 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
 
 // JNI Method Registration Table End
 
-static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
-    netty_jni_util_unregister_natives(env, packagePrefix, STREAM_CLASSNAME);
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, STREAM_CLASSNAME);
+
+    if (staticPackagePrefix != NULL) {
+        free((void *) staticPackagePrefix);
+        staticPackagePrefix = NULL;
+    }
 }
 
 static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
@@ -182,6 +188,10 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* 
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
+
+    if (packagePrefix != NULL) {
+        staticPackagePrefix = strdup(packagePrefix);
+    }
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
