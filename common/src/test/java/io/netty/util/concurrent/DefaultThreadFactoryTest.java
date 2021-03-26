@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultThreadFactoryTest {
     @Test(timeout = 2000)
@@ -109,24 +111,6 @@ public class DefaultThreadFactoryTest {
         final ThreadGroup sticky = new ThreadGroup("sticky");
         runStickyThreadGroupTest(
                 () -> new DefaultThreadFactory("test", false, Thread.NORM_PRIORITY, sticky),
-                sticky);
-    }
-
-    // test that when DefaultThreadFactory is constructed it is sticky to the thread group from the thread group of the
-    // thread that created it
-    @Test(timeout = 2000)
-    public void testDefaultThreadFactoryInheritsThreadGroup() throws InterruptedException {
-        final ThreadGroup sticky = new ThreadGroup("sticky");
-
-        runStickyThreadGroupTest(
-                () -> {
-                    final AtomicReference<DefaultThreadFactory> factory =
-                            new AtomicReference<>();
-                    final Thread thread = new Thread(sticky, () -> factory.set(new DefaultThreadFactory("test")));
-                    thread.start();
-                    thread.join();
-                    return factory.get();
-                },
                 sticky);
     }
 
@@ -215,5 +199,34 @@ public class DefaultThreadFactoryTest {
         second.join();
 
         assertEquals(secondGroup, secondCaptured.get());
+    }
+
+    // test that when DefaultThreadFactory is constructed without a sticky thread group, threads
+    // created by it inherit the correct thread group
+    @Test(timeout = 2000)
+    public void testCurrentThreadGroupIsUsed() throws InterruptedException {
+        final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<>();
+        final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<>();
+
+        final ThreadGroup group = new ThreadGroup("first");
+        assertFalse(group.isDestroyed());
+        final Thread first = new Thread(group, () -> {
+            final Thread current = Thread.currentThread();
+            firstCaptured.set(current.getThreadGroup());
+            factory.set(new DefaultThreadFactory("sticky", false));
+        });
+        first.start();
+        first.join();
+        // Destroy the group now
+        group.destroy();
+        assertTrue(group.isDestroyed());
+        assertEquals(group, firstCaptured.get());
+
+        ThreadGroup currentThreadGroup = Thread.currentThread().getThreadGroup();
+        Thread second = factory.get().newThread(() -> {
+            // NOOP.
+        });
+        second.join();
+        assertEquals(currentThreadGroup, currentThreadGroup);
     }
 }
