@@ -59,6 +59,10 @@ final class LinuxSocket extends Socket {
         return Native.recvmmsg(intValue(), ipv6, msgs, offset, len);
     }
 
+    int recvmsg(NativeDatagramPacketArray.NativeDatagramPacket msg) throws IOException {
+        return Native.recvmsg(intValue(), ipv6, msg);
+    }
+
     void setTimeToLive(int ttl) throws IOException {
         setTimeToLive(intValue(), ttl);
     }
@@ -286,6 +290,14 @@ final class LinuxSocket extends Socket {
         setIpMulticastLoop(intValue(), ipv6, loopbackModeDisabled ? 0 : 1);
     }
 
+    boolean isUdpGro() throws IOException {
+        return isUdpGro(intValue()) != 0;
+    }
+
+    void setUdpGro(boolean gro) throws IOException {
+        setUdpGro(intValue(), gro ? 1 : 0);
+    }
+
     long sendFile(DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
         // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
         // the FileChannel field via JNI.
@@ -389,4 +401,6 @@ final class LinuxSocket extends Socket {
     private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
     private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
+    private static native int isUdpGro(int fd) throws IOException;
+    private static native void setUdpGro(int fd, int gro) throws IOException;
 }
