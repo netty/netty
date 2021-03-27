@@ -465,25 +465,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 try {
                     boolean connected = isConnected();
                     do {
-                        ByteBuf byteBuf = allocHandle.allocate(allocator);
                         final boolean read;
                         int datagramSize = config().getMaxDatagramPayloadSize();
 
+                        ByteBuf byteBuf = allocHandle.allocate(allocator);
                         // Only try to use recvmmsg if its really supported by the running system.
                         int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
                                 datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize :
                                 0;
-
                         try {
                             if (numDatagram <= 1) {
                                 if (!connected || config.isUdpGro()) {
-                                    read = recvmsg(allocHandle, byteBuf);
+                                    read = recvmsg(allocHandle, cleanDatagramPacketArray(), byteBuf);
                                 } else {
                                     read = connectedRead(allocHandle, byteBuf, datagramSize);
                                 }
                             } else {
                                 // Try to use scattering reads via recvmmsg(...) syscall.
-                                read = scatteringRead(allocHandle, byteBuf, datagramSize, numDatagram);
+                                read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
+                                        byteBuf, datagramSize, numDatagram);
                             }
                         } catch (NativeIoException e) {
                             if (connected) {
@@ -597,16 +597,33 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-    private boolean recvmsg(EpollRecvByteAllocatorHandle allocHandle, ByteBuf byteBuf) throws IOException {
-        RecyclableArrayList bufferPackets = null;
+    private static void processPacket(ChannelPipeline pipeline, EpollRecvByteAllocatorHandle handle,
+                                      int bytesRead, DatagramPacket packet) {
+        handle.lastBytesRead(bytesRead);
+        handle.incMessagesRead(1);
+        pipeline.fireChannelRead(packet);
+    }
+
+    private static void processPacketList(ChannelPipeline pipeline, EpollRecvByteAllocatorHandle handle,
+                                          int bytesRead, RecyclableArrayList packetList) {
+        int messagesRead = packetList.size();
+        handle.lastBytesRead(bytesRead);
+        handle.incMessagesRead(messagesRead);
+        for (int i = 0; i < messagesRead; i++) {
+            pipeline.fireChannelRead(packetList.set(i, Unpooled.EMPTY_BUFFER));
+        }
+    }
+
+    private boolean recvmsg(EpollRecvByteAllocatorHandle allocHandle,
+                            NativeDatagramPacketArray array, ByteBuf byteBuf) throws IOException {
+        RecyclableArrayList datagramPackets = null;
         try {
             int writable = byteBuf.writableBytes();
 
-            NativeDatagramPacketArray array = cleanDatagramPacketArray();
             boolean added = array.addWritable(byteBuf, byteBuf.writerIndex(), writable);
             assert added;
 
-            allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+            allocHandle.attemptedBytesRead(writable);
 
             NativeDatagramPacketArray.NativeDatagramPacket msg = array.packets()[0];
 
@@ -619,41 +636,34 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             InetSocketAddress local = localAddress();
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
             if (!(packet instanceof SegmentedDatagramPacket)) {
-                allocHandle.lastBytesRead(bytesReceived);
-                allocHandle.incMessagesRead(1);
-                pipeline().fireChannelRead(packet);
+                processPacket(pipeline(), allocHandle, bytesReceived, packet);
                 byteBuf = null;
             } else {
                 // Its important that we process all received data out of the NativeDatagramPacketArray
                 // before we call fireChannelRead(...). This is because the user may call flush()
                 // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
-                bufferPackets = RecyclableArrayList.newInstance();
-                addDatagramPacketToOut(packet, bufferPackets);
+                datagramPackets = RecyclableArrayList.newInstance();
+                addDatagramPacketToOut(packet, datagramPackets);
+                // null out byteBuf as addDatagramPacketToOut did take ownership of the ByteBuf / packet and transfered
+                // it into the RecyclableArrayList.
                 byteBuf = null;
 
-                allocHandle.lastBytesRead(bytesReceived);
-                allocHandle.incMessagesRead(bufferPackets.size());
-
-                for (int i = 0; i < bufferPackets.size(); i++) {
-                    pipeline().fireChannelRead(bufferPackets.set(i, Unpooled.EMPTY_BUFFER));
-                }
-                bufferPackets.recycle();
-                bufferPackets = null;
+                processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
+                datagramPackets.recycle();
+                datagramPackets = null;
             }
 
             return true;
         } finally {
-            releaseAndRecycle(byteBuf, bufferPackets);
+            releaseAndRecycle(byteBuf, datagramPackets);
         }
     }
 
-    private boolean scatteringRead(EpollRecvByteAllocatorHandle allocHandle,
+    private boolean scatteringRead(EpollRecvByteAllocatorHandle allocHandle, NativeDatagramPacketArray array,
             ByteBuf byteBuf, int datagramSize, int numDatagram) throws IOException {
-        RecyclableArrayList bufferPackets = null;
+        RecyclableArrayList datagramPackets = null;
         try {
             int offset = byteBuf.writerIndex();
-            NativeDatagramPacketArray array = cleanDatagramPacketArray();
-
             for (int i = 0; i < numDatagram;  i++, offset += datagramSize) {
                 if (!array.addWritable(byteBuf, offset, datagramSize)) {
                     break;
@@ -676,9 +686,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(byteBuf, local);
                 if (!(packet instanceof SegmentedDatagramPacket)) {
-                    allocHandle.lastBytesRead(datagramSize);
-                    allocHandle.incMessagesRead(1);
-                    pipeline().fireChannelRead(packet);
+                    processPacket(pipeline(), allocHandle, datagramSize, packet);
                     byteBuf = null;
                     return true;
                 }
@@ -686,25 +694,21 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             // Its important that we process all received data out of the NativeDatagramPacketArray
             // before we call fireChannelRead(...). This is because the user may call flush()
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
-            bufferPackets = RecyclableArrayList.newInstance();
+            datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
                 DatagramPacket packet = packets[i].newDatagramPacket(byteBuf.readRetainedSlice(datagramSize), local);
-                addDatagramPacketToOut(packet, bufferPackets);
+                addDatagramPacketToOut(packet, datagramPackets);
             }
-
-            int messages = bufferPackets.size();
-            allocHandle.lastBytesRead(bytesReceived);
-            allocHandle.incMessagesRead(messages);
-
-            for (int i = 0; i < messages; i++) {
-                pipeline().fireChannelRead(bufferPackets.set(i, Unpooled.EMPTY_BUFFER));
-            }
+            // Ass we did use readRetainedSlice(...) before we should now release the byteBuf and null it out.
+            byteBuf.release();
             byteBuf = null;
-            bufferPackets.recycle();
-            bufferPackets = null;
+
+            processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
+            datagramPackets.recycle();
+            datagramPackets = null;
             return true;
         } finally {
-            releaseAndRecycle(byteBuf, bufferPackets);
+            releaseAndRecycle(byteBuf, datagramPackets);
         }
     }
 
