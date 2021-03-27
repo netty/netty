@@ -25,7 +25,7 @@ public final class QuicStreamAddress extends SocketAddress {
 
     private final long streamId;
 
-    QuicStreamAddress(long streamId) {
+    public QuicStreamAddress(long streamId) {
         this.streamId = streamId;
     }
 
