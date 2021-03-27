@@ -119,8 +119,8 @@ final class NativeDatagramPacketArray {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
                 int segmentSize = 0;
-                if (packet instanceof SegmentedDatagramPacket) {
-                    int seg = ((SegmentedDatagramPacket) packet).segmentSize();
+                if (packet instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
+                    int seg = ((io.netty.channel.unix.SegmentedDatagramPacket) packet).segmentSize();
                     // We only need to tell the kernel that we want to use UDP_SEGMENT if there are multiple
                     // segments in the packet.
                     if (buf.readableBytes() > seg) {
