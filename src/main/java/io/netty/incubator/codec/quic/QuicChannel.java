@@ -19,14 +19,122 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+
+import java.net.SocketAddress;
 
 /**
  * A QUIC {@link Channel}.
  */
 public interface QuicChannel extends Channel {
+
+    @Override
+    default ChannelFuture bind(SocketAddress localAddress) {
+        return pipeline().bind(localAddress);
+    }
+
+    @Override
+    default ChannelFuture connect(SocketAddress remoteAddress) {
+        return pipeline().connect(remoteAddress);
+    }
+
+    @Override
+    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return pipeline().connect(remoteAddress, localAddress);
+    }
+
+    @Override
+    default ChannelFuture disconnect() {
+        return pipeline().disconnect();
+    }
+
+    @Override
+    default ChannelFuture close() {
+        return pipeline().close();
+    }
+
+    @Override
+    default ChannelFuture deregister() {
+        return pipeline().deregister();
+    }
+
+    @Override
+    default ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline().bind(localAddress, promise);
+    }
+
+    @Override
+    default ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return pipeline().connect(remoteAddress, promise);
+    }
+
+    @Override
+    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline().connect(remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    default ChannelFuture disconnect(ChannelPromise promise) {
+        return pipeline().disconnect(promise);
+    }
+
+    @Override
+    default ChannelFuture close(ChannelPromise promise) {
+        return pipeline().close(promise);
+    }
+
+    @Override
+    default ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline().deregister(promise);
+    }
+
+    @Override
+    default ChannelFuture write(Object msg) {
+        return pipeline().write(msg);
+    }
+
+    @Override
+    default ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline().write(msg, promise);
+    }
+
+    @Override
+    default ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        return pipeline().writeAndFlush(msg, promise);
+    }
+
+    @Override
+    default ChannelFuture writeAndFlush(Object msg) {
+        return pipeline().writeAndFlush(msg);
+    }
+
+    @Override
+    default ChannelPromise newPromise() {
+        return pipeline().newPromise();
+    }
+
+    @Override
+    default ChannelProgressivePromise newProgressivePromise() {
+        return pipeline().newProgressivePromise();
+    }
+
+    @Override
+    default ChannelFuture newSucceededFuture() {
+        return pipeline().newSucceededFuture();
+    }
+
+    @Override
+    default ChannelFuture newFailedFuture(Throwable cause) {
+        return pipeline().newFailedFuture(cause);
+    }
+
+    @Override
+    default ChannelPromise voidPromise() {
+        return pipeline().voidPromise();
+    }
 
     @Override
     QuicChannel read();

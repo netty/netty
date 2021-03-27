@@ -24,7 +24,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.DefaultChannelId;
@@ -335,111 +334,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     @Override
     public ByteBufAllocator alloc() {
         return config.getAllocator();
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return pipeline.bind(localAddress);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return pipeline.connect(remoteAddress);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline.connect(remoteAddress, localAddress);
-    }
-
-    @Override
-    public ChannelFuture disconnect() {
-        return pipeline.disconnect();
-    }
-
-    @Override
-    public ChannelFuture close() {
-        return pipeline.close();
-    }
-
-    @Override
-    public ChannelFuture deregister() {
-        return pipeline.deregister();
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline.disconnect(promise);
-    }
-
-    @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        return pipeline.close(promise);
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(promise);
-    }
-
-    @Override
-    public ChannelFuture write(Object msg) {
-        return pipeline.write(msg);
-    }
-
-    @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline.write(msg, promise);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return pipeline.writeAndFlush(msg, promise);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg) {
-        return pipeline.writeAndFlush(msg);
-    }
-
-    @Override
-    public ChannelPromise newPromise() {
-        return pipeline.newPromise();
-    }
-
-    @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return pipeline.newProgressivePromise();
-    }
-
-    @Override
-    public ChannelFuture newSucceededFuture() {
-        return pipeline.newProgressivePromise();
-    }
-
-    @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
-        return pipeline.newFailedFuture(cause);
-    }
-
-    @Override
-    public ChannelPromise voidPromise() {
-        return pipeline.voidPromise();
     }
 
     @Override
