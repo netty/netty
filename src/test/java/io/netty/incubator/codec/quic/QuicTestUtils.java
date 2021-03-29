@@ -16,22 +16,18 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.SegmentedDatagramPacket;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
@@ -111,9 +107,9 @@ final class QuicTestUtils {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .activeMigration(false);
-        if (GROUP instanceof EpollEventLoopGroup && EpollSegmentedDatagramPacketAllocator.isSupported()) {
+        if (GROUP instanceof EpollEventLoopGroup) {
             builder.option(QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR,
-                    new EpollSegmentedDatagramPacketAllocator(10));
+                    EpollQuicUtils.newSegmentedAllocator(10));
         }
         return builder;
     }
