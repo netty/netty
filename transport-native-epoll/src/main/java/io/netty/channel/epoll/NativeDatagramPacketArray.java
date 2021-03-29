@@ -182,7 +182,7 @@ final class NativeDatagramPacketArray {
             }
         }
 
-        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress localAddress) throws UnknownHostException {
+        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress recipient) throws UnknownHostException {
             final InetAddress address;
             if (addrLen == ipv4Bytes.length) {
                 System.arraycopy(addr, 0, ipv4Bytes, 0, addrLen);
@@ -190,8 +190,14 @@ final class NativeDatagramPacketArray {
             } else {
                 address = Inet6Address.getByAddress(null, addr, scopeId);
             }
-            return new DatagramPacket(buffer.writerIndex(count),
-                    localAddress, new InetSocketAddress(address, port));
+            InetSocketAddress sender = new InetSocketAddress(address, port);
+            buffer.writerIndex(count);
+
+            // UDP_GRO
+            if (segmentSize > 0) {
+                return new SegmentedDatagramPacket(buffer, segmentSize, recipient, sender);
+            }
+            return new DatagramPacket(buffer, recipient, sender);
         }
     }
 }

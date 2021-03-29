@@ -263,6 +263,17 @@ public final class Native {
     private static native int recvmmsg0(
             int fd, boolean ipv6, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
+    static int recvmsg(int fd, boolean ipv6, NativeDatagramPacketArray.NativeDatagramPacket packet) throws IOException {
+        int res = recvmsg0(fd, ipv6, packet);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("recvmsg", res);
+    }
+
+    private static native int recvmsg0(
+            int fd, boolean ipv6, NativeDatagramPacketArray.NativeDatagramPacket msg);
+
     // epoll_event related
     public static native int sizeofEpollEvent();
     public static native int offsetofEpollData();

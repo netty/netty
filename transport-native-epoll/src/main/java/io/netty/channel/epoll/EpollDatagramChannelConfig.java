@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -52,7 +51,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
-                EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE);
+                EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
+                EpollChannelOption.UDP_GRO);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -103,6 +103,9 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             return (T) Integer.valueOf(getMaxDatagramPayloadSize());
         }
+        if (option == EpollChannelOption.UDP_GRO) {
+            return (T) Boolean.valueOf(isUdpGro());
+        }
         return super.getOption(option);
     }
 
@@ -141,6 +144,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             setIpRecvOrigDestAddr((Boolean) value);
         } else if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             setMaxDatagramPayloadSize((Integer) value);
+        } else if (option == EpollChannelOption.UDP_GRO) {
+            setUdpGro((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -526,6 +531,33 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      */
     public int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
+    }
+
+    private volatile boolean gro;
+
+    /**
+     * Enable / disable <a href="https://lwn.net/Articles/768995/">UDP_GRO</a>.
+     * @param gro {@code true} if {@code UDP_GRO} should be enabled, {@code false} otherwise.
+     * @return this.
+     */
+    public EpollDatagramChannelConfig setUdpGro(boolean gro) {
+        try {
+            ((EpollDatagramChannel) channel).socket.setUdpGro(gro);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+        this.gro = gro;
+        return this;
+    }
+
+    /**
+     * Returns if {@code UDP_GRO} is enabled.
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public boolean isUdpGro() {
+        // We don't do a syscall here but just return the cached value due a kernel bug:
+        // https://lore.kernel.org/netdev/20210325195614.800687-1-norman_maurer@apple.com/T/#u
+        return gro;
     }
 
     @Override
