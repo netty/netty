@@ -44,6 +44,8 @@ import java.util.concurrent.TimeUnit;
 
 public final class Http3ServerExample {
     private static final byte[] CONTENT = "Hello World!\r\n".getBytes(CharsetUtil.US_ASCII);
+    static final int PORT = 9999;
+
     private Http3ServerExample() { }
 
     public static void main(String... args) throws Exception {
@@ -108,7 +110,7 @@ public final class Http3ServerExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(9999)).sync().channel();
+                    .bind(new InetSocketAddress(PORT)).sync().channel();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();
