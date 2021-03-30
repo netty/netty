@@ -39,6 +39,8 @@
     <jarName>${project.artifactId}-${project.version}.jar</jarName>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
     <skipJapicmp>true</skipJapicmp>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
   </properties>
 
   <build>
