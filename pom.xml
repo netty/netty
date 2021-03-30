@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-quic</artifactId>
-  <version>0.0.11.Final-SNAPSHOT</version>
+  <version>0.0.10.Final-SNAPSHOT</version>
   <name>Netty/Incubator/Codec/Quic</name>
   <packaging>jar</packaging>
   <url>https://netty.io/</url>
