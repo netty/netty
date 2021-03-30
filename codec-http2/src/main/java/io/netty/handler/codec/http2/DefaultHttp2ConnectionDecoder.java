@@ -353,10 +353,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             boolean allowHalfClosedRemote = false;
+            boolean isTrailers = false;
             if (stream == null && !connection.streamMayHaveExisted(streamId)) {
                 stream = connection.remote().createStream(streamId, endOfStream);
                 // Allow the state to be HALF_CLOSE_REMOTE if we're creating it in that state.
                 allowHalfClosedRemote = stream.state() == HALF_CLOSED_REMOTE;
+            } else if (stream != null) {
+                isTrailers = stream.isHeadersReceived();
             }
 
             if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "HEADERS")) {
@@ -394,7 +397,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                             stream.state());
             }
 
-            if (!stream.isHeadersReceived()) {
+            if (!isTrailers) {
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
                 if (contentLength != null && !contentLength.isEmpty()) {

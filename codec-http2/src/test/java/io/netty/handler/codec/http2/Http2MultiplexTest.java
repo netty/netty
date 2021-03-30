@@ -224,10 +224,53 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
     @Test
     public void headerMultipleContentLengthValidationShouldPropagate() {
+        headerMultipleContentLengthValidationShouldPropagate(false);
+    }
+
+    @Test
+    public void headerMultipleContentLengthValidationShouldPropagateWithEndStream() {
+        headerMultipleContentLengthValidationShouldPropagate(true);
+    }
+
+    private void headerMultipleContentLengthValidationShouldPropagate(boolean endStream) {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         request.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
         request.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
-        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        Http2StreamChannel channel = newInboundStream(3, endStream, inboundHandler);
+        try {
+            inboundHandler.checkException();
+            fail();
+        } catch (Exception e) {
+            assertThat(e, CoreMatchers.<Exception>instanceOf(StreamException.class));
+        }
+        assertNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+    }
+
+    @Test
+    public void headerPlusSignContentLengthValidationShouldPropagate() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(false, false);
+    }
+
+    @Test
+    public void headerPlusSignContentLengthValidationShouldPropagateWithEndStream() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(false, true);
+    }
+
+    @Test
+    public void headerMinusSignContentLengthValidationShouldPropagate() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(true, false);
+    }
+
+    @Test
+    public void headerMinusSignContentLengthValidationShouldPropagateWithEndStream() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(true, true);
+    }
+
+    private void headerSignContentLengthValidationShouldPropagateWithEndStream(boolean minus, boolean endStream) {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.add(HttpHeaderNames.CONTENT_LENGTH, (minus ? "-" : "+") + 1);
+        Http2StreamChannel channel = newInboundStream(3, endStream, inboundHandler);
         try {
             inboundHandler.checkException();
             fail();
