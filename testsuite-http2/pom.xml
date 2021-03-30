@@ -30,6 +30,8 @@
 
   <properties>
     <skipJapicmp>true</skipJapicmp>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
   </properties>
 
   <dependencies>

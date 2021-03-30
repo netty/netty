@@ -31,6 +31,8 @@
   <properties>
     <skipJapicmp>true</skipJapicmp>
     <skipNativeTestsuite>false</skipNativeTestsuite>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
   </properties>
 
   <dependencies>
