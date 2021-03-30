@@ -27,6 +27,10 @@
   <packaging>pom</packaging>
 
   <name>Netty/Tarball</name>
+  <properties>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
+  </properties>
 
   <dependencies>
     <!-- The example depends on all modules either directly or transitively -->
@@ -82,13 +86,6 @@
             <phase>none</phase>
           </execution>
         </executions>
-      </plugin>
-      <!-- Do not deploy this module -->
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
       </plugin>
     </plugins>
   </build>

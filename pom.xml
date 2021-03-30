@@ -403,6 +403,7 @@
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
+    <skipDeploy>false</skipDeploy>
   </properties>
 
   <modules>
@@ -1176,6 +1177,7 @@
         <version>2.8.2</version>
         <configuration>
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
+          <skip>${skipDeploy}</skip>
         </configuration>
       </plugin>
       <!-- After artifacts were deployed from linux and macos we need to execute the following on macOS (in the root of the project).
