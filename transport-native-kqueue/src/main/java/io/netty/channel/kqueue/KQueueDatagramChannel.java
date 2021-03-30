@@ -279,7 +279,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         }
 
         // Whether all messages were written or not.
-        writeFilter(in.isEmpty());
+        writeFilter(!in.isEmpty());
     }
 
     private boolean doWriteMessage(Object msg) throws Exception {
