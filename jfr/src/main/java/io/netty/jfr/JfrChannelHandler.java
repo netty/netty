@@ -29,6 +29,7 @@ import jdk.jfr.Name;
 import jdk.jfr.Threshold;
 
 import java.net.SocketAddress;
+import java.util.Optional;
 
 /**
  * A {@link ChannelHandler} that creates JDK Flight Recorder events for all Netty channel events/operations.
@@ -402,11 +403,15 @@ public final class JfrChannelHandler extends ChannelDuplexHandler {
     @Label("Exception Caught")
     @Name("io.netty.channel.ExceptionCaught")
     private static final class ExceptionCaughtEvent extends ChannelEvent {
-        @Label("Cause")
-        String cause;
+        @Label("Message")
+        String message;
+
+        @Label("Class")
+        Class<?> thrownClass;
 
         void setCause(Throwable cause) {
-            this.cause = cause.toString();
+            this.message = Optional.ofNullable(cause).map(Throwable::getMessage).orElse(null);
+            this.thrownClass = Optional.ofNullable(cause).map(Throwable::getClass).orElse(null);
         }
     }
 
