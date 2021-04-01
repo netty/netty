@@ -90,7 +90,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @SuppressWarnings("unchecked")
-    final V runTask() throws Exception {
+    V runTask() throws Throwable {
         final Object task = this.task;
         if (task instanceof Callable) {
             return ((Callable<V>) task).call();

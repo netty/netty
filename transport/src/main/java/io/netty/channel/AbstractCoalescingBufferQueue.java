@@ -263,6 +263,11 @@ public abstract class AbstractCoalescingBufferQueue {
         }
     }
 
+    @Override
+    public String toString() {
+        return "bytes: " + readableBytes + " buffers: " + (size() >> 1);
+    }
+
     /**
      * Calculate the result of {@code current + next}.
      */

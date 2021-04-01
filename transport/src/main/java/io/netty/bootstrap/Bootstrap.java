@@ -257,13 +257,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
         setChannelOptions(channel, newOptionsArray(), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
+        setAttributes(channel, newAttributesArray());
     }
 
     @Override

@@ -632,7 +632,56 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @SuppressWarnings("unchecked")
-    private static PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
-        return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
+    private static <T> PooledByteBuf<T> unwrapIfNeeded(ByteBuf buf) {
+        return (PooledByteBuf<T>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
+    }
+
+    @Test
+    public void testCacheWorksForNormalAllocations() {
+        int maxCachedBufferCapacity = PooledByteBufAllocator.DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+        final PooledByteBufAllocator allocator =
+                new PooledByteBufAllocator(true, 1, 1,
+                        PooledByteBufAllocator.defaultPageSize(), PooledByteBufAllocator.defaultMaxOrder(),
+                        128, 128, true);
+        ByteBuf buffer = allocator.directBuffer(maxCachedBufferCapacity);
+        assertEquals(1, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        buffer = allocator.directBuffer(maxCachedBufferCapacity);
+        // Should come out of the cache so the count should not be incremented
+        assertEquals(1, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        // Should be allocated without cache and also not put back in a cache.
+        buffer = allocator.directBuffer(maxCachedBufferCapacity + 1);
+        assertEquals(2, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+
+        buffer = allocator.directBuffer(maxCachedBufferCapacity + 1);
+        assertEquals(3, allocator.metric().directArenas().get(0).numNormalAllocations());
+        buffer.release();
+    }
+
+    @Test
+    public void testNormalPoolSubpageRelease() {
+        // 16 < elemSize <= 7168 or 8192 < elemSize <= 28672, 1 < subpage.maxNumElems <= 256
+        // 7168 <= elemSize <= 8192, subpage.maxNumElems == 1
+        int elemSize = 8192;
+        int length = 1024;
+        ByteBuf[] byteBufs = new ByteBuf[length];
+        final PooledByteBufAllocator allocator = new PooledByteBufAllocator(false, 32, 32, 8192, 11, 256, 64, false, 0);
+
+        for (int i = 0; i < length; i++) {
+            byteBufs[i] = allocator.heapBuffer(elemSize, elemSize);
+        }
+        PoolChunk<Object> chunk = unwrapIfNeeded(byteBufs[0]).chunk;
+
+        int beforeFreeBytes = chunk.freeBytes();
+        for (int i = 0; i < length; i++) {
+            byteBufs[i].release();
+        }
+        int afterFreeBytes = chunk.freeBytes();
+
+        assertTrue(beforeFreeBytes < afterFreeBytes);
     }
 }

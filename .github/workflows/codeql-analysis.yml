@@ -7,10 +7,10 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [4.1, master]
+    branches: ["4.1", master]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [4.1, master]
+    branches: ["4.1", master]
   schedule:
     - cron: '0 13 * * 3'
 
@@ -36,6 +36,17 @@ jobs:
         # a pull request then we can checkout the head.
         fetch-depth: 2
 
+    # Cache .m2/repository
+    - uses: actions/cache@v2
+      env:
+        cache-name: verify-cache-m2-repository
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-pr-${{ env.cache-name }}-
+          ${{ runner.os }}-pr-
+
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.
     - run: git checkout HEAD^2
@@ -47,7 +58,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file. 
+        # By default, queries listed here will override any specified in a config file.
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
@@ -63,7 +74,7 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - run: ./mvnw clean package -DskipTests=true
+    - run: ./mvnw clean package -DskipTests=true -ntp -B
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

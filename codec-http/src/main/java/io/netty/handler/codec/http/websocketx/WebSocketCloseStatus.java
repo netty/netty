@@ -208,16 +208,26 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
 
     // 1004, 1005, 1006, 1015 are reserved and should never be used by user
     //public static final WebSocketCloseStatus SPECIFIC_MEANING = register(1004, "...");
-    //public static final WebSocketCloseStatus EMPTY = register(1005, "Empty");
-    //public static final WebSocketCloseStatus ABNORMAL_CLOSURE = register(1006, "Abnormal closure");
-    //public static final WebSocketCloseStatus TLS_HANDSHAKE_FAILED(1015, "TLS handshake failed");
+
+    public static final WebSocketCloseStatus EMPTY =
+        new WebSocketCloseStatus(1005, "Empty", false);
+
+    public static final WebSocketCloseStatus ABNORMAL_CLOSURE =
+        new WebSocketCloseStatus(1006, "Abnormal closure", false);
+
+    public static final WebSocketCloseStatus TLS_HANDSHAKE_FAILED =
+        new WebSocketCloseStatus(1015, "TLS handshake failed", false);
 
     private final int statusCode;
     private final String reasonText;
     private String text;
 
     public WebSocketCloseStatus(int statusCode, String reasonText) {
-        if (!isValidStatusCode(statusCode)) {
+        this(statusCode, reasonText, true);
+    }
+
+    public WebSocketCloseStatus(int statusCode, String reasonText, boolean validate) {
+        if (validate && !isValidStatusCode(statusCode)) {
             throw new IllegalArgumentException(
                 "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
@@ -290,6 +300,10 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
                 return PROTOCOL_ERROR;
             case 1003:
                 return INVALID_MESSAGE_TYPE;
+            case 1005:
+                return EMPTY;
+            case 1006:
+                return ABNORMAL_CLOSURE;
             case 1007:
                 return INVALID_PAYLOAD_DATA;
             case 1008:
@@ -306,6 +320,8 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
                 return TRY_AGAIN_LATER;
             case 1014:
                 return BAD_GATEWAY;
+            case 1015:
+                return TLS_HANDSHAKE_FAILED;
             default:
                 return new WebSocketCloseStatus(code, "Close status #" + code);
         }

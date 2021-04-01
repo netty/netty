@@ -78,6 +78,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -692,6 +693,14 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void canCloseStreamWithVoidPromise() throws Exception {
+        handler = newHandler();
+        handler.closeStream(stream, ctx.voidPromise());
+        verify(stream, times(1)).close();
+        verifyNoMoreInteractions(stream);
+    }
+
+    @Test
     public void channelReadCompleteTriggersFlush() throws Exception {
         handler = newHandler();
         handler.channelReadComplete(ctx);
@@ -716,6 +725,16 @@ public class Http2ConnectionHandlerTest {
                                                  any(ByteBuf.class), any(ChannelPromise.class));
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                                     any(ChannelPromise.class));
+    }
+
+    @Test
+    public void clientChannelClosedDoesNotSendGoAwayBeforePreface() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        when(channel.isActive()).thenReturn(false);
+        handler = newHandler();
+        when(channel.isActive()).thenReturn(true);
+        handler.close(ctx, promise);
+        verifyZeroInteractions(frameWriter);
     }
 
     @Test

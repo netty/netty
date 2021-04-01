@@ -35,9 +35,11 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.AbstractAddressResolver;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -51,6 +53,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -71,6 +75,47 @@ public class BootstrapTest {
         groupB.shutdownGracefully();
         groupA.terminationFuture().syncUninterruptibly();
         groupB.terminationFuture().syncUninterruptibly();
+    }
+
+    @Test
+    public void testOptionsCopied() {
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.option(ChannelOption.AUTO_READ, true);
+        Map.Entry<ChannelOption<?>, Object>[] channelOptions = bootstrapA.newOptionsArray();
+        bootstrapA.option(ChannelOption.AUTO_READ, false);
+        assertEquals(ChannelOption.AUTO_READ, channelOptions[0].getKey());
+        assertEquals(true, channelOptions[0].getValue());
+    }
+
+    @Test
+    public void testAttributesCopied() {
+        AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        String value = "value";
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.attr(key, value);
+        Map.Entry<AttributeKey<?>, Object>[] attributesArray = bootstrapA.newAttributesArray();
+        bootstrapA.attr(key, "value2");
+        assertEquals(key, attributesArray[0].getKey());
+        assertEquals(value, attributesArray[0].getValue());
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChannelInit() throws InterruptedException {
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        new Bootstrap()
+                .group(groupA)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .attr(key, "value")
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                    }
+                })
+                .bind(LocalAddress.ANY).sync();
     }
 
     @Test(timeout = 10000)

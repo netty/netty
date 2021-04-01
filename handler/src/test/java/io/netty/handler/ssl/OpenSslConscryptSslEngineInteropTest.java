@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -143,14 +144,22 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     }
 
     @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
+    }
+
+    @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {
             ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
         }
         return context;
     }

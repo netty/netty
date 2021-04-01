@@ -263,7 +263,8 @@ public final class JdkSslServerContext extends JdkSslContext {
                 trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
             }
             if (key != null) {
-                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory, null);
+                keyManagerFactory = buildKeyManagerFactory(keyCertChain, null,
+                        key, keyPassword, keyManagerFactory, null);
             }
 
             // Initialize the SSLContext to work with our key managers.

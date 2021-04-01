@@ -39,7 +39,7 @@ public class DefaultFileRegionTest {
     }
 
     private static File newFile() throws IOException {
-        File file = File.createTempFile("netty-", ".tmp");
+        File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
         file.deleteOnExit();
 
         final FileOutputStream out = new FileOutputStream(file);

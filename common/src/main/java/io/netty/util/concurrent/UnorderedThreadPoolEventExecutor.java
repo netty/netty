@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -161,12 +162,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
         return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, task);
+                task : new RunnableScheduledFutureTask<V>(this, task, false);
     }
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<V>(this, task);
+        return new RunnableScheduledFutureTask<V>(this, task, true);
     }
 
     @Override
@@ -212,10 +213,31 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     private static final class RunnableScheduledFutureTask<V> extends PromiseTask<V>
             implements RunnableScheduledFuture<V>, ScheduledFuture<V> {
         private final RunnableScheduledFuture<V> future;
+        private final boolean wasCallable;
 
-        RunnableScheduledFutureTask(EventExecutor executor, RunnableScheduledFuture<V> future) {
+        RunnableScheduledFutureTask(EventExecutor executor, RunnableScheduledFuture<V> future, boolean wasCallable) {
             super(executor, future);
             this.future = future;
+            this.wasCallable = wasCallable;
+        }
+
+        @Override
+        V runTask() throws Throwable {
+            V result =  super.runTask();
+            if (result == null && wasCallable) {
+                // If this RunnableScheduledFutureTask wraps a RunnableScheduledFuture that wraps a Callable we need
+                // to ensure that we return the correct result by calling future.get().
+                //
+                // See https://github.com/netty/netty/issues/11072
+                assert future.isDone();
+                try {
+                    return future.get();
+                } catch (ExecutionException e) {
+                    // unwrap exception.
+                    throw e.getCause();
+                }
+            }
+            return result;
         }
 
         @Override

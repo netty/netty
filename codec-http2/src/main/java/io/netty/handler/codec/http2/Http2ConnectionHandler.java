@@ -461,8 +461,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return;
         }
         promise = promise.unvoid();
-        // Avoid NotYetConnectedException
-        if (!ctx.channel().isActive()) {
+        // Avoid NotYetConnectedException and avoid sending before connection preface
+        if (!ctx.channel().isActive() || !prefaceSent()) {
             ctx.close(promise);
             return;
         }

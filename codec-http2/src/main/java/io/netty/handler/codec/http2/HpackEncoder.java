@@ -62,6 +62,7 @@ import static java.lang.Math.min;
  * are fast, but don't provide any security guarantees.
  */
 final class HpackEncoder {
+    static final int NOT_FOUND = -1;
     static final int HUFF_CODE_THRESHOLD = 512;
     // a linked hash map of header fields
     private final HeaderEntry[] headerFields;
@@ -162,7 +163,7 @@ final class HpackEncoder {
         // If the peer will only use the static table
         if (maxHeaderTableSize == 0) {
             int staticTableIndex = HpackStaticTable.getIndexInsensitive(name, value);
-            if (staticTableIndex == -1) {
+            if (staticTableIndex == HpackStaticTable.NOT_FOUND) {
                 int nameIndex = HpackStaticTable.getIndex(name);
                 encodeLiteral(out, name, value, IndexType.NONE, nameIndex);
             } else {
@@ -185,7 +186,7 @@ final class HpackEncoder {
             encodeInteger(out, 0x80, 7, index);
         } else {
             int staticTableIndex = HpackStaticTable.getIndexInsensitive(name, value);
-            if (staticTableIndex != -1) {
+            if (staticTableIndex != HpackStaticTable.NOT_FOUND) {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             } else {
@@ -285,7 +286,7 @@ final class HpackEncoder {
      */
     private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, IndexType indexType,
                                int nameIndex) {
-        boolean nameIndexValid = nameIndex != -1;
+        boolean nameIndexValid = nameIndex != NOT_FOUND;
         switch (indexType) {
             case INCREMENTAL:
                 encodeInteger(out, 0x40, 6, nameIndexValid ? nameIndex : 0);
@@ -307,7 +308,7 @@ final class HpackEncoder {
 
     private int getNameIndex(CharSequence name) {
         int index = HpackStaticTable.getIndex(name);
-        if (index == -1) {
+        if (index == HpackStaticTable.NOT_FOUND) {
             index = getIndex(name);
             if (index >= 0) {
                 index += HpackStaticTable.length;
@@ -381,7 +382,7 @@ final class HpackEncoder {
      */
     private int getIndex(CharSequence name) {
         if (length() == 0 || name == null) {
-            return -1;
+            return NOT_FOUND;
         }
         int h = AsciiString.hashCode(name);
         int i = index(h);
@@ -390,14 +391,14 @@ final class HpackEncoder {
                 return getIndex(e.index);
             }
         }
-        return -1;
+        return NOT_FOUND;
     }
 
     /**
      * Compute the index into the dynamic table given the index in the header entry.
      */
     private int getIndex(int index) {
-        return index == -1 ? -1 : index - head.before.index + 1;
+        return index == NOT_FOUND ? NOT_FOUND : index - head.before.index + 1;
     }
 
     /**

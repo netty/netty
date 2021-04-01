@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -88,9 +89,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         File tmpFile;
         if (getBaseDirectory() == null) {
             // create a temporary file
-            tmpFile = File.createTempFile(getPrefix(), newpostfix);
+            tmpFile = PlatformDependent.createTempFile(getPrefix(), newpostfix, null);
         } else {
-            tmpFile = File.createTempFile(getPrefix(), newpostfix, new File(
+            tmpFile = PlatformDependent.createTempFile(getPrefix(), newpostfix, new File(
                     getBaseDirectory()));
         }
         if (deleteOnExit()) {

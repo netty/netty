@@ -26,19 +26,21 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,9 +56,12 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.buffer.ByteBufUtil.writeAscii;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -492,6 +497,121 @@ public class ParameterizedSslHandlerTest {
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    @Test(timeout = 30000)
+    public void reentryWriteOnHandshakeComplete() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(serverProvider)
+                .build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(clientProvider)
+                .build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            final String expectedContent = "HelloWorld";
+            final CountDownLatch serverLatch = new CountDownLatch(1);
+            final CountDownLatch clientLatch = new CountDownLatch(1);
+            final StringBuilder serverQueue = new StringBuilder(expectedContent.length());
+            final StringBuilder clientQueue = new StringBuilder(expectedContent.length());
+
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
+                                    serverLatch));
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
+                                    clientLatch));
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            serverLatch.await();
+            assertEquals(expectedContent, serverQueue.toString());
+            clientLatch.await();
+            assertEquals(expectedContent, clientQueue.toString());
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    private static final class ReentryWriteSslHandshakeHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final String toWrite;
+        private final StringBuilder readQueue;
+        private final CountDownLatch doneLatch;
+
+        ReentryWriteSslHandshakeHandler(String toWrite, StringBuilder readQueue, CountDownLatch doneLatch) {
+            this.toWrite = toWrite;
+            this.readQueue = readQueue;
+            this.doneLatch = doneLatch;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            // Write toWrite in two chunks, first here then we get SslHandshakeCompletionEvent (which is re-entry).
+            ctx.writeAndFlush(writeAscii(ctx.alloc(), toWrite.substring(0, toWrite.length() / 2)));
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+            readQueue.append(msg.toString(CharsetUtil.US_ASCII));
+            if (readQueue.length() >= toWrite.length()) {
+                doneLatch.countDown();
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if (evt instanceof SslHandshakeCompletionEvent) {
+                SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
+                if (sslEvt.isSuccess()) {
+                    // this is the re-entry write, it should be ordered after the subsequent write.
+                    ctx.writeAndFlush(writeAscii(ctx.alloc(), toWrite.substring(toWrite.length() / 2)));
+                } else {
+                    appendError(sslEvt.cause());
+                }
+            }
+            ctx.fireUserEventTriggered(evt);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            appendError(cause);
+            ctx.fireExceptionCaught(cause);
+        }
+
+        private void appendError(Throwable cause) {
+            readQueue.append("failed to write '").append(toWrite).append("': ").append(cause);
+            doneLatch.countDown();
         }
     }
 }

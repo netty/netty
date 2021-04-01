@@ -50,11 +50,7 @@ public class XmlEntityReference {
         if (name != null ? !name.equals(that.name) : that.name != null) {
             return false;
         }
-        if (text != null ? !text.equals(that.text) : that.text != null) {
-            return false;
-        }
-
-        return true;
+        return text != null ? text.equals(that.text) : that.text == null;
     }
 
     @Override

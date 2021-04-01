@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpConstants;
 
 /**
  * Shared Static object between HttpMessageDecoder, HttpPostRequestDecoder and HttpPostRequestEncoder
@@ -150,4 +151,85 @@ final class HttpPostBodyUtil {
         return result;
     }
 
+    /**
+     * Try to find LF or CRLF as Line Breaking
+     *
+     * @param buffer the buffer to search in
+     * @param index the index to start from in the buffer
+     * @return a relative position from index > 0 if LF or CRLF is found
+     *         or < 0 if not found
+     */
+    static int findLineBreak(ByteBuf buffer, int index) {
+        int toRead = buffer.readableBytes() - (index - buffer.readerIndex());
+        int posFirstChar = buffer.bytesBefore(index, toRead, HttpConstants.LF);
+        if (posFirstChar == -1) {
+            // No LF, so neither CRLF
+            return  -1;
+        }
+        if (posFirstChar > 0 && buffer.getByte(index + posFirstChar - 1) == HttpConstants.CR) {
+            posFirstChar--;
+        }
+        return posFirstChar;
+    }
+
+    /**
+     * Try to find the delimiter, with LF or CRLF in front of it (added as delimiters) if needed
+     *
+     * @param buffer the buffer to search in
+     * @param index the index to start from in the buffer
+     * @param delimiter the delimiter as byte array
+     * @param precededByLineBreak true if it must be preceded by LF or CRLF, else false
+     * @return a relative position from index > 0 if delimiter found designing the start of it
+     *         (including LF or CRLF is asked)
+     *         or a number < 0 if delimiter is not found
+     * @throws IndexOutOfBoundsException
+     *         if {@code offset + delimiter.length} is greater than {@code buffer.capacity}
+     */
+    static int findDelimiter(ByteBuf buffer, int index, byte[] delimiter, boolean precededByLineBreak) {
+        final int delimiterLength = delimiter.length;
+        final int readerIndex = buffer.readerIndex();
+        final int writerIndex = buffer.writerIndex();
+        int toRead = writerIndex - index;
+        int newOffset = index;
+        boolean delimiterNotFound = true;
+        while (delimiterNotFound && delimiterLength <= toRead) {
+            // Find first position: delimiter
+            int posDelimiter = buffer.bytesBefore(newOffset, toRead, delimiter[0]);
+            if (posDelimiter < 0) {
+                return -1;
+            }
+            newOffset += posDelimiter;
+            toRead -= posDelimiter;
+            // Now check for delimiter
+            delimiterNotFound = false;
+            for (int i = 0; i < delimiterLength; i++) {
+                if (buffer.getByte(newOffset + i) != delimiter[i]) {
+                    newOffset++;
+                    toRead--;
+                    delimiterNotFound = true;
+                    break;
+                }
+            }
+            if (!delimiterNotFound) {
+                // Delimiter found, find if necessary: LF or CRLF
+                if (precededByLineBreak && newOffset > readerIndex) {
+                    if (buffer.getByte(newOffset - 1) == HttpConstants.LF) {
+                        newOffset--;
+                        // Check if CR before: not mandatory to be there
+                        if (newOffset > readerIndex && buffer.getByte(newOffset - 1) == HttpConstants.CR) {
+                            newOffset--;
+                        }
+                    } else {
+                        // Delimiter with Line Break could be further: iterate after first char of delimiter
+                        newOffset++;
+                        toRead--;
+                        delimiterNotFound = true;
+                        continue;
+                    }
+                }
+                return newOffset - readerIndex;
+            }
+        }
+        return -1;
+    }
 }

@@ -23,13 +23,13 @@ import io.netty.internal.tcnative.SniHostNameMatcher;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
@@ -52,18 +52,16 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
 
-    private static final boolean ENABLE_SESSION_TICKET =
-            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
-
     ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore) throws SSLException {
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore);
+                enableOcsp, keyStore, options);
     }
 
     ReferenceCountedOpenSslServerContext(
@@ -71,15 +69,17 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
-              clientAuth, protocols, startTls, enableOcsp, true);
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
+              clientAuth, protocols, startTls, enableOcsp, true, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                                      keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
-            if (ENABLE_SESSION_TICKET) {
+                    keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                    sessionCacheSize, sessionTimeout);
+            if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
             success = true;
@@ -101,7 +101,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                                          TrustManagerFactory trustManagerFactory,
                                                          X509Certificate[] keyCertChain, PrivateKey key,
                                                          String keyPassword, KeyManagerFactory keyManagerFactory,
-                                                         String keyStore)
+                                                         String keyStore, long sessionCacheSize, long sessionTimeout)
             throws SSLException {
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
@@ -185,6 +185,14 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
 
             OpenSslServerSessionContext sessionContext = new OpenSslServerSessionContext(thiz, keyMaterialProvider);
             sessionContext.setSessionIdContext(ID);
+            // Enable session caching by default
+            sessionContext.setSessionCacheEnabled(SERVER_ENABLE_SESSION_CACHE);
+            if (sessionCacheSize > 0) {
+                sessionContext.setSessionCacheSize((int) Math.min(sessionCacheSize, Integer.MAX_VALUE));
+            }
+            if (sessionTimeout > 0) {
+                sessionContext.setSessionTimeout((int) Math.min(sessionTimeout, Integer.MAX_VALUE));
+            }
 
             keyMaterialProvider = null;
 

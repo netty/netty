@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +71,42 @@ public class UnorderedThreadPoolEventExecutorTest {
             latch.await();
         } finally {
             future.cancel(true);
+            executor.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testGetReturnsCorrectValueOnSuccess() throws Exception {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        try {
+            final String expected = "expected";
+            Future<String> f = executor.submit(new Callable<String>() {
+                @Override
+                public String call() {
+                    return expected;
+                }
+            });
+
+            Assert.assertEquals(expected, f.get());
+        } finally {
+            executor.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testGetReturnsCorrectValueOnFailure() throws Exception {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        try {
+            final RuntimeException cause = new RuntimeException();
+            Future<String> f = executor.submit(new Callable<String>() {
+                @Override
+                public String call() {
+                    throw cause;
+                }
+            });
+
+            Assert.assertSame(cause, f.await().cause());
+        } finally {
             executor.shutdownGracefully();
         }
     }

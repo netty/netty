@@ -26,7 +26,7 @@ import java.util.List;
 public class EpollETSocketReadPendingTest extends SocketReadPendingTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socket();
+        return EpollSocketTestPermutation.INSTANCE.socketWithFastOpen();
     }
 
     @Override

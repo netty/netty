@@ -32,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 public class EpollSocketRstTest extends SocketRstTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socket();
+        return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }
 
     @Override

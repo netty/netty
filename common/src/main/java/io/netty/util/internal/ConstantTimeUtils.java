@@ -34,7 +34,7 @@ public final class ConstantTimeUtils {
      * @return {@code 0} if not equal. {@code 1} if equal.
      */
     public static int equalsConstantTime(int x, int y) {
-        int z = -1 ^ (x ^ y);
+        int z = ~(x ^ y);
         z &= z >> 16;
         z &= z >> 8;
         z &= z >> 4;
@@ -59,7 +59,7 @@ public final class ConstantTimeUtils {
      * @return {@code 0} if not equal. {@code 1} if equal.
      */
     public static int equalsConstantTime(long x, long y) {
-        long z = -1L ^ (x ^ y);
+        long z = ~(x ^ y);
         z &= z >> 32;
         z &= z >> 16;
         z &= z >> 8;

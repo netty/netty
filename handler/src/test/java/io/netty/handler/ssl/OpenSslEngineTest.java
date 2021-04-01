@@ -39,11 +39,16 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.X509ExtendedKeyManager;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
 import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
+import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1312,6 +1317,63 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @Test(expected = SSLException.class)
+    public void testNoKeyFound() throws Exception {
+        clientSslCtx = wrapContext(SslContextBuilder
+                .forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build());
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        serverSslCtx = wrapContext(SslContextBuilder
+                .forServer(new X509ExtendedKeyManager() {
+                    @Override
+                    public String[] getClientAliases(String keyType, Principal[] issuers) {
+                        return new String[0];
+                    }
+
+                    @Override
+                    public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                        return null;
+                    }
+
+                    @Override
+                    public String[] getServerAliases(String keyType, Principal[] issuers) {
+                        return new String[0];
+                    }
+
+                    @Override
+                    public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                        return null;
+                    }
+
+                    @Override
+                    public X509Certificate[] getCertificateChain(String alias) {
+                        return new X509Certificate[0];
+                    }
+
+                    @Override
+                    public PrivateKey getPrivateKey(String alias) {
+                        return null;
+                    }
+                })
+                .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build());
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            handshake(client, server);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
     @Override
     @Test
     public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
@@ -1352,11 +1414,46 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return (ReferenceCountedOpenSslEngine) engine;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {
             ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
         }
         return context;
+    }
+
+    @Test
+    @Override
+    public void testSessionCache() throws Exception {
+        super.testSessionCache();
+        assertSessionContext(clientSslCtx);
+        assertSessionContext(serverSslCtx);
+    }
+
+    private static void assertSessionContext(SslContext context) {
+        if (context == null) {
+            return;
+        }
+        OpenSslSessionContext serverSessionCtx = (OpenSslSessionContext) context.sessionContext();
+        assertTrue(serverSessionCtx.isSessionCacheEnabled());
+        if (serverSessionCtx.getIds().hasMoreElements()) {
+            serverSessionCtx.setSessionCacheEnabled(false);
+            assertFalse(serverSessionCtx.getIds().hasMoreElements());
+            assertFalse(serverSessionCtx.isSessionCacheEnabled());
+        }
+    }
+
+    @Override
+    protected void assertSessionReusedForEngine(SSLEngine clientEngine, SSLEngine serverEngine, boolean reuse) {
+        assertEquals(reuse, unwrapEngine(clientEngine).isSessionReused());
+        assertEquals(reuse, unwrapEngine(serverEngine).isSessionReused());
+    }
+
+    @Override
+    protected boolean isSessionMaybeReused(SSLEngine engine) {
+        return unwrapEngine(engine).isSessionReused();
     }
 }

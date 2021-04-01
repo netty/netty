@@ -114,9 +114,11 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        assert ctx.executor().inEventLoop();
         WriteTimeoutTask task = lastTask;
         lastTask = null;
         while (task != null) {
+            assert task.ctx.executor().inEventLoop();
             task.scheduledFuture.cancel(false);
             WriteTimeoutTask prev = task.prev;
             task.prev = null;
@@ -139,6 +141,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void addWriteTimeoutTask(WriteTimeoutTask task) {
+        assert task.ctx.executor().inEventLoop();
         if (lastTask != null) {
             lastTask.next = task;
             task.prev = lastTask;
@@ -147,6 +150,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void removeWriteTimeoutTask(WriteTimeoutTask task) {
+        assert task.ctx.executor().inEventLoop();
         if (task == lastTask) {
             // task is the tail of list
             assert task.next == null;
@@ -214,7 +218,19 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         public void operationComplete(ChannelFuture future) throws Exception {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
-            removeWriteTimeoutTask(this);
+
+            // Check if its safe to modify the "doubly-linked-list" that we maintain. If its not we will schedule the
+            // modification so its picked up by the executor..
+            if (ctx.executor().inEventLoop()) {
+                removeWriteTimeoutTask(this);
+            } else {
+                // So let's just pass outself to the executor which will then take care of remove this task
+                // from the doubly-linked list. Schedule ourself is fine as the promise itself is done.
+                //
+                // This fixes https://github.com/netty/netty/issues/11053
+                assert promise.isDone();
+                ctx.executor().execute(this);
+            }
         }
     }
 }

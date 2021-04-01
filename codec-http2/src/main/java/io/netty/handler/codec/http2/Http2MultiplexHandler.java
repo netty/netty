@@ -25,11 +25,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import javax.net.ssl.SSLException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -264,7 +266,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof Http2FrameStreamException) {
             Http2FrameStreamException exception = (Http2FrameStreamException) cause;
             Http2FrameStream stream = exception.stream();
@@ -276,6 +278,17 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 childChannel.unsafe().closeForcibly();
             }
             return;
+        }
+        if (cause.getCause() instanceof SSLException) {
+            forEachActiveStream(new Http2FrameStreamVisitor() {
+                @Override
+                public boolean visit(Http2FrameStream stream) {
+                    AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                            ((DefaultHttp2FrameStream) stream).attachment;
+                    childChannel.pipeline().fireExceptionCaught(cause);
+                    return true;
+                }
+            });
         }
         ctx.fireExceptionCaught(cause);
     }

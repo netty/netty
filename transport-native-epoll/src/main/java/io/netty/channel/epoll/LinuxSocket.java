@@ -59,6 +59,10 @@ final class LinuxSocket extends Socket {
         return Native.recvmmsg(intValue(), ipv6, msgs, offset, len);
     }
 
+    int recvmsg(NativeDatagramPacketArray.NativeDatagramPacket msg) throws IOException {
+        return Native.recvmsg(intValue(), ipv6, msg);
+    }
+
     void setTimeToLive(int ttl) throws IOException {
         setTimeToLive(intValue(), ttl);
     }
@@ -117,11 +121,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            joinSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            joinSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            joinGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            joinGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -130,11 +137,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            leaveSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            leaveSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            leaveGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            leaveGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -177,14 +187,6 @@ final class LinuxSocket extends Socket {
 
     void setTcpFastOpen(int tcpFastopenBacklog) throws IOException {
         setTcpFastOpen(intValue(), tcpFastopenBacklog);
-    }
-
-    void setTcpFastOpenConnect(boolean tcpFastOpenConnect) throws IOException {
-        setTcpFastOpenConnect(intValue(), tcpFastOpenConnect ? 1 : 0);
-    }
-
-    boolean isTcpFastOpenConnect() throws IOException {
-        return isTcpFastOpenConnect(intValue()) != 0;
     }
 
     void setTcpKeepIdle(int seconds) throws IOException {
@@ -288,6 +290,14 @@ final class LinuxSocket extends Socket {
         setIpMulticastLoop(intValue(), ipv6, loopbackModeDisabled ? 0 : 1);
     }
 
+    boolean isUdpGro() throws IOException {
+        return isUdpGro(intValue()) != 0;
+    }
+
+    void setUdpGro(boolean gro) throws IOException {
+        setUdpGro(intValue(), gro ? 1 : 0);
+    }
+
     long sendFile(DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
         // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
         // the FileChannel field via JNI.
@@ -369,7 +379,6 @@ final class LinuxSocket extends Socket {
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
     private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
-    private static native int isTcpFastOpenConnect(int fd) throws IOException;
 
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
     private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
@@ -377,7 +386,6 @@ final class LinuxSocket extends Socket {
     private static native void setSoBusyPoll(int fd, int loopMicros) throws IOException;
     private static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
     private static native void setTcpFastOpen(int fd, int tcpFastopenBacklog) throws IOException;
-    private static native void setTcpFastOpenConnect(int fd, int tcpFastOpenConnect) throws IOException;
     private static native void setTcpKeepIdle(int fd, int seconds) throws IOException;
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
@@ -393,4 +401,6 @@ final class LinuxSocket extends Socket {
     private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
     private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
+    private static native int isUdpGro(int fd) throws IOException;
+    private static native void setUdpGro(int fd, int gro) throws IOException;
 }

@@ -18,6 +18,7 @@ package io.netty.util;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -114,9 +115,116 @@ public class RecyclerTest {
         });
         thread2.start();
         thread2.join();
+        HandledObject a = recycler.get();
+        HandledObject b = recycler.get();
+        assertNotSame(a, b);
         IllegalStateException exception = exceptionStore.get();
         if (exception != null) {
             throw exception;
+        }
+    }
+
+    @Test
+    public void testMultipleRecycleAtDifferentThreadRacing() throws InterruptedException {
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        final HandledObject object = recycler.get();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
+
+        final CountDownLatch countDownLatch = new CountDownLatch(2);
+        final Thread thread1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }
+        });
+        thread1.start();
+
+        final Thread thread2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }
+        });
+        thread2.start();
+
+        try {
+            countDownLatch.await();
+            HandledObject a = recycler.get();
+            HandledObject b = recycler.get();
+            assertNotSame(a, b);
+            IllegalStateException exception = exceptionStore.get();
+            if (exception != null) {
+                assertEquals("recycled already", exception.getMessage());
+                assertEquals(0, exception.getSuppressed().length);
+            }
+        } finally {
+            thread1.join(1000);
+            thread2.join(1000);
+        }
+    }
+
+    @Test
+    public void testMultipleRecycleRacing() throws InterruptedException {
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        final HandledObject object = recycler.get();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
+
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
+        final Thread thread1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }
+        });
+        thread1.start();
+
+        try {
+            object.recycle();
+        } catch (IllegalStateException e) {
+            Exception x = exceptionStore.getAndSet(e);
+            if (x != null) {
+                e.addSuppressed(x);
+            }
+        }
+
+        try {
+            countDownLatch.await();
+            HandledObject a = recycler.get();
+            HandledObject b = recycler.get();
+            assertNotSame(a, b);
+            IllegalStateException exception = exceptionStore.get();
+            if (exception != null) {
+                throw exception;
+            }
+        } finally {
+            thread1.join(1000);
         }
     }
 

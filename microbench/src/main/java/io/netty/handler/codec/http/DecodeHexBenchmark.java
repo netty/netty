@@ -18,7 +18,10 @@ package io.netty.handler.codec.http;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import org.jctools.util.Pow2;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.CompilerControl.Mode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -28,6 +31,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -43,17 +47,53 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
             "4DDeA5gDD1C6fE567E1b6gf0C40FEcDg",
     })
     private String hex;
-    private char[] hexDigits;
+    // Needs to specify a high number of inputs to allow the current strategy
+    // on nextHexDigits to produce enough branch-misses
+    @Param({ "2048" })
+    private int inputs;
+    private char[][] hexDigits;
+    private static final long SEED = 1578675524L;
+    private long next;
 
     @Setup
     public void init() {
-        hexDigits = hex.toCharArray();
+        final char[] hexCh = hex.toCharArray();
+        next = 0;
+        inputs = Pow2.roundToPowerOfTwo(inputs);
+        hexDigits = new char[inputs][];
+        hexDigits[0] = hexCh;
+        if (inputs > 1) {
+            final Random rnd = new Random(SEED);
+            for (int i = 1; i < inputs; i++) {
+                hexDigits[i] = shuffle(Arrays.copyOf(hexCh, hexCh.length), rnd);
+            }
+        }
+    }
+
+    // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+    private static char[] shuffle(char[] chars, Random rnd) {
+        int index;
+        char tmp;
+        for (int i = chars.length - 1; i > 0; i--) {
+            index = rnd.nextInt(i + 1);
+            tmp = chars[index];
+            chars[index] = chars[i];
+            chars[i] = tmp;
+        }
+        return chars;
+    }
+
+    private int nextHexDigits() {
+        final int idx = (int) (next & (inputs - 1));
+        next++;
+        return idx;
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigits() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += StringUtil.decodeHexNibble(hexDigits[i]);
         }
@@ -61,9 +101,10 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigitsWithChecks() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += decodeHexNibbleWithCheck(hexDigits[i]);
         }
@@ -71,9 +112,10 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigitsOriginal() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += decodeHexNibble(hexDigits[i]);
         }

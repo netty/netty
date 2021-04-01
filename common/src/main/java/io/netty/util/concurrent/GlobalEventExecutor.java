@@ -260,7 +260,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     assert stopped;
 
                     // Check if there are pending entries added by execute() or schedule*() while we do CAS above.
-                    if (taskQueue.isEmpty() && (scheduledTaskQueue == null || scheduledTaskQueue.size() == 1)) {
+                    // Do not check scheduledTaskQueue because it is not thread-safe and can only be mutated from a
+                    // TaskRunner actively running tasks.
+                    if (taskQueue.isEmpty()) {
                         // A) No new task was added and thus there's nothing to handle
                         //    -> safe to terminate because there's nothing left to do
                         // B) A new thread started and handled all the new tasks.

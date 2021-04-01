@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ public class ChunkedWriteHandlerTest {
 
         FileOutputStream out = null;
         try {
-            TMP = File.createTempFile("netty-chunk-", ".tmp");
+            TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
             out = new FileOutputStream(TMP);
             out.write(BYTES);
@@ -582,6 +583,55 @@ public class ChunkedWriteHandlerTest {
         assertTrue(writeFuture.isSuccess());
         assertTrue(inputClosedWhenListenerInvoked.get());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEndOfInputWhenChannelIsClosedwhenWrite() {
+        ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
+
+            @Override
+            public boolean isEndOfInput() {
+                return true;
+            }
+
+            @Override
+            public void close() {
+            }
+
+            @Deprecated
+            @Override
+            public ByteBuf readChunk(ChannelHandlerContext ctx) {
+                return null;
+            }
+
+            @Override
+            public ByteBuf readChunk(ByteBufAllocator allocator) {
+                return null;
+            }
+
+            @Override
+            public long length() {
+                return -1;
+            }
+
+            @Override
+            public long progress() {
+                return 1;
+            }
+        };
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                ReferenceCountUtil.release(msg);
+                // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
+                ctx.close();
+                promise.setSuccess();
+            }
+        }, new ChunkedWriteHandler());
+
+        ch.writeAndFlush(input).syncUninterruptibly();
+        assertFalse(ch.finishAndReleaseAll());
     }
 
     @Test

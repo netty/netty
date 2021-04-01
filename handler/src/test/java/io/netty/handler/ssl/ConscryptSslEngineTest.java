@@ -20,6 +20,7 @@ import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.net.ssl.SSLSessionContext;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,5 +78,16 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
+    }
+
+    @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
+    }
+
+    @Ignore("Possible Conscrypt bug")
+    public void testSessionCacheTimeout() throws Exception {
+        // Skip
+        // https://github.com/google/conscrypt/issues/851
     }
 }

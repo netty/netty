@@ -261,11 +261,14 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     message = Unpooled.EMPTY_BUFFER;
                 }
 
+                if (endOfInput) {
+                    // We need to remove the element from the queue before we call writeAndFlush() as this operation
+                    // may cause an action that also touches the queue.
+                    queue.remove();
+                }
                 // Flush each chunk to conserve memory
                 ChannelFuture f = ctx.writeAndFlush(message);
                 if (endOfInput) {
-                    queue.remove();
-
                     if (f.isDone()) {
                         handleEndOfInputFuture(f, currentWrite);
                     } else {

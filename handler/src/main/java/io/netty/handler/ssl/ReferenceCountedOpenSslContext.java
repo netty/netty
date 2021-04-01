@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.CertificateVerifier;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
@@ -92,6 +93,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // TODO: Maybe make configurable ?
     protected static final int VERIFY_DEPTH = 10;
 
+    static final boolean CLIENT_ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", false);
+
+    static final boolean CLIENT_ENABLE_SESSION_TICKET_TLSV13 =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", true);
+
+    static final boolean SERVER_ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
+
+     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
+
+    static final boolean SERVER_ENABLE_SESSION_CACHE =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheServer", true);
+    // session caching is disabled by default on the client side due a JDK bug:
+    // https://mail.openjdk.java.net/pipermail/security-dev/2021-March/024758.html
+    static final boolean CLIENT_ENABLE_SESSION_CACHE =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheClient", false);
     /**
      * The OpenSSL SSL_CTX object.
      *
@@ -99,8 +118,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     protected long ctx;
     private final List<String> unmodifiableCiphers;
-    private final long sessionCacheSize;
-    private final long sessionTimeout;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
 
@@ -178,19 +195,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         DH_KEY_LENGTH = dhLen;
     }
 
-    ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   ApplicationProtocolConfig apnCfg, long sessionCacheSize, long sessionTimeout,
-                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, String[] protocols,
-                                   boolean startTls, boolean enableOcsp, boolean leakDetection) throws SSLException {
-        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, leakDetection);
-    }
+    final boolean tlsFalseStart;
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                                   long sessionTimeout, int mode, Certificate[] keyCertChain,
+                                   OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                                   boolean leakDetection) throws SSLException {
+                                   boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+            throws SSLException {
         super(startTls);
 
         OpenSsl.ensureAvailability();
@@ -202,6 +213,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {
             throw new IllegalArgumentException("mode most be either SSL.SSL_MODE_SERVER or SSL.SSL_MODE_CLIENT");
         }
+
+        boolean tlsFalseStart = false;
+        boolean useTasks = USE_TASKS;
+        OpenSslPrivateKeyMethod privateKeyMethod = null;
+
+        if (ctxOptions != null) {
+            for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
+                SslContextOption<?> option = ctxOpt.getKey();
+
+                if (option == OpenSslContextOption.TLS_FALSE_START) {
+                    tlsFalseStart = (Boolean) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.USE_TASKS) {
+                    useTasks = (Boolean) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD) {
+                    privateKeyMethod = (OpenSslPrivateKeyMethod) ctxOpt.getValue();
+                } else {
+                    logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
+                            + ": " + ctxOpt.getKey());
+                }
+            }
+        }
+        this.tlsFalseStart = tlsFalseStart;
+
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
@@ -314,27 +348,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
 
-            /* Set session cache size, if specified */
-            if (sessionCacheSize <= 0) {
-                // Get the default session cache size using SSLContext.setSessionCacheSize()
-                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-            }
-            this.sessionCacheSize = sessionCacheSize;
-            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-
-            /* Set session timeout, if specified */
-            if (sessionTimeout <= 0) {
-                // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-            }
-            this.sessionTimeout = sessionTimeout;
-            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
             }
 
-            SSLContext.setUseTasks(ctx, USE_TASKS);
+            SSLContext.setUseTasks(ctx, useTasks);
+            if (privateKeyMethod != null) {
+                SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, privateKeyMethod));
+            }
             success = true;
         } finally {
             if (!success) {
@@ -357,16 +378,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     public final List<String> cipherSuites() {
         return unmodifiableCiphers;
-    }
-
-    @Override
-    public final long sessionCacheSize() {
-        return sessionCacheSize;
-    }
-
-    @Override
-    public final long sessionTimeout() {
-        return sessionTimeout;
     }
 
     @Override
@@ -513,8 +524,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      *
      * This method is currently only supported when {@code BoringSSL} is used.
      *
-     * @param method method to use.
+     * @param        method method to use.
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#PRIVATE_KEY_METHOD}.
      */
+    @Deprecated
     @UnstableApi
     public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
         ObjectUtil.checkNotNull(method, "method");
@@ -527,6 +541,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    /**
+     * @deprecated   use {@link SslContextBuilder#option(SslContextOption, Object)} with
+     *              {@link OpenSslContextOption#USE_TASKS}.
+     */
+    @Deprecated
     public final void setUseTasks(boolean useTasks) {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
@@ -565,7 +584,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static X509Certificate[] certificates(byte[][] chain) {
         X509Certificate[] peerCerts = new X509Certificate[chain.length];
         for (int i = 0; i < peerCerts.length; i++) {
-            peerCerts[i] = new OpenSslX509Certificate(chain[i]);
+            peerCerts[i] = new LazyX509Certificate(chain[i]);
         }
         return peerCerts;
     }

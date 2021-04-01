@@ -2123,6 +2123,36 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testSWARIndexOf() {
+        ByteBuf buffer = newBuffer(16);
+        buffer.clear();
+        // Ensure the buffer is completely zero'ed.
+        buffer.setZero(0, buffer.capacity());
+        buffer.writeByte((byte) 0); // 0
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0); // 7
+
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 1); // 11
+        buffer.writeByte((byte) 2);
+        buffer.writeByte((byte) 3);
+        buffer.writeByte((byte) 4);
+        buffer.writeByte((byte) 1);
+        assertEquals(11, buffer.indexOf(0, 12, (byte) 1));
+        assertEquals(12, buffer.indexOf(0, 16, (byte) 2));
+        assertEquals(-1, buffer.indexOf(0, 11, (byte) 1));
+        assertEquals(11, buffer.indexOf(0, 16, (byte) 1));
+        buffer.release();
+    }
+
+    @Test
     public void testIndexOf() {
         buffer.clear();
         // Ensure the buffer is completely zero'ed.
@@ -4521,7 +4551,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testReadBytesAndWriteBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
@@ -4564,7 +4594,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testGetBytesAndSetBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");

@@ -255,17 +255,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void adjustMarkers(int decrement) {
-        int markedReaderIndex = this.markedReaderIndex;
         if (markedReaderIndex <= decrement) {
-            this.markedReaderIndex = 0;
-            int markedWriterIndex = this.markedWriterIndex;
+            markedReaderIndex = 0;
             if (markedWriterIndex <= decrement) {
-                this.markedWriterIndex = 0;
+                markedWriterIndex = 0;
             } else {
-                this.markedWriterIndex = markedWriterIndex - decrement;
+                markedWriterIndex -= decrement;
             }
         } else {
-            this.markedReaderIndex = markedReaderIndex - decrement;
+            markedReaderIndex -= decrement;
             markedWriterIndex -= decrement;
         }
     }
@@ -1251,43 +1249,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
         if (fromIndex <= toIndex) {
-            return firstIndexOf(fromIndex, toIndex, value);
-        } else {
-            return lastIndexOf(fromIndex, toIndex, value);
+            return ByteBufUtil.firstIndexOf(this, fromIndex, toIndex, value);
         }
-    }
-
-    private int firstIndexOf(int fromIndex, int toIndex, byte value) {
-        fromIndex = Math.max(fromIndex, 0);
-        if (fromIndex >= toIndex || capacity() == 0) {
-            return -1;
-        }
-        checkIndex(fromIndex, toIndex - fromIndex);
-
-        for (int i = fromIndex; i < toIndex; i ++) {
-            if (_getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private int lastIndexOf(int fromIndex, int toIndex, byte value) {
-        fromIndex = Math.min(fromIndex, capacity());
-        if (fromIndex < 0 || capacity() == 0) {
-            return -1;
-        }
-
-        checkIndex(toIndex, fromIndex - toIndex);
-
-        for (int i = fromIndex - 1; i >= toIndex; i --) {
-            if (_getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
+        return ByteBufUtil.lastIndexOf(this, fromIndex, toIndex, value);
     }
 
     @Override

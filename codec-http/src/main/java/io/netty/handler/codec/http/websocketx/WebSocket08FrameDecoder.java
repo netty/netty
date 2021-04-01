@@ -246,7 +246,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
 
                 // check opcode vs message fragmentation state 2/2
-                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT) {
                     protocolViolation(ctx, in,
                                       "received non-continuation data frame while inside fragmented message");
                     return;
@@ -347,9 +347,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 if (frameFinalFlag) {
                     // Final frame of the sequence. Apparently ping frames are
                     // allowed in the middle of a fragmented message
-                    if (frameOpcode != OPCODE_PING) {
-                        fragmentedFramesCount = 0;
-                    }
+                    fragmentedFramesCount = 0;
                 } else {
                     // Increment counter
                     fragmentedFramesCount++;

@@ -26,12 +26,14 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.LastInboundHandler.Consumer;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,6 +62,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -69,6 +72,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     private final Http2Headers request = new DefaultHttp2Headers()
@@ -216,6 +220,137 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2Frame>readInbound());
 
         assertNull(inboundHandler.readInbound());
+    }
+
+    @Test
+    public void headerMultipleContentLengthValidationShouldPropagate() {
+        headerMultipleContentLengthValidationShouldPropagate(false);
+    }
+
+    @Test
+    public void headerMultipleContentLengthValidationShouldPropagateWithEndStream() {
+        headerMultipleContentLengthValidationShouldPropagate(true);
+    }
+
+    private void headerMultipleContentLengthValidationShouldPropagate(boolean endStream) {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+        Http2StreamChannel channel = newInboundStream(3, endStream, inboundHandler);
+        try {
+            inboundHandler.checkException();
+            fail();
+        } catch (Exception e) {
+            assertThat(e, CoreMatchers.<Exception>instanceOf(StreamException.class));
+        }
+        assertNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+    }
+
+    @Test
+    public void headerPlusSignContentLengthValidationShouldPropagate() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(false, false);
+    }
+
+    @Test
+    public void headerPlusSignContentLengthValidationShouldPropagateWithEndStream() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(false, true);
+    }
+
+    @Test
+    public void headerMinusSignContentLengthValidationShouldPropagate() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(true, false);
+    }
+
+    @Test
+    public void headerMinusSignContentLengthValidationShouldPropagateWithEndStream() {
+        headerSignContentLengthValidationShouldPropagateWithEndStream(true, true);
+    }
+
+    private void headerSignContentLengthValidationShouldPropagateWithEndStream(boolean minus, boolean endStream) {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.add(HttpHeaderNames.CONTENT_LENGTH, (minus ? "-" : "+") + 1);
+        Http2StreamChannel channel = newInboundStream(3, endStream, inboundHandler);
+        try {
+            inboundHandler.checkException();
+            fail();
+        } catch (Exception e) {
+            assertThat(e, CoreMatchers.<Exception>instanceOf(StreamException.class));
+        }
+        assertNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagate() {
+        headerContentLengthNotMatchValidationShouldPropagate(false, false, false);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateWithEndStream() {
+        headerContentLengthNotMatchValidationShouldPropagate(false, true, false);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateCloseLocal() {
+        headerContentLengthNotMatchValidationShouldPropagate(true, false, false);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateWithEndStreamCloseLocal() {
+        headerContentLengthNotMatchValidationShouldPropagate(true, true, false);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateTrailers() {
+        headerContentLengthNotMatchValidationShouldPropagate(false, false, true);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateWithEndStreamTrailers() {
+        headerContentLengthNotMatchValidationShouldPropagate(false, true, true);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateCloseLocalTrailers() {
+        headerContentLengthNotMatchValidationShouldPropagate(true, false, true);
+    }
+
+    @Test
+    public void headerContentLengthNotMatchValidationShouldPropagateWithEndStreamCloseLocalTrailers() {
+        headerContentLengthNotMatchValidationShouldPropagate(true, true, true);
+    }
+
+    private void headerContentLengthNotMatchValidationShouldPropagate(
+            boolean closeLocal, boolean endStream, boolean trailer) {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+
+        if (closeLocal) {
+            channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true))
+                    .syncUninterruptibly();
+            assertEquals(Http2Stream.State.HALF_CLOSED_LOCAL, channel.stream().state());
+        } else {
+            assertEquals(Http2Stream.State.OPEN, channel.stream().state());
+        }
+
+        if (trailer) {
+            frameInboundWriter.writeInboundHeaders(channel.stream().id(), new DefaultHttp2Headers(), 0, endStream);
+        } else {
+            frameInboundWriter.writeInboundData(channel.stream().id(), bb("foo"), 0, endStream);
+        }
+        try {
+            inboundHandler.checkException();
+            fail();
+        } catch (Exception e) {
+            assertThat(e, CoreMatchers.<Exception>instanceOf(StreamException.class));
+        }
+        Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(request).stream(channel.stream());
+        assertEquals(headersFrame, inboundHandler.readInbound());
+        assertNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
     }
 
     @Test

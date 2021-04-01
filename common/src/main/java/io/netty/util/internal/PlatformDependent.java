@@ -38,6 +38,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -767,6 +768,32 @@ public final class PlatformDependent {
         decrementMemoryCounter(capacity);
     }
 
+    public static boolean hasAlignDirectByteBuffer() {
+        return hasUnsafe() || PlatformDependent0.hasAlignSliceMethod();
+    }
+
+    public static ByteBuffer alignDirectBuffer(ByteBuffer buffer, int alignment) {
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("Cannot get aligned slice of non-direct byte buffer.");
+        }
+        if (PlatformDependent0.hasAlignSliceMethod()) {
+            return PlatformDependent0.alignSlice(buffer, alignment);
+        }
+        if (hasUnsafe()) {
+            long address = directBufferAddress(buffer);
+            long aligned = align(address, alignment);
+            buffer.position((int) (aligned - address));
+            return buffer.slice();
+        }
+        // We don't have enough information to be able to align any buffers.
+        throw new UnsupportedOperationException("Cannot align direct buffer. " +
+                "Needs either Unsafe or ByteBuffer.alignSlice method available.");
+    }
+
+    public static long align(long value, int alignment) {
+        return Pow2.align(value, alignment);
+    }
+
     private static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);
@@ -1387,6 +1414,24 @@ public final class PlatformDependent {
 
     public static Set<String> normalizedLinuxClassifiers() {
         return LINUX_OS_CLASSIFIERS;
+    }
+
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    public static File createTempFile(String prefix, String suffix, File directory) throws IOException {
+        if (javaVersion() >= 7) {
+            if (directory == null) {
+                return Files.createTempFile(prefix, suffix).toFile();
+            }
+            return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
+        }
+        if (directory == null) {
+            return File.createTempFile(prefix, suffix);
+        }
+        File file = File.createTempFile(prefix, suffix, directory);
+        // Try to adjust the perms, if this fails there is not much else we can do...
+        file.setReadable(false, false);
+        file.setReadable(true, true);
+        return file;
     }
 
     /**

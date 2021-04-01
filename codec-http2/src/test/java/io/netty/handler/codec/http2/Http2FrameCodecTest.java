@@ -896,6 +896,40 @@ public class Http2FrameCodecTest {
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
     }
 
+    @Test
+    public void priorityForNonExistingStream() {
+        writeHeaderAndAssert(1);
+
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+    }
+
+    @Test
+    public void priorityForExistingStream() {
+        writeHeaderAndAssert(1);
+        writeHeaderAndAssert(3);
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+
+        assertInboundStreamFrame(3, new DefaultHttp2PriorityFrame(1, (short) 31, true));
+    }
+
+    private void writeHeaderAndAssert(int streamId) {
+        frameInboundWriter.writeInboundHeaders(streamId, request, 31, false);
+
+        Http2Stream stream = frameCodec.connection().stream(streamId);
+        assertNotNull(stream);
+        assertEquals(State.OPEN, stream.state());
+
+        assertInboundStreamFrame(streamId, new DefaultHttp2HeadersFrame(request, false, 31));
+    }
+
+    private void assertInboundStreamFrame(int expectedId, Http2StreamFrame streamFrame) {
+        Http2StreamFrame inboundFrame = inboundHandler.readInbound();
+        Http2FrameStream stream2 = inboundFrame.stream();
+        assertNotNull(stream2);
+        assertEquals(expectedId, stream2.id());
+        assertEquals(inboundFrame, streamFrame.stream(stream2));
+    }
+
     private ChannelHandlerContext eqFrameCodecCtx() {
         return eq(frameCodec.ctx);
     }

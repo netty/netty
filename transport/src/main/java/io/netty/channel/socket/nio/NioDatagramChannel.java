@@ -30,6 +30,7 @@ import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.PlatformDependent;
@@ -597,5 +598,16 @@ public final class NioDatagramChannel
             return false;
         }
         return super.closeOnReadError(cause);
+    }
+
+    @Override
+    protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
+        if (allocHandle instanceof RecvByteBufAllocator.ExtendedHandle) {
+            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+            // as we read anything).
+            return ((RecvByteBufAllocator.ExtendedHandle) allocHandle)
+                    .continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER);
+        }
+        return allocHandle.continueReading();
     }
 }

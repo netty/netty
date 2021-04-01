@@ -26,6 +26,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.ServerSocket;
@@ -131,6 +132,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
+    @Ignore
     @Test(timeout = 30000)
     public void testWriteAfterShutdownOutputNoWritabilityChange() throws Throwable {
         run();
