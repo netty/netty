@@ -60,7 +60,7 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Build project
-      run: ./mvnw clean package -DskipTests=true
+      run: ./mvnw clean package -DskipTests=true -DskipH3Spec=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

@@ -75,6 +75,7 @@
     <release.gpg.keyname />
     <release.gpg.passphrase />
     <test.argLine>-D_</test.argLine>
+    <skipH3Spec>false</skipH3Spec>
   </properties>
 
   <build>
@@ -298,6 +299,29 @@
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.2.0</version>
+      </plugin>
+      <plugin>
+        <groupId>io.netty.incubator</groupId>
+        <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
+        <version>0.0.4.Final</version>
+        <configuration>
+          <delay>1000</delay>
+          <mainClass>io.netty.incubator.codec.http3.example.Http3ServerExample</mainClass>
+          <excludeSpecs>
+            <!-- Let's only run the HTTP3 tests -->
+            <excludeSpec>/QUIC</excludeSpec>
+          </excludeSpecs>
+
+          <skip>${skipH3Spec}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>h3spec</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

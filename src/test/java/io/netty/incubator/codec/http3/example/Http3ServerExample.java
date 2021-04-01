@@ -49,6 +49,13 @@ public final class Http3ServerExample {
     private Http3ServerExample() { }
 
     public static void main(String... args) throws Exception {
+        int port;
+        // Allow to pass in the port so we can also use it to run h3spec against
+        if (args.length == 1) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = PORT;
+        }
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         SelfSignedCertificate cert = new SelfSignedCertificate();
         QuicSslContext sslContext = QuicSslContextBuilder.forServer(cert.key(), null, cert.cert())
@@ -110,7 +117,7 @@ public final class Http3ServerExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(PORT)).sync().channel();
+                    .bind(new InetSocketAddress(port)).sync().channel();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

@@ -27,7 +27,7 @@ jobs:
             ${{ runner.os }}-pr-${{ env.cache-name }}-
             ${{ runner.os }}-pr-
       - name: Verify with Maven
-        run: mvn verify -B --file pom.xml -DskipTests=true
+        run: mvn verify -B --file pom.xml -DskipTests=true -DskipH3Spec=true
 
   build:
     runs-on: ubuntu-latest

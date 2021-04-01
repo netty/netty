@@ -45,7 +45,7 @@ jobs:
             }]
 
       - name: Prepare release with Maven
-        run:  mvn -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+        run:  mvn -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
 
       - name: Perform release with Maven
         run: mvn -B --file pom.xml release:perform -Drelease.gpg.keyname=${{ secrets.GPG_KEYNAME }} -Drelease.gpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
