@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -94,7 +94,7 @@ final class CacheControlDecoder {
                     flags.add(CacheControlDirectives.CacheControlFlags.ONLY_IF_CACHED);
                 } else if (NO_TRANSFORM.contentEqualsIgnoreCase(directive)) {
                     flags.add(CacheControlDirectives.CacheControlFlags.NO_TRANSFORM);
-                } else if (IMMUTABLE.contentEqualsIgnoreCase(directive)) {
+                } else if ("IMMUTABLE".equalsIgnoreCase(directive)) {
                     flags.add(CacheControlDirectives.CacheControlFlags.IMMUTABLE);
                 } else if ("stale-while-revalidate".equalsIgnoreCase(directive)) {
                     staleWhileRevalidate = parseSeconds(parameter, -1);

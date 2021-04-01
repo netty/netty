@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -66,10 +66,11 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
     private boolean waitingOnConditionalResponse;
     private HttpCacheEntry conditionResponseCacheEntry;
 
-    public HttpClientCacheHandler(final HttpCacheStorage cacheStorage,
-                                  final CacheConfig cacheConfig,
-                                  final EventLoop eventLoop) {
-        this.httpCache = new HttpCache(cacheStorage, new CacheKeyGenerator(), eventLoop);
+    public HttpClientCacheHandler(HttpCacheStorage cacheStorage,
+                                  CacheConfig cacheConfig,
+                                  EventLoop eventLoop,
+                                  CacheKeyGenerator cacheKeyGenerator) {
+        this.httpCache = new HttpCache(cacheStorage, cacheKeyGenerator, eventLoop);
         this.requestCachingPolicy = new RequestCachingPolicy();
         this.responseCachingPolicy = new ResponseCachingPolicy(cacheConfig.isSharedCache());
         this.httpCacheEntryChecker = new HttpCacheEntryChecker(cacheConfig.isSharedCache());

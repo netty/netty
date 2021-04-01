@@ -15,25 +15,9 @@
  */
 package io.netty.handler.codec.http.cache;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public class CacheKeyGenerator {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CacheKeyGenerator.class);
+public interface CacheKeyGenerator {
 
-    public String generateKey(HttpRequest request) {
-        final String host = request.headers().get(HttpHeaderNames.HOST);
-        if (StringUtil.isNullOrEmpty(host)) {
-            logger.debug("Can't generate cache key, the request has no meaningful HOST header.");
-            return null;
-        }
-
-        final StringBuilder stringBuilder = new StringBuilder(host);
-        stringBuilder.append(request.uri());
-
-        return stringBuilder.toString();
-    }
+    String generateKey(HttpRequest request);
 }
