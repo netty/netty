@@ -15,10 +15,12 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
@@ -66,13 +68,20 @@ public class ApplicationProtocolNegotiationHandlerTest {
         };
 
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
-        engine.setUseClientMode(false);
+        // This test is mocked/simulated and doesn't go through full TLS handshake. Currently only JDK SSLEngineImpl
+        // client mode will generate a close_notify.
+        engine.setUseClientMode(true);
 
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), alpnHandler);
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
-        assertTrue(channel.finishAndReleaseAll());
+        channel.releaseOutbound();
+        channel.close();
+        ByteBuf close_notify = channel.readOutbound();
+        assertTrue("close_notify: " + close_notify.toString(CharsetUtil.UTF_8), close_notify.readableBytes() >= 7);
+        close_notify.release();
+        channel.finishAndReleaseAll();
         assertTrue(configureCalled.get());
     }
 
