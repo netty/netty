@@ -25,26 +25,22 @@ import java.util.concurrent.ConcurrentMap;
  * TODO: Enforce config like maxCacheEntries
  */
 public class HttpCacheMemoryStorage implements HttpCacheStorage {
-    private final ConcurrentMap<String, HttpCacheEntry> cache;
-
-    public HttpCacheMemoryStorage() {
-        cache = new ConcurrentHashMap<String, HttpCacheEntry>();
-    }
+    private final ConcurrentMap<String, HttpCacheEntry> cache = new ConcurrentHashMap<String, HttpCacheEntry>();
 
     @Override
-    public Future<Void> put(final String key, final HttpCacheEntry entry, final Promise<Void> promise) {
+    public Future<Void> put(String key, HttpCacheEntry entry, Promise<Void> promise) {
         cache.put(key, entry);
         return promise.setSuccess(null);
     }
 
     @Override
-    public Future<HttpCacheEntry> get(final String key, final Promise<HttpCacheEntry> promise) {
+    public Future<HttpCacheEntry> get(String key, Promise<HttpCacheEntry> promise) {
         return promise.setSuccess(cache.get(key));
     }
 
     @Override
-    public Future<Void> remove(final String key, Promise<Void> promise) {
-        final HttpCacheEntry cacheEntry = cache.remove(key);
+    public Future<Void> remove(String key, Promise<Void> promise) {
+        HttpCacheEntry cacheEntry = cache.remove(key);
         cacheEntry.getContent().release();
         promise.setSuccess(null);
         return promise;

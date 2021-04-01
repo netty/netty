@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.cache;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
@@ -32,38 +33,38 @@ public class CacheConfig {
     private final boolean checkFreshness;
 
     CacheConfig(long maxObjectSize, int maxCacheEntries, boolean sharedCache, boolean checkFreshness) {
-        this.maxObjectSize = maxObjectSize;
-        this.maxCacheEntries = maxCacheEntries;
+        this.maxObjectSize = ObjectUtil.checkPositive(maxObjectSize, "maxObjectSize");
+        this.maxCacheEntries = ObjectUtil.checkPositive(maxCacheEntries, "maxCacheEntries");
         this.sharedCache = sharedCache;
         this.checkFreshness = checkFreshness;
     }
 
-    public static Builder custom() {
+    public static Builder newBuilder() {
         return new Builder();
     }
 
     /**
      * Maximum response body size in bytes that will be cached.
      */
-    public long getMaxObjectSize() {
+    public long maxObjectSize() {
         return maxObjectSize;
     }
 
     /**
      * Maximum number of entries in the cache
      */
-    public int getMaxCacheEntries() {
+    public int maxCacheEntries() {
         return maxCacheEntries;
     }
 
     /**
      * Should the cache behave as a shared cache?
      */
-    public boolean isSharedCache() {
+    public boolean sharedCache() {
         return sharedCache;
     }
 
-    public boolean shoulCheckFreshness() {
+    public boolean checkFreshness() {
         return checkFreshness;
     }
 
@@ -83,7 +84,7 @@ public class CacheConfig {
         /**
          * Set maximum response body size in bytes that will be cached.
          */
-        public Builder setMaxObjectSize(final long maxObjectSize) {
+        public Builder setMaxObjectSize(long maxObjectSize) {
             this.maxObjectSize = maxObjectSize;
             return this;
         }
@@ -91,7 +92,7 @@ public class CacheConfig {
         /**
          * Set maximum number of entries in the cache
          */
-        public Builder setMaxCacheEntries(final int maxCacheEntries) {
+        public Builder setMaxCacheEntries(int maxCacheEntries) {
             this.maxCacheEntries = maxCacheEntries;
             return this;
         }
@@ -99,7 +100,7 @@ public class CacheConfig {
         /**
          * Set whether the cache should behave as a shared cache or not, true by default.
          */
-        public Builder isSharedCache(final boolean sharedCache) {
+        public Builder isSharedCache(boolean sharedCache) {
             this.sharedCache = sharedCache;
             return this;
         }
@@ -107,7 +108,7 @@ public class CacheConfig {
         /**
          * Set whether the cache should check entry freshness before returning response, true by default.
          */
-        public Builder shouldCheckFreshness(final boolean checkFreshness) {
+        public Builder shouldCheckFreshness(boolean checkFreshness) {
             this.checkFreshness = checkFreshness;
             return this;
         }

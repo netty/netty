@@ -27,6 +27,7 @@ final class CacheControlDecoder {
     public static final int MAXIMUM_AGE = Integer.MAX_VALUE;
 
     private CacheControlDecoder() {
+        // Prevent outside initialization
     }
 
     public static CacheControlDirectives decode(HttpHeaders headers) {
@@ -141,5 +142,4 @@ final class CacheControlDecoder {
             return defaultValue;
         }
     }
-
 }

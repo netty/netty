@@ -41,17 +41,17 @@ class ResponseCachingPolicy {
 
     private final boolean sharedCache;
 
-    ResponseCachingPolicy(final boolean sharedCache) {
+    ResponseCachingPolicy(boolean sharedCache) {
         this.sharedCache = sharedCache;
     }
 
-    public boolean canBeCached(final HttpRequest request, final HttpResponse response) {
+    public boolean canBeCached(HttpRequest request, HttpResponse response) {
         if (request.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             logger.debug("HTTP/1.0 request can not be cached.");
             return false;
         }
 
-        final HttpMethod httpMethod = request.method();
+        HttpMethod httpMethod = request.method();
         if (httpMethod != HttpMethod.GET && httpMethod != HttpMethod.HEAD) {
             if (logger.isDebugEnabled()) {
                 logger.debug(httpMethod + " method response is not cacheable.");
@@ -60,7 +60,7 @@ class ResponseCachingPolicy {
             return false;
         }
 
-        final HttpResponseStatus status = response.status();
+        HttpResponseStatus status = response.status();
         if (uncacheableStatusCodes.contains(status)) {
             if (logger.isDebugEnabled()) {
                 logger.debug(status + " response is not cacheable.");
@@ -77,15 +77,15 @@ class ResponseCachingPolicy {
             return false;
         }
 
-        final HttpHeaders headers = response.headers();
-        final CacheControlDirectives cacheControlDirectives = CacheControlDecoder.decode(headers);
-        final List<String> dateHeader = headers.getAll(HttpHeaderNames.DATE);
+        HttpHeaders headers = response.headers();
+        CacheControlDirectives cacheControlDirectives = CacheControlDecoder.decode(headers);
+        List<String> dateHeader = headers.getAll(HttpHeaderNames.DATE);
         if (dateHeader.size() > 1) {
             logger.debug("Multiple Date headers.");
             return false;
         }
 
-        final Long dateHeaderInMilliseconds = headers.getTimeMillis(HttpHeaderNames.DATE);
+        Long dateHeaderInMilliseconds = headers.getTimeMillis(HttpHeaderNames.DATE);
         if (dateHeaderInMilliseconds == null) {
             logger.debug("Invalid Date header.");
             return false;

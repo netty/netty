@@ -40,15 +40,13 @@ public class HttpCacheEntry implements Serializable {
     private final Date date;
     private final CacheControlDirectives responseCacheControlDirectives;
 
-    public HttpCacheEntry(final ByteBufHolder content,
-                          final Date requestDate,
-                          final Date responseDate,
-                          final HttpResponseStatus status, final HttpHeaders responseHeaders) {
-        this.content = content;
-        this.requestDate = requestDate;
+    public HttpCacheEntry(ByteBufHolder content, Date requestDate, Date responseDate, HttpResponseStatus status,
+                          HttpHeaders responseHeaders) {
+        this.content = checkNotNull(content, "content");
+        this.requestDate = checkNotNull(requestDate, "requestDate");
         this.responseDate = checkNotNull(responseDate, "responseDate");
         this.status = checkNotNull(status, "status");
-        this.responseHeaders = responseHeaders;
+        this.responseHeaders = checkNotNull(responseHeaders, "responseHeaders");
         this.responseCacheControlDirectives = CacheControlDecoder.decode(responseHeaders);
 
         final String dateString = responseHeaders.get(HttpHeaderNames.DATE);

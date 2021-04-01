@@ -27,13 +27,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-final class AggregatedCacheFullHttpResponse implements FullHttpResponse {
+final class CachedFullHttpResponse implements FullHttpResponse {
 
     private final HttpMessage message;
     private final CompositeByteBuf content;
     private HttpHeaders trailingHeaders;
 
-    AggregatedCacheFullHttpResponse(HttpMessage message, CompositeByteBuf content, HttpHeaders trailingHeaders) {
+    CachedFullHttpResponse(HttpMessage message, CompositeByteBuf content, HttpHeaders trailingHeaders) {
         this.message = message;
         this.content = content;
         this.trailingHeaders = trailingHeaders;

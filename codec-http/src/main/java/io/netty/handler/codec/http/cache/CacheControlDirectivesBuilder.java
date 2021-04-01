@@ -72,37 +72,37 @@ public class CacheControlDirectivesBuilder {
         return this;
     }
 
-    public CacheControlDirectivesBuilder flags(final EnumSet<CacheControlDirectives.CacheControlFlags> flags) {
+    public CacheControlDirectivesBuilder flags(EnumSet<CacheControlDirectives.CacheControlFlags> flags) {
         this.flags = EnumSet.copyOf(flags);
         return this;
     }
 
-    public CacheControlDirectivesBuilder maxAge(final int maxAge) {
+    public CacheControlDirectivesBuilder maxAge(int maxAge) {
         this.maxAge = maxAge;
         return this;
     }
 
-    public CacheControlDirectivesBuilder sMaxAge(final int sMaxAge) {
+    public CacheControlDirectivesBuilder sMaxAge(int sMaxAge) {
         this.sMaxAge = sMaxAge;
         return this;
     }
 
-    public CacheControlDirectivesBuilder maxStale(final int maxStale) {
+    public CacheControlDirectivesBuilder maxStale(int maxStale) {
         this.maxStale = maxStale;
         return this;
     }
 
-    public CacheControlDirectivesBuilder minFresh(final int minFresh) {
+    public CacheControlDirectivesBuilder minFresh(int minFresh) {
         this.minFresh = minFresh;
         return this;
     }
 
-    public CacheControlDirectivesBuilder staleWhileRevalidate(final int staleWhileRevalidate) {
+    public CacheControlDirectivesBuilder staleWhileRevalidate(int staleWhileRevalidate) {
         this.staleWhileRevalidate = staleWhileRevalidate;
         return this;
     }
 
-    public CacheControlDirectivesBuilder staleIfError(final int staleIfError) {
+    public CacheControlDirectivesBuilder staleIfError(int staleIfError) {
         this.staleIfError = staleIfError;
         return this;
     }

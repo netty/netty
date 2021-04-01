@@ -32,7 +32,7 @@ class RequestCachingPolicy {
             return false;
         }
 
-        final HttpMethod method = request.method();
+        HttpMethod method = request.method();
         if (!method.equals(HttpMethod.GET) && !method.equals(HttpMethod.HEAD)) {
             if (logger.isDebugEnabled()) {
                 logger.debug(method + " request can not be served from cache.");
@@ -46,10 +46,9 @@ class RequestCachingPolicy {
             return false;
         }
 
-        final CacheControlDirectives cacheControlDirectives = CacheControlDecoder.decode(request.headers());
+        CacheControlDirectives cacheControlDirectives = CacheControlDecoder.decode(request.headers());
         if (cacheControlDirectives.noStore()) {
             logger.debug("Request with 'cache-control: no-store' header can not be served from cache.");
-
             return false;
         }
 

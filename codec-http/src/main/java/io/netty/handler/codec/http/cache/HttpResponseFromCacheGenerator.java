@@ -41,14 +41,14 @@ import static io.netty.handler.codec.http.cache.CacheControlDecoder.*;
 
 class HttpResponseFromCacheGenerator {
 
-    FullHttpResponse generate(final HttpRequest request, final HttpCacheEntry cacheEntry) {
-        final Date now = new Date();
+    FullHttpResponse generate(HttpRequest request, HttpCacheEntry cacheEntry) {
+        Date now = new Date();
 
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders(false);
+        DefaultHttpHeaders headers = new DefaultHttpHeaders(false);
         headers.set(cacheEntry.getResponseHeaders());
 
         ByteBuf content = EMPTY_BUFFER;
-        final ByteBufHolder contentHolder = cacheEntry.getContent();
+        ByteBufHolder contentHolder = cacheEntry.getContent();
         if (request.method().equals(HttpMethod.GET) && content != null) {
             content = contentHolder.content();
 
@@ -58,7 +58,7 @@ class HttpResponseFromCacheGenerator {
             }
         }
 
-        final long age = cacheEntry.getCurrentAgeInSeconds(now);
+        long age = cacheEntry.getCurrentAgeInSeconds(now);
         if (age > 0) {
             if (age >= MAXIMUM_AGE) {
                 headers.add(HttpHeaderNames.AGE, Integer.toString(MAXIMUM_AGE));
@@ -74,11 +74,11 @@ class HttpResponseFromCacheGenerator {
     HttpResponse generateNotModifiedResponse(final HttpCacheEntry entry) {
 
         HttpHeaders headers = new DefaultHttpHeaders();
-        Set<AsciiString> headerNames = new HashSet<AsciiString>(Arrays.asList(
-                HttpHeaderNames.DATE, HttpHeaderNames.ETAG, HttpHeaderNames.CONTENT_LOCATION, HttpHeaderNames.EXPIRES,
+        Set<AsciiString> headerNames = new HashSet<AsciiString>(Arrays.asList(HttpHeaderNames.DATE,
+                HttpHeaderNames.ETAG, HttpHeaderNames.CONTENT_LOCATION, HttpHeaderNames.EXPIRES,
                 HttpHeaderNames.CACHE_CONTROL, HttpHeaderNames.VARY));
         for (AsciiString headerName : headerNames) {
-            final String headerValue = entry.getResponseHeaders().get(headerName);
+            String headerValue = entry.getResponseHeaders().get(headerName);
             if (headerValue != null) {
                 headers.add(headerName, headerValue);
             }

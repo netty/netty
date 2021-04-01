@@ -45,23 +45,20 @@ class HttpCache {
         this(storage, cacheKeyGenerator, executor);
     }
 
-    HttpCache(final HttpCacheStorage storage,
-              final CacheKeyGenerator keyGenerator,
-              final EventExecutor executor) {
+    HttpCache(HttpCacheStorage storage, CacheKeyGenerator keyGenerator, EventExecutor executor) {
         this.storage = checkNotNull(storage, "storage");
         this.keyGenerator = checkNotNull(keyGenerator, "keyGenerator");
         this.executor = checkNotNull(executor, "executor");
     }
 
-    private static boolean isHttpMethodSafe(HttpMethod method) {
+    private static boolean isMethodCacheable(HttpMethod method) {
         return method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.TRACE;
     }
 
-    public Future<HttpCacheEntry> cache(final HttpRequest request,
-                                        final FullHttpResponse response,
-                                        final Date requestSent,
-                                        final Date responseReceived) {
-        final String cacheKey = keyGenerator.generateKey(request);
+    public Future<HttpCacheEntry> cache(HttpRequest request, FullHttpResponse response, Date requestSent,
+                                        Date responseReceived) {
+
+        String cacheKey = keyGenerator.generateKey(request);
 
         final HttpCacheEntry entry = new HttpCacheEntry(response.copy(), requestSent, responseReceived,
                                                         response.status(), response.headers());
@@ -70,7 +67,7 @@ class HttpCache {
         storage.put(cacheKey, entry, executor.<Void>newPromise())
                .addListener(new GenericFutureListener<Future<? super Void>>() {
                    @Override
-                   public void operationComplete(Future<? super Void> future) throws Exception {
+                   public void operationComplete(Future<? super Void> future) {
                        if (future.isSuccess()) {
                            promise.setSuccess(entry);
                        } else {
@@ -83,12 +80,12 @@ class HttpCache {
         return promise;
     }
 
-    public Future<HttpCacheEntry> getCacheEntry(final HttpRequest request, final Promise<HttpCacheEntry> promise) {
-        final String cacheKey = keyGenerator.generateKey(request);
+    public Future<HttpCacheEntry> getCacheEntry(HttpRequest request, Promise<HttpCacheEntry> promise) {
+        String cacheKey = keyGenerator.generateKey(request);
         return storage.get(cacheKey, promise);
     }
 
-    public Future<Void> invalidate(final HttpRequest request, final Promise<Void> promise) {
+    public Future<Void> invalidate(HttpRequest request, final Promise<Void> promise) {
         logger.debug("Invalid cache entries");
 
         final String cacheKey = keyGenerator.generateKey(request);
@@ -114,16 +111,15 @@ class HttpCache {
     /**
      * @see <a href="https://tools.ietf.org/html/rfc7234#section-4.4">RFC 7234 - Invalidation</a>
      */
-    public Future<Void> flushCacheEntriesInvalidatedByExchange(final HttpRequest request,
-                                                               final HttpResponse response,
+    public Future<Void> flushCacheEntriesInvalidatedByExchange(HttpRequest request, HttpResponse response,
                                                                Promise<Void> promise) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Flush cache entries invalidated by exchange: " + request.headers().get(HttpHeaderNames.HOST) +
-                         "; " + request.method() + ' ' + request.uri() + request.protocolVersion() + " -> " +
-                         response.protocolVersion() + ' ' + response.status());
+            logger.debug("Flush cache entries invalidated by exchange: " +
+                    request.headers().get(HttpHeaderNames.HOST) + "; " + request.method() + ' ' + request.uri() +
+                    request.protocolVersion() + " -> " + response.protocolVersion() + ' ' + response.status());
         }
 
-        if (!isHttpMethodSafe(request.method())) {
+        if (!isMethodCacheable(request.method())) {
 
             final HttpResponseStatus status = response.status();
             if (status.codeClass() != HttpStatusClass.SUCCESS) {
@@ -146,7 +142,7 @@ class HttpCache {
         }
 
         final HttpMethod method = request.method();
-        if (!isHttpMethodSafe(method)) {
+        if (!isMethodCacheable(method)) {
             return invalidate(request, promise);
         }
 

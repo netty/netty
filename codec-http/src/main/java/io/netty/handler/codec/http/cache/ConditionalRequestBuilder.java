@@ -19,6 +19,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 
 import java.util.HashSet;
@@ -27,10 +28,9 @@ import java.util.Set;
 
 public class ConditionalRequestBuilder {
 
-    private static final Set<CharSequence> UNCONDITIONAL_EXCLUDED_HEADERS;
+    private static final Set<CharSequence> UNCONDITIONAL_EXCLUDED_HEADERS = new HashSet<CharSequence>();
 
     static {
-        UNCONDITIONAL_EXCLUDED_HEADERS = new HashSet<CharSequence>();
         UNCONDITIONAL_EXCLUDED_HEADERS.add(HttpHeaderNames.IF_RANGE);
         UNCONDITIONAL_EXCLUDED_HEADERS.add(HttpHeaderNames.IF_MATCH);
         UNCONDITIONAL_EXCLUDED_HEADERS.add(HttpHeaderNames.IF_NONE_MATCH);
@@ -39,29 +39,29 @@ public class ConditionalRequestBuilder {
     }
 
     HttpRequest conditionalRequest(HttpRequest request, HttpCacheEntry cacheEntry) {
-        final DefaultHttpHeaders copiedHeaders = new DefaultHttpHeaders();
+        HttpHeaders copiedHeaders = new DefaultHttpHeaders();
         for (Entry<String, String> header : request.headers()) {
             copiedHeaders.add(header.getKey(), header.getValue());
         }
 
-        final HttpRequest newRequest =
-                new DefaultHttpRequest(request.protocolVersion(), request.method(), request.uri(), copiedHeaders);
+        HttpRequest newRequest = new DefaultHttpRequest(request.protocolVersion(), request.method(), request.uri(),
+                copiedHeaders);
 
-        final String etag = cacheEntry.getResponseHeaders().get(HttpHeaderNames.ETAG);
+        String etag = cacheEntry.getResponseHeaders().get(HttpHeaderNames.ETAG);
         if (etag != null) {
             copiedHeaders.set(HttpHeaderNames.IF_NONE_MATCH, etag);
         }
 
-        final String lastModified = cacheEntry.getResponseHeaders().get(HttpHeaderNames.LAST_MODIFIED);
+        String lastModified = cacheEntry.getResponseHeaders().get(HttpHeaderNames.LAST_MODIFIED);
         if (lastModified != null) {
             copiedHeaders.set(HttpHeaderNames.IF_MODIFIED_SINCE, lastModified);
         }
 
-        final CacheControlDirectives cacheEntryCacheControlDirectives =
+        CacheControlDirectives cacheEntryCacheControlDirectives =
                 CacheControlDecoder.decode(cacheEntry.getResponseHeaders());
+
         boolean mustRevalidate = cacheEntryCacheControlDirectives.mustRevalidate() ||
                                  cacheEntryCacheControlDirectives.proxyRevalidate();
-
         if (mustRevalidate) {
             copiedHeaders.add(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.MAX_AGE + "=0");
         }

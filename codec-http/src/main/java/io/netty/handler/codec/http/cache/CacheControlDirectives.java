@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.cache;
 import java.util.EnumSet;
 
 class CacheControlDirectives {
+
     public static final CacheControlDirectives EMPTY = builder().build();
 
     private final EnumSet<CacheControlFlags> flags;
@@ -32,9 +33,9 @@ class CacheControlDirectives {
         return new CacheControlDirectivesBuilder();
     }
 
-    public CacheControlDirectives(final EnumSet<CacheControlFlags> flags, final int maxAge, final int sMaxAge,
-                                  final int maxStale, final int minFresh, final int staleWhileRevalidate,
-                                  final int staleIfError) {
+    public CacheControlDirectives(EnumSet<CacheControlFlags> flags, int maxAge, int sMaxAge,
+                                  int maxStale, int minFresh, int staleWhileRevalidate,
+                                  int staleIfError) {
         this.flags = EnumSet.copyOf(flags);
         this.maxAge = maxAge;
         this.sMaxAge = sMaxAge;
