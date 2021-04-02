@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,23 +15,22 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SessionTicketKey;
+import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionContext;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.NoSuchElementException;
+import java.util.Iterator;
 import java.util.concurrent.locks.Lock;
 
 /**
  * OpenSSL specific {@link SSLSessionContext} implementation.
  */
 public abstract class OpenSslSessionContext implements SSLSessionContext {
-    private static final Enumeration<byte[]> EMPTY = new EmptyEnumeration();
 
     private final OpenSslSessionStats stats;
 
@@ -42,27 +41,76 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
 
     final ReferenceCountedOpenSslContext context;
 
+    private final OpenSslSessionCache sessionCache;
+    private final long mask;
+
     // IMPORTANT: We take the OpenSslContext and not just the long (which points the native instance) to prevent
     //            the GC to collect OpenSslContext as this would also free the pointer and so could result in a
     //            segfault when the user calls any of the methods here that try to pass the pointer down to the native
     //            level.
-    OpenSslSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider) {
+    OpenSslSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider, long mask,
+                          OpenSslSessionCache cache) {
         this.context = context;
         this.provider = provider;
+        this.mask = mask;
         stats = new OpenSslSessionStats(context);
+        sessionCache = cache;
+        SSLContext.setSSLSessionCache(context.ctx, cache);
+    }
+
+    final boolean useKeyManager() {
+        return provider != null;
+    }
+
+    @Override
+    public void setSessionCacheSize(int size) {
+        ObjectUtil.checkPositiveOrZero(size, "size");
+        sessionCache.setSessionCacheSize(size);
+    }
+
+    @Override
+    public int getSessionCacheSize() {
+        return sessionCache.getSessionCacheSize();
+    }
+
+    @Override
+    public void setSessionTimeout(int seconds) {
+        ObjectUtil.checkPositiveOrZero(seconds, "seconds");
+
+        Lock writerLock = context.ctxLock.writeLock();
+        writerLock.lock();
+        try {
+            SSLContext.setSessionCacheTimeout(context.ctx, seconds);
+            sessionCache.setSessionTimeout(seconds);
+        } finally {
+            writerLock.unlock();
+        }
+    }
+
+    @Override
+    public int getSessionTimeout() {
+        return sessionCache.getSessionTimeout();
     }
 
     @Override
     public SSLSession getSession(byte[] bytes) {
-        if (bytes == null) {
-            throw new NullPointerException("bytes");
-        }
-        return null;
+        return sessionCache.getSession(new OpenSslSessionId(bytes));
     }
 
     @Override
     public Enumeration<byte[]> getIds() {
-        return EMPTY;
+        return new Enumeration<byte[]>() {
+            private final Iterator<OpenSslSessionId> ids = sessionCache.getIds().iterator();
+            @Override
+            public boolean hasMoreElements() {
+                return ids.hasNext();
+            }
+
+            @Override
+            public byte[] nextElement() {
+                return ids.next().cloneBytes();
+            }
+        };
     }
 
     /**
@@ -95,7 +143,11 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     }
 
     /**
-     * Sets the SSL session ticket keys of this context.
+     * Sets the SSL session ticket keys of this context. Depending on the underlying native library you may omit the
+     * argument or pass an empty array and so let the native library handle the key generation and rotating for you.
+     * If this is supported by the underlying native library should be checked in this case. For example
+     * <a href="https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets/">
+     *     BoringSSL</a> is known to support this.
      */
     public void setTicketKeys(OpenSslSessionTicketKey... keys) {
         ObjectUtil.checkNotNull(keys, "keys");
@@ -107,7 +159,9 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         writerLock.lock();
         try {
             SSLContext.clearOptions(context.ctx, SSL.SSL_OP_NO_TICKET);
-            SSLContext.setSessionTicketKeys(context.ctx, ticketKeys);
+            if (ticketKeys.length > 0) {
+                SSLContext.setSessionTicketKeys(context.ctx, ticketKeys);
+            }
         } finally {
             writerLock.unlock();
         }
@@ -116,12 +170,33 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     /**
      * Enable or disable caching of SSL sessions.
      */
-    public abstract void setSessionCacheEnabled(boolean enabled);
+    public void setSessionCacheEnabled(boolean enabled) {
+        long mode = enabled ? mask | SSL.SSL_SESS_CACHE_NO_INTERNAL_LOOKUP |
+                SSL.SSL_SESS_CACHE_NO_INTERNAL_STORE : SSL.SSL_SESS_CACHE_OFF;
+        Lock writerLock = context.ctxLock.writeLock();
+        writerLock.lock();
+        try {
+            SSLContext.setSessionCacheMode(context.ctx, mode);
+            if (!enabled) {
+                sessionCache.clear();
+            }
+        } finally {
+            writerLock.unlock();
+        }
+    }
 
     /**
      * Return {@code true} if caching of SSL sessions is enabled, {@code false} otherwise.
      */
-    public abstract boolean isSessionCacheEnabled();
+    public boolean isSessionCacheEnabled() {
+        Lock readerLock = context.ctxLock.readLock();
+        readerLock.lock();
+        try {
+            return (SSLContext.getSessionCacheMode(context.ctx) & mask) != 0;
+        } finally {
+            readerLock.unlock();
+        }
+    }
 
     /**
      * Returns the stats of this context.
@@ -130,21 +205,25 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         return stats;
     }
 
+    /**
+     * Remove the given {@link OpenSslSession} from the cache, and so not re-use it for new connections.
+     */
+    final void removeFromCache(OpenSslSessionId id) {
+        sessionCache.removeSessionWithId(id);
+    }
+
+    final boolean isInCache(OpenSslSessionId id) {
+        return sessionCache.containsSessionWithId(id);
+    }
+
+    void setSessionFromCache(String host, int port, long ssl) {
+        sessionCache.setSession(ssl, host, port);
+    }
+
     final void destroy() {
         if (provider != null) {
             provider.destroy();
         }
-    }
-
-    private static final class EmptyEnumeration implements Enumeration<byte[]> {
-        @Override
-        public boolean hasMoreElements() {
-            return false;
-        }
-
-        @Override
-        public byte[] nextElement() {
-            throw new NoSuchElementException();
-        }
+        sessionCache.clear();
     }
 }

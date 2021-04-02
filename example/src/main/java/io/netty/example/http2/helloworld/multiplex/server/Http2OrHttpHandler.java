@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -18,7 +18,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.example.http2.helloworld.server.HelloWorldHttp1Handler;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 
@@ -37,7 +38,8 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     @Override
     protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
         if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-            ctx.pipeline().addLast(Http2MultiplexCodecBuilder.forServer(new HelloWorldHttp2Handler()).build());
+            ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build());
+            ctx.pipeline().addLast(new Http2MultiplexHandler(new HelloWorldHttp2Handler()));
             return;
         }
 

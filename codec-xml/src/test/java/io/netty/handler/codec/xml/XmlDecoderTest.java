@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,8 @@ import static org.hamcrest.core.IsNull.nullValue;
 
 /**
  * Verifies the basic functionality of the {@link XmlDecoder}.
- * XML borrowed from <a href="http://www.studytrails.com/java/xml/woodstox/java-xml-woodstox-validation-xml-schema.jsp">
+ * XML borrowed from
+ * <a href="https://www.studytrails.com/java/xml/woodstox/java-xml-woodstox-validation-xml-schema.jsp">
  * Woodstox : Validate against XML Schema</a>
  */
 public class XmlDecoderTest {
@@ -37,12 +38,12 @@ public class XmlDecoderTest {
             "<!DOCTYPE employee SYSTEM \"employee.dtd\">" +
             "<?xml-stylesheet type=\"text/css\" href=\"netty.css\"?>" +
             "<?xml-test ?>" +
-            "<employee xmlns:nettya=\"http://netty.io/netty/a\">" +
+            "<employee xmlns:nettya=\"https://netty.io/netty/a\">" +
             "<nettya:id>&plusmn;1</nettya:id>\n" +
             "<name ";
 
     private static final String XML2 = "type=\"given\">Alba</name><![CDATA[ <some data &gt;/> ]]>" +
-            "   <!-- namespaced --><nettyb:salary xmlns:nettyb=\"http://netty.io/netty/b\" nettyb:period=\"weekly\">" +
+            "   <!-- namespaced --><nettyb:salary xmlns:nettyb=\"https://netty.io/netty/b\" nettyb:period=\"weekly\">" +
             "100</nettyb:salary><last/></employee>";
 
     private static final String XML3 = "<?xml version=\"1.1\" encoding=\"UTf-8\" standalone=\"yes\"?><netty></netty>";
@@ -99,13 +100,13 @@ public class XmlDecoderTest {
         assertThat(((XmlElementStart) temp).attributes().size(), is(0));
         assertThat(((XmlElementStart) temp).namespaces().size(), is(1));
         assertThat(((XmlElementStart) temp).namespaces().get(0).prefix(), is("nettya"));
-        assertThat(((XmlElementStart) temp).namespaces().get(0).uri(), is("http://netty.io/netty/a"));
+        assertThat(((XmlElementStart) temp).namespaces().get(0).uri(), is("https://netty.io/netty/a"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlElementStart.class));
         assertThat(((XmlElementStart) temp).name(), is("id"));
         assertThat(((XmlElementStart) temp).prefix(), is("nettya"));
-        assertThat(((XmlElementStart) temp).namespace(), is("http://netty.io/netty/a"));
+        assertThat(((XmlElementStart) temp).namespace(), is("https://netty.io/netty/a"));
         assertThat(((XmlElementStart) temp).attributes().size(), is(0));
         assertThat(((XmlElementStart) temp).namespaces().size(), is(0));
 
@@ -122,7 +123,7 @@ public class XmlDecoderTest {
         assertThat(temp, instanceOf(XmlElementEnd.class));
         assertThat(((XmlElementEnd) temp).name(), is("id"));
         assertThat(((XmlElementEnd) temp).prefix(), is("nettya"));
-        assertThat(((XmlElementEnd) temp).namespace(), is("http://netty.io/netty/a"));
+        assertThat(((XmlElementEnd) temp).namespace(), is("https://netty.io/netty/a"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlCharacters.class));
@@ -171,15 +172,15 @@ public class XmlDecoderTest {
         assertThat(temp, instanceOf(XmlElementStart.class));
         assertThat(((XmlElementStart) temp).name(), is("salary"));
         assertThat(((XmlElementStart) temp).prefix(), is("nettyb"));
-        assertThat(((XmlElementStart) temp).namespace(), is("http://netty.io/netty/b"));
+        assertThat(((XmlElementStart) temp).namespace(), is("https://netty.io/netty/b"));
         assertThat(((XmlElementStart) temp).attributes().size(), is(1));
         assertThat(((XmlElementStart) temp).attributes().get(0).name(), is("period"));
         assertThat(((XmlElementStart) temp).attributes().get(0).value(), is("weekly"));
         assertThat(((XmlElementStart) temp).attributes().get(0).prefix(), is("nettyb"));
-        assertThat(((XmlElementStart) temp).attributes().get(0).namespace(), is("http://netty.io/netty/b"));
+        assertThat(((XmlElementStart) temp).attributes().get(0).namespace(), is("https://netty.io/netty/b"));
         assertThat(((XmlElementStart) temp).namespaces().size(), is(1));
         assertThat(((XmlElementStart) temp).namespaces().get(0).prefix(), is("nettyb"));
-        assertThat(((XmlElementStart) temp).namespaces().get(0).uri(), is("http://netty.io/netty/b"));
+        assertThat(((XmlElementStart) temp).namespaces().get(0).uri(), is("https://netty.io/netty/b"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlCharacters.class));
@@ -189,10 +190,10 @@ public class XmlDecoderTest {
         assertThat(temp, instanceOf(XmlElementEnd.class));
         assertThat(((XmlElementEnd) temp).name(), is("salary"));
         assertThat(((XmlElementEnd) temp).prefix(), is("nettyb"));
-        assertThat(((XmlElementEnd) temp).namespace(), is("http://netty.io/netty/b"));
+        assertThat(((XmlElementEnd) temp).namespace(), is("https://netty.io/netty/b"));
         assertThat(((XmlElementEnd) temp).namespaces().size(), is(1));
         assertThat(((XmlElementEnd) temp).namespaces().get(0).prefix(), is("nettyb"));
-        assertThat(((XmlElementEnd) temp).namespaces().get(0).uri(), is("http://netty.io/netty/b"));
+        assertThat(((XmlElementEnd) temp).namespaces().get(0).uri(), is("https://netty.io/netty/b"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlElementStart.class));
@@ -216,7 +217,7 @@ public class XmlDecoderTest {
         assertThat(((XmlElementEnd) temp).namespace(), is(""));
         assertThat(((XmlElementEnd) temp).namespaces().size(), is(1));
         assertThat(((XmlElementEnd) temp).namespaces().get(0).prefix(), is("nettya"));
-        assertThat(((XmlElementEnd) temp).namespaces().get(0).uri(), is("http://netty.io/netty/a"));
+        assertThat(((XmlElementEnd) temp).namespaces().get(0).uri(), is("https://netty.io/netty/a"));
 
         temp = channel.readInbound();
         assertThat(temp, nullValue());

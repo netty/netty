@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,6 +37,15 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      */
     public LocalEventLoopGroup(int nThreads) {
         super(nThreads);
+    }
+
+    /**
+     * Create a new instance with the default number of threads and the given {@link ThreadFactory}.
+     *
+     * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
+     */
+    public LocalEventLoopGroup(ThreadFactory threadFactory) {
+        super(0, threadFactory);
     }
 
     /**

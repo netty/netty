@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,9 @@
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
+#include "netty_jni_util.h"
+
+#define FILEDESCRIPTOR_CLASSNAME "io/netty/channel/unix/FileDescriptor"
 
 static jmethodID posId = NULL;
 static jmethodID limitId = NULL;
@@ -276,65 +279,43 @@ static const jint method_table_size = sizeof(method_table) / sizeof(method_table
 // JNI Method Registration Table End
 
 jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    if (netty_unix_util_register_natives(env, packagePrefix, "io/netty/channel/unix/FileDescriptor", method_table, method_table_size) != 0) {
-        return JNI_ERR;
+    int ret = JNI_ERR;
+    void* mem = NULL;
+    if (netty_jni_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
+        goto done;
     }
-    void* mem = malloc(1);
-    if (mem == NULL) {
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
+    if ((mem = malloc(1)) == NULL) {
+        goto done;
     }
     jobject directBuffer = (*env)->NewDirectByteBuffer(env, mem, 1);
     if (directBuffer == NULL) {
-        free(mem);
-
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
+        goto done;
     }
     if ((*env)->GetDirectBufferAddress(env, directBuffer) == NULL) {
-        free(mem);
-
-        netty_unix_errors_throwRuntimeException(env, "failed to get direct buffer address");
-        return JNI_ERR;
+        goto done;
     }
-
     jclass cls = (*env)->GetObjectClass(env, directBuffer);
-
+    if (cls == NULL) {
+        goto done;
+    }
+ 
     // Get the method id for Buffer.position() and Buffer.limit(). These are used as fallback if
     // it is not possible to obtain the position and limit using the fields directly.
-    posId = (*env)->GetMethodID(env, cls, "position", "()I");
-    if (posId == NULL) {
-        free(mem);
+    NETTY_JNI_UTIL_GET_METHOD(env, cls, posId, "position", "()I", done);
+    NETTY_JNI_UTIL_GET_METHOD(env, cls, limitId, "limit", "()I", done);
 
-        // position method was not found.. something is wrong so bail out
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: ByteBuffer.position()");
-        return JNI_ERR;
-    }
-
-    limitId = (*env)->GetMethodID(env, cls, "limit", "()I");
-    if (limitId == NULL) {
-        free(mem);
-
-        // limit method was not found.. something is wrong so bail out
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: ByteBuffer.limit()");
-        return JNI_ERR;
-    }
     // Try to get the ids of the position and limit fields. We later then check if we was able
     // to find them and if so use them get the position and limit of the buffer. This is
     // much faster then call back into java via (*env)->CallIntMethod(...).
-    posFieldId = (*env)->GetFieldID(env, cls, "position", "I");
-    if (posFieldId == NULL) {
-        // this is ok as we can still use the method so just clear the exception
-        (*env)->ExceptionClear(env);
-    }
-    limitFieldId = (*env)->GetFieldID(env, cls, "limit", "I");
-    if (limitFieldId == NULL) {
-        // this is ok as we can still use the method so just clear the exception
-        (*env)->ExceptionClear(env);
-    }
+    NETTY_JNI_UTIL_TRY_GET_FIELD(env, cls, posFieldId, "position", "I");
+    NETTY_JNI_UTIL_TRY_GET_FIELD(env, cls, limitFieldId, "limit", "I");
 
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
+done:
     free(mem);
-    return NETTY_JNI_VERSION;
+    return ret;
 }
 
-void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env) { }
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    netty_jni_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
+}

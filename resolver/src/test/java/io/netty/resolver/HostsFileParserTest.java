@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,11 @@
 package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.Inet4Address;
@@ -76,7 +76,7 @@ public class HostsFileParserTest {
             return;
         }
         testParseFile(HostsFileParser.parse(
-                new File(getClass().getResource("hosts-unicode").getFile()), unicodeCharset));
+                ResourcesUtil.getFile(getClass(),  "hosts-unicode"), unicodeCharset));
     }
 
     @Test
@@ -88,7 +88,7 @@ public class HostsFileParserTest {
             Assume.assumeNoException(e);
             return;
         }
-        testParseFile(HostsFileParser.parse(new File(getClass().getResource("hosts-unicode").getFile()),
+        testParseFile(HostsFileParser.parse(ResourcesUtil.getFile(getClass(),  "hosts-unicode"),
                                             CharsetUtil.UTF_8, CharsetUtil.ISO_8859_1, unicodeCharset));
     }
 

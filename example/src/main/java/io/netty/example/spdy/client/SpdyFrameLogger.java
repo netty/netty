@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.spdy.SpdyFrame;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,12 +37,8 @@ public class SpdyFrameLogger extends ChannelDuplexHandler {
     private final InternalLogLevel level;
 
     public SpdyFrameLogger(InternalLogLevel level) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
-
-        logger = InternalLoggerFactory.getInstance(getClass());
-        this.level = level;
+        this.level = ObjectUtil.checkNotNull(level, "level");
+        this.logger = InternalLoggerFactory.getInstance(getClass());
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -29,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -48,12 +51,12 @@ import java.util.Date;
  * It is purely for testing purposes, and thus it is very insecure.
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
- * A X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
+ * An X.509 certificate file and a EC/RSA private key file are generated in a system's temporary directory using
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>
  * At first, this method tries to use OpenJDK's X.509 implementation (the {@code sun.security.x509} package).
- * If it fails, it tries to use <a href="http://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
+ * If it fails, it tries to use <a href="https://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
  * </p>
  */
 public final class SelfSignedCertificate {
@@ -67,6 +70,14 @@ public final class SelfSignedCertificate {
     private static final Date DEFAULT_NOT_AFTER = new Date(SystemPropertyUtil.getLong(
             "io.netty.selfSignedCertificate.defaultNotAfter", 253402300799000L));
 
+    /**
+     * FIPS 140-2 encryption requires the RSA key length to be 2048 bits or greater.
+     * Let's use that as a sane default but allow the default to be set dynamically
+     * for those that need more stringent security requirements.
+     */
+    private static final int DEFAULT_KEY_LENGTH_BITS =
+            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 2048);
+
     private final File certificate;
     private final File privateKey;
     private final X509Certificate cert;
@@ -74,90 +85,173 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA </p>
      */
     public SelfSignedCertificate() throws CertificateException {
-        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
+        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
      * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param notAfter  Certificate is not valid after this time
      */
-    public SelfSignedCertificate(Date notBefore, Date notAfter) throws CertificateException {
-        this("example.com", notBefore, notAfter);
+    public SelfSignedCertificate(Date notBefore, Date notAfter)
+            throws CertificateException {
+        this("localhost", notBefore, notAfter, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
      * Creates a new instance.
+     *
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm, int bits)
+            throws CertificateException {
+        this("localhost", notBefore, notAfter, algorithm, bits);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
      *
      * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificate(String fqdn) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param fqdn a fully qualified domain name
+     * @param fqdn      a fully qualified domain name
+     * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(String fqdn, String algorithm, int bits) throws CertificateException {
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm, bits);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn      a fully qualified domain name
      * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param notAfter  Certificate is not valid after this time
      */
     public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
         // Bypass entropy collection by using insecure random generator.
         // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), 1024, notBefore, notAfter);
+        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter, "RSA");
     }
 
     /**
      * Creates a new instance.
      *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link java.security.SecureRandom} to use
-     * @param bits the number of bits of the generated private key
-     */
-    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits) throws CertificateException {
-        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link java.security.SecureRandom} to use
-     * @param bits the number of bits of the generated private key
+     * @param fqdn      a fully qualified domain name
      * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter, String algorithm, int bits)
+            throws CertificateException {
+        // Bypass entropy collection by using insecure random generator.
+        // We just want to generate it without any delay because it's for testing purposes only.
+        this(fqdn, ThreadLocalInsecureRandom.current(), bits, notBefore, notAfter, algorithm);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits)
+            throws CertificateException {
+        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA");
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(String fqdn, SecureRandom random, String algorithm, int bits)
+            throws CertificateException {
+        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter)
             throws CertificateException {
-        // Generate an RSA key pair.
+        this(fqdn, random, bits, notBefore, notAfter, "RSA");
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
+     */
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
+                                 String algorithm) throws CertificateException {
+
+        if (!algorithm.equalsIgnoreCase("EC") && !algorithm.equalsIgnoreCase("RSA")) {
+            throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
+        }
+
         final KeyPair keypair;
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
             keyGen.initialize(bits, random);
             keypair = keyGen.generateKeyPair();
         } catch (NoSuchAlgorithmException e) {
-            // Should not reach here because every Java implementation must have RSA key pair generator.
+            // Should not reach here because every Java implementation must have RSA and EC key pair generator.
             throw new Error(e);
         }
 
         String[] paths;
         try {
             // Try the OpenJDK's proprietary implementation.
-            paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter);
+            paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable t) {
             logger.debug("Failed to generate a self-signed X.509 certificate using sun.security.x509:", t);
             try {
                 // Try Bouncy Castle if the current JVM didn't have sun.security.x509.
-                paths = BouncyCastleSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter);
+                paths = BouncyCastleSelfSignedCertGenerator.generate(
+                        fqdn, keypair, random, notBefore, notAfter, algorithm);
             } catch (Throwable t2) {
                 logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t2);
-                throw new CertificateException(
+                final CertificateException certificateException = new CertificateException(
                         "No provider succeeded to generate a self-signed certificate. " +
                                 "See debug log for the root cause.", t2);
-                // TODO: consider using Java 7 addSuppressed to append t
+                ThrowableUtil.addSuppressed(certificateException, t);
+                throw certificateException;
             }
         }
 
@@ -229,8 +323,8 @@ public final class SelfSignedCertificate {
             encodedBuf = Base64.encode(wrappedBuf, true);
             try {
                 keyText = "-----BEGIN PRIVATE KEY-----\n" +
-                          encodedBuf.toString(CharsetUtil.US_ASCII) +
-                          "\n-----END PRIVATE KEY-----\n";
+                        encodedBuf.toString(CharsetUtil.US_ASCII) +
+                        "\n-----END PRIVATE KEY-----\n";
             } finally {
                 encodedBuf.release();
             }
@@ -238,7 +332,7 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
-        File keyFile = File.createTempFile("keyutil_" + fqdn + '_', ".key");
+        File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
         OutputStream keyOut = new FileOutputStream(keyFile);
@@ -260,8 +354,8 @@ public final class SelfSignedCertificate {
             try {
                 // Encode the certificate into a CRT file.
                 certText = "-----BEGIN CERTIFICATE-----\n" +
-                           encodedBuf.toString(CharsetUtil.US_ASCII) +
-                           "\n-----END CERTIFICATE-----\n";
+                        encodedBuf.toString(CharsetUtil.US_ASCII) +
+                        "\n-----END CERTIFICATE-----\n";
             } finally {
                 encodedBuf.release();
             }
@@ -269,7 +363,7 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
-        File certFile = File.createTempFile("keyutil_" + fqdn + '_', ".crt");
+        File certFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".crt", null);
         certFile.deleteOnExit();
 
         OutputStream certOut = new FileOutputStream(certFile);

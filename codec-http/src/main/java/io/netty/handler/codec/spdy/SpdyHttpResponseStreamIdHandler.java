@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 import io.netty.util.ReferenceCountUtil;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
@@ -33,7 +33,7 @@ import java.util.Queue;
 public class SpdyHttpResponseStreamIdHandler extends
         MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
-    private final Queue<Integer> ids = new LinkedList<Integer>();
+    private final Queue<Integer> ids = new ArrayDeque<Integer>();
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {

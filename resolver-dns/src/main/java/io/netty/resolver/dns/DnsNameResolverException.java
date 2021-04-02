@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,14 +18,12 @@ package io.netty.resolver.dns;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
 /**
  * A {@link RuntimeException} raised when {@link DnsNameResolver} failed to perform a successful query.
  */
-@UnstableApi
 public class DnsNameResolverException extends RuntimeException {
 
     private static final long serialVersionUID = -8826717909627131850L;
@@ -68,8 +66,9 @@ public class DnsNameResolverException extends RuntimeException {
         return question;
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
         setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         return this;
     }

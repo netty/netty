@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 public final class AsciiHeadersEncoder {
 
@@ -63,19 +64,9 @@ public final class AsciiHeadersEncoder {
     }
 
     public AsciiHeadersEncoder(ByteBuf buf, SeparatorType separatorType, NewlineType newlineType) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        if (separatorType == null) {
-            throw new NullPointerException("separatorType");
-        }
-        if (newlineType == null) {
-            throw new NullPointerException("newlineType");
-        }
-
-        this.buf = buf;
-        this.separatorType = separatorType;
-        this.newlineType = newlineType;
+        this.buf = ObjectUtil.checkNotNull(buf, "buf");
+        this.separatorType = ObjectUtil.checkNotNull(separatorType, "separatorType");
+        this.newlineType = ObjectUtil.checkNotNull(newlineType, "newlineType");
     }
 
     public void encode(Entry<CharSequence, CharSequence> entry) {

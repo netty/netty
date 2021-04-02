@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,17 @@
  */
 package io.netty.channel.unix;
 
-import io.netty.util.internal.ThrowableUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
 
 /**
@@ -34,36 +33,6 @@ import static java.lang.Math.min;
  * {@link FileDescriptor} for it.
  */
 public class FileDescriptor {
-    private static final ClosedChannelException WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "write(..)");
-    private static final ClosedChannelException WRITE_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writeAddress(..)");
-    private static final ClosedChannelException WRITEV_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "writev(..)");
-    private static final ClosedChannelException WRITEV_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writevAddresses(..)");
-    private static final ClosedChannelException READ_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "read(..)");
-    private static final ClosedChannelException READ_ADDRESS_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "readAddress(..)");
-    private static final Errors.NativeIoException WRITE_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:write", Errors.ERRNO_EPIPE_NEGATIVE),
-            FileDescriptor.class, "write(..)");
-    private static final Errors.NativeIoException WRITE_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:write",
-                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddress(..)");
-    private static final Errors.NativeIoException WRITEV_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:writev", Errors.ERRNO_EPIPE_NEGATIVE),
-            FileDescriptor.class, "writev(..)");
-    private static final Errors.NativeIoException WRITEV_ADDRESSES_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:writev",
-                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddresses(..)");
-    private static final Errors.NativeIoException READ_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:read", Errors.ERRNO_ECONNRESET_NEGATIVE),
-            FileDescriptor.class, "read(..)");
-    private static final Errors.NativeIoException READ_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:read",
-                    Errors.ERRNO_ECONNRESET_NEGATIVE), FileDescriptor.class, "readAddress(..)");
 
     private static final AtomicIntegerFieldUpdater<FileDescriptor> stateUpdater =
             AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "state");
@@ -82,9 +51,7 @@ public class FileDescriptor {
     final int fd;
 
     public FileDescriptor(int fd) {
-        if (fd < 0) {
-            throw new IllegalArgumentException("fd must be >= 0");
-        }
+        checkPositiveOrZero(fd, "fd");
         this.fd = fd;
     }
 
@@ -95,23 +62,28 @@ public class FileDescriptor {
         return fd;
     }
 
+    protected boolean markClosed() {
+        for (;;) {
+            int state = this.state;
+            if (isClosed(state)) {
+                return false;
+            }
+            // Once a close operation happens, the channel is considered shutdown.
+            if (casState(state, state | STATE_ALL_MASK)) {
+                return true;
+            }
+        }
+    }
+
     /**
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        for (;;) {
-            int state = this.state;
-            if (isClosed(state)) {
-                return;
+        if (markClosed()) {
+            int res = close(fd);
+            if (res < 0) {
+                throw newIOException("close", res);
             }
-            // Once a close operation happens, the channel is considered shutdown.
-            if (casState(state, state | STATE_ALL_MASK)) {
-                break;
-            }
-        }
-        int res = close(fd);
-        if (res < 0) {
-            throw newIOException("close", res);
         }
     }
 
@@ -127,7 +99,7 @@ public class FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("write", res, WRITE_CONNECTION_RESET_EXCEPTION, WRITE_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("write", res);
     }
 
     public final int writeAddress(long address, int pos, int limit) throws IOException {
@@ -135,8 +107,7 @@ public class FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("writeAddress", res,
-                WRITE_ADDRESS_CONNECTION_RESET_EXCEPTION, WRITE_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("writeAddress", res);
     }
 
     public final long writev(ByteBuffer[] buffers, int offset, int length, long maxBytesToWrite) throws IOException {
@@ -144,7 +115,7 @@ public class FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("writev", (int) res, WRITEV_CONNECTION_RESET_EXCEPTION, WRITEV_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("writev", (int) res);
     }
 
     public final long writevAddresses(long memoryAddress, int length) throws IOException {
@@ -152,8 +123,7 @@ public class FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("writevAddresses", (int) res,
-                WRITEV_ADDRESSES_CONNECTION_RESET_EXCEPTION, WRITEV_ADDRESSES_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("writevAddresses", (int) res);
     }
 
     public final int read(ByteBuffer buf, int pos, int limit) throws IOException {
@@ -164,7 +134,7 @@ public class FileDescriptor {
         if (res == 0) {
             return -1;
         }
-        return ioResult("read", res, READ_CONNECTION_RESET_EXCEPTION, READ_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("read", res);
     }
 
     public final int readAddress(long address, int pos, int limit) throws IOException {
@@ -175,8 +145,7 @@ public class FileDescriptor {
         if (res == 0) {
             return -1;
         }
-        return ioResult("readAddress", res,
-                READ_ADDRESS_CONNECTION_RESET_EXCEPTION, READ_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("readAddress", res);
     }
 
     @Override
@@ -207,8 +176,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given path.
      */
     public static FileDescriptor from(String path) throws IOException {
-        checkNotNull(path, "path");
-        int res = open(path);
+        int res = open(checkNotNull(path, "path"));
         if (res < 0) {
             throw newIOException("open", res);
         }

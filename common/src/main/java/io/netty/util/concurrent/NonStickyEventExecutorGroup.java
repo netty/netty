@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -274,7 +274,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         //
                         // The above cases can be distinguished by performing a
                         // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
-                        if (tasks.peek() == null || !state.compareAndSet(NONE, RUNNING)) {
+                        if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
                             return; // done
                         }
                     }
@@ -335,13 +335,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (state.compareAndSet(NONE, SUBMITTED)) {
                 // Actually it could happen that the runnable was picked up in between but we not care to much and just
                 // execute ourself. At worst this will be a NOOP when run() is called.
-                try {
-                    executor.execute(this);
-                } catch (Throwable e) {
-                    // Not reset the state as some other Runnable may be added to the queue already in the meantime.
-                    tasks.remove(command);
-                    PlatformDependent.throwException(e);
-                }
+                executor.execute(this);
             }
         }
     }

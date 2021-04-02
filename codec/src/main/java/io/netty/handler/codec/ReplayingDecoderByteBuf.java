@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.SwappedByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.util.ByteProcessor;
-import io.netty.util.Signal;
-import io.netty.util.internal.StringUtil;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -31,6 +23,15 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.SwappedByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.ByteProcessor;
+import io.netty.util.Signal;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
@@ -472,10 +473,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
-        if (endianness == order()) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order()) {
             return this;
         }
 
@@ -488,12 +486,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public boolean isReadable() {
-        return terminated? buffer.isReadable() : true;
+        return !terminated || buffer.isReadable();
     }
 
     @Override
     public boolean isReadable(int size) {
-        return terminated? buffer.isReadable(size) : true;
+        return !terminated || buffer.isReadable(size);
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -103,7 +103,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     @Override
-    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
+            final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
@@ -113,7 +114,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                         return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                             @Override
                             public Channel newChannel() {
-                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                                return new NioDatagramChannel(family);
                             }
 
                             @Override

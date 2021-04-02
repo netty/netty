@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,10 +22,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
@@ -33,7 +33,7 @@ import java.util.Map;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
+    private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {

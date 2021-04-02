@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,7 +43,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new continuation frame with the specified binary data
+     * Creates a new continuation frame with the specified binary data.
      *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
@@ -71,17 +71,17 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the text data in this frame
+     * Returns the text data in this frame.
      */
     public String text() {
         return content().toString(CharsetUtil.UTF_8);
     }
 
     /**
-     * Sets the string for this frame
+     * Sets the string for this frame.
      *
      * @param text
-     *            text to store
+     *            text to store.
      */
     private static ByteBuf fromText(String text) {
         if (text == null || text.isEmpty()) {

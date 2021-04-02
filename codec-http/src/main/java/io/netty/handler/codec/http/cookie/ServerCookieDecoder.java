@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,16 +17,19 @@ package io.netty.handler.codec.http.cookie;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used server side.
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used server side.
  *
  * Only name and value fields are expected, so old fields are not populated (path, domain, etc).
  *
- * Old <a href="http://tools.ietf.org/html/rfc2965">RFC2965</a> cookies are still supported,
+ * Old <a href="https://tools.ietf.org/html/rfc2965">RFC2965</a> cookies are still supported,
  * old fields will simply be ignored.
  *
  * @see ServerCookieEncoder
@@ -57,18 +60,39 @@ public final class ServerCookieDecoder extends CookieDecoder {
     }
 
     /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.  Unlike {@link #decode(String)}, this
+     * includes all cookie values present, even if they have the same name.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    public List<Cookie> decodeAll(String header) {
+        List<Cookie> cookies = new ArrayList<Cookie>();
+        decode(cookies, header);
+        return Collections.unmodifiableList(cookies);
+    }
+
+    /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
      *
      * @return the decoded {@link Cookie}
      */
     public Set<Cookie> decode(String header) {
+        Set<Cookie> cookies = new TreeSet<Cookie>();
+        decode(cookies, header);
+        return cookies;
+    }
+
+    /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    private void decode(Collection<? super Cookie> cookies, String header) {
         final int headerLen = checkNotNull(header, "header").length();
 
         if (headerLen == 0) {
-            return Collections.emptySet();
+            return;
         }
-
-        Set<Cookie> cookies = new TreeSet<Cookie>();
 
         int i = 0;
 
@@ -149,7 +173,5 @@ public final class ServerCookieDecoder extends CookieDecoder {
                 cookies.add(cookie);
             }
         }
-
-        return cookies;
     }
 }

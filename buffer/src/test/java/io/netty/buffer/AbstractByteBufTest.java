@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,12 +58,12 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
@@ -2123,8 +2123,41 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testSWARIndexOf() {
+        ByteBuf buffer = newBuffer(16);
+        buffer.clear();
+        // Ensure the buffer is completely zero'ed.
+        buffer.setZero(0, buffer.capacity());
+        buffer.writeByte((byte) 0); // 0
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0); // 7
+
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 0);
+        buffer.writeByte((byte) 1); // 11
+        buffer.writeByte((byte) 2);
+        buffer.writeByte((byte) 3);
+        buffer.writeByte((byte) 4);
+        buffer.writeByte((byte) 1);
+        assertEquals(11, buffer.indexOf(0, 12, (byte) 1));
+        assertEquals(12, buffer.indexOf(0, 16, (byte) 2));
+        assertEquals(-1, buffer.indexOf(0, 11, (byte) 1));
+        assertEquals(11, buffer.indexOf(0, 16, (byte) 1));
+        buffer.release();
+    }
+
+    @Test
     public void testIndexOf() {
         buffer.clear();
+        // Ensure the buffer is completely zero'ed.
+        buffer.setZero(0, buffer.capacity());
+
         buffer.writeByte((byte) 1);
         buffer.writeByte((byte) 2);
         buffer.writeByte((byte) 3);
@@ -2135,6 +2168,38 @@ public abstract class AbstractByteBufTest {
         assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
         assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
         assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+
+        try {
+            buffer.indexOf(0, buffer.capacity() + 1, (byte) 0);
+            fail();
+        } catch (IndexOutOfBoundsException expected) {
+            // expected
+        }
+
+        try {
+            buffer.indexOf(buffer.capacity(), -1, (byte) 0);
+            fail();
+        } catch (IndexOutOfBoundsException expected) {
+            // expected
+        }
+
+        assertEquals(4, buffer.indexOf(buffer.capacity() + 1, 0, (byte) 1));
+        assertEquals(0, buffer.indexOf(-1, buffer.capacity(), (byte) 1));
+    }
+
+    @Test
+    public void testIndexOfReleaseBuffer() {
+        ByteBuf buffer = releasedBuffer();
+        if (buffer.capacity() != 0) {
+            try {
+                buffer.indexOf(0, 1, (byte) 1);
+                fail();
+            } catch (IllegalReferenceCountException expected) {
+                // expected
+            }
+        } else {
+            assertEquals(-1, buffer.indexOf(0, 1, (byte) 1));
+        }
     }
 
     @Test
@@ -2570,7 +2635,6 @@ public abstract class AbstractByteBufTest {
 
     private ByteBuf releasedBuffer() {
         ByteBuf buffer = newBuffer(8);
-
         // Clear the buffer so we are sure the reader and writer indices are 0.
         // This is important as we may return a slice from newBuffer(...).
         buffer.clear();
@@ -4487,7 +4551,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testReadBytesAndWriteBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
@@ -4530,7 +4594,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testGetBytesAndSetBytesWithFileChannel() throws IOException {
-        File file = File.createTempFile("file-channel", ".tmp");
+        File file = PlatformDependent.createTempFile("file-channel", ".tmp", null);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
@@ -4877,5 +4941,91 @@ public abstract class AbstractByteBufTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test
+    public void testMaxFastWritableBytes() {
+        ByteBuf buffer = newBuffer(150, 500).writerIndex(100);
+        assertEquals(50, buffer.writableBytes());
+        assertEquals(150, buffer.capacity());
+        assertEquals(500, buffer.maxCapacity());
+        assertEquals(400, buffer.maxWritableBytes());
+        // Default implementation has fast writable == writable
+        assertEquals(50, buffer.maxFastWritableBytes());
+        buffer.release();
+    }
+
+    @Test
+    public void testEnsureWritableIntegerOverflow() {
+        ByteBuf buffer = newBuffer(CAPACITY);
+        buffer.writerIndex(buffer.readerIndex());
+        buffer.writeByte(1);
+        try {
+            buffer.ensureWritable(Integer.MAX_VALUE);
+            fail();
+        } catch (IndexOutOfBoundsException e) {
+            // expected
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testEndiannessIndexOf() {
+        buffer.clear();
+        final int v = 0x02030201;
+        buffer.writeIntLE(v);
+        buffer.writeByte(0x01);
+
+        assertEquals(-1, buffer.indexOf(1, 4, (byte) 1));
+        assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
+        assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
+        assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+    }
+
+    @Test
+    public void explicitLittleEndianReadMethodsMustAlwaysUseLittleEndianByteOrder() {
+        buffer.clear();
+        buffer.writeBytes(new byte[] {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08});
+        assertEquals(0x0201, buffer.readShortLE());
+        buffer.readerIndex(0);
+        assertEquals(0x0201, buffer.readUnsignedShortLE());
+        buffer.readerIndex(0);
+        assertEquals(0x030201, buffer.readMediumLE());
+        buffer.readerIndex(0);
+        assertEquals(0x030201, buffer.readUnsignedMediumLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, buffer.readIntLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, buffer.readUnsignedIntLE());
+        buffer.readerIndex(0);
+        assertEquals(0x04030201, Float.floatToRawIntBits(buffer.readFloatLE()));
+        buffer.readerIndex(0);
+        assertEquals(0x0807060504030201L, buffer.readLongLE());
+        buffer.readerIndex(0);
+        assertEquals(0x0807060504030201L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
+        buffer.readerIndex(0);
+    }
+
+    @Test
+    public void explicitLittleEndianWriteMethodsMustAlwaysUseLittleEndianByteOrder() {
+        buffer.clear();
+        buffer.writeShortLE(0x0102);
+        assertEquals(0x0102, buffer.readShortLE());
+        buffer.clear();
+        buffer.writeMediumLE(0x010203);
+        assertEquals(0x010203, buffer.readMediumLE());
+        buffer.clear();
+        buffer.writeIntLE(0x01020304);
+        assertEquals(0x01020304, buffer.readIntLE());
+        buffer.clear();
+        buffer.writeFloatLE(Float.intBitsToFloat(0x01020304));
+        assertEquals(0x01020304, Float.floatToRawIntBits(buffer.readFloatLE()));
+        buffer.clear();
+        buffer.writeLongLE(0x0102030405060708L);
+        assertEquals(0x0102030405060708L, buffer.readLongLE());
+        buffer.clear();
+        buffer.writeDoubleLE(Double.longBitsToDouble(0x0102030405060708L));
+        assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
     }
 }

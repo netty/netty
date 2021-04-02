@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -97,17 +97,20 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
         } catch (Exception e) {
             throw new DecoderException(e);
         } finally {
-            int size = out.size();
-            for (int i = 0; i < size; i ++) {
-                ctx.fireChannelRead(out.getUnsafe(i));
+            try {
+                int size = out.size();
+                for (int i = 0; i < size; i++) {
+                    ctx.fireChannelRead(out.getUnsafe(i));
+                }
+            } finally {
+                out.recycle();
             }
-            out.recycle();
         }
     }
 
     /**
      * Decode from one message to an other. This method will be called for each written message that can be handled
-     * by this encoder.
+     * by this decoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one

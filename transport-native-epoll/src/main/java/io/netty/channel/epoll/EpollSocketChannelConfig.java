@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,6 +39,7 @@ import static io.netty.channel.ChannelOption.TCP_NODELAY;
 
 public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
+    private volatile boolean tcpFastopen;
 
     /**
      * Creates a new instance.
@@ -60,7 +61,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
                 EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT,
-                EpollChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
+                ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
     }
 
     @SuppressWarnings("unchecked")
@@ -114,7 +115,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.IP_TRANSPARENT) {
             return (T) Boolean.valueOf(isIpTransparent());
         }
-        if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
+        if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
         if (option == EpollChannelOption.SO_BUSY_POLL) {
@@ -163,7 +164,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpMd5Sig(m);
         } else if (option == EpollChannelOption.TCP_QUICKACK) {
             setTcpQuickAck((Boolean) value);
-        } else if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
+        } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
         } else if (option == EpollChannelOption.SO_BUSY_POLL) {
             setSoBusyPoll((Integer) value);
@@ -486,7 +487,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
      /**
-     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
     public boolean isIpTransparent() {
@@ -498,7 +499,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
-     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
     public EpollSocketChannelConfig setIpTransparent(boolean transparent) {
@@ -525,7 +526,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
-     * Set the {@code TCP_QUICKACK} option on the socket. See <a href="http://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
+     * Set the {@code TCP_QUICKACK} option on the socket.
+     * See <a href="https://linux.die.net//man/7/tcp">TCP_QUICKACK</a>
      * for more details.
      */
     public EpollSocketChannelConfig setTcpQuickAck(boolean quickAck) {
@@ -538,7 +540,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
-     * Returns {@code true} if <a href="http://linux.die.net/man/7/tcp">TCP_QUICKACK</a> is enabled,
+     * Returns {@code true} if <a href="https://linux.die.net//man/7/tcp">TCP_QUICKACK</a> is enabled,
      * {@code false} otherwise.
      */
     public boolean isTcpQuickAck() {
@@ -550,29 +552,21 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
-     * Set the {@code TCP_FASTOPEN_CONNECT} option on the socket. Requires Linux kernel 4.11 or later.
-     * See
-     * <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=19f6d3f3">this commit</a>
-     * for more details.
+     * Enables client TCP fast open. {@code TCP_FASTOPEN_CONNECT} normally
+     * requires Linux kernel 4.11 or later, so instead we use the traditional fast open
+     * client socket mechanics that work with kernel 3.6 and later. See this
+     * <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
     public EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
-        try {
-            ((EpollSocketChannel) channel).socket.setTcpFastOpenConnect(fastOpenConnect);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        tcpFastopen = fastOpenConnect;
+        return this;
     }
 
     /**
-     * Returns {@code true} if {@code TCP_FASTOPEN_CONNECT} is enabled, {@code false} otherwise.
+     * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
      */
     public boolean isTcpFastOpenConnect() {
-        try {
-            return ((EpollSocketChannel) channel).socket.isTcpFastOpenConnect();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return tcpFastopen;
     }
 
     @Override

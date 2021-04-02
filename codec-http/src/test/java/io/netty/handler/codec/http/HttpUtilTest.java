@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -109,6 +109,7 @@ public class HttpUtilTest {
     public void testGetCharset_defaultValue() {
         final String SIMPLE_CONTENT_TYPE = "text/html";
         final String CONTENT_TYPE_WITH_INCORRECT_CHARSET = "text/html; charset=UTFFF";
+        final String CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME = "text/html; charset=!illegal!";
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, SIMPLE_CONTENT_TYPE);
@@ -127,6 +128,15 @@ public class HttpUtilTest {
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
         assertEquals(CharsetUtil.UTF_8,
                      HttpUtil.getCharset(CONTENT_TYPE_WITH_INCORRECT_CHARSET, StandardCharsets.UTF_8));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME);
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME);
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
+        assertEquals(CharsetUtil.UTF_8,
+                HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME, StandardCharsets.UTF_8));
     }
 
     @Test
@@ -316,5 +326,26 @@ public class HttpUtilTest {
         HttpMessage http10Message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET,
             "http:localhost/http_1_0");
         assertFalse(HttpUtil.isKeepAlive(http10Message));
+    }
+
+    @Test
+    public void testKeepAliveIfConnectionHeaderMultipleValues() {
+        HttpMessage http11Message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            "http:localhost/http_1_1");
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE);
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", Close");
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE + ", " + HttpHeaderValues.UPGRADE);
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.KEEP_ALIVE);
+        assertTrue(HttpUtil.isKeepAlive(http11Message));
     }
 }

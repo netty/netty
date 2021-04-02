@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,7 @@
 /*
  * Written by Doug Lea with assistance from members of JCP JSR-166
  * Expert Group and released to the public domain, as explained at
- * http://creativecommons.org/publicdomain/zero/1.0/
+ * https://creativecommons.org/publicdomain/zero/1.0/
  */
 
 package io.netty.util.internal;
@@ -271,6 +271,7 @@ public final class ThreadLocalRandom extends Random {
      *
      * @throws UnsupportedOperationException always
      */
+    @Override
     public void setSeed(long seed) {
         if (initialized) {
             throw new UnsupportedOperationException();
@@ -278,6 +279,7 @@ public final class ThreadLocalRandom extends Random {
         rnd = (seed ^ multiplier) & mask;
     }
 
+    @Override
     protected int next(int bits) {
         rnd = (rnd * multiplier + addend) & mask;
         return (int) (rnd >>> (48 - bits));

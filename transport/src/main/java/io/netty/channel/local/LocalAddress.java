@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.channel.local;
 
 import io.netty.channel.Channel;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 
@@ -50,9 +51,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
      * Creates a new instance with the specified ID.
      */
     public LocalAddress(String id) {
-        if (id == null) {
-            throw new NullPointerException("id");
-        }
+        ObjectUtil.checkNotNull(id, "id");
         id = id.trim().toLowerCase();
         if (id.isEmpty()) {
             throw new IllegalArgumentException("empty id");

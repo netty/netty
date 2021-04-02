@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,19 +30,24 @@ import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedExc
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
  * This API is targeted to eventually replace or reduce the need for the {@link Http2ConnectionHandler} API.
  *
- * <p>A HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
- * frame, a {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
+ * <p>An HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
+ * frame, an {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
  * objects received via {@link #write} are converted to the HTTP/2 wire format. HTTP/2 frames specific to a stream
  * implement the {@link Http2StreamFrame} interface. The {@link Http2FrameCodec} is instantiated using the
  * {@link Http2FrameCodecBuilder}. It's recommended for channel handlers to inherit from the
@@ -49,7 +55,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
  * creating outbound streams.
  *
  * <h3>Stream Lifecycle</h3>
- *
+ * <p>
  * The frame codec delivers and writes frames for active streams. An active stream is closed when either side sends a
  * {@code RST_STREAM} frame or both sides send a frame with the {@code END_STREAM} flag set. Each
  * {@link Http2StreamFrame} has a {@link Http2FrameStream} object attached that uniquely identifies a particular stream.
@@ -59,7 +65,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
  * {@link Http2StreamFrame#stream(Http2FrameStream)}.
  *
  * <h3>Flow control</h3>
- *
+ * <p>
  * The frame codec automatically increments stream and connection flow control windows.
  *
  * <p>Incoming flow controlled frames need to be consumed by writing a {@link Http2WindowUpdateFrame} with the consumed
@@ -73,12 +79,12 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
  * connection-level flow control window is the same as initial stream-level flow control window.
  *
  * <h3>New inbound Streams</h3>
- *
- * The first frame of a HTTP/2 stream must be a {@link Http2HeadersFrame}, which will have a {@link Http2FrameStream}
+ * <p>
+ * The first frame of an HTTP/2 stream must be an {@link Http2HeadersFrame}, which will have an {@link Http2FrameStream}
  * object attached.
  *
  * <h3>New outbound Streams</h3>
- *
+ * <p>
  * A outbound HTTP/2 stream can be created by first instantiating a new {@link Http2FrameStream} object via
  * {@link Http2ChannelDuplexHandler#newStream()}, and then writing a {@link Http2HeadersFrame} object with the stream
  * attached.
@@ -120,21 +126,21 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
  * the last stream identifier of the GO_AWAY frame will fail with a {@link Http2GoAwayException}.
  *
  * <h3>Error Handling</h3>
- *
+ * <p>
  * Exceptions and errors are propagated via {@link ChannelInboundHandler#exceptionCaught}. Exceptions that apply to
  * a specific HTTP/2 stream are wrapped in a {@link Http2FrameStreamException} and have the corresponding
  * {@link Http2FrameStream} object attached.
  *
  * <h3>Reference Counting</h3>
- *
+ * <p>
  * Some {@link Http2StreamFrame}s implement the {@link ReferenceCounted} interface, as they carry
  * reference counted objects (e.g. {@link ByteBuf}s). The frame codec will call {@link ReferenceCounted#retain()} before
  * propagating a reference counted object through the pipeline, and thus an application handler needs to release such
  * an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>HTTP Upgrade</h3>
- *
+ * <p>
  * Server-side HTTP to HTTP/2 upgrade is supported in conjunction with {@link Http2ServerUpgradeCodec}; the necessary
  * HTTP-to-HTTP/2 conversion is performed automatically.
  */
@@ -148,14 +154,18 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private final Integer initialFlowControlWindowSize;
 
-    private ChannelHandlerContext ctx;
+    ChannelHandlerContext ctx;
 
-    /** Number of buffered streams if the {@link StreamBufferingEncoder} is used. **/
+    /**
+     * Number of buffered streams if the {@link StreamBufferingEncoder} is used.
+     **/
     private int numBufferedStreams;
-    private DefaultHttp2FrameStream frameStreamToInitialize;
+    private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
+            new IntObjectHashMap<DefaultHttp2FrameStream>(8);
 
-    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings) {
-        super(decoder, encoder, initialSettings);
+    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
+                    boolean decoupleCloseAndGoAway) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
 
         decoder.frameListener(new FrameListener());
         connection().addListener(new ConnectionListener());
@@ -179,18 +189,28 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     final void forEachActiveStream(final Http2FrameStreamVisitor streamVisitor) throws Http2Exception {
         assert ctx.executor().inEventLoop();
-
-        connection().forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                try {
-                    return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
-                } catch (Throwable cause) {
-                    onError(ctx, false, cause);
-                    return false;
+        if (connection().numActiveStreams() > 0) {
+            connection().forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) {
+                    try {
+                        return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
+                    } catch (Throwable cause) {
+                        onError(ctx, false, cause);
+                        return false;
+                    }
                 }
-            }
-        });
+            });
+        }
+    }
+
+    /**
+     * Retrieve the number of streams currently in the process of being initialized.
+     * <p>
+     * This is package-private for testing only.
+     */
+    int numInitializingStreams() {
+        return frameStreamToInitializeMap.size();
     }
 
     @Override
@@ -231,10 +251,20 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * HTTP/2 on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
      */
     @Override
-    public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public final void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
             // The user event implies that we are on the client.
             tryExpandConnectionFlowControlWindow(connection());
+
+            // We schedule this on the EventExecutor to allow to have any extra handlers added to the pipeline
+            // before we pass the event to the next handler. This is needed as the event may be called from within
+            // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            });
         } else if (evt instanceof UpgradeEvent) {
             UpgradeEvent upgrade = (UpgradeEvent) evt;
             try {
@@ -254,9 +284,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             } finally {
                 upgrade.release();
             }
-            return;
+        } else {
+            ctx.fireUserEventTriggered(evt);
         }
-        super.userEventTriggered(ctx, evt);
     }
 
     /**
@@ -288,14 +318,34 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             }
         } else if (msg instanceof Http2ResetFrame) {
             Http2ResetFrame rstFrame = (Http2ResetFrame) msg;
-            encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(), promise);
+            int id = rstFrame.stream().id();
+            // Only ever send a reset frame if stream may have existed before as otherwise we may send a RST on a
+            // stream in an invalid state and cause a connection error.
+            if (connection().streamMayHaveExisted(id)) {
+                encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(), promise);
+            } else {
+                ReferenceCountUtil.release(rstFrame);
+                promise.setFailure(Http2Exception.streamError(
+                        rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream never existed"));
+            }
         } else if (msg instanceof Http2PingFrame) {
             Http2PingFrame frame = (Http2PingFrame) msg;
             encoder().writePing(ctx, frame.ack(), frame.content(), promise);
         } else if (msg instanceof Http2SettingsFrame) {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
+        } else if (msg instanceof Http2SettingsAckFrame) {
+            // In the event of manual SETTINGS ACK, it is assumed the encoder will apply the earliest received but not
+            // yet ACKed settings.
+            encoder().writeSettingsAck(ctx, promise);
         } else if (msg instanceof Http2GoAwayFrame) {
             writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, promise);
+        } else if (msg instanceof Http2PushPromiseFrame) {
+            Http2PushPromiseFrame pushPromiseFrame = (Http2PushPromiseFrame) msg;
+            writePushPromise(ctx, pushPromiseFrame, promise);
+        } else if (msg instanceof Http2PriorityFrame) {
+            Http2PriorityFrame priorityFrame = (Http2PriorityFrame) msg;
+            encoder().writePriority(ctx, priorityFrame.stream().id(), priorityFrame.streamDependency(),
+                    priorityFrame.weight(), priorityFrame.exclusive(), promise);
         } else if (msg instanceof Http2UnknownFrame) {
             Http2UnknownFrame unknownFrame = (Http2UnknownFrame) msg;
             encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
@@ -342,60 +392,100 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         goAway(ctx, (int) lastStreamId, frame.errorCode(), frame.content(), promise);
     }
 
-    private void writeHeadersFrame(
-            final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame, final ChannelPromise promise) {
+    private void writeHeadersFrame(final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame,
+                                   final ChannelPromise promise) {
 
         if (isStreamIdValid(headersFrame.stream().id())) {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
-        } else {
-            final DefaultHttp2FrameStream stream = (DefaultHttp2FrameStream) headersFrame.stream();
-            final Http2Connection connection = connection();
-            final int streamId = connection.local().incrementAndGetNextStreamId();
-            if (streamId < 0) {
-                promise.setFailure(new Http2NoMoreStreamIdsException());
-                return;
-            }
-            stream.id = streamId;
-
-            // TODO: This depends on the fact that the connection based API will create Http2Stream objects
-            // synchronously. We should investigate how to refactor this later on when we consolidate some layers.
-            assert frameStreamToInitialize == null;
-            frameStreamToInitialize = stream;
-
-            // TODO(buchgr): Once Http2Stream2 and Http2Stream are merged this is no longer necessary.
-            final ChannelPromise writePromise = ctx.newPromise();
+        } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
+            final int streamId = headersFrame.stream().id();
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
-                    headersFrame.isEndStream(), writePromise);
-            if (writePromise.isDone()) {
-                notifyHeaderWritePromise(writePromise, promise);
+                    headersFrame.isEndStream(), promise);
+
+            if (!promise.isDone()) {
+                numBufferedStreams++;
+                // Clean up the stream being initialized if writing the headers fails and also
+                // decrement the number of buffered streams.
+                promise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture channelFuture) {
+                        numBufferedStreams--;
+                        handleHeaderFuture(channelFuture, streamId);
+                    }
+                });
+            } else {
+                handleHeaderFuture(promise, streamId);
+            }
+        }
+    }
+
+    private void writePushPromise(final ChannelHandlerContext ctx, Http2PushPromiseFrame pushPromiseFrame,
+                                  final ChannelPromise promise) {
+        if (isStreamIdValid(pushPromiseFrame.pushStream().id())) {
+            encoder().writePushPromise(ctx, pushPromiseFrame.stream().id(), pushPromiseFrame.pushStream().id(),
+                    pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
+        } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) pushPromiseFrame.pushStream(), promise)) {
+            final int streamId = pushPromiseFrame.stream().id();
+            encoder().writePushPromise(ctx, streamId, pushPromiseFrame.pushStream().id(),
+                    pushPromiseFrame.http2Headers(), pushPromiseFrame.padding(), promise);
+
+            if (promise.isDone()) {
+                handleHeaderFuture(promise, streamId);
             } else {
                 numBufferedStreams++;
-
-                writePromise.addListener(new ChannelFutureListener() {
+                // Clean up the stream being initialized if writing the headers fails and also
+                // decrement the number of buffered streams.
+                promise.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture channelFuture) {
                         numBufferedStreams--;
-
-                        notifyHeaderWritePromise(future, promise);
+                        handleHeaderFuture(channelFuture, streamId);
                     }
                 });
             }
         }
     }
 
-    private static void notifyHeaderWritePromise(ChannelFuture future, ChannelPromise promise) {
-        Throwable cause = future.cause();
-        if (cause == null) {
-            promise.setSuccess();
-        } else {
-            promise.setFailure(cause);
+    private boolean initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
+                                        ChannelPromise promise) {
+        final Http2Connection connection = connection();
+        final int streamId = connection.local().incrementAndGetNextStreamId();
+        if (streamId < 0) {
+            promise.setFailure(new Http2NoMoreStreamIdsException());
+
+            // Simulate a GOAWAY being received due to stream exhaustion on this connection. We use the maximum
+            // valid stream ID for the current peer.
+            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
+                    Integer.MAX_VALUE - 1, NO_ERROR.code(),
+                    writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
+
+            return false;
+        }
+        http2FrameStream.id = streamId;
+
+        // Use a Map to store all pending streams as we may have multiple. This is needed as if we would store the
+        // stream in a field directly we may override the stored field before onStreamAdded(...) was called
+        // and so not correctly set the property for the buffered stream.
+        //
+        // See https://github.com/netty/netty/issues/8692
+        Object old = frameStreamToInitializeMap.put(streamId, http2FrameStream);
+
+        // We should not re-use ids.
+        assert old == null;
+        return true;
+    }
+
+    private void handleHeaderFuture(ChannelFuture channelFuture, int streamId) {
+        if (!channelFuture.isSuccess()) {
+            frameStreamToInitializeMap.remove(streamId);
         }
     }
 
     private void onStreamActive0(Http2Stream stream) {
-        if (connection().local().isValidStreamId(stream.id())) {
+        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID &&
+                connection().local().isValidStreamId(stream.id())) {
             return;
         }
 
@@ -404,14 +494,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private final class ConnectionListener extends Http2ConnectionAdapter {
-
         @Override
         public void onStreamAdded(Http2Stream stream) {
-             if (frameStreamToInitialize != null && stream.id() == frameStreamToInitialize.id()) {
-                 frameStreamToInitialize.setStreamAndProperty(streamKey, stream);
-                 frameStreamToInitialize = null;
-             }
-         }
+            DefaultHttp2FrameStream frameStream = frameStreamToInitializeMap.remove(stream.id());
+
+            if (frameStream != null) {
+                frameStream.setStreamAndProperty(streamKey, stream);
+            }
+        }
 
         @Override
         public void onStreamActive(Http2Stream stream) {
@@ -420,14 +510,15 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onStreamClosed(Http2Stream stream) {
-            DefaultHttp2FrameStream stream2 = stream.getProperty(streamKey);
-            if (stream2 != null) {
-                onHttp2StreamStateChanged(ctx, stream2);
-            }
+            onHttp2StreamStateChanged0(stream);
         }
 
         @Override
         public void onStreamHalfClosed(Http2Stream stream) {
+            onHttp2StreamStateChanged0(stream);
+        }
+
+        private void onHttp2StreamStateChanged0(Http2Stream stream) {
             DefaultHttp2FrameStream stream2 = stream.getProperty(streamKey);
             if (stream2 != null) {
                 onHttp2StreamStateChanged(ctx, stream2);
@@ -454,7 +545,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     @Override
     protected final void onStreamError(ChannelHandlerContext ctx, boolean outbound, Throwable cause,
-                                 Http2Exception.StreamException streamException) {
+                                       Http2Exception.StreamException streamException) {
         int streamId = streamException.streamId();
         Http2Stream connectionStream = connection().stream(streamId);
         if (connectionStream == null) {
@@ -478,10 +569,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
-                                   Http2Exception.StreamException streamException) {
-        // Just log....
-        LOG.warn("Stream exception thrown for unkown stream {}.", streamException.streamId(), cause);
+    private void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
+                                           Http2Exception.StreamException streamException) {
+        // It is normal to hit a race condition where we still receive frames for a stream that this
+        // peer has deemed closed, such as if this peer sends a RST(CANCEL) to discard the request.
+        // Since this is likely to be normal we log at DEBUG level.
+        InternalLogLevel level =
+                streamException.error() == Http2Error.STREAM_CLOSED ? InternalLogLevel.DEBUG : InternalLogLevel.WARN;
+        LOG.log(level, "Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override
@@ -494,6 +589,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onUnknownFrame(
                 ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+            if (streamId == 0) {
+                // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
+                return;
+            }
             onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload)
                     .stream(requireStream(streamId)).retain());
         }
@@ -538,14 +637,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int padding, boolean endOfStream) {
             onHttp2Frame(ctx, new DefaultHttp2HeadersFrame(headers, endOfStream, padding)
-                                        .stream(requireStream(streamId)));
+                    .stream(requireStream(streamId)));
         }
 
         @Override
         public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                               boolean endOfStream) {
             onHttp2Frame(ctx, new DefaultHttp2DataFrame(data, endOfStream, padding)
-                                        .stream(requireStream(streamId)).retain());
+                    .stream(requireStream(streamId)).retain());
             // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
             return 0;
         }
@@ -556,20 +655,30 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         @Override
-        public void onPriorityRead(
-                ChannelHandlerContext ctx, int streamId, int streamDependency, short weight, boolean exclusive) {
-            // TODO: Maybe handle me
+        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
+                                   short weight, boolean exclusive) {
+
+            Http2Stream stream = connection().stream(streamId);
+            if (stream == null) {
+                // The stream was not opened yet, let's just ignore this for now.
+                return;
+            }
+            onHttp2Frame(ctx, new DefaultHttp2PriorityFrame(streamDependency, weight, exclusive)
+                    .stream(requireStream(streamId)));
         }
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
-            // TODO: Maybe handle me
+            onHttp2Frame(ctx, Http2SettingsAckFrame.INSTANCE);
         }
 
         @Override
-        public void onPushPromiseRead(
-                ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers, int padding)  {
-            // TODO: Maybe handle me
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                                      Http2Headers headers, int padding) {
+            onHttp2Frame(ctx, new DefaultHttp2PushPromiseFrame(headers, padding, promisedStreamId)
+                    .pushStream(new DefaultHttp2FrameStream()
+                            .setStreamAndProperty(streamKey, connection().stream(promisedStreamId)))
+                    .stream(requireStream(streamId)));
         }
 
         private Http2FrameStream requireStream(int streamId) {
@@ -581,17 +690,17 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    void onUpgradeEvent(ChannelHandlerContext ctx, UpgradeEvent evt) {
+    private void onUpgradeEvent(ChannelHandlerContext ctx, UpgradeEvent evt) {
         ctx.fireUserEventTriggered(evt);
     }
 
-    void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
-                                         @SuppressWarnings("unused") boolean writable) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.writabilityChanged(stream));
+    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,
+                                                 @SuppressWarnings("unused") boolean writable) {
+        ctx.fireUserEventTriggered(stream.writabilityChanged);
     }
 
-    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.stateChanged(stream));
+    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
+        ctx.fireUserEventTriggered(stream.stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
@@ -602,15 +711,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         ctx.fireExceptionCaught(cause);
     }
 
-    final boolean isWritable(DefaultHttp2FrameStream stream) {
-        Http2Stream s = stream.stream;
-        return s != null && connection().remote().flowController().isWritable(s);
-    }
-
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {
         @Override
         public void writabilityChanged(Http2Stream stream) {
-            Http2FrameStream frameStream = stream.getProperty(streamKey);
+            DefaultHttp2FrameStream frameStream = stream.getProperty(streamKey);
             if (frameStream == null) {
                 return;
             }
@@ -626,7 +730,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     static class DefaultHttp2FrameStream implements Http2FrameStream {
 
         private volatile int id = -1;
-        volatile Http2Stream stream;
+        private volatile Http2Stream stream;
+
+        final Http2FrameStreamEvent stateChanged = Http2FrameStreamEvent.stateChanged(this);
+        final Http2FrameStreamEvent writabilityChanged = Http2FrameStreamEvent.writabilityChanged(this);
+
+        Channel attachment;
 
         DefaultHttp2FrameStream setStreamAndProperty(PropertyKey streamKey, Http2Stream stream) {
             assert id == -1 || stream.id() == id;

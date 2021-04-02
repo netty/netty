@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,18 +16,19 @@
 
 package io.netty.buffer;
 
+import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
+import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
+import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
+import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
+import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
 
-
-
-
-//
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
-    final PoolChunk<T> chunk;// 所属的Chunk
-    private final int memoryMapIdx; // 当前page在chunk中的id；// 所属Page的标号
-    private final int runOffset; // 当前page 在chunk.memory的偏移量 // 在整个Chunk的偏移字节数
-    private final int pageSize; // page大小
-    private final long[] bitmap;// 这个bitmap的实现和BitSet相同，通过对每一个二进制位的标记来修改一段内存的占用状态
+    final PoolChunk<T> chunk;
+    private final int pageShifts;
+    private final int runOffset;
+    private final int runSize;
+    private final long[] bitmap;
 
     PoolSubpage<T> prev;// 前一个节点，这里要配合PoolArena看// arena双向链表的后继节点
     PoolSubpage<T> next;// arena双向链表的前驱节点
@@ -43,47 +44,26 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /** Special constructor that creates a linked list head */
-    //
-    PoolSubpage(int pageSize) {
+    PoolSubpage() {
         chunk = null;
-        memoryMapIdx = -1;
+        pageShifts = -1;
         runOffset = -1;
         elemSize = -1;
-        this.pageSize = pageSize;
+        runSize = -1;
         bitmap = null;
     }
 
-    // 构造方法有两个，其中一个用于-构造双向链表的头节点Head，这是一个特殊节点。重点关注普通节点构造方法：
-    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
         this.chunk = chunk;
-        this.memoryMapIdx = memoryMapIdx;
+        this.pageShifts = pageShifts;
         this.runOffset = runOffset;
-        this.pageSize = pageSize;
-        // long = 64byte
-        // 这里为什么是16,64两个数字呢，elemSize是经过normCapacity处理的数字，最小值为16；
-        // 所以一个page最多可能被分成pageSize/16段内存，而一个long可以表示64个内存段的状态；
-        // 因此最多需要pageSize/16/64个元素就能保证所有段的状态都可以管理
-        // 此处使用最大值，最小分配16B所需的long个数
-        /*
-        * Netty 使用了多个long整数的位数表示位图信息，
-        * 这部分代码主要是在初始化位图结构。bitmap的最大长度为pageSize >>> 10表示最小分配16(1>>>4)B所需的long(1>>>6)个数，
-        * 此处不使用pageSize/elemSize/64是因为考虑到复用。
-        * 当一个PoolSubpage以32B均等切分，然后释放返回给Chunk，
-        * 当Chunk再次被分配时，比如16B，此时只需调用init()方法即可而不再需要初始其他数据。
-        * */
+        this.runSize = runSize;
+        this.elemSize = elemSize;
+        bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
-        bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
-        init(head, elemSize);
-    }
-
-    // 这个方法有两种情况下会调用
-    // 1、类初始化时
-    // 2、整个subpage被回收后重新分配
-    void init(PoolSubpage<T> head, int elemSize) {
-        doNotDestroy = true;// 表示该page在使用中，不能被清除
-        this.elemSize = elemSize;// 该page切分后每一段的大小
+        doNotDestroy = true;
         if (elemSize != 0) {
-            maxNumElems = numAvail = pageSize / elemSize; //该page包含的段数量 = 可用的段数量
+            maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
             //
             bitmapLength = maxNumElems >>> 6; // 64  bitmap需要用到的长度 /64 表示long的个数
@@ -108,10 +88,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     // 下面看看subpage是如何进行内部的内存分配的：
     // 分配一个可用的element并标记
     long allocate() {
-        if (elemSize == 0) {
-            return toHandle(0);
-        }
-        // 1.没有可分配的均等小块 2.需要销毁(arena池中有其他可分配subpage)
         if (numAvail == 0 || !doNotDestroy) {
             return -1;
         }
@@ -159,7 +135,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         if (numAvail ++ == 0) {
             // 该page已分配了至少一个subpage，加入到arena双向链表
             addToPool(head);
-            return true;
+            /* When maxNumElems == 1, the maximum numAvail is also 1.
+             * Each of these PoolSubpages will go in here when they do free operation.
+             * If they return true directly from here, then the rest of the code will be unreachable
+             * and they will not actually be recycled. So return true only on maxNumElems > 1. */
+            if (maxNumElems > 1) {
+                return true;
+            }
         }
 
         if (numAvail != maxNumElems) {
@@ -260,7 +242,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     // handle有两种含义，1、handle<Integer.MAX_VALUE, 表示一个node id; 2、handle>Integer.MAX_VALUE,
     // 则里面包含node id + 对应的subPage的bitmapIdx;
     private long toHandle(int bitmapIdx) {
-        return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
+        int pages = runSize >> pageShifts;
+        return (long) runOffset << RUN_OFFSET_SHIFT
+               | (long) pages << SIZE_SHIFT
+               | 1L << IS_USED_SHIFT
+               | 1L << IS_SUBPAGE_SHIFT
+               | bitmapIdx;
     }
 
     @Override
@@ -269,29 +256,42 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         final int maxNumElems;
         final int numAvail;
         final int elemSize;
-        synchronized (chunk.arena) {
-            if (!this.doNotDestroy) {
-                doNotDestroy = false;
-                // Not used for creating the String.
-                maxNumElems = numAvail = elemSize = -1;
-            } else {
-                doNotDestroy = true;
-                maxNumElems = this.maxNumElems;
-                numAvail = this.numAvail;
-                elemSize = this.elemSize;
+        if (chunk == null) {
+            // This is the head so there is no need to synchronize at all as these never change.
+            doNotDestroy = true;
+            maxNumElems = 0;
+            numAvail = 0;
+            elemSize = -1;
+        } else {
+            synchronized (chunk.arena) {
+                if (!this.doNotDestroy) {
+                    doNotDestroy = false;
+                    // Not used for creating the String.
+                    maxNumElems = numAvail = elemSize = -1;
+                } else {
+                    doNotDestroy = true;
+                    maxNumElems = this.maxNumElems;
+                    numAvail = this.numAvail;
+                    elemSize = this.elemSize;
+                }
             }
         }
 
         if (!doNotDestroy) {
-            return "(" + memoryMapIdx + ": not in use)";
+            return "(" + runOffset + ": not in use)";
         }
 
-        return "(" + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
-                ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+        return "(" + runOffset + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
+                ", offset: " + runOffset + ", length: " + runSize + ", elemSize: " + elemSize + ')';
     }
 
     @Override
     public int maxNumElements() {
+        if (chunk == null) {
+            // It's the head.
+            return 0;
+        }
+
         synchronized (chunk.arena) {
             return maxNumElems;
         }
@@ -299,6 +299,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int numAvailable() {
+        if (chunk == null) {
+            // It's the head.
+            return 0;
+        }
+
         synchronized (chunk.arena) {
             return numAvail;
         }
@@ -306,6 +311,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int elementSize() {
+        if (chunk == null) {
+            // It's the head.
+            return -1;
+        }
+
         synchronized (chunk.arena) {
             return elemSize;
         }
@@ -313,7 +323,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int pageSize() {
-        return pageSize;
+        return 1 << pageShifts;
     }
 
     void destroy() {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import java.net.SocketAddress;
 
@@ -46,10 +48,7 @@ public final class ChannelMetadata {
      * set for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
      */
     public ChannelMetadata(boolean hasDisconnect, int defaultMaxMessagesPerRead) {
-        if (defaultMaxMessagesPerRead <= 0) {
-            throw new IllegalArgumentException("defaultMaxMessagesPerRead: " + defaultMaxMessagesPerRead +
-                                               " (expected > 0)");
-        }
+        checkPositive(defaultMaxMessagesPerRead, "defaultMaxMessagesPerRead");
         this.hasDisconnect = hasDisconnect;
         this.defaultMaxMessagesPerRead = defaultMaxMessagesPerRead;
     }

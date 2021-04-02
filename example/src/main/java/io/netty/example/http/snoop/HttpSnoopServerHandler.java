@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -158,7 +158,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             // Add 'Content-Length' header only for a keep-alive connection.
             response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
             // Add keep alive header as per:
-            // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+            // - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
@@ -185,7 +185,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
         ctx.write(response);
     }
 

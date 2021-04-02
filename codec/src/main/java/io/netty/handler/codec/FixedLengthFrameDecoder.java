@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,10 +48,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      * @param frameLength the length of the frame
      */
     public FixedLengthFrameDecoder(int frameLength) {
-        if (frameLength <= 0) {
-            throw new IllegalArgumentException(
-                    "frameLength must be a positive integer: " + frameLength);
-        }
+        checkPositive(frameLength, "frameLength");
         this.frameLength = frameLength;
     }
 

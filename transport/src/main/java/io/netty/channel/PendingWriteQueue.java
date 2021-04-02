@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,11 @@
  */
 package io.netty.channel;
 
-import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -37,7 +39,8 @@ public final class PendingWriteQueue {
     private static final int PENDING_WRITE_OVERHEAD =
             SystemPropertyUtil.getInt("io.netty.transport.pendingWriteSizeOverhead", 64);
 
-    private final ChannelHandlerContext ctx;
+    private final ChannelOutboundInvoker invoker;
+    private final EventExecutor executor;
     private final PendingBytesTracker tracker;
 
     // head and tail pointers for the linked-list structure. If empty head and tail are null.
@@ -48,14 +51,21 @@ public final class PendingWriteQueue {
 
     public PendingWriteQueue(ChannelHandlerContext ctx) {
         tracker = PendingBytesTracker.newTracker(ctx.channel());
-        this.ctx = ctx;
+        this.invoker = ctx;
+        this.executor = ctx.executor();
+    }
+
+    public PendingWriteQueue(Channel channel) {
+        tracker = PendingBytesTracker.newTracker(channel);
+        this.invoker = channel;
+        this.executor = channel.eventLoop();
     }
 
     /**
      * Returns {@code true} if there are no pending write operations left in this queue.
      */
     public boolean isEmpty() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return head == null;
     }
 
@@ -63,7 +73,7 @@ public final class PendingWriteQueue {
      * Returns the number of pending write operations.
      */
     public int size() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return size;
     }
 
@@ -72,7 +82,7 @@ public final class PendingWriteQueue {
      * it should only be treated as a hint.
      */
     public long bytes() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return bytes;
     }
 
@@ -91,13 +101,9 @@ public final class PendingWriteQueue {
      * Add the given {@code msg} and {@link ChannelPromise}.
      */
     public void add(Object msg, ChannelPromise promise) {
-        assert ctx.executor().inEventLoop();
-        if (msg == null) {
-            throw new NullPointerException("msg");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
+        assert executor.inEventLoop();
+        ObjectUtil.checkNotNull(msg, "msg");
+        ObjectUtil.checkNotNull(promise, "promise");
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
         int messageSize = size(msg);
@@ -123,14 +129,14 @@ public final class PendingWriteQueue {
      *          if the {@link PendingWriteQueue} is empty.
      */
     public ChannelFuture removeAndWriteAll() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
 
         if (isEmpty()) {
             return null;
         }
 
-        ChannelPromise p = ctx.newPromise();
-        PromiseCombiner combiner = new PromiseCombiner();
+        ChannelPromise p = invoker.newPromise();
+        PromiseCombiner combiner = new PromiseCombiner(executor);
         try {
             // It is possible for some of the written promises to trigger more writes. The new writes
             // will "revive" the queue, so we need to write them up until the queue is empty.
@@ -147,7 +153,7 @@ public final class PendingWriteQueue {
                     if (!(promise instanceof VoidChannelPromise)) {
                         combiner.add(promise);
                     }
-                    ctx.write(msg, promise);
+                    invoker.write(msg, promise);
                     write = next;
                 }
             }
@@ -164,10 +170,8 @@ public final class PendingWriteQueue {
      * via {@link ReferenceCountUtil#safeRelease(Object)}.
      */
     public void removeAndFailAll(Throwable cause) {
-        assert ctx.executor().inEventLoop();
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
+        assert executor.inEventLoop();
+        ObjectUtil.checkNotNull(cause, "cause");
         // It is possible for some of the failed promises to trigger more writes. The new writes
         // will "revive" the queue, so we need to clean them up until the queue is empty.
         for (PendingWrite write = head; write != null; write = head) {
@@ -191,12 +195,10 @@ public final class PendingWriteQueue {
      * {@link ReferenceCountUtil#safeRelease(Object)}.
      */
     public void removeAndFail(Throwable cause) {
-        assert ctx.executor().inEventLoop();
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        PendingWrite write = head;
+        assert executor.inEventLoop();
+        ObjectUtil.checkNotNull(cause, "cause");
 
+        PendingWrite write = head;
         if (write == null) {
             return;
         }
@@ -218,7 +220,7 @@ public final class PendingWriteQueue {
      *          if the {@link PendingWriteQueue} is empty.
      */
     public ChannelFuture removeAndWrite() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -226,7 +228,7 @@ public final class PendingWriteQueue {
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
         recycle(write, true);
-        return ctx.write(msg, promise);
+        return invoker.write(msg, promise);
     }
 
     /**
@@ -236,7 +238,7 @@ public final class PendingWriteQueue {
      *
      */
     public ChannelPromise remove() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -251,7 +253,7 @@ public final class PendingWriteQueue {
      * Return the current message or {@code null} if empty.
      */
     public Object current() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -292,20 +294,20 @@ public final class PendingWriteQueue {
      * Holds all meta-data and construct the linked-list structure.
      */
     static final class PendingWrite {
-        private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
+        private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(new ObjectCreator<PendingWrite>() {
             @Override
-            protected PendingWrite newObject(Handle<PendingWrite> handle) {
+            public PendingWrite newObject(ObjectPool.Handle<PendingWrite> handle) {
                 return new PendingWrite(handle);
             }
-        };
+        });
 
-        private final Recycler.Handle<PendingWrite> handle;
+        private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
         private ChannelPromise promise;
         private Object msg;
 
-        private PendingWrite(Recycler.Handle<PendingWrite> handle) {
+        private PendingWrite(ObjectPool.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 

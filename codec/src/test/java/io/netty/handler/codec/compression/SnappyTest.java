@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -234,7 +234,19 @@ public class SnappyTest {
         ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
                 'n', 'e', 't', 't', 'y'
         });
-        assertEquals(maskChecksum(0xd6cb8b55), calculateChecksum(input));
+
+        assertEquals(maskChecksum(0xd6cb8b55L), calculateChecksum(input));
+        input.release();
+    }
+
+    @Test
+    public void testMaskChecksum() {
+        ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
+                0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00,
+                0x5f, 0x68, 0x65, 0x61, 0x72, 0x74, 0x62, 0x65,
+                0x61, 0x74, 0x5f,
+        });
+        assertEquals(0x44a4301f, calculateChecksum(input));
         input.release();
     }
 

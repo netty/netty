@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2019 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.1.64.Final-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>netty-transport-blockhound-tests</artifactId>
+  <packaging>jar</packaging>
+  <description>
+    Tests for the BlockHound integration.
+  </description>
+
+  <name>Netty/Transport/BlockHound/Tests</name>
+
+  <profiles>
+    <profile>
+      <id>java13</id>
+      <activation>
+        <jdk>13</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java14</id>
+      <activation>
+        <jdk>14</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java15</id>
+      <activation>
+        <jdk>15</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java16</id>
+      <activation>
+        <jdk>16</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+  </profiles>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <!-- Needed for SelfSignedCertificate -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
+    <skipJapicmp>true</skipJapicmp>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-resolver-dns</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor.tools</groupId>
+      <artifactId>blockhound</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -22,7 +22,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * A decorator around another {@link Http2ConnectionEncoder} instance.
  */
 @UnstableApi
-public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter implements Http2ConnectionEncoder {
+public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter implements Http2ConnectionEncoder,
+        Http2SettingsReceivedConsumer {
     private final Http2ConnectionEncoder delegate;
 
     public DecoratingHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
@@ -58,5 +59,15 @@ public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter
     @Override
     public void remoteSettings(Http2Settings settings) throws Http2Exception {
         delegate.remoteSettings(settings);
+    }
+
+    @Override
+    public void consumeReceivedSettings(Http2Settings settings) {
+        if (delegate instanceof Http2SettingsReceivedConsumer) {
+            ((Http2SettingsReceivedConsumer) delegate).consumeReceivedSettings(settings);
+        } else {
+            throw new IllegalStateException("delegate " + delegate + " is not an instance of " +
+                    Http2SettingsReceivedConsumer.class);
+        }
     }
 }

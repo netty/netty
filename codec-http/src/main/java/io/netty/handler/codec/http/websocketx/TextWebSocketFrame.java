@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 /**
- * Web Socket text frame
+ * Web Socket text frame.
  */
 public class TextWebSocketFrame extends WebSocketFrame {
 
@@ -35,7 +35,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
      *
      * @param text
-     *            String to put in the frame
+     *            String to put in the frame.
      */
     public TextWebSocketFrame(String text) {
         super(fromText(text));
@@ -59,7 +59,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * @param rsv
      *            reserved bits used for protocol extensions
      * @param text
-     *            String to put in the frame
+     *            String to put in the frame.
      */
     public TextWebSocketFrame(boolean finalFragment, int rsv, String text) {
         super(finalFragment, rsv, fromText(text));
@@ -74,7 +74,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
+     * Creates a new text frame with the specified binary data and the final fragment flag.
      *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
@@ -88,7 +88,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the text data in this frame
+     * Returns the text data in this frame.
      */
     public String text() {
         return content().toString(CharsetUtil.UTF_8);

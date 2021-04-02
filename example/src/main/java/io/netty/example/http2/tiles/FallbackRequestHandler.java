@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package io.netty.example.http2.tiles;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -47,7 +48,7 @@ public final class FallbackRequestHandler extends SimpleChannelInboundHandler<Ht
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
         if (HttpUtil.is100ContinueExpected(req)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, EMPTY_BUFFER));
         }
 
         ByteBuf content = ctx.alloc().buffer();

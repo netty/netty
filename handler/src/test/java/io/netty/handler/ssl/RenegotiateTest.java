@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -46,13 +46,18 @@ public abstract class RenegotiateTest {
         EventLoopGroup group = new LocalEventLoopGroup();
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(serverSslProvider()).build();
+                    .sslProvider(serverSslProvider())
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
+
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(context.newHandler(ch.alloc()));
+                            SslHandler handler = context.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 private boolean renegotiate;
 
@@ -76,9 +81,9 @@ public abstract class RenegotiateTest {
                                                 public void operationComplete(Future<Channel> future) throws Exception {
                                                     if (!future.isSuccess()) {
                                                         error.compareAndSet(null, future.cause());
-                                                        latch.countDown();
                                                         ctx.close();
                                                     }
+                                                    latch.countDown();
                                                 }
                                             });
                                         } else {
@@ -95,14 +100,19 @@ public abstract class RenegotiateTest {
             Channel channel = sb.bind(new LocalAddress("test")).syncUninterruptibly().channel();
 
             final SslContext clientContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE).sslProvider(SslProvider.JDK).build();
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .sslProvider(SslProvider.JDK)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
+                            SslHandler handler = clientContext.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(

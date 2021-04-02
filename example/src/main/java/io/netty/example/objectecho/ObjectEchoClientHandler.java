@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,15 @@
  */
 package io.netty.example.objectecho;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static io.netty.channel.ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE;
 
 /**
  * Handler implementation for the object echo client.  It initiates the
@@ -43,7 +47,8 @@ public class ObjectEchoClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         // Send the first message if this handler is a client-side handler.
-        ctx.writeAndFlush(firstMessage);
+        ChannelFuture future = ctx.writeAndFlush(firstMessage);
+        future.addListener(FIRE_EXCEPTION_ON_FAILURE); // Let object serialisation exceptions propagate.
     }
 
     @Override

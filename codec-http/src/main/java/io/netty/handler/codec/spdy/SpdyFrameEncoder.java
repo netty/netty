@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 import java.util.Set;
@@ -34,10 +35,7 @@ public class SpdyFrameEncoder {
      * Creates a new instance with the specified {@code spdyVersion}.
      */
     public SpdyFrameEncoder(SpdyVersion spdyVersion) {
-        if (spdyVersion == null) {
-            throw new NullPointerException("spdyVersion");
-        }
-        version = spdyVersion.getVersion();
+        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
     }
 
     private void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {

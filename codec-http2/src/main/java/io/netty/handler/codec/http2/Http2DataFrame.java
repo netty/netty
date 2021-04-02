@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,13 +37,13 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
     ByteBuf content();
 
     /**
-     * Returns the number of bytes that are flow-controlled initialy, so even if the {@link #content()} is consumed
+     * Returns the number of bytes that are flow-controlled initially, so even if the {@link #content()} is consumed
      * this will not change.
      */
     int initialFlowControlledBytes();
 
     /**
-     * Returns {@code true} if the END_STREAM flag ist set.
+     * Returns {@code true} if the END_STREAM flag is set.
      */
     boolean isEndStream();
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,18 +22,27 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 
+import java.security.cert.X509Certificate;
+
 final class DefaultOpenSslKeyMaterial extends AbstractReferenceCounted implements OpenSslKeyMaterial {
 
     private static final ResourceLeakDetector<DefaultOpenSslKeyMaterial> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(DefaultOpenSslKeyMaterial.class);
     private final ResourceLeakTracker<DefaultOpenSslKeyMaterial> leak;
+    private final X509Certificate[] x509CertificateChain;
     private long chain;
     private long privateKey;
 
-    DefaultOpenSslKeyMaterial(long chain, long privateKey) {
+    DefaultOpenSslKeyMaterial(long chain, long privateKey, X509Certificate[] x509CertificateChain) {
         this.chain = chain;
         this.privateKey = privateKey;
+        this.x509CertificateChain = x509CertificateChain;
         leak = leakDetector.track(this);
+    }
+
+    @Override
+    public X509Certificate[] certificateChain() {
+        return x509CertificateChain.clone();
     }
 
     @Override

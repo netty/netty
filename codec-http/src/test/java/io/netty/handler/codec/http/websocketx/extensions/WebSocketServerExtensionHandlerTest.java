@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,13 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -62,8 +64,9 @@ public class WebSocketServerExtensionHandlerTest {
         when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
 
         // execute
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                mainHandshakerMock, fallbackHandshakerMock));
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock, fallbackHandshakerMock);
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
 
         HttpRequest req = newUpgradeRequest("main, fallback");
         ch.writeInbound(req);
@@ -76,6 +79,7 @@ public class WebSocketServerExtensionHandlerTest {
                 res2.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
+        assertNull(ch.pipeline().context(extensionHandler));
         assertEquals(1, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertTrue(resExts.get(0).parameters().isEmpty());
@@ -119,8 +123,9 @@ public class WebSocketServerExtensionHandlerTest {
         when(fallbackExtensionMock.newExtensionDecoder()).thenReturn(new Dummy2Decoder());
 
         // execute
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                mainHandshakerMock, fallbackHandshakerMock));
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock, fallbackHandshakerMock);
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
 
         HttpRequest req = newUpgradeRequest("main, fallback");
         ch.writeInbound(req);
@@ -133,6 +138,7 @@ public class WebSocketServerExtensionHandlerTest {
                 res2.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
+        assertNull(ch.pipeline().context(extensionHandler));
         assertEquals(2, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertEquals("fallback", resExts.get(1).name());
@@ -170,8 +176,9 @@ public class WebSocketServerExtensionHandlerTest {
                 thenReturn(null);
 
         // execute
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                mainHandshakerMock, fallbackHandshakerMock));
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock, fallbackHandshakerMock);
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
 
         HttpRequest req = newUpgradeRequest("unknown, unknown2");
         ch.writeInbound(req);
@@ -182,6 +189,7 @@ public class WebSocketServerExtensionHandlerTest {
         HttpResponse res2 = ch.readOutbound();
 
         // test
+        assertNull(ch.pipeline().context(extensionHandler));
         assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
@@ -189,5 +197,32 @@ public class WebSocketServerExtensionHandlerTest {
 
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
+    }
+
+    @Test
+    public void testExtensionHandlerNotRemovedByFailureWritePromise() {
+        // initialize
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
+                .thenReturn(mainExtensionMock);
+        when(mainExtensionMock.newReponseData()).thenReturn(
+                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+
+        // execute
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock);
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
+
+        HttpRequest req = newUpgradeRequest("main");
+        ch.writeInbound(req);
+
+        HttpResponse res = newUpgradeResponse(null);
+        ChannelPromise failurePromise = ch.newPromise();
+        ch.writeOneOutbound(res, failurePromise);
+        failurePromise.setFailure(new IOException("Cannot write response"));
+
+        // test
+        assertNull(ch.readOutbound());
+        assertNotNull(ch.pipeline().context(extensionHandler));
+        assertTrue(ch.finish());
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,11 +24,11 @@ import java.util.Random;
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -36,6 +36,15 @@ import static org.junit.Assert.assertTrue;
  */
 public class AsciiStringCharacterTest {
     private static final Random r = new Random();
+
+    @Test
+    public void testContentEqualsIgnoreCase() {
+        byte[] bytes = { 32, 'a' };
+        AsciiString asciiString = new AsciiString(bytes, 1, 1, false);
+        // https://github.com/netty/netty/issues/9475
+        assertFalse(asciiString.contentEqualsIgnoreCase("b"));
+        assertFalse(asciiString.contentEqualsIgnoreCase(AsciiString.of("b")));
+    }
 
     @Test
     public void testGetBytesStringBuilder() {
@@ -240,6 +249,9 @@ public class AsciiStringCharacterTest {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "bar"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("Foo", "foobar"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("foobar", "Foo"), is(false));
 
         // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
         assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"), is(true));
@@ -353,15 +365,15 @@ public class AsciiStringCharacterTest {
     @Test
     public void testLastIndexOfCharSequence() {
         assertEquals(0, new AsciiString("abcd").lastIndexOf("abcd", 0));
-        assertEquals(0, new AsciiString("abcd").lastIndexOf("abc", 0));
-        assertEquals(1, new AsciiString("abcd").lastIndexOf("bcd", 0));
-        assertEquals(1, new AsciiString("abcd").lastIndexOf("bc", 0));
-        assertEquals(5, new AsciiString("abcdabcd").lastIndexOf("bcd", 0));
-        assertEquals(0, new AsciiString("abcd", 1, 2).lastIndexOf("bc", 0));
-        assertEquals(0, new AsciiString("abcd", 1, 3).lastIndexOf("bcd", 0));
-        assertEquals(1, new AsciiString("abcdabcd", 4, 4).lastIndexOf("bcd", 0));
+        assertEquals(0, new AsciiString("abcd").lastIndexOf("abc", 4));
+        assertEquals(1, new AsciiString("abcd").lastIndexOf("bcd", 4));
+        assertEquals(1, new AsciiString("abcd").lastIndexOf("bc", 4));
+        assertEquals(5, new AsciiString("abcdabcd").lastIndexOf("bcd", 10));
+        assertEquals(0, new AsciiString("abcd", 1, 2).lastIndexOf("bc", 2));
+        assertEquals(0, new AsciiString("abcd", 1, 3).lastIndexOf("bcd", 3));
+        assertEquals(1, new AsciiString("abcdabcd", 4, 4).lastIndexOf("bcd", 4));
         assertEquals(3, new AsciiString("012345").lastIndexOf("345", 3));
-        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 0));
+        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 6));
 
         // Test with empty string
         assertEquals(0, new AsciiString("abcd").lastIndexOf("", 0));
@@ -373,7 +385,7 @@ public class AsciiStringCharacterTest {
         assertEquals(-1, new AsciiString("abcdbc").lastIndexOf("bce", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 3).lastIndexOf("abc", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 2).lastIndexOf("bd", 0));
-        assertEquals(-1, new AsciiString("012345").lastIndexOf("345", 4));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("345", 2));
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 3));
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 0));
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 0));

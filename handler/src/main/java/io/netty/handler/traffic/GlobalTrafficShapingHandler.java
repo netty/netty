@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
@@ -103,10 +104,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
-        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
+        TrafficCounter tc = new TrafficCounter(this,
+                ObjectUtil.checkNotNull(executor, "executor"),
+                "GlobalTC",
+                checkInterval);
+
         setTrafficCounter(tc);
         tc.start();
     }

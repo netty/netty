@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -26,7 +26,6 @@ import java.util.List;
 /**
  * Provides an infinite sequence of DNS server addresses to {@link DnsNameResolver}.
  */
-@UnstableApi
 @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
 public abstract class DnsServerAddresses {
     /**
@@ -149,9 +148,7 @@ public abstract class DnsServerAddresses {
      * Returns the {@link DnsServerAddresses} that yields only a single {@code address}.
      */
     public static DnsServerAddresses singleton(final InetSocketAddress address) {
-        if (address == null) {
-            throw new NullPointerException("address");
-        }
+        ObjectUtil.checkNotNull(address, "address");
         if (address.isUnresolved()) {
             throw new IllegalArgumentException("cannot use an unresolved DNS server address: " + address);
         }
@@ -160,9 +157,7 @@ public abstract class DnsServerAddresses {
     }
 
     private static List<InetSocketAddress> sanitize(Iterable<? extends InetSocketAddress> addresses) {
-        if (addresses == null) {
-            throw new NullPointerException("addresses");
-        }
+        ObjectUtil.checkNotNull(addresses, "addresses");
 
         final List<InetSocketAddress> list;
         if (addresses instanceof Collection) {
@@ -189,9 +184,7 @@ public abstract class DnsServerAddresses {
     }
 
     private static List<InetSocketAddress> sanitize(InetSocketAddress[] addresses) {
-        if (addresses == null) {
-            throw new NullPointerException("addresses");
-        }
+        ObjectUtil.checkNotNull(addresses, "addresses");
 
         List<InetSocketAddress> list = new ArrayList<InetSocketAddress>(addresses.length);
         for (InetSocketAddress a: addresses) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -58,9 +58,13 @@ public final class NativeInetAddress {
 
     public static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
         byte[] address = new byte[16];
-        System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, address, 0, IPV4_MAPPED_IPV6_PREFIX.length);
-        System.arraycopy(ipv4, 0, address, 12, ipv4.length);
+        copyIpv4MappedIpv6Address(ipv4, address);
         return address;
+    }
+
+    public static void copyIpv4MappedIpv6Address(byte[] ipv4, byte[] ipv6) {
+        System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, ipv6, 0, IPV4_MAPPED_IPV6_PREFIX.length);
+        System.arraycopy(ipv4, 0, ipv6, 12, ipv4.length);
     }
 
     public static InetSocketAddress address(byte[] addr, int offset, int len) {

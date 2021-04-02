@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -63,6 +63,19 @@ public final class StompTestConstants {
             "current-time:2000-01-01T00:00:00\n" +
             '\n' +
             "some body\0";
+
+    public static final String FRAME_WITH_EMPTY_HEADER_NAME = "SEND\n" +
+            "destination:/some-destination\n" +
+            "content-type:text/plain\n" +
+            ":header-value\n" +
+            '\n' +
+            "some body\0";
+
+    public static final String SEND_FRAME_UTF8 = "SEND\n" +
+            "destination:/queue/№11±♛нетти♕\n" +
+            "content-type:text/plain\n" +
+            '\n' +
+            "body\0";
 
     private StompTestConstants() { }
 }

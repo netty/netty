@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -41,7 +41,7 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
+ * Handles <a href="https://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
  * <p>
  * This handler can be configured using one or more {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
@@ -191,7 +191,7 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private static boolean isPreflightRequest(final HttpRequest request) {
         final HttpHeaders headers = request.headers();
-        return request.method().equals(OPTIONS) &&
+        return OPTIONS.equals(request.method()) &&
                 headers.contains(HttpHeaderNames.ORIGIN) &&
                 headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
@@ -228,7 +228,8 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
-        HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN);
+        HttpResponse response = new DefaultFullHttpResponse(
+                request.protocolVersion(), FORBIDDEN, ctx.alloc().buffer(0));
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         release(request);
         respond(ctx, request, response);

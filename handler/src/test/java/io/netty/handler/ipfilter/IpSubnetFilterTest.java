@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,9 @@ import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class IpSubnetFilterTest {
 
@@ -139,6 +142,57 @@ public class IpSubnetFilterTest {
 
         EmbeddedChannel ch4 = newEmbeddedInetChannel("91.92.93.1", handler);
         Assert.assertTrue(ch4.isActive());
+    }
+
+    @Test
+    public void testBinarySearch() {
+        List<IpSubnetFilterRule> ipSubnetFilterRuleList = new ArrayList<IpSubnetFilterRule>();
+        ipSubnetFilterRuleList.add(buildRejectIP("1.2.3.4", 32));
+        ipSubnetFilterRuleList.add(buildRejectIP("1.1.1.1", 8));
+        ipSubnetFilterRuleList.add(buildRejectIP("200.200.200.200", 32));
+        ipSubnetFilterRuleList.add(buildRejectIP("108.0.0.0", 4));
+        ipSubnetFilterRuleList.add(buildRejectIP("10.10.10.10", 8));
+        ipSubnetFilterRuleList.add(buildRejectIP("2001:db8:abcd:0000::", 52));
+
+        // 1.0.0.0/8
+        EmbeddedChannel ch1 = newEmbeddedInetChannel("1.1.1.1", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertFalse(ch1.isActive());
+        Assert.assertTrue(ch1.close().isSuccess());
+
+        // Nothing applies here
+        EmbeddedChannel ch2 = newEmbeddedInetChannel("2.2.2.2", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertTrue(ch2.isActive());
+        Assert.assertTrue(ch2.close().isSuccess());
+
+        // 108.0.0.0/4
+        EmbeddedChannel ch3 = newEmbeddedInetChannel("97.100.100.100", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertFalse(ch3.isActive());
+        Assert.assertTrue(ch3.close().isSuccess());
+
+        // 200.200.200.200/32
+        EmbeddedChannel ch4 = newEmbeddedInetChannel("200.200.200.200", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertFalse(ch4.isActive());
+        Assert.assertTrue(ch4.close().isSuccess());
+
+        // Nothing applies here
+        EmbeddedChannel ch5 = newEmbeddedInetChannel("127.0.0.1", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertTrue(ch5.isActive());
+        Assert.assertTrue(ch5.close().isSuccess());
+
+        // 10.0.0.0/8
+        EmbeddedChannel ch6 = newEmbeddedInetChannel("10.1.1.2", new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertFalse(ch6.isActive());
+        Assert.assertTrue(ch6.close().isSuccess());
+
+        //2001:db8:abcd:0000::/52
+        EmbeddedChannel ch7 = newEmbeddedInetChannel("2001:db8:abcd:1000::",
+                new IpSubnetFilter(ipSubnetFilterRuleList));
+        Assert.assertFalse(ch7.isActive());
+        Assert.assertTrue(ch7.close().isSuccess());
+    }
+
+    private static IpSubnetFilterRule buildRejectIP(String ipAddress, int mask) {
+        return new IpSubnetFilterRule(ipAddress, mask, IpFilterRuleType.REJECT);
     }
 
     private static EmbeddedChannel newEmbeddedInetChannel(final String ipAddress, ChannelHandler... handlers) {

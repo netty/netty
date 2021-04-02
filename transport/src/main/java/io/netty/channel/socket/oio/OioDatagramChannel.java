@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,7 +54,9 @@ import java.util.Locale;
  *
  * @see AddressedEnvelope
  * @see DatagramPacket
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
 
@@ -121,7 +123,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     /**
      * {@inheritDoc}
      *
-     * This can be safetly cast to {@link OioDatagramChannelConfig}.
+     * This can be safely cast to {@link OioDatagramChannelConfig}.
      */
     @Override
     // TODO: Change return type to OioDatagramChannelConfig in next major release

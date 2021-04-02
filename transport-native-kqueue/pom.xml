@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,12 +14,12 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.32.Final-SNAPSHOT</version>
+    <version>4.1.64.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-kqueue</artifactId>
 
@@ -71,7 +71,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -84,13 +84,13 @@
                          explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
                          methods which are not expected to be present on MacOS (e.g. accept4). -->
                     <arg>MACOSX_DEPLOYMENT_TARGET=10.6</arg>
+                    <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>
                 </configuration>
                 <goals>
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -110,7 +110,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX, processor=${os.detected.arch}"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -181,7 +181,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -198,7 +198,6 @@
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -218,7 +217,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=OpenBSD, processor=${os.detected.arch}"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=OpenBSD; processor=${os.detected.arch}</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -288,7 +287,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -305,7 +304,6 @@
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -325,7 +323,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=FreeBSD, processor=${os.detected.arch}"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=FreeBSD; processor=${os.detected.arch}</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -355,14 +353,15 @@
 
   <properties>
     <javaModuleName>io.netty.transport.kqueue</javaModuleName>
-    <!-- Needed by the native transport as we need the memoryAddress of the ByteBuffer -->
-    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED</argLine.java9.extras>
+    <!-- Needed as we use SelfSignedCertificate in our tests -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
   </properties>
 
@@ -379,12 +378,12 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -409,6 +408,24 @@
 
   <build>
     <plugins>
+      <!-- Also include c files in source jar -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${nativeSourceDirectory}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>

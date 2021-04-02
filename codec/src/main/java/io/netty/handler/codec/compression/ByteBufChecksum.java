@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,7 +55,7 @@ abstract class ByteBufChecksum implements Checksum {
         if (PlatformDependent.javaVersion() >= 8) {
             try {
                 Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
-                method.invoke(method, ByteBuffer.allocate(1));
+                method.invoke(checksum, ByteBuffer.allocate(1));
                 return method;
             } catch (Throwable ignore) {
                 return null;
@@ -66,6 +66,9 @@ abstract class ByteBufChecksum implements Checksum {
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
         ObjectUtil.checkNotNull(checksum, "checksum");
+        if (checksum instanceof ByteBufChecksum) {
+            return (ByteBufChecksum) checksum;
+        }
         if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
             return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
         }
@@ -100,7 +103,7 @@ abstract class ByteBufChecksum implements Checksum {
                 update(b.array(), b.arrayOffset() + off, len);
             } else {
                 try {
-                    method.invoke(checksum, CompressionUtil.safeNioBuffer(b));
+                    method.invoke(checksum, CompressionUtil.safeNioBuffer(b, off, len));
                 } catch (Throwable cause) {
                     throw new Error();
                 }

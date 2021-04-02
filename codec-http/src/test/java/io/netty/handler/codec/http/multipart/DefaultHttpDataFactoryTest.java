@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -55,6 +56,21 @@ public class DefaultHttpDataFactoryTest {
     @After
     public void cleanupFactory() {
         factory.cleanAllHttpData();
+    }
+
+    @Test
+    public void customBaseDirAndDeleteOnExit() {
+        final DefaultHttpDataFactory defaultHttpDataFactory = new DefaultHttpDataFactory(true);
+        final String dir = "target/DefaultHttpDataFactoryTest/customBaseDirAndDeleteOnExit";
+        defaultHttpDataFactory.setBaseDir(dir);
+        defaultHttpDataFactory.setDeleteOnExit(true);
+        final Attribute attr = defaultHttpDataFactory.createAttribute(req1, "attribute1");
+        final FileUpload fu = defaultHttpDataFactory.createFileUpload(
+                req1, "attribute1", "f.txt", "text/plain", null, null, 0);
+        assertEquals(dir, DiskAttribute.class.cast(attr).getBaseDirectory());
+        assertEquals(dir, DiskFileUpload.class.cast(fu).getBaseDirectory());
+        assertTrue(DiskAttribute.class.cast(attr).deleteOnExit());
+        assertTrue(DiskFileUpload.class.cast(fu).deleteOnExit());
     }
 
     @Test

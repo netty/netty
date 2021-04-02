@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,20 +15,21 @@
  */
 /*
  * Written by Robert Harder and released to the public domain, as explained at
- * http://creativecommons.org/licenses/publicdomain
+ * https://creativecommons.org/licenses/publicdomain
  */
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
- * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a> notation.
+ * <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> notation.
  * <p>
  * The encoding and decoding algorithm in this class has been derived from
  * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
@@ -50,24 +51,15 @@ public final class Base64 {
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
     private static byte[] alphabet(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
-        return dialect.alphabet;
+        return ObjectUtil.checkNotNull(dialect, "dialect").alphabet;
     }
 
     private static byte[] decodabet(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
-        return dialect.decodabet;
+        return ObjectUtil.checkNotNull(dialect, "dialect").decodabet;
     }
 
     private static boolean breakLines(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
-        return dialect.breakLinesByDefault;
+        return ObjectUtil.checkNotNull(dialect, "dialect").breakLinesByDefault;
     }
 
     public static ByteBuf encode(ByteBuf src) {
@@ -83,10 +75,7 @@ public final class Base64 {
     }
 
     public static ByteBuf encode(ByteBuf src, boolean breakLines, Base64Dialect dialect) {
-
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        ObjectUtil.checkNotNull(src, "src");
 
         ByteBuf dest = encode(src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
         src.readerIndex(src.writerIndex());
@@ -113,12 +102,8 @@ public final class Base64 {
 
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        ObjectUtil.checkNotNull(src, "src");
+        ObjectUtil.checkNotNull(dialect, "dialect");
 
         ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
         byte[] alphabet = alphabet(dialect);
@@ -291,9 +276,7 @@ public final class Base64 {
     }
 
     public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        ObjectUtil.checkNotNull(src, "src");
 
         ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
         src.readerIndex(src.writerIndex());
@@ -312,12 +295,8 @@ public final class Base64 {
 
     public static ByteBuf decode(
             ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufAllocator allocator) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        ObjectUtil.checkNotNull(src, "src");
+        ObjectUtil.checkNotNull(dialect, "dialect");
 
         // Using a ByteProcessor to reduce bound and reference count checking.
         return new Decoder().decode(src, off, len, allocator, dialect);
@@ -331,8 +310,6 @@ public final class Base64 {
     private static final class Decoder implements ByteProcessor {
         private final byte[] b4 = new byte[4];
         private int b4Posn;
-        private byte sbiCrop;
-        private byte sbiDecode;
         private byte[] decodabet;
         private int outBuffPosn;
         private ByteBuf dest;
@@ -353,26 +330,24 @@ public final class Base64 {
 
         @Override
         public boolean process(byte value) throws Exception {
-            sbiCrop = (byte) (value & 0x7f); // Only the low seven bits
-            sbiDecode = decodabet[sbiCrop];
+            if (value > 0) {
+                byte sbiDecode = decodabet[value];
+                if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better
+                    if (sbiDecode >= EQUALS_SIGN_ENC) { // Equals sign or better
+                        b4[b4Posn ++] = value;
+                        if (b4Posn > 3) { // Quartet built
+                            outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
+                            b4Posn = 0;
 
-            if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better
-                if (sbiDecode >= EQUALS_SIGN_ENC) { // Equals sign or better
-                    b4[b4Posn ++] = sbiCrop;
-                    if (b4Posn > 3) { // Quartet built
-                        outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
-                        b4Posn = 0;
-
-                        // If that was the equals sign, break out of 'for' loop
-                        if (sbiCrop == EQUALS_SIGN) {
-                            return false;
+                            // If that was the equals sign, break out of 'for' loop
+                            return value != EQUALS_SIGN;
                         }
                     }
+                    return true;
                 }
-                return true;
             }
             throw new IllegalArgumentException(
-                    "invalid bad Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
+                    "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
         }
 
         private static int decode4to3(byte[] src, ByteBuf dest, int destOffset, byte[] decodabet) {

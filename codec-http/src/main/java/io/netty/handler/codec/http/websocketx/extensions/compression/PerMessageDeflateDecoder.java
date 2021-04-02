@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
 import java.util.List;
 
@@ -33,23 +34,45 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
 
     /**
      * Constructor
+     *
      * @param noContext true to disable context takeover.
      */
-    public PerMessageDeflateDecoder(boolean noContext) {
-        super(noContext);
+    PerMessageDeflateDecoder(boolean noContext) {
+        super(noContext, WebSocketExtensionFilter.NEVER_SKIP);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param noContext true to disable context takeover.
+     * @param extensionDecoderFilter extension decoder for per message deflate decoder.
+     */
+    PerMessageDeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter) {
+        super(noContext, extensionDecoderFilter);
     }
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return ((msg instanceof TextWebSocketFrame ||
-                 msg instanceof BinaryWebSocketFrame) &&
-                    (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) > 0) ||
-                (msg instanceof ContinuationWebSocketFrame && compressing);
+        if (!super.acceptInboundMessage(msg)) {
+            return false;
+        }
+
+        WebSocketFrame wsFrame = (WebSocketFrame) msg;
+        if (extensionDecoderFilter().mustSkip(wsFrame)) {
+            if (compressing) {
+                throw new IllegalStateException("Cannot skip per message deflate decoder, compression in progress");
+            }
+            return false;
+        }
+
+        return ((wsFrame instanceof TextWebSocketFrame || wsFrame instanceof BinaryWebSocketFrame) &&
+                (wsFrame.rsv() & WebSocketExtension.RSV1) > 0) ||
+               (wsFrame instanceof ContinuationWebSocketFrame && compressing);
     }
 
     @Override
     protected int newRsv(WebSocketFrame msg) {
-        return (msg.rsv() & WebSocketExtension.RSV1) > 0 ?
+        return (msg.rsv() & WebSocketExtension.RSV1) > 0?
                 msg.rsv() ^ WebSocketExtension.RSV1 : msg.rsv();
     }
 
@@ -60,7 +83,7 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-        List<Object> out) throws Exception {
+                          List<Object> out) throws Exception {
         super.decode(ctx, msg, out);
 
         if (msg.isFinalFragment()) {
@@ -69,4 +92,5 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
             compressing = true;
         }
     }
+
 }

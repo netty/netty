@@ -1,11 +1,11 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,7 @@
  * under the License.
  */
 /*
- * Adaptation of http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+ * Adaptation of https://bjoern.hoehrmann.de/utf-8/decoder/dfa/
  *
  * Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
  *
@@ -36,7 +36,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.ByteProcessor;
 
 /**
@@ -79,7 +78,8 @@ final class Utf8Validator implements ByteProcessor {
         codep = 0;
         if (state != UTF8_ACCEPT) {
             state = UTF8_ACCEPT;
-            throw new CorruptedFrameException("bytes are not UTF-8");
+            throw new CorruptedWebSocketFrameException(
+                WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "bytes are not UTF-8");
         }
     }
 
@@ -93,7 +93,8 @@ final class Utf8Validator implements ByteProcessor {
 
         if (state == UTF8_REJECT) {
             checking = false;
-            throw new CorruptedFrameException("bytes are not UTF-8");
+            throw new CorruptedWebSocketFrameException(
+                WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "bytes are not UTF-8");
         }
         return true;
     }

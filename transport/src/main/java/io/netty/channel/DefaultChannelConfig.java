@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -28,6 +29,7 @@ import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
+import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP;
@@ -36,6 +38,8 @@ import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * The default {@link ChannelConfig} implementation.
@@ -59,6 +63,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
+    private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
+
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
@@ -82,7 +88,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
-                SINGLE_EVENTEXECUTOR_PER_GROUP);
+                SINGLE_EVENTEXECUTOR_PER_GROUP, MAX_MESSAGES_PER_WRITE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -99,9 +105,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("unchecked")
     @Override
     public boolean setOptions(Map<ChannelOption<?>, ?> options) {
-        if (options == null) {
-            throw new NullPointerException("options");
-        }
+        ObjectUtil.checkNotNull(options, "options");
 
         boolean setAllOptions = true;
         for (Entry<ChannelOption<?>, ?> e: options.entrySet()) {
@@ -116,9 +120,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
@@ -156,6 +158,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
             return (T) Boolean.valueOf(getPinEventExecutorPerGroup());
         }
+        if (option == MAX_MESSAGES_PER_WRITE) {
+            return (T) Integer.valueOf(getMaxMessagesPerWrite());
+        }
         return null;
     }
 
@@ -188,6 +193,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setMessageSizeEstimator((MessageSizeEstimator) value);
         } else if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
             setPinEventExecutorPerGroup((Boolean) value);
+        } else if (option == MAX_MESSAGES_PER_WRITE) {
+            setMaxMessagesPerWrite((Integer) value);
         } else {
             return false;
         }
@@ -196,10 +203,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     protected <T> void validate(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
-        option.validate(value);
+        ObjectUtil.checkNotNull(option, "option").validate(value);
     }
 
     @Override
@@ -209,10 +213,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
-        }
+        checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
         this.connectTimeoutMillis = connectTimeoutMillis;
         return this;
     }
@@ -254,6 +255,23 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
     }
 
+    /**
+     * Get the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public int getMaxMessagesPerWrite() {
+        return maxMessagesPerWrite;
+    }
+
+     /**
+     * Set the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    public ChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        this.maxMessagesPerWrite = ObjectUtil.checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
+        return this;
+    }
+
     @Override
     public int getWriteSpinCount() {
         return writeSpinCount;
@@ -261,10 +279,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteSpinCount(int writeSpinCount) {
-        if (writeSpinCount <= 0) {
-            throw new IllegalArgumentException(
-                    "writeSpinCount must be a positive integer.");
-        }
+        checkPositive(writeSpinCount, "writeSpinCount");
         // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
         // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
         // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
@@ -283,10 +298,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAllocator(ByteBufAllocator allocator) {
-        if (allocator == null) {
-            throw new NullPointerException("allocator");
-        }
-        this.allocator = allocator;
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
         return this;
     }
 
@@ -357,10 +369,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        if (writeBufferHighWaterMark < 0) {
-            throw new IllegalArgumentException(
-                    "writeBufferHighWaterMark must be >= 0");
-        }
+        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
         for (;;) {
             WriteBufferWaterMark waterMark = writeBufferWaterMark;
             if (writeBufferHighWaterMark < waterMark.low()) {
@@ -383,10 +392,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        if (writeBufferLowWaterMark < 0) {
-            throw new IllegalArgumentException(
-                    "writeBufferLowWaterMark must be >= 0");
-        }
+        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
         for (;;) {
             WriteBufferWaterMark waterMark = writeBufferWaterMark;
             if (writeBufferLowWaterMark > waterMark.high()) {
@@ -420,10 +426,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        if (estimator == null) {
-            throw new NullPointerException("estimator");
-        }
-        msgSizeEstimator = estimator;
+        this.msgSizeEstimator = ObjectUtil.checkNotNull(estimator, "estimator");
         return this;
     }
 

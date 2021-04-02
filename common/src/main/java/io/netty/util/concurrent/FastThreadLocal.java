@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -139,33 +139,22 @@ public class FastThreadLocal<V> {
             return (V) v;
         }
 
-        V value = initialize(threadLocalMap);
-        registerCleaner(threadLocalMap);
-        return value;
+        return initialize(threadLocalMap);
     }
 
-    private void registerCleaner(final InternalThreadLocalMap threadLocalMap) {
-        Thread current = Thread.currentThread();
-        if (FastThreadLocalThread.willCleanupFastThreadLocals(current) || threadLocalMap.isCleanerFlagSet(index)) {
-            return;
-        }
-
-        threadLocalMap.setCleanerFlag(index);
-
-        // TODO: We need to find a better way to handle this.
-        /*
-        // We will need to ensure we will trigger remove(InternalThreadLocalMap) so everything will be released
-        // and FastThreadLocal.onRemoval(...) will be called.
-        ObjectCleaner.register(current, new Runnable() {
-            @Override
-            public void run() {
-                remove(threadLocalMap);
-
-                // It's fine to not call InternalThreadLocalMap.remove() here as this will only be triggered once
-                // the Thread is collected by GC. In this case the ThreadLocal will be gone away already.
+    /**
+     * Returns the current value for the current thread if it exists, {@code null} otherwise.
+     */
+    @SuppressWarnings("unchecked")
+    public final V getIfExists() {
+        InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.getIfSet();
+        if (threadLocalMap != null) {
+            Object v = threadLocalMap.indexedVariable(index);
+            if (v != InternalThreadLocalMap.UNSET) {
+                return (V) v;
             }
-        });
-        */
+        }
+        return null;
     }
 
     /**
@@ -201,9 +190,7 @@ public class FastThreadLocal<V> {
     public final void set(V value) {
         if (value != InternalThreadLocalMap.UNSET) {
             InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
-            if (setKnownNotUnset(threadLocalMap, value)) {
-                registerCleaner(threadLocalMap);
-            }
+            setKnownNotUnset(threadLocalMap, value);
         } else {
             remove();
         }
@@ -221,14 +208,12 @@ public class FastThreadLocal<V> {
     }
 
     /**
-     * @return see {@link InternalThreadLocalMap#setIndexedVariable(int, Object)}.
+     * @see InternalThreadLocalMap#setIndexedVariable(int, Object).
      */
-    private boolean setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
+    private void setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
         if (threadLocalMap.setIndexedVariable(index, value)) {
             addToVariablesToRemove(threadLocalMap, this);
-            return true;
         }
-        return false;
     }
 
     /**
@@ -246,15 +231,16 @@ public class FastThreadLocal<V> {
         return threadLocalMap != null && threadLocalMap.isIndexedVariableSet(index);
     }
     /**
-     * Sets the value to uninitialized; a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      */
     public final void remove() {
         remove(InternalThreadLocalMap.getIfSet());
     }
 
     /**
-     * Sets the value to uninitialized for the specified thread local map;
-     * a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      * The specified thread local map must be for the current thread.
      */
     @SuppressWarnings("unchecked")

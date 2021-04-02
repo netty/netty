@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * The {@link RecvByteBufAllocator} that always yields the same buffer
@@ -26,7 +28,7 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
     private final class HandleImpl extends MaxMessageHandle {
         private final int bufferSize;
 
-        public HandleImpl(int bufferSize) {
+        HandleImpl(int bufferSize) {
             this.bufferSize = bufferSize;
         }
 
@@ -41,10 +43,7 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
      * the specified buffer size.
      */
     public FixedRecvByteBufAllocator(int bufferSize) {
-        if (bufferSize <= 0) {
-            throw new IllegalArgumentException(
-                    "bufferSize must greater than 0: " + bufferSize);
-        }
+        checkPositive(bufferSize, "bufferSize");
         this.bufferSize = bufferSize;
     }
 

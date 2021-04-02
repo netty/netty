@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,12 +23,12 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -38,18 +38,7 @@ import java.util.concurrent.TimeoutException;
  * number of concurrent connections.
  */
 public class FixedChannelPool extends SimpleChannelPool {
-    private static final IllegalStateException FULL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("Too many outstanding acquire operations"),
-            FixedChannelPool.class, "acquire0(...)");
-    private static final TimeoutException TIMEOUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new TimeoutException("Acquire operation took longer then configured maximum time"),
-            FixedChannelPool.class, "<init>(...)");
-    static final IllegalStateException POOL_CLOSED_ON_RELEASE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPool was closed"),
-            FixedChannelPool.class, "release(...)");
-    static final IllegalStateException POOL_CLOSED_ON_ACQUIRE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPool was closed"),
-            FixedChannelPool.class, "acquire0(...)");
+
     public enum AcquireTimeoutAction {
         /**
          * Create a new connection when the timeout is detected.
@@ -205,7 +194,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     @Override
                     public void onTimeout(AcquireTask task) {
                         // Fail the promise as we timed out.
-                        task.promise.setFailure(TIMEOUT_EXCEPTION);
+                        task.promise.setFailure(new AcquireTimeoutException());
                     }
                 };
                 break;
@@ -258,7 +247,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         assert executor.inEventLoop();
 
         if (closed) {
-            promise.setFailure(POOL_CLOSED_ON_ACQUIRE_EXCEPTION);
+            promise.setFailure(new IllegalStateException("FixedChannelPool was closed"));
             return;
         }
         if (acquiredChannelCount.get() < maxConnections) {
@@ -273,7 +262,7 @@ public class FixedChannelPool extends SimpleChannelPool {
             super.acquire(p);
         } else {
             if (pendingAcquireCount >= maxPendingAcquires) {
-                promise.setFailure(FULL_EXCEPTION);
+                tooManyOutstanding(promise);
             } else {
                 AcquireTask task = new AcquireTask(promise);
                 if (pendingAcquireQueue.offer(task)) {
@@ -283,12 +272,16 @@ public class FixedChannelPool extends SimpleChannelPool {
                         task.timeoutFuture = executor.schedule(timeoutTask, acquireTimeoutNanos, TimeUnit.NANOSECONDS);
                     }
                 } else {
-                    promise.setFailure(FULL_EXCEPTION);
+                    tooManyOutstanding(promise);
                 }
             }
 
             assert pendingAcquireCount > 0;
         }
+    }
+
+    private void tooManyOutstanding(Promise<?> promise) {
+        promise.setFailure(new IllegalStateException("Too many outstanding acquire operations"));
     }
 
     @Override
@@ -304,7 +297,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 if (closed) {
                     // Since the pool is closed, we have no choice but to close the channel
                     channel.close();
-                    promise.setFailure(POOL_CLOSED_ON_RELEASE_EXCEPTION);
+                    promise.setFailure(new IllegalStateException("FixedChannelPool was closed"));
                     return;
                 }
 
@@ -366,7 +359,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         final long expireNanoTime = System.nanoTime() + acquireTimeoutNanos;
         ScheduledFuture<?> timeoutFuture;
 
-        public AcquireTask(Promise<Channel> promise) {
+        AcquireTask(Promise<Channel> promise) {
             super(promise);
             // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
             // EventLoop.
@@ -415,7 +408,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     // Since the pool is closed, we have no choice but to close the channel
                     future.getNow().close();
                 }
-                originalPromise.setFailure(POOL_CLOSED_ON_ACQUIRE_EXCEPTION);
+                originalPromise.setFailure(new IllegalStateException("FixedChannelPool was closed"));
                 return;
             }
 
@@ -443,19 +436,47 @@ public class FixedChannelPool extends SimpleChannelPool {
 
     @Override
     public void close() {
-        if (executor.inEventLoop()) {
-            close0();
-        } else {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    close0();
-                }
-            }).awaitUninterruptibly();
+        try {
+            closeAsync().await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
 
-    private void close0() {
+    /**
+     * Closes the pool in an async manner.
+     *
+     * @return Future which represents completion of the close task
+     */
+    @Override
+    public Future<Void> closeAsync() {
+        if (executor.inEventLoop()) {
+            return close0();
+        } else {
+            final Promise<Void> closeComplete = executor.newPromise();
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    close0().addListener(new FutureListener<Void>() {
+                        @Override
+                        public void operationComplete(Future<Void> f) throws Exception {
+                            if (f.isSuccess()) {
+                                closeComplete.setSuccess(null);
+                            } else {
+                                closeComplete.setFailure(f.cause());
+                            }
+                        }
+                    });
+                }
+            });
+            return closeComplete;
+        }
+    }
+
+    private Future<Void> close0() {
+        assert executor.inEventLoop();
+
         if (!closed) {
             closed = true;
             for (;;) {
@@ -474,12 +495,28 @@ public class FixedChannelPool extends SimpleChannelPool {
 
             // Ensure we dispatch this on another Thread as close0 will be called from the EventExecutor and we need
             // to ensure we will not block in a EventExecutor.
-            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
+            return GlobalEventExecutor.INSTANCE.submit(new Callable<Void>() {
                 @Override
-                public void run() {
+                public Void call() throws Exception {
                     FixedChannelPool.super.close();
+                    return null;
                 }
             });
+        }
+
+        return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+    }
+
+    private static final class AcquireTimeoutException extends TimeoutException {
+
+        private AcquireTimeoutException() {
+            super("Acquire operation took longer then configured maximum time");
+        }
+
+        // Suppress a warning since the method doesn't need synchronization
+        @Override
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+            return this;
         }
     }
 }

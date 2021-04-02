@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,13 +24,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ThreadPerChannelEventLoopGroup;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
  * {@link EventLoopGroup} which is used to handle OIO {@link Channel}'s. Each {@link Channel} will be handled by its
  * own {@link EventLoop} to not block others.
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {
 
     /**
@@ -50,7 +52,7 @@ public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {
      *                          Use {@code 0} to use no limit
      */
     public OioEventLoopGroup(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
+        this(maxChannels, (ThreadFactory) null);
     }
 
     /**

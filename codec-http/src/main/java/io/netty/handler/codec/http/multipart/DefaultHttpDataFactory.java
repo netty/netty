@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpRequest;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -58,6 +59,10 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private long maxSize = MAXSIZE;
 
     private Charset charset = HttpConstants.DEFAULT_CHARSET;
+
+    private String baseDir;
+
+    private boolean deleteOnExit; // false is a good default cause true leaks
 
     /**
      * Keep all {@link HttpData}s until cleaning methods are called.
@@ -111,6 +116,25 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         this.charset = charset;
     }
 
+    /**
+     * Override global {@link DiskAttribute#baseDirectory} and {@link DiskFileUpload#baseDirectory} values.
+     *
+     * @param baseDir directory path where to store disk attributes and file uploads.
+     */
+    public void setBaseDir(String baseDir) {
+        this.baseDir = baseDir;
+    }
+
+    /**
+     * Override global {@link DiskAttribute#deleteOnExitTemporaryFile} and
+     * {@link DiskFileUpload#deleteOnExitTemporaryFile} values.
+     *
+     * @param deleteOnExit true if temporary files should be deleted with the JVM, false otherwise.
+     */
+    public void setDeleteOnExit(boolean deleteOnExit) {
+        this.deleteOnExit = deleteOnExit;
+    }
+
     @Override
     public void setMaxLimit(long maxSize) {
         this.maxSize = maxSize;
@@ -131,14 +155,14 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name, charset);
+            Attribute attribute = new DiskAttribute(name, charset, baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
             List<HttpData> list = getList(request);
             list.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize, charset);
+            Attribute attribute = new MixedAttribute(name, minSize, charset, baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
             List<HttpData> list = getList(request);
             list.add(attribute);
@@ -152,14 +176,14 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name, long definedSize) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name, definedSize, charset);
+            Attribute attribute = new DiskAttribute(name, definedSize, charset, baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
             List<HttpData> list = getList(request);
             list.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, definedSize, minSize, charset);
+            Attribute attribute = new MixedAttribute(name, definedSize, minSize, charset, baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
             List<HttpData> list = getList(request);
             list.add(attribute);
@@ -186,11 +210,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value, charset);
+                attribute = new DiskAttribute(name, value, charset, baseDir, deleteOnExit);
                 attribute.setMaxSize(maxSize);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize, charset);
+                attribute = new MixedAttribute(name, value, minSize, charset, baseDir, deleteOnExit);
                 attribute.setMaxSize(maxSize);
             }
             checkHttpDataSize(attribute);
@@ -199,7 +223,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize, charset);
+            Attribute attribute = new MixedAttribute(name, value, minSize, charset, baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
             checkHttpDataSize(attribute);
             List<HttpData> list = getList(request);
@@ -222,7 +246,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             long size) {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size);
+                    contentTransferEncoding, charset, size, baseDir, deleteOnExit);
             fileUpload.setMaxSize(maxSize);
             checkHttpDataSize(fileUpload);
             List<HttpData> list = getList(request);
@@ -231,7 +255,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, minSize);
+                    contentTransferEncoding, charset, size, minSize, baseDir, deleteOnExit);
             fileUpload.setMaxSize(maxSize);
             checkHttpDataSize(fileUpload);
             List<HttpData> list = getList(request);

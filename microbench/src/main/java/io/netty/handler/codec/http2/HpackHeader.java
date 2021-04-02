@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,14 +40,14 @@ import java.util.Random;
 /**
  * Helper class representing a single header entry. Used by the benchmarks.
  */
-class HpackHeader {
+final class HpackHeader {
     private static final String ALPHABET =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 
     final CharSequence name;
     final CharSequence value;
 
-    HpackHeader(byte[] name, byte[] value) {
+    private HpackHeader(byte[] name, byte[] value) {
         this.name = new AsciiString(name, false);
         this.value = new AsciiString(value, false);
     }
@@ -59,7 +59,8 @@ class HpackHeader {
                                            boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = new ArrayList<HpackHeader>(numHeaders);
         for (int i = 0; i < numHeaders; ++i) {
-            byte[] name = randomBytes(new byte[nameLength], limitToAscii);
+            // Force always ascii for header names
+            byte[] name = randomBytes(new byte[nameLength], true);
             byte[] value = randomBytes(new byte[valueLength], limitToAscii);
             hpackHeaders.add(new HpackHeader(name, value));
         }

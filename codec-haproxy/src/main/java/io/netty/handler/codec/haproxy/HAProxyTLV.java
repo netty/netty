@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.util.internal.StringUtil;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -31,6 +32,18 @@ public class HAProxyTLV extends DefaultByteBufHolder {
 
     private final Type type;
     private final byte typeByteValue;
+
+    /**
+     * The size of this tlv in bytes.
+     * @return the number of bytes.
+     */
+    int totalNumBytes() {
+        return 3 + contentNumBytes(); // type(1) + length(2) + content
+    }
+
+    int contentNumBytes() {
+        return content().readableBytes();
+    }
 
     /**
      * The registered types a TLV can have regarding the PROXY protocol 1.5 spec
@@ -56,7 +69,7 @@ public class HAProxyTLV extends DefaultByteBufHolder {
          *
          * @return the {@link Type} of a TLV
          */
-        public static Type typeForByteValue(final byte byteValue) {
+        public static Type typeForByteValue(byte byteValue) {
             switch (byteValue) {
             case 0x01:
                 return PP2_TYPE_ALPN;
@@ -74,6 +87,52 @@ public class HAProxyTLV extends DefaultByteBufHolder {
                 return OTHER;
             }
         }
+
+        /**
+         * Returns the byte value for the {@link Type} as defined in the PROXY protocol 1.5 spec.
+         *
+         * @param type the {@link Type}
+         *
+         * @return the byte value of the {@link Type}.
+         */
+        public static byte byteValueForType(Type type) {
+            switch (type) {
+            case PP2_TYPE_ALPN:
+                return 0x01;
+            case PP2_TYPE_AUTHORITY:
+                return 0x02;
+            case PP2_TYPE_SSL:
+                return 0x20;
+            case PP2_TYPE_SSL_VERSION:
+                return 0x21;
+            case PP2_TYPE_SSL_CN:
+                return 0x22;
+            case PP2_TYPE_NETNS:
+                return 0x30;
+            default:
+                throw new IllegalArgumentException("unknown type: " + type);
+            }
+        }
+    }
+
+    /**
+     * Creates a new HAProxyTLV
+     *
+     * @param typeByteValue the byteValue of the TLV. This is especially important if non-standard TLVs are used
+     * @param content the raw content of the TLV
+     */
+    public HAProxyTLV(byte typeByteValue, ByteBuf content) {
+        this(Type.typeForByteValue(typeByteValue), typeByteValue, content);
+    }
+
+    /**
+     * Creates a new HAProxyTLV
+     *
+     * @param type the {@link Type} of the TLV
+     * @param content the raw content of the TLV
+     */
+    public HAProxyTLV(Type type, ByteBuf content) {
+        this(type, Type.byteValueForType(type), content);
     }
 
     /**
@@ -85,9 +144,7 @@ public class HAProxyTLV extends DefaultByteBufHolder {
      */
     HAProxyTLV(final Type type, final byte typeByteValue, final ByteBuf content) {
         super(content);
-        checkNotNull(type, "type");
-
-        this.type = type;
+        this.type = checkNotNull(type, "type");
         this.typeByteValue = typeByteValue;
     }
 
@@ -147,5 +204,13 @@ public class HAProxyTLV extends DefaultByteBufHolder {
     public HAProxyTLV touch(Object hint) {
         super.touch(hint);
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) +
+               "(type: " + type() +
+               ", typeByteValue: " + typeByteValue() +
+               ", content: " + contentToString() + ')';
     }
 }

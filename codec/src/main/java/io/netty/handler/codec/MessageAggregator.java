@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * An abstract {@link ChannelHandler} that aggregates a series of message objects into a single aggregated message.
@@ -61,6 +62,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private ChannelHandlerContext ctx;
     private ChannelFutureListener continueResponseWriteListener;
 
+    private boolean aggregating;
+
     /**
      * Creates a new instance.
      *
@@ -81,9 +84,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     private static void validateMaxContentLength(int maxContentLength) {
-        if (maxContentLength < 0) {
-            throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(maxContentLength, "maxContentLength");
     }
 
     @Override
@@ -96,7 +97,20 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         @SuppressWarnings("unchecked")
         I in = (I) msg;
 
-        return (isContentMessage(in) || isStartMessage(in)) && !isAggregated(in);
+        if (isAggregated(in)) {
+            return false;
+        }
+
+        // NOTE: It's tempting to make this check only if aggregating is false. There are however
+        // side conditions in decode(...) in respect to large messages.
+        if (isStartMessage(in)) {
+            aggregating = true;
+            return true;
+        } else if (aggregating && isContentMessage(in)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -192,6 +206,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     protected void decode(final ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
+        assert aggregating;
+
         if (isStartMessage(msg)) {
             handlingOversizedMessage = false;
             if (currentMessage != null) {
@@ -246,7 +262,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 } else {
                     aggregated = beginAggregation(m, EMPTY_BUFFER);
                 }
-                finishAggregation(aggregated);
+                finishAggregation0(aggregated);
                 out.add(aggregated);
                 return;
             }
@@ -301,7 +317,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             }
 
             if (last) {
-                finishAggregation(currentMessage);
+                finishAggregation0(currentMessage);
 
                 // All done
                 out.add(currentMessage);
@@ -370,6 +386,11 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * that the content message provides to {@code aggregated}.
      */
     protected void aggregate(O aggregated, C content) throws Exception { }
+
+    private void finishAggregation0(O aggregated) throws Exception {
+        aggregating = false;
+        finishAggregation(aggregated);
+    }
 
     /**
      * Invoked when the specified {@code aggregated} message is about to be passed to the next handler in the pipeline.
@@ -441,6 +462,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             currentMessage.release();
             currentMessage = null;
             handlingOversizedMessage = false;
+            aggregating = false;
         }
     }
 }

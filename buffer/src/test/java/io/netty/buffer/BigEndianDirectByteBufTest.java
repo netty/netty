@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,8 @@ package io.netty.buffer;
 import static org.junit.Assert.*;
 
 import java.nio.ByteOrder;
+
+import org.junit.Test;
 
 /**
  * Tests big-endian direct channel buffers
@@ -34,5 +36,12 @@ public class BigEndianDirectByteBufTest extends AbstractByteBufTest {
 
     protected ByteBuf newDirectBuffer(int length, int maxCapacity) {
         return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
+    }
+
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertTrue(buf.isContiguous());
+        buf.release();
     }
 }

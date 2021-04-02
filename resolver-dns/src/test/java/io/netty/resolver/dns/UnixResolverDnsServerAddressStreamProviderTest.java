@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,8 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
-import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
+import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverOptions;
 import static org.junit.Assert.assertEquals;
 
 public class UnixResolverDnsServerAddressStreamProviderTest {
@@ -48,6 +47,62 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
         assertHostNameEquals("127.0.0.2", stream.next());
         assertHostNameEquals("127.0.0.3", stream.next());
+    }
+
+    @Test
+    public void nameServerAddressStreamShouldBeRotationalWhenRotationOptionsIsPresent() throws Exception {
+        File f = buildFile("options rotate\n" +
+            "domain linecorp.local\n" +
+            "nameserver 127.0.0.2\n" +
+            "nameserver 127.0.0.3\n" +
+            "nameserver 127.0.0.4\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+            new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
+
+        stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
+        assertHostNameEquals("127.0.0.2", stream.next());
+
+        stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.4", stream.next());
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+
+        stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
+    }
+
+    @Test
+    public void nameServerAddressStreamShouldAlwaysStartFromTheTopWhenRotationOptionsIsAbsent() throws Exception {
+        File f = buildFile("domain linecorp.local\n" +
+            "nameserver 127.0.0.2\n" +
+            "nameserver 127.0.0.3\n" +
+            "nameserver 127.0.0.4\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+            new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
+
+        stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
+
+        stream = p.nameServerAddressStream("");
+        assertHostNameEquals("127.0.0.2", stream.next());
+        assertHostNameEquals("127.0.0.3", stream.next());
+        assertHostNameEquals("127.0.0.4", stream.next());
     }
 
     @Test
@@ -83,23 +138,63 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     }
 
     @Test
-    public void ndotsIsParsedIfPresent() throws IOException {
+    public void ndotsOptionIsParsedIfPresent() throws IOException {
         File f = buildFile("search localdomain\n" +
-                           "nameserver 127.0.0.11\n" +
-                           "options ndots:0\n");
-        assertEquals(0, parseEtcResolverFirstNdots(f));
+            "nameserver 127.0.0.11\n" +
+            "options ndots:0\n");
+        assertEquals(0, parseEtcResolverOptions(f).ndots());
 
         f = buildFile("search localdomain\n" +
-                      "nameserver 127.0.0.11\n" +
-                      "options ndots:123 foo:goo\n");
-        assertEquals(123, parseEtcResolverFirstNdots(f));
+            "nameserver 127.0.0.11\n" +
+            "options ndots:123 foo:goo\n");
+        assertEquals(123, parseEtcResolverOptions(f).ndots());
     }
 
     @Test
-    public void defaultValueReturnedIfNdotsNotPresent() throws IOException {
+    public void defaultValueReturnedIfNdotsOptionsNotPresent() throws IOException {
         File f = buildFile("search localdomain\n" +
-                           "nameserver 127.0.0.11\n");
-        assertEquals(DEFAULT_NDOTS, parseEtcResolverFirstNdots(f));
+            "nameserver 127.0.0.11\n");
+        assertEquals(1, parseEtcResolverOptions(f).ndots());
+    }
+
+    @Test
+    public void timeoutOptionIsParsedIfPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n" +
+            "options timeout:0\n");
+        assertEquals(0, parseEtcResolverOptions(f).timeout());
+
+        f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n" +
+            "options foo:bar timeout:124\n");
+        assertEquals(124, parseEtcResolverOptions(f).timeout());
+    }
+
+    @Test
+    public void defaultValueReturnedIfTimeoutOptionsIsNotPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n");
+        assertEquals(5, parseEtcResolverOptions(f).timeout());
+    }
+
+    @Test
+    public void attemptsOptionIsParsedIfPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n" +
+            "options attempts:0\n");
+        assertEquals(0, parseEtcResolverOptions(f).attempts());
+
+        f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n" +
+            "options foo:bar attempts:12\n");
+        assertEquals(12, parseEtcResolverOptions(f).attempts());
+    }
+
+    @Test
+    public void defaultValueReturnedIfAttemptsOptionsIsNotPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+            "nameserver 127.0.0.11\n");
+        assertEquals(16, parseEtcResolverOptions(f).attempts());
     }
 
     @Test
@@ -164,6 +259,19 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         assertEquals(Collections.singletonList("squarecorp.local"), domains);
     }
 
+    @Test
+    public void ignoreInvalidEntries() throws Exception {
+        File f = buildFile("domain netty.local\n" +
+                "nameserver nil\n" +
+                "nameserver 127.0.0.3\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertEquals(1, stream.size());
+        assertHostNameEquals("127.0.0.3", stream.next());
+    }
+
     private File buildFile(String contents) throws IOException {
         File f = folder.newFile();
         OutputStream out = new FileOutputStream(f);
@@ -173,6 +281,17 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
             out.close();
         }
         return f;
+    }
+
+    @Test
+    public void ignoreComments() throws Exception {
+        File f = buildFile("domain linecorp.local\n" +
+                "nameserver 127.0.0.2 #somecomment\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertHostNameEquals("127.0.0.2", stream.next());
     }
 
     private static void assertHostNameEquals(String expectedHostname, InetSocketAddress next) {

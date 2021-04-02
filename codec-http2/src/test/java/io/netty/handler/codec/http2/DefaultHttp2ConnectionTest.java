@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -370,6 +370,18 @@ public class DefaultHttp2ConnectionTest {
         incrementAndGetStreamShouldRespectOverflow(client.local(), MAX_VALUE);
     }
 
+    @Test
+    public void clientLocalCreateStreamExhaustedSpace() throws Http2Exception {
+        client.local().createStream(MAX_VALUE, true);
+        try {
+            client.local().createStream(MAX_VALUE, true);
+            fail();
+        } catch (Http2Exception expected) {
+            assertEquals(Http2Error.REFUSED_STREAM, expected.error());
+            assertEquals(Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN, expected.shutdownHint());
+        }
+    }
+
     @Test(expected = Http2Exception.class)
     public void newStreamBehindExpectedShouldThrow() throws Http2Exception {
         server.local().createStream(0, true);
@@ -624,7 +636,7 @@ public class DefaultHttp2ConnectionTest {
         private final boolean[] array;
         private final int index;
 
-        public ListenerExceptionThrower(boolean[] array, int index) {
+        ListenerExceptionThrower(boolean[] array, int index) {
             this.array = array;
             this.index = index;
         }
@@ -640,7 +652,7 @@ public class DefaultHttp2ConnectionTest {
         private final boolean[] array;
         private final int index;
 
-        public ListenerVerifyCallAnswer(boolean[] array, int index) {
+        ListenerVerifyCallAnswer(boolean[] array, int index) {
             this.array = array;
             this.index = index;
         }

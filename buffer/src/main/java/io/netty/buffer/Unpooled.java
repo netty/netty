@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 package io.netty.buffer;
 
 import io.netty.buffer.CompositeByteBuf.ByteWrapper;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -221,7 +223,7 @@ public final class Unpooled {
      * Creates a new buffer which wraps the specified buffer's readable bytes.
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
-     * @param buffer The buffer to wrap. Reference count ownership of this variable is transfered to this method.
+     * @param buffer The buffer to wrap. Reference count ownership of this variable is transferred to this method.
      * @return The readable portion of the {@code buffer}, or an empty buffer if there is no readable portion.
      * The caller is responsible for releasing this buffer.
      */
@@ -247,7 +249,7 @@ public final class Unpooled {
      * Creates a new big-endian composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transferred to this method.
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
@@ -302,7 +304,7 @@ public final class Unpooled {
      * of the specified buffers will be visible to the returned buffer.
      * @param maxNumComponents Advisement as to how many independent buffers are allowed to exist before
      * consolidation occurs.
-     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transferred to this method.
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(int maxNumComponents, ByteBuf... buffers) {
@@ -577,15 +579,48 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
-        if (string == null) {
-            throw new NullPointerException("string");
+        ObjectUtil.checkNotNull(string, "string");
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            return copiedBufferUtf8(string);
         }
-
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            return copiedBufferAscii(string);
+        }
         if (string instanceof CharBuffer) {
             return copiedBuffer((CharBuffer) string, charset);
         }
 
         return copiedBuffer(CharBuffer.wrap(string), charset);
+    }
+
+    private static ByteBuf copiedBufferUtf8(CharSequence string) {
+        boolean release = true;
+        // Mimic the same behavior as other copiedBuffer implementations.
+        ByteBuf buffer = ALLOC.heapBuffer(ByteBufUtil.utf8Bytes(string));
+        try {
+            ByteBufUtil.writeUtf8(buffer, string);
+            release = false;
+            return buffer;
+        } finally {
+            if (release) {
+                buffer.release();
+            }
+        }
+    }
+
+    private static ByteBuf copiedBufferAscii(CharSequence string) {
+        boolean release = true;
+        // Mimic the same behavior as other copiedBuffer implementations.
+        ByteBuf buffer = ALLOC.heapBuffer(string.length());
+        try {
+            ByteBufUtil.writeAscii(buffer, string);
+            release = false;
+            return buffer;
+        } finally {
+            if (release) {
+                buffer.release();
+            }
+        }
     }
 
     /**
@@ -596,9 +631,7 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
+        ObjectUtil.checkNotNull(string, "string");
         if (length == 0) {
             return EMPTY_BUFFER;
         }
@@ -628,9 +661,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, Charset charset) {
-        if (array == null) {
-            throw new NullPointerException("array");
-        }
+        ObjectUtil.checkNotNull(array, "array");
         return copiedBuffer(array, 0, array.length, charset);
     }
 
@@ -641,9 +672,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
-        if (array == null) {
-            throw new NullPointerException("array");
-        }
+        ObjectUtil.checkNotNull(array, "array");
         if (length == 0) {
             return EMPTY_BUFFER;
         }

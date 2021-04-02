@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,13 +14,13 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.32.Final-SNAPSHOT</version>
+    <version>4.1.64.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-shading</artifactId>
@@ -38,6 +38,9 @@
 
     <jarName>${project.artifactId}-${project.version}.jar</jarName>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
+    <skipJapicmp>true</skipJapicmp>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
   </properties>
 
   <build>
@@ -60,11 +63,63 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
     </dependency>
   </dependencies>
   <profiles>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <properties>
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+      </properties>
+    </profile>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-handler</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>${tcnative.artifactId}</artifactId>
+          <version>${tcnative.version}</version>
+          <classifier>${tcnative.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>mac</id>
       <activation>
@@ -74,8 +129,15 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
+        <nativeTcnativeLib>netty_tcnative_osx_${os.detected.arch}.jnilib</nativeTcnativeLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
@@ -157,6 +219,7 @@
                   <goal>run</goal>
                 </goals>
                 <configuration>
+                  <skip>${skipShadingTestsuite}</skip>
                   <target>
                     <unzip dest="${classesShadedDir}/">
                       <fileset dir="${project.build.directory}/">
@@ -166,10 +229,6 @@
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
                     <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
-
-                    <condition property="nativeTcnativeLib" value="netty_tcnative_osx_${os.detected.arch}.jnilib" else="netty_tcnative.jnilib">
-                      <equals arg1="${tcnative.classifier}" arg2="" />
-                    </condition>
 
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
@@ -186,6 +245,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
+              <skip>${skipShadingTestsuite}</skip>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
                 <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
@@ -212,8 +272,15 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
+        <nativeTcnativeLib>netty_tcnative_linux_${os.detected.arch}.so</nativeTcnativeLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
@@ -295,6 +362,7 @@
                   <goal>run</goal>
                 </goals>
                 <configuration>
+                  <skip>${skipShadingTestsuite}</skip>
                   <target>
                     <unzip dest="${classesShadedDir}/">
                       <fileset dir="${project.build.directory}/">
@@ -304,10 +372,6 @@
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
                     <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
-
-                    <condition property="nativeTcnativeLib" value="netty_tcnative_linux_${os.detected.arch}.so" else="netty_tcnative.so">
-                      <equals arg1="${tcnative.classifier}" arg2="" />
-                    </condition>
 
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
@@ -324,6 +388,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
+              <skip>${skipShadingTestsuite}</skip>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
                 <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>

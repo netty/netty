@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,6 +35,21 @@ public class SignatureAlgorithmConverterTest {
     @Test
     public void testWithUnderscore() {
         assertEquals("SHA256withDSA", SignatureAlgorithmConverter.toJavaName("dsa_with_SHA256"));
+    }
+
+    @Test
+    public void testBoringSSLOneUnderscore() {
+        assertEquals("SHA256withECDSA", SignatureAlgorithmConverter.toJavaName("ecdsa_sha256"));
+    }
+
+    @Test
+    public void testBoringSSLPkcs1() {
+        assertEquals("SHA256withRSA", SignatureAlgorithmConverter.toJavaName("rsa_pkcs1_sha256"));
+    }
+
+    @Test
+    public void testBoringSSLPSS() {
+        assertEquals("SHA256withRSA", SignatureAlgorithmConverter.toJavaName("rsa_pss_rsae_sha256"));
     }
 
     @Test

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,10 +28,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
+    private final int maxCachedEntries;
+    private volatile boolean full;
     private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
 
-    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password) {
+    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxCachedEntries) {
         super(keyManager, password);
+        this.maxCachedEntries = maxCachedEntries;
     }
 
     @Override
@@ -44,6 +47,14 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
                 return null;
             }
 
+            if (full) {
+                return material;
+            }
+            if (cache.size() > maxCachedEntries) {
+                full = true;
+                // Do not cache...
+                return material;
+            }
             OpenSslKeyMaterial old = cache.putIfAbsent(alias, material);
             if (old != null) {
                 material.release();

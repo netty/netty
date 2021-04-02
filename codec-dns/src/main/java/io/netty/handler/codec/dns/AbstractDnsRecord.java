@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.IDN;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * A skeletal implementation of {@link DnsRecord}.
@@ -62,17 +64,26 @@ public abstract class AbstractDnsRecord implements DnsRecord {
      * @param timeToLive the TTL value of the record
      */
     protected AbstractDnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive) {
-        if (timeToLive < 0) {
-            throw new IllegalArgumentException("timeToLive: " + timeToLive + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(timeToLive, "timeToLive");
         // Convert to ASCII which will also check that the length is not too big.
         // See:
         //   - https://github.com/netty/netty/issues/4937
         //   - https://github.com/netty/netty/issues/4935
-        this.name = appendTrailingDot(IDN.toASCII(checkNotNull(name, "name")));
+        this.name = appendTrailingDot(IDNtoASCII(name));
         this.type = checkNotNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
+    }
+
+    private static String IDNtoASCII(String name) {
+        checkNotNull(name, "name");
+        if (PlatformDependent.isAndroid() && DefaultDnsRecordDecoder.ROOT.equals(name)) {
+            // Prior Android 10 there was a bug that did not correctly parse ".".
+            //
+            // See https://github.com/netty/netty/issues/10034
+            return name;
+        }
+        return IDN.toASCII(name);
     }
 
     private static String appendTrailingDot(String name) {

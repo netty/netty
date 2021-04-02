@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,19 +15,15 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -36,10 +32,11 @@ import java.util.List;
 
 /**
  * Provide a way to use {@code TLSv1.3} with Java versions prior to 11 by adding a
- * <a href="http://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html>workaround</a> for the
+ * <a href="https://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html>workaround</a> for the
  * default {@link X509ExtendedTrustManager} implementations provided by the JDK that can not handle a protocol version
  * of {@code TLSv1.3}.
  */
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManager {
 
     private final X509ExtendedTrustManager tm;
@@ -48,22 +45,9 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
         this.tm = tm;
     }
 
-    static X509ExtendedTrustManager wrap(X509ExtendedTrustManager tm, boolean client) {
-        if (PlatformDependent.javaVersion() < 11) {
-            try {
-                X509Certificate[] certs = { OpenSsl.selfSignedCertificate() };
-                if (client) {
-                    tm.checkServerTrusted(certs, "RSA", new DummySSLEngine(true));
-                } else {
-                    tm.checkClientTrusted(certs, "RSA", new DummySSLEngine(false));
-                }
-            } catch (IllegalArgumentException e) {
-                // If this happened we failed because our protocol version was not known by the implementation.
-                // See http://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html.
-                return new OpenSslTlsv13X509ExtendedTrustManager(tm);
-            } catch (Throwable ignore) {
-                // Just assume we do not need to wrap.
-            }
+    static X509ExtendedTrustManager wrap(X509ExtendedTrustManager tm) {
+        if (!SslProvider.isTlsv13Supported(SslProvider.JDK) && SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
+            return new OpenSslTlsv13X509ExtendedTrustManager(tm);
         }
         return tm;
     }
@@ -252,247 +236,5 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
     @Override
     public X509Certificate[] getAcceptedIssuers() {
         return tm.getAcceptedIssuers();
-    }
-
-    private static final class DummySSLEngine extends SSLEngine {
-
-        private final boolean client;
-
-        DummySSLEngine(boolean client) {
-            this.client = client;
-        }
-
-        @Override
-        public SSLSession getHandshakeSession() {
-            return new SSLSession() {
-                @Override
-                public byte[] getId() {
-                    return EmptyArrays.EMPTY_BYTES;
-                }
-
-                @Override
-                public SSLSessionContext getSessionContext() {
-                    return null;
-                }
-
-                @Override
-                public long getCreationTime() {
-                    return 0;
-                }
-
-                @Override
-                public long getLastAccessedTime() {
-                    return 0;
-                }
-
-                @Override
-                public void invalidate() {
-                    // NOOP
-                }
-
-                @Override
-                public boolean isValid() {
-                    return false;
-                }
-
-                @Override
-                public void putValue(String s, Object o) {
-                    // NOOP
-                }
-
-                @Override
-                public Object getValue(String s) {
-                    return null;
-                }
-
-                @Override
-                public void removeValue(String s) {
-                    // NOOP
-                }
-
-                @Override
-                public String[] getValueNames() {
-                    return EmptyArrays.EMPTY_STRINGS;
-                }
-
-                @Override
-                public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-                    return EmptyArrays.EMPTY_CERTIFICATES;
-                }
-
-                @Override
-                public Certificate[] getLocalCertificates() {
-                    return EmptyArrays.EMPTY_CERTIFICATES;
-                }
-
-                @Override
-                public javax.security.cert.X509Certificate[] getPeerCertificateChain()
-                        throws SSLPeerUnverifiedException {
-                    return EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
-                }
-
-                @Override
-                public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
-                    return null;
-                }
-
-                @Override
-                public Principal getLocalPrincipal() {
-                    return null;
-                }
-
-                @Override
-                public String getCipherSuite() {
-                    return null;
-                }
-
-                @Override
-                public String getProtocol() {
-                    return SslUtils.PROTOCOL_TLS_V1_3;
-                }
-
-                @Override
-                public String getPeerHost() {
-                    return null;
-                }
-
-                @Override
-                public int getPeerPort() {
-                    return 0;
-                }
-
-                @Override
-                public int getPacketBufferSize() {
-                    return 0;
-                }
-
-                @Override
-                public int getApplicationBufferSize() {
-                    return 0;
-                }
-            };
-        }
-
-        @Override
-        public SSLEngineResult wrap(ByteBuffer[] byteBuffers, int i, int i1, ByteBuffer byteBuffer)
-                            throws SSLException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public SSLEngineResult unwrap(ByteBuffer byteBuffer, ByteBuffer[] byteBuffers, int i, int i1)
-                            throws SSLException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Runnable getDelegatedTask() {
-            return null;
-        }
-
-        @Override
-        public void closeInbound() throws SSLException {
-            // NOOP
-        }
-
-        @Override
-        public boolean isInboundDone() {
-            return true;
-        }
-
-        @Override
-        public void closeOutbound() {
-            // NOOP
-        }
-
-        @Override
-        public boolean isOutboundDone() {
-            return true;
-        }
-
-        @Override
-        public String[] getSupportedCipherSuites() {
-            return EmptyArrays.EMPTY_STRINGS;
-        }
-
-        @Override
-        public String[] getEnabledCipherSuites() {
-            return EmptyArrays.EMPTY_STRINGS;
-        }
-
-        @Override
-        public void setEnabledCipherSuites(String[] strings) {
-            // NOOP
-        }
-
-        @Override
-        public String[] getSupportedProtocols() {
-            return new String[] { SslUtils.PROTOCOL_TLS_V1_3 };
-        }
-
-        @Override
-        public String[] getEnabledProtocols() {
-            return new String[] { SslUtils.PROTOCOL_TLS_V1_3 };
-        }
-
-        @Override
-        public void setEnabledProtocols(String[] strings) {
-            // NOOP
-        }
-
-        @Override
-        public SSLSession getSession() {
-            return getHandshakeSession();
-        }
-
-        @Override
-        public void beginHandshake() throws SSLException {
-            // NOOP
-        }
-
-        @Override
-        public HandshakeStatus getHandshakeStatus() {
-            return HandshakeStatus.NEED_TASK;
-        }
-
-        @Override
-        public void setUseClientMode(boolean b) {
-            // NOOP
-        }
-
-        @Override
-        public boolean getUseClientMode() {
-            return client;
-        }
-
-        @Override
-        public void setNeedClientAuth(boolean b) {
-            // NOOP
-        }
-
-        @Override
-        public boolean getNeedClientAuth() {
-            return false;
-        }
-
-        @Override
-        public void setWantClientAuth(boolean b) {
-            // NOOP
-        }
-
-        @Override
-        public boolean getWantClientAuth() {
-            return false;
-        }
-
-        @Override
-        public void setEnableSessionCreation(boolean b) {
-            // NOOP
-        }
-
-        @Override
-        public boolean getEnableSessionCreation() {
-            return false;
-        }
     }
 }

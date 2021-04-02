@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.internal.ObjectUtil;
 
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -51,7 +52,6 @@ import java.util.List;
 @Sharable
 public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
-    // TODO Use CharsetEncoder instead.
     private final Charset charset;
 
     /**
@@ -65,10 +65,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(Charset charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.charset = charset;
+        this.charset = ObjectUtil.checkNotNull(charset, "charset");
     }
 
     @Override

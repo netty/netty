@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.CharsetUtil;
@@ -34,13 +35,14 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
         @Override
-        protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
+        protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
             return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
                 protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
@@ -156,6 +158,7 @@ public class HttpContentEncoderTest {
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -285,6 +288,7 @@ public class HttpContentEncoderTest {
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -392,7 +396,7 @@ public class HttpContentEncoderTest {
     public void testCleanupThrows() {
         HttpContentEncoder encoder = new HttpContentEncoder() {
             @Override
-            protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+            protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
                 return new Result("myencoding", new EmbeddedChannel(
                         new ChannelInboundHandlerAdapter() {
                     @Override

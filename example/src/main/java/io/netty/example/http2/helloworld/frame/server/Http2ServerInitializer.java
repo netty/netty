@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -100,8 +100,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
-                ChannelHandlerContext thisCtx = pipeline.context(this);
-                pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                pipeline.addAfter(ctx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
                 pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
             }

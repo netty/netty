@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.handler.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.IDN;
 
@@ -35,15 +36,10 @@ public final class SocksCmdRequest extends SocksRequest {
 
     public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
-        if (cmdType == null) {
-            throw new NullPointerException("cmdType");
-        }
-        if (addressType == null) {
-            throw new NullPointerException("addressType");
-        }
-        if (host == null) {
-            throw new NullPointerException("host");
-        }
+        ObjectUtil.checkNotNull(cmdType, "cmdType");
+        ObjectUtil.checkNotNull(addressType, "addressType");
+        ObjectUtil.checkNotNull(host, "host");
+
         switch (addressType) {
             case IPv4:
                 if (!NetUtil.isValidIpV4Address(host)) {

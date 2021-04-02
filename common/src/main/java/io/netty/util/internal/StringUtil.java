@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,8 @@ package io.netty.util.internal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -38,6 +40,7 @@ public final class StringUtil {
 
     private static final String[] BYTE2HEX_PAD = new String[256];
     private static final String[] BYTE2HEX_NOPAD = new String[256];
+    private static final byte[] HEX2B;
 
     /**
      * 2 - Quote character at beginning and end.
@@ -53,6 +56,33 @@ public final class StringUtil {
             BYTE2HEX_PAD[i] = i > 0xf ? str : ('0' + str);
             BYTE2HEX_NOPAD[i] = str;
         }
+        // Generate the lookup table that converts an hex char into its decimal value:
+        // the size of the table is such that the JVM is capable of save any bounds-check
+        // if a char type is used as an index.
+        HEX2B = new byte[Character.MAX_VALUE + 1];
+        Arrays.fill(HEX2B, (byte) -1);
+        HEX2B['0'] = (byte) 0;
+        HEX2B['1'] = (byte) 1;
+        HEX2B['2'] = (byte) 2;
+        HEX2B['3'] = (byte) 3;
+        HEX2B['4'] = (byte) 4;
+        HEX2B['5'] = (byte) 5;
+        HEX2B['6'] = (byte) 6;
+        HEX2B['7'] = (byte) 7;
+        HEX2B['8'] = (byte) 8;
+        HEX2B['9'] = (byte) 9;
+        HEX2B['A'] = (byte) 10;
+        HEX2B['B'] = (byte) 11;
+        HEX2B['C'] = (byte) 12;
+        HEX2B['D'] = (byte) 13;
+        HEX2B['E'] = (byte) 14;
+        HEX2B['F'] = (byte) 15;
+        HEX2B['a'] = (byte) 10;
+        HEX2B['b'] = (byte) 11;
+        HEX2B['c'] = (byte) 12;
+        HEX2B['d'] = (byte) 13;
+        HEX2B['e'] = (byte) 14;
+        HEX2B['f'] = (byte) 15;
     }
 
     private StringUtil() {
@@ -210,18 +240,11 @@ public final class StringUtil {
      * given, or {@code -1} if the character is invalid.
      */
     public static int decodeHexNibble(final char c) {
+        assert HEX2B.length == (Character.MAX_VALUE + 1);
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        if (c >= '0' && c <= '9') {
-            return c - '0';
-        }
-        if (c >= 'A' && c <= 'F') {
-            return c - ('A' - 0xA);
-        }
-        if (c >= 'a' && c <= 'f') {
-            return c - ('a' - 0xA);
-        }
-        return -1;
+        final int index = c;
+        return HEX2B[index];
     }
 
     /**
@@ -238,7 +261,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes part of a string with <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes part of a string with <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      *
      * @param hexDump a {@link CharSequence} which contains the hex dump
      * @param fromIndex start of hex dump in {@code hexDump}
@@ -259,7 +282,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      */
     public static byte[] decodeHexDump(CharSequence hexDump) {
         return decodeHexDump(hexDump, 0, hexDump.length());
@@ -541,7 +564,7 @@ public final class StringUtil {
      *
      * @param seq    The string to search.
      * @param offset The offset to start searching at.
-     * @return the index of the first non-white space character or &lt;{@code 0} if none was found.
+     * @return the index of the first non-white space character or &lt;{@code -1} if none was found.
      */
     public static int indexOfNonWhiteSpace(CharSequence seq, int offset) {
         for (; offset < seq.length(); ++offset) {
@@ -553,12 +576,28 @@ public final class StringUtil {
     }
 
     /**
+     * Find the index of the first white space character in {@code s} starting at {@code offset}.
+     *
+     * @param seq    The string to search.
+     * @param offset The offset to start searching at.
+     * @return the index of the first white space character or &lt;{@code -1} if none was found.
+     */
+    public static int indexOfWhiteSpace(CharSequence seq, int offset) {
+        for (; offset < seq.length(); ++offset) {
+            if (Character.isWhitespace(seq.charAt(offset))) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Determine if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
      *
      * @param c the character to check.
      * @return {@code true} if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
      */
     public static boolean isSurrogate(char c) {
         return c >= '\uD800' && c <= '\uDFFF';
@@ -598,6 +637,36 @@ public final class StringUtil {
     }
 
     /**
+     * Returns a char sequence that contains all {@code elements} joined by a given separator.
+     *
+     * @param separator for each element
+     * @param elements to join together
+     *
+     * @return a char sequence joined by a given separator.
+     */
+    public static CharSequence join(CharSequence separator, Iterable<? extends CharSequence> elements) {
+        ObjectUtil.checkNotNull(separator, "separator");
+        ObjectUtil.checkNotNull(elements, "elements");
+
+        Iterator<? extends CharSequence> iterator = elements.iterator();
+        if (!iterator.hasNext()) {
+            return EMPTY_STRING;
+        }
+
+        CharSequence firstElement = iterator.next();
+        if (!iterator.hasNext()) {
+            return firstElement;
+        }
+
+        StringBuilder builder = new StringBuilder(firstElement);
+        do {
+            builder.append(separator).append(iterator.next());
+        } while (iterator.hasNext());
+
+        return builder;
+    }
+
+    /**
      * @return {@code length} if no OWS is found.
      */
     private static int indexOfFirstNonOwsChar(CharSequence value, int length) {
@@ -622,4 +691,5 @@ public final class StringUtil {
     private static boolean isOws(char c) {
         return c == SPACE || c == TAB;
     }
+
 }

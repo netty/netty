@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,11 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -52,7 +54,7 @@ import static java.lang.Math.min;
 public final class ChannelOutboundBuffer {
     // Assuming a 64-bit JVM:
     //  - 16 bytes object header
-    //  - 8 reference fields
+    //  - 6 reference fields
     //  - 2 long fields
     //  - 2 int fields
     //  - 1 boolean field
@@ -221,15 +223,27 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
+     * Return the current message flush progress.
+     * @return {@code 0} if nothing was flushed before for the current message or there is no current message
+     */
+    public long currentProgress() {
+        Entry entry = flushedEntry;
+        if (entry == null) {
+            return 0;
+        }
+        return entry.progress;
+    }
+
+    /**
      * Notify the {@link ChannelPromise} of the current message about writing progress.
      */
     public void progress(long amount) {
         Entry e = flushedEntry;
         assert e != null;
         ChannelPromise p = e.promise;
+        long progress = e.progress + amount;
+        e.progress = progress;
         if (p instanceof ChannelProgressivePromise) {
-            long progress = e.progress + amount;
-            e.progress = progress;
             ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
         }
     }
@@ -411,7 +425,7 @@ public final class ChannelOutboundBuffer {
                         //
                         // See also:
                         // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                        // - http://linux.die.net/man/2/writev
+                        // - https://linux.die.net//man/2/writev
                         break;
                     }
                     nioBufferSize += readableBytes;
@@ -434,23 +448,11 @@ public final class ChannelOutboundBuffer {
                         }
                         nioBuffers[nioBufferCount++] = nioBuf;
                     } else {
-                        ByteBuffer[] nioBufs = entry.bufs;
-                        if (nioBufs == null) {
-                            // cached ByteBuffers as they may be expensive to create in terms
-                            // of Object allocation
-                            entry.bufs = nioBufs = buf.nioBuffers();
-                        }
-                        for (int i = 0; i < nioBufs.length && nioBufferCount < maxCount; ++i) {
-                            ByteBuffer nioBuf = nioBufs[i];
-                            if (nioBuf == null) {
-                                break;
-                            } else if (!nioBuf.hasRemaining()) {
-                                continue;
-                            }
-                            nioBuffers[nioBufferCount++] = nioBuf;
-                        }
+                        // The code exists in an extra method to ensure the method is not too big to inline as this
+                        // branch is not very likely to get hit very frequently.
+                        nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
                     }
-                    if (nioBufferCount == maxCount) {
+                    if (nioBufferCount >= maxCount) {
                         break;
                     }
                 }
@@ -461,6 +463,25 @@ public final class ChannelOutboundBuffer {
         this.nioBufferSize = nioBufferSize;
 
         return nioBuffers;
+    }
+
+    private static int nioBuffers(Entry entry, ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount, int maxCount) {
+        ByteBuffer[] nioBufs = entry.bufs;
+        if (nioBufs == null) {
+            // cached ByteBuffers as they may be expensive to create in terms
+            // of Object allocation
+            entry.bufs = nioBufs = buf.nioBuffers();
+        }
+        for (int i = 0; i < nioBufs.length && nioBufferCount < maxCount; ++i) {
+            ByteBuffer nioBuf = nioBufs[i];
+            if (nioBuf == null) {
+                break;
+            } else if (!nioBuf.hasRemaining()) {
+                continue;
+            }
+            nioBuffers[nioBufferCount++] = nioBuf;
+        }
+        return nioBufferCount;
     }
 
     private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
@@ -582,7 +603,7 @@ public final class ChannelOutboundBuffer {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
-                if (oldValue == 0 && newValue != 0) {
+                if (oldValue == 0) {
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;
@@ -747,9 +768,7 @@ public final class ChannelOutboundBuffer {
      * returns {@code false} or there are no more flushed messages to process.
      */
     public void forEachFlushedMessage(MessageProcessor processor) throws Exception {
-        if (processor == null) {
-            throw new NullPointerException("processor");
-        }
+        ObjectUtil.checkNotNull(processor, "processor");
 
         Entry entry = flushedEntry;
         if (entry == null) {
@@ -779,12 +798,12 @@ public final class ChannelOutboundBuffer {
     }
 
     static final class Entry {
-        private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
+        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
             @Override
-            protected Entry newObject(Handle<Entry> handle) {
+            public Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
-        };
+        });
 
         private final Handle<Entry> handle;
         Entry next;

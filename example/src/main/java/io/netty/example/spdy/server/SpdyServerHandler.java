@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,16 +22,22 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
 
 import java.util.Date;
 
-import static io.netty.handler.codec.http.HttpUtil.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http.HttpUtil.is100ContinueExpected;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 
 /**
  * HTTP handler that responds with a "Hello World"
@@ -44,21 +50,25 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
             HttpRequest req = (HttpRequest) msg;
 
             if (is100ContinueExpected(req)) {
-                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
             }
             boolean keepAlive = isKeepAlive(req);
 
             ByteBuf content = Unpooled.copiedBuffer("Hello World " + new Date(), CharsetUtil.UTF_8);
 
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
-            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
-            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
-            if (!keepAlive) {
-                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
-            } else {
-                response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+            if (keepAlive) {
+                if (req.protocolVersion().equals(HTTP_1_0)) {
+                    response.headers().set(CONNECTION, KEEP_ALIVE);
+                }
                 ctx.write(response);
+            } else {
+                // Tell the client we're going to close the connection.
+                response.headers().set(CONNECTION, CLOSE);
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
             }
         }
     }

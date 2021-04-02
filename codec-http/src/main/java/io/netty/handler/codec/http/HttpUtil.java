@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,14 +18,20 @@ package io.netty.handler.codec.http;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
+
+import static io.netty.util.internal.StringUtil.COMMA;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -34,6 +40,7 @@ public final class HttpUtil {
 
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
     private static final AsciiString SEMICOLON = AsciiString.cached(";");
+    private static final String COMMA_STRING = String.valueOf(COMMA);
 
     private HttpUtil() { }
 
@@ -65,16 +72,9 @@ public final class HttpUtil {
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        CharSequence connection = message.headers().get(HttpHeaderNames.CONNECTION);
-        if (HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection)) {
-            return false;
-        }
-
-        if (message.protocolVersion().isKeepAliveDefault()) {
-            return !HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection);
-        } else {
-            return HttpHeaderValues.KEEP_ALIVE.contentEqualsIgnoreCase(connection);
-        }
+        return !message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, true) &&
+               (message.protocolVersion().isKeepAliveDefault() ||
+                message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE, true));
     }
 
     /**
@@ -251,13 +251,9 @@ public final class HttpUtil {
      * present
      */
     public static boolean is100ContinueExpected(HttpMessage message) {
-        if (!isExpectHeaderValid(message)) {
-            return false;
-        }
-
-        final String expectValue = message.headers().get(HttpHeaderNames.EXPECT);
-        // unquoted tokens in the expect header are case-insensitive, thus 100-continue is case insensitive
-        return HttpHeaderValues.CONTINUE.toString().equalsIgnoreCase(expectValue);
+        return isExpectHeaderValid(message)
+          // unquoted tokens in the expect header are case-insensitive, thus 100-continue is case insensitive
+          && message.headers().contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE, true);
     }
 
     /**
@@ -309,7 +305,7 @@ public final class HttpUtil {
      * @return True if transfer encoding is chunked, otherwise false
      */
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true);
+        return message.headers().containsValue(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true);
     }
 
     /**
@@ -402,15 +398,14 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
+                } catch (IllegalCharsetNameException ignored) {
+                    // just return the default charset
                 } catch (UnsupportedCharsetException ignored) {
-                    return defaultCharset;
+                    // just return the default charset
                 }
-            } else {
-                return defaultCharset;
             }
-        } else {
-            return defaultCharset;
         }
+        return defaultCharset;
     }
 
     /**
@@ -459,9 +454,7 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getCharsetAsSequence(CharSequence contentTypeValue) {
-        if (contentTypeValue == null) {
-            throw new NullPointerException("contentTypeValue");
-        }
+        ObjectUtil.checkNotNull(contentTypeValue, "contentTypeValue");
 
         int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
         if (indexOfCharset == AsciiString.INDEX_NOT_FOUND) {
@@ -515,9 +508,7 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getMimeType(CharSequence contentTypeValue) {
-        if (contentTypeValue == null) {
-            throw new NullPointerException("contentTypeValue");
-        }
+        ObjectUtil.checkNotNull(contentTypeValue, "contentTypeValue");
 
         int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
         if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
@@ -529,7 +520,7 @@ public final class HttpUtil {
 
     /**
      * Formats the host string of an address so it can be used for computing an HTTP component
-     * such as an URL or a Host header
+     * such as a URL or a Host header
      *
      * @param addr the address
      * @return the formatted String
@@ -543,5 +534,86 @@ public final class HttpUtil {
             return '[' + hostString + ']';
         }
         return hostString;
+    }
+
+    /**
+     * Validates, and optionally extracts the content length from headers. This method is not intended for
+     * general use, but is here to be shared between HTTP/1 and HTTP/2 parsing.
+     *
+     * @param contentLengthFields the content-length header fields.
+     * @param isHttp10OrEarlier {@code true} if we are handling HTTP/1.0 or earlier
+     * @param allowDuplicateContentLengths {@code true}  if multiple, identical-value content lengths should be allowed.
+     * @return the normalized content length from the headers or {@code -1} if the fields were empty.
+     * @throws IllegalArgumentException if the content-length fields are not valid
+     */
+    @UnstableApi
+    public static long normalizeAndGetContentLength(
+            List<? extends CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
+            boolean allowDuplicateContentLengths) {
+        if (contentLengthFields.isEmpty()) {
+            return -1;
+        }
+
+        // Guard against multiple Content-Length headers as stated in
+        // https://tools.ietf.org/html/rfc7230#section-3.3.2:
+        //
+        // If a message is received that has multiple Content-Length header
+        //   fields with field-values consisting of the same decimal value, or a
+        //   single Content-Length header field with a field value containing a
+        //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
+        //   indicating that duplicate Content-Length header fields have been
+        //   generated or combined by an upstream message processor, then the
+        //   recipient MUST either reject the message as invalid or replace the
+        //   duplicated field-values with a single valid Content-Length field
+        //   containing that decimal value prior to determining the message body
+        //   length or forwarding the message.
+        String firstField = contentLengthFields.get(0).toString();
+        boolean multipleContentLengths =
+                contentLengthFields.size() > 1 || firstField.indexOf(COMMA) >= 0;
+
+        if (multipleContentLengths && !isHttp10OrEarlier) {
+            if (allowDuplicateContentLengths) {
+                // Find and enforce that all Content-Length values are the same
+                String firstValue = null;
+                for (CharSequence field : contentLengthFields) {
+                    String[] tokens = field.toString().split(COMMA_STRING, -1);
+                    for (String token : tokens) {
+                        String trimmed = token.trim();
+                        if (firstValue == null) {
+                            firstValue = trimmed;
+                        } else if (!trimmed.equals(firstValue)) {
+                            throw new IllegalArgumentException(
+                                    "Multiple Content-Length values found: " + contentLengthFields);
+                        }
+                    }
+                }
+                // Replace the duplicated field-values with a single valid Content-Length field
+                firstField = firstValue;
+            } else {
+                // Reject the message as invalid
+                throw new IllegalArgumentException(
+                        "Multiple Content-Length values found: " + contentLengthFields);
+            }
+        }
+        // Ensure we not allow sign as part of the content-length:
+        // See https://github.com/squid-cache/squid/security/advisories/GHSA-qf3v-rc95-96j5
+        if (!Character.isDigit(firstField.charAt(0))) {
+            // Reject the message as invalid
+            throw new IllegalArgumentException(
+                    "Content-Length value is not a number: " + firstField);
+        }
+        try {
+            final long value = Long.parseLong(firstField);
+            if (value < 0) {
+                // Reject the message as invalid
+                throw new IllegalArgumentException(
+                        "Content-Length value must be >=0: " + value);
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            // Reject the message as invalid
+            throw new IllegalArgumentException(
+                    "Content-Length value is not a number: " + firstField, e);
+        }
     }
 }

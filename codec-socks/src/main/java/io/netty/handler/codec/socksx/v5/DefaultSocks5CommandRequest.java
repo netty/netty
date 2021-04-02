@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
@@ -34,15 +35,9 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
     public DefaultSocks5CommandRequest(
             Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
 
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
-        if (dstAddrType == null) {
-            throw new NullPointerException("dstAddrType");
-        }
-        if (dstAddr == null) {
-            throw new NullPointerException("dstAddr");
-        }
+        this.type = ObjectUtil.checkNotNull(type, "type");
+        ObjectUtil.checkNotNull(dstAddrType, "dstAddrType");
+        ObjectUtil.checkNotNull(dstAddr, "dstAddr");
 
         if (dstAddrType == Socks5AddressType.IPv4) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {
@@ -63,7 +58,6 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
         }
 
-        this.type = type;
         this.dstAddrType = dstAddrType;
         this.dstAddr = dstAddr;
         this.dstPort = dstPort;

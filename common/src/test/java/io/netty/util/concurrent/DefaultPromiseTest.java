@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +37,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.*;
 
@@ -63,10 +66,45 @@ public class DefaultPromiseTest {
         return max(stackOverflowDepth << 1, stackOverflowDepth);
     }
 
+    @Test
+    public void testCancelDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        assertTrue(promise.cancel(false));
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertTrue(promise.isCancelled());
+    }
+
+    @Test
+    public void testSuccessDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Object value = new Object();
+        Promise<Object> promise = new DefaultPromise<Object>(executor);
+        promise.setSuccess(value);
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertSame(value, promise.getNow());
+    }
+
+    @Test
+    public void testFailureDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Exception cause = new Exception();
+        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        promise.setFailure(cause);
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertSame(cause, promise.cause());
+    }
+
     @Test(expected = CancellationException.class)
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         promise.get();
     }
 
@@ -74,8 +112,16 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
             ExecutionException, TimeoutException {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         promise.get(1, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
+    ExecutionException, TimeoutException {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        assertTrue(promise.cancel(false));
+        assertThat(promise.cause(), instanceOf(CancellationException.class));
     }
 
     @Test

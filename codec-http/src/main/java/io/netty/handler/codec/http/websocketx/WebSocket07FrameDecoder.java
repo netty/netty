@@ -1,11 +1,11 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// (BSD License: http://www.opensource.org/licenses/bsd-license)
+// (BSD License: https://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
 // All rights reserved.
@@ -71,7 +71,11 @@ public class WebSocket07FrameDecoder extends WebSocket08FrameDecoder {
      *            helps check for denial of services attacks.
      */
     public WebSocket07FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength) {
-        this(expectMaskedFrames, allowExtensions, maxFramePayloadLength, false);
+        this(WebSocketDecoderConfig.newBuilder()
+            .expectMaskedFrames(expectMaskedFrames)
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .build());
     }
 
     /**
@@ -91,6 +95,21 @@ public class WebSocket07FrameDecoder extends WebSocket08FrameDecoder {
      */
     public WebSocket07FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
                                    boolean allowMaskMismatch) {
-        super(expectMaskedFrames, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
+        this(WebSocketDecoderConfig.newBuilder()
+            .expectMaskedFrames(expectMaskedFrames)
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor
+     *
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocket07FrameDecoder(WebSocketDecoderConfig decoderConfig) {
+        super(decoderConfig);
     }
 }

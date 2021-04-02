@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
@@ -46,6 +47,14 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
      */
     public KQueueEventLoopGroup(int nThreads) {
         this(nThreads, (ThreadFactory) null);
+    }
+
+    /**
+     * Create a new instance using the default number of threads and the given {@link ThreadFactory}.
+     */
+    @SuppressWarnings("deprecation")
+    public KQueueEventLoopGroup(ThreadFactory threadFactory) {
+        this(0, threadFactory, 0);
     }
 
     /**
@@ -116,6 +125,14 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler);
     }
 
+    public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
+                                SelectStrategyFactory selectStrategyFactory,
+                                RejectedExecutionHandler rejectedExecutionHandler,
+                                EventLoopTaskQueueFactory queueFactory) {
+        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory,
+                rejectedExecutionHandler, queueFactory);
+    }
+
     /**
      * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
@@ -128,7 +145,10 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+        EventLoopTaskQueueFactory queueFactory = args.length == 4 ? (EventLoopTaskQueueFactory) args[3] : null;
+
         return new KQueueEventLoop(this, executor, (Integer) args[0],
-                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
+                ((SelectStrategyFactory) args[1]).newSelectStrategy(),
+                (RejectedExecutionHandler) args[2], queueFactory);
     }
 }

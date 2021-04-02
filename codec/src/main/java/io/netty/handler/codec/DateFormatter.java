@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,10 +38,12 @@ import java.util.TimeZone;
  * If you're looking for a date format that validates day of week, or supports other timezones, consider using
  * java.util.DateTimeFormatter.RFC_1123_DATE_TIME.
  *
- * On the formatting side, it uses RFC1123 format.
+ * On the formatting side, it uses a subset of RFC1123 (2 digit day-of-month and 4 digit year) as per RFC2616.
+ * This subset supports RFC6265.
  *
  * @see <a href="https://tools.ietf.org/html/rfc6265#section-5.1.1">RFC6265</a> for the parsing side
- * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> for the encoding side.
+ * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> and
+ * <a href="https://tools.ietf.org/html/rfc2616#section-3.3.1">RFC2616</a> for the encoding side.
  */
 public final class DateFormatter {
 
@@ -99,7 +101,7 @@ public final class DateFormatter {
         } else if (length < 0) {
             throw new IllegalArgumentException("Can't have end < start");
         } else if (length > 64) {
-            throw new IllegalArgumentException("Can't parse more than 64 chars," +
+            throw new IllegalArgumentException("Can't parse more than 64 chars, " +
                     "looks like a user error or a malformed header");
         }
         return formatter().parse0(checkNotNull(txt, "txt"), start, end);
@@ -261,10 +263,6 @@ public final class DateFormatter {
         return false;
     }
 
-    private static boolean matchMonth(String month, CharSequence txt, int tokenStart) {
-        return AsciiString.regionMatchesAscii(month, true, 0, txt, tokenStart, 3);
-    }
-
     private boolean tryParseMonth(CharSequence txt, int tokenStart, int tokenEnd) {
         int len = tokenEnd - tokenStart;
 
@@ -272,29 +270,33 @@ public final class DateFormatter {
             return false;
         }
 
-        if (matchMonth("Jan", txt, tokenStart)) {
+        char monthChar1 = AsciiString.toLowerCase(txt.charAt(tokenStart));
+        char monthChar2 = AsciiString.toLowerCase(txt.charAt(tokenStart + 1));
+        char monthChar3 = AsciiString.toLowerCase(txt.charAt(tokenStart + 2));
+
+        if (monthChar1 == 'j' && monthChar2 == 'a' && monthChar3 == 'n') {
             month = Calendar.JANUARY;
-        } else if (matchMonth("Feb", txt, tokenStart)) {
+        } else if (monthChar1 == 'f' && monthChar2 == 'e' && monthChar3 == 'b') {
             month = Calendar.FEBRUARY;
-        } else if (matchMonth("Mar", txt, tokenStart)) {
+        } else if (monthChar1 == 'm' && monthChar2 == 'a' && monthChar3 == 'r') {
             month = Calendar.MARCH;
-        } else if (matchMonth("Apr", txt, tokenStart)) {
+        } else if (monthChar1 == 'a' && monthChar2 == 'p' && monthChar3 == 'r') {
             month = Calendar.APRIL;
-        } else if (matchMonth("May", txt, tokenStart)) {
+        } else if (monthChar1 == 'm' && monthChar2 == 'a' && monthChar3 == 'y') {
             month = Calendar.MAY;
-        } else if (matchMonth("Jun", txt, tokenStart)) {
+        } else if (monthChar1 == 'j' && monthChar2 == 'u' && monthChar3 == 'n') {
             month = Calendar.JUNE;
-        } else if (matchMonth("Jul", txt, tokenStart)) {
+        } else if (monthChar1 == 'j' && monthChar2 == 'u' && monthChar3 == 'l') {
             month = Calendar.JULY;
-        } else if (matchMonth("Aug", txt, tokenStart)) {
+        } else if (monthChar1 == 'a' && monthChar2 == 'u' && monthChar3 == 'g') {
             month = Calendar.AUGUST;
-        } else if (matchMonth("Sep", txt, tokenStart)) {
+        } else if (monthChar1 == 's' && monthChar2 == 'e' && monthChar3 == 'p') {
             month = Calendar.SEPTEMBER;
-        } else if (matchMonth("Oct", txt, tokenStart)) {
+        } else if (monthChar1 == 'o' && monthChar2 == 'c' && monthChar3 == 't') {
             month = Calendar.OCTOBER;
-        } else if (matchMonth("Nov", txt, tokenStart)) {
+        } else if (monthChar1 == 'n' && monthChar2 == 'o' && monthChar3 == 'v') {
             month = Calendar.NOVEMBER;
-        } else if (matchMonth("Dec", txt, tokenStart)) {
+        } else if (monthChar1 == 'd' && monthChar2 == 'e' && monthChar3 == 'c') {
             month = Calendar.DECEMBER;
         } else {
             return false;
@@ -429,7 +431,7 @@ public final class DateFormatter {
         cal.setTime(date);
 
         sb.append(DAY_OF_WEEK_TO_SHORT_NAME[cal.get(Calendar.DAY_OF_WEEK) - 1]).append(", ");
-        sb.append(cal.get(Calendar.DAY_OF_MONTH)).append(' ');
+        appendZeroLeftPadded(cal.get(Calendar.DAY_OF_MONTH), sb).append(' ');
         sb.append(CALENDAR_MONTH_TO_SHORT_NAME[cal.get(Calendar.MONTH)]).append(' ');
         sb.append(cal.get(Calendar.YEAR)).append(' ');
         appendZeroLeftPadded(cal.get(Calendar.HOUR_OF_DAY), sb).append(':');

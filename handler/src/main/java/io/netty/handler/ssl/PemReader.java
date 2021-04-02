@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -126,7 +126,7 @@ final class PemReader {
         Matcher m = KEY_PATTERN.matcher(content);
         if (!m.find()) {
             throw new KeyException("could not find a PKCS #8 private key in input stream" +
-                    " (see http://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
+                    " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
         }
 
         ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,10 @@
  * under the License.
  */
 package io.netty.channel;
+
+import io.netty.util.internal.ObjectUtil;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -61,12 +65,8 @@ public final class ChannelFlushPromiseNotifier {
      * {@code pendingDataSize} was reached.
      */
     public ChannelFlushPromiseNotifier add(ChannelPromise promise, long pendingDataSize) {
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-        if (pendingDataSize < 0) {
-            throw new IllegalArgumentException("pendingDataSize must be >= 0 but was " + pendingDataSize);
-        }
+        ObjectUtil.checkNotNull(promise, "promise");
+        checkPositiveOrZero(pendingDataSize, "pendingDataSize");
         long checkpoint = writeCounter + pendingDataSize;
         if (promise instanceof FlushCheckpoint) {
             FlushCheckpoint cp = (FlushCheckpoint) promise;
@@ -81,9 +81,7 @@ public final class ChannelFlushPromiseNotifier {
      * Increase the current write counter by the given delta
      */
     public ChannelFlushPromiseNotifier increaseWriteCounter(long delta) {
-        if (delta < 0) {
-            throw new IllegalArgumentException("delta must be >= 0 but was " + delta);
-        }
+        checkPositiveOrZero(delta, "delta");
         writeCounter += delta;
         return this;
     }

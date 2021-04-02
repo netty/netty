@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -88,7 +89,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
          * will be treated as distinct fields.
          *
          * Reference:
-         *   http://www.w3.org/TR/html5/forms.html#multipart-form-data
+         *   https://www.w3.org/TR/html5/forms.html#multipart-form-data
          */
         HTML5
     }
@@ -310,9 +311,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      *             if the encoding is in error or if the finalize were already done
      */
     public void setBodyHttpDatas(List<InterfaceHttpData> datas) throws ErrorDataEncoderException {
-        if (datas == null) {
-            throw new NullPointerException("datas");
-        }
+        ObjectUtil.checkNotNull(datas, "datas");
         globalBodySize = 0;
         bodyListDatas.clear();
         currentFileUpload = null;
@@ -638,7 +637,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                         replacement.append("; ")
                                    .append(HttpHeaderValues.FILENAME)
                                    .append("=\"")
-                                   .append(fileUpload.getFilename())
+                                   .append(currentFileUpload.getFilename())
                                    .append('"');
                     }
 
@@ -867,7 +866,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     /**
      *
-     * @return the next ByteBuf to send as a HttpChunk and modifying currentBuffer accordingly
+     * @return the next ByteBuf to send as an HttpChunk and modifying currentBuffer accordingly
      */
     private ByteBuf fillByteBuf() {
         int length = currentBuffer.readableBytes();
@@ -944,12 +943,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         // Set name=
         if (isKey) {
             String key = currentData.getName();
-            buffer = wrappedBuffer(key.getBytes());
+            buffer = wrappedBuffer(key.getBytes(charset));
             isKey = false;
             if (currentBuffer == null) {
-                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes(charset)));
             } else {
-                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes(charset)));
             }
             // continue
             size -= buffer.readableBytes() + 1;
@@ -970,14 +969,18 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
             isKey = true;
-            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes()) : null;
+            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes(charset)) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data
         if (buffer.capacity() == 0) {
             currentData = null;
             if (currentBuffer == null) {
-                currentBuffer = delimiter;
+                if (delimiter == null) {
+                    return null;
+                } else {
+                    currentBuffer = delimiter;
+                }
             } else {
                 if (delimiter != null) {
                     currentBuffer = wrappedBuffer(currentBuffer, delimiter);

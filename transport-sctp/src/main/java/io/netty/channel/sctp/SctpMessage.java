@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.channel.sctp;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Representation of SCTP Data Chunk
@@ -61,13 +62,10 @@ public final class SctpMessage extends DefaultByteBufHolder {
      */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         super(payloadBuffer);
-        if (msgInfo == null) {
-            throw new NullPointerException("msgInfo");
-        }
-        this.msgInfo = msgInfo;
-        streamIdentifier = msgInfo.streamNumber();
-        protocolIdentifier = msgInfo.payloadProtocolID();
-        unordered = msgInfo.isUnordered();
+        this.msgInfo = ObjectUtil.checkNotNull(msgInfo, "msgInfo");
+        this.streamIdentifier = msgInfo.streamNumber();
+        this.protocolIdentifier = msgInfo.payloadProtocolID();
+        this.unordered = msgInfo.isUnordered();
     }
 
     /**

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,15 +38,19 @@ public class XmlEntityReference {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         XmlEntityReference that = (XmlEntityReference) o;
 
-        if (name != null ? !name.equals(that.name) : that.name != null) { return false; }
-        if (text != null ? !text.equals(that.text) : that.text != null) { return false; }
-
-        return true;
+        if (name != null ? !name.equals(that.name) : that.name != null) {
+            return false;
+        }
+        return text != null ? text.equals(that.text) : that.text == null;
     }
 
     @Override

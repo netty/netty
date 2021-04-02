@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -210,12 +210,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      */
     private int writeDefaultFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
         final long regionCount = region.count();
-        if (region.transferred() >= regionCount) {
+        final long offset = region.transferred();
+
+        if (offset >= regionCount) {
             in.remove();
             return 0;
         }
 
-        final long offset = region.transferred();
         final long flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
         if (flushedAmount > 0) {
             in.progress(flushedAmount);
@@ -223,6 +224,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 in.remove();
             }
             return 1;
+        } else if (flushedAmount == 0) {
+            validateFileRegion(region, offset);
         }
         return WRITE_STATUS_SNDBUF_FULL;
     }
@@ -584,7 +587,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(cause);
-                if (close || cause instanceof IOException) {
+
+                // If oom will close the read event, release connection.
+                // See https://github.com/netty/netty/issues/10434
+                if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
                     shutdownInput(false);
                 }
             }

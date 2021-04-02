@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,10 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.X509KeyManager;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -35,6 +37,58 @@ class OpenSslKeyMaterialProvider {
     OpenSslKeyMaterialProvider(X509KeyManager keyManager, String password) {
         this.keyManager = keyManager;
         this.password = password;
+    }
+
+    static void validateKeyMaterialSupported(X509Certificate[] keyCertChain, PrivateKey key, String keyPassword)
+            throws SSLException {
+        validateSupported(keyCertChain);
+        validateSupported(key, keyPassword);
+    }
+
+    private static void validateSupported(PrivateKey key, String password) throws SSLException {
+        if (key == null) {
+            return;
+        }
+
+        long pkeyBio = 0;
+        long pkey = 0;
+
+        try {
+            pkeyBio = toBIO(UnpooledByteBufAllocator.DEFAULT, key);
+            pkey = SSL.parsePrivateKey(pkeyBio, password);
+        } catch (Exception e) {
+            throw new SSLException("PrivateKey type not supported " + key.getFormat(), e);
+        } finally {
+            SSL.freeBIO(pkeyBio);
+            if (pkey != 0) {
+                SSL.freePrivateKey(pkey);
+            }
+        }
+    }
+
+    private static void validateSupported(X509Certificate[] certificates) throws SSLException {
+        if (certificates == null || certificates.length == 0) {
+            return;
+        }
+
+        long chainBio = 0;
+        long chain = 0;
+        PemEncoded encoded = null;
+        try {
+            encoded = PemX509Certificate.toPEM(UnpooledByteBufAllocator.DEFAULT, true, certificates);
+            chainBio = toBIO(UnpooledByteBufAllocator.DEFAULT, encoded.retain());
+            chain = SSL.parseX509Chain(chainBio);
+        } catch (Exception e) {
+            throw new SSLException("Certificate type not supported", e);
+        } finally {
+            SSL.freeBIO(chainBio);
+            if (chain != 0) {
+                SSL.freeX509Chain(chain);
+            }
+            if (encoded != null) {
+                encoded.release();
+            }
+        }
     }
 
     /**
@@ -66,11 +120,11 @@ class OpenSslKeyMaterialProvider {
 
             OpenSslKeyMaterial keyMaterial;
             if (key instanceof OpenSslPrivateKey) {
-                keyMaterial = ((OpenSslPrivateKey) key).toKeyMaterial(chain);
+                keyMaterial = ((OpenSslPrivateKey) key).newKeyMaterial(chain, certificates);
             } else {
                 pkeyBio = toBIO(allocator, key);
                 pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
-                keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey);
+                keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey, certificates);
             }
 
             // See the chain and pkey to 0 so we will not release it as the ownership was

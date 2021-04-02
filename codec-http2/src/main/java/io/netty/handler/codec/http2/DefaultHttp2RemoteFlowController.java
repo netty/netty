@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -31,6 +31,7 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -635,9 +636,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         void initialWindowSize(int newWindowSize) throws Http2Exception {
-            if (newWindowSize < 0) {
-                throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
-            }
+            checkPositiveOrZero(newWindowSize, "newWindowSize");
 
             final int delta = newWindowSize - initialWindowSize;
             initialWindowSize = newWindowSize;

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.util.Signal;
+import io.netty.util.internal.ObjectUtil;
 
 public class DecoderResult {
 
@@ -26,19 +27,13 @@ public class DecoderResult {
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
 
     public static DecoderResult failure(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        return new DecoderResult(cause);
+        return new DecoderResult(ObjectUtil.checkNotNull(cause, "cause"));
     }
 
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     public boolean isFinished() {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,5 +24,10 @@ public class WrappedCompositeByteBufTest extends BigEndianCompositeByteBufTest {
 
     protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
         return new WrappedCompositeByteBuf(buffer);
+    }
+
+    @Override
+    protected CompositeByteBuf newCompositeBuffer() {
+        return wrap(super.newCompositeBuffer());
     }
 }

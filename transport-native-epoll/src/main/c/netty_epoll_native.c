@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,6 +36,12 @@
 #include <inttypes.h>
 #include <link.h>
 #include <time.h>
+// Needed to be able to use syscalls directly and so not depend on newer GLIBC versions
+#include <linux/net.h>
+#include <sys/syscall.h>
+
+// Needed for UDP_SEGMENT
+#include <netinet/udp.h>
 
 #include "netty_epoll_linuxsocket.h"
 #include "netty_unix_buffer.h"
@@ -45,17 +51,34 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+#include "netty_unix.h"
+
+// Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
+#ifdef NETTY_BUILD_STATIC
+#define NETTY_JNI_UTIL_BUILD_STATIC
+#endif
+
+#define STATICALLY_CLASSNAME "io/netty/channel/epoll/NativeStaticallyReferencedJniMethods"
+#define NATIVE_CLASSNAME "io/netty/channel/epoll/Native"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
 #define TCP_FASTOPEN 23
 #endif
 
+// Allow to compile on systems with older kernels.
+#ifndef UDP_SEGMENT
+#define UDP_SEGMENT	103
+#endif
+
+// UDP_GRO is defined in linux 5. We define this here so older kernels can compile.
+#ifndef UDP_GRO
+#define UDP_GRO 104
+#endif
+
+
 // optional
 extern int epoll_create1(int flags) __attribute__((weak));
-
-#ifdef IO_NETTY_SENDMMSG_NOT_FOUND
-extern int sendmmsg(int sockfd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) __attribute__((weak));
 
 #ifndef __USE_GNU
 struct mmsghdr {
@@ -63,14 +86,45 @@ struct mmsghdr {
     unsigned int  msg_len;  /* Number of bytes transmitted */
 };
 #endif
+
+// All linux syscall numbers are stable so this is safe.
+#ifndef SYS_recvmmsg
+// Only support SYS_recvmmsg for __x86_64__ / __i386__ for now
+#if defined(__x86_64__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_64.tbl
+#define SYS_recvmmsg 299
+#elif defined(__i386__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
+#define SYS_recvmmsg 337
+#else
+#define SYS_recvmmsg -1
 #endif
+#endif // SYS_recvmmsg
+
+#ifndef SYS_sendmmsg
+// Only support SYS_sendmmsg for __x86_64__ / __i386__ for now
+#if defined(__x86_64__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_64.tbl
+#define SYS_sendmmsg 307
+#elif defined(__i386__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
+#define SYS_sendmmsg 345
+#else
+#define SYS_sendmmsg -1
+#endif
+#endif // SYS_sendmmsg
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jfieldID packetAddrFieldId = NULL;
+static jfieldID packetAddrLenFieldId = NULL;
+static jfieldID packetSegmentSizeFieldId = NULL;
 static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
 static jfieldID packetCountFieldId = NULL;
+
+static const char* staticPackagePrefix = NULL;
+static int register_unix_called = 0;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -116,10 +170,27 @@ static jint netty_epoll_native_timerFd(JNIEnv* env, jclass clazz) {
 }
 
 static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
-    jint eventFD = eventfd_write(fd, (eventfd_t) value);
+    uint64_t val;
 
-    if (eventFD < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", errno);
+    for (;;) {
+        jint ret = eventfd_write(fd, (eventfd_t) value);
+
+        if (ret < 0) {
+            // We need to read before we can write again, let's try to read and then write again and if this
+            // fails we will bail out.
+            //
+            // See https://man7.org/linux/man-pages/man2/eventfd.2.html.
+            if (errno == EAGAIN) {
+                if (eventfd_read(fd, &val) == 0 || errno == EAGAIN) {
+                    // Try again
+                    continue;
+                }
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_read(...) failed: ", errno);
+            } else {
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", errno);
+            }
+        }
+        break;
     }
 }
 
@@ -169,48 +240,44 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     return efd;
 }
 
-static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
+static void netty_epoll_native_timerFdSetTime(JNIEnv* env, jclass clazz, jint timerFd, jint tvSec, jint tvNsec) {
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    ts.it_value.tv_sec = tvSec;
+    ts.it_value.tv_nsec = tvNsec;
+    if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+        netty_unix_errors_throwIOExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+    }
+}
+
+static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
     int result, err;
 
-    if (tvSec == 0 && tvNsec == 0) {
-        // Zeros = poll (aka return immediately).
-        do {
-            result = epoll_wait(efd, ev, len, 0);
-            if (result >= 0) {
-                return result;
-            }
-        } while((err = errno) == EINTR);
-    } else {
-        // only reschedule the timer if there is a newer event.
-        // -1 is a special value used by EpollEventLoop.
-        if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
-            struct itimerspec ts;
-            memset(&ts.it_interval, 0, sizeof(struct timespec));
-            ts.it_value.tv_sec = tvSec;
-            ts.it_value.tv_nsec = tvNsec;
-            if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-                netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
-                return -1;
-            }
+    do {
+        result = epoll_wait(efd, ev, len, timeout);
+        if (result >= 0) {
+            return result;
         }
-        do {
-            result = epoll_wait(efd, ev, len, -1);
-            if (result > 0) {
-                // Detect timeout, and preserve the epoll_wait API.
-                if (result == 1 && ev[0].data.fd == timerFd) {
-                    // We assume that timerFD is in ET mode. So we must consume this event to ensure we are notified
-                    // of future timer events because ET mode only notifies a single time until the event is consumed.
-                    uint64_t timerFireCount;
-                    // We don't care what the result is. We just want to consume the wakeup event and reset ET.
-                    result = read(timerFd, &timerFireCount, sizeof(uint64_t));
-                    return 0;
-                }
-                return result;
-            }
-        } while((err = errno) == EINTR);
-    }
+    } while((err = errno) == EINTR);
     return -err;
+}
+
+// This method is deprecated!
+static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
+    // only reschedule the timer if there is a newer event.
+    // -1 is a special value used by EpollEventLoop.
+    if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
+    	struct itimerspec ts;
+    	memset(&ts.it_interval, 0, sizeof(struct timespec));
+    	ts.it_value.tv_sec = tvSec;
+    	ts.it_value.tv_nsec = tvNsec;
+    	if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+    		netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+    		return -1;
+    	}
+    }
+    return netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
 }
 
 static inline void cpu_relax() {
@@ -265,42 +332,162 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
     return res;
 }
 
-static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
+static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
     struct sockaddr_storage addr[len];
+    char controls[len][CMSG_SPACE(sizeof(uint16_t))];
+
     socklen_t addrSize;
     int i;
 
     memset(msg, 0, sizeof(msg));
 
     for (i = 0; i < len; i++) {
-
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
-        jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
-        jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+        jint addrLen = (*env)->GetIntField(env, packet, packetAddrLenFieldId);
+        jint packetSegmentSize = (*env)->GetIntField(env, packet, packetSegmentSizeFieldId);
+        if (packetSegmentSize > 0) {
+            msg[i].msg_hdr.msg_control = controls[i];
+            msg[i].msg_hdr.msg_controllen = sizeof(controls[i]);
+            struct cmsghdr *cm = CMSG_FIRSTHDR(&msg[i].msg_hdr);
+            cm->cmsg_level = SOL_UDP;
+            cm->cmsg_type = UDP_SEGMENT;
+            cm->cmsg_len = CMSG_LEN(sizeof(uint16_t));
+            *((uint16_t *) CMSG_DATA(cm)) = packetSegmentSize;
+        }
+        if (addrLen != 0) {
+            jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
+            jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, address, scopeId, port, &addr[i], &addrSize) == -1) {
-            return -1;
+           if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
+              return -1;
+           }
+           msg[i].msg_hdr.msg_name = &addr[i];
+           msg[i].msg_hdr.msg_namelen = addrSize;
         }
 
-        msg[i].msg_hdr.msg_name = &addr[i];
-        msg[i].msg_hdr.msg_namelen = addrSize;
-
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
-        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);;
+        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
     }
 
     ssize_t res;
     int err;
     do {
-       res = sendmmsg(fd, msg, len, 0);
+       // We directly use the syscall to prevent depending on GLIBC 2.14.
+       res = syscall(SYS_sendmmsg, fd, msg, len, 0);
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
         return -err;
     }
+    return (jint) res;
+}
+
+static void init_packet(JNIEnv* env, jobject packet, struct msghdr* msg, int len) {
+    jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
+
+    (*env)->SetIntField(env, packet, packetCountFieldId, len);
+
+    struct sockaddr_storage* addr = (struct sockaddr_storage*) msg->msg_name;
+
+    if (addr->ss_family == AF_INET) {
+        struct sockaddr_in* ipaddr = (struct sockaddr_in*) addr;
+
+        (*env)->SetByteArrayRegion(env, address, 0, 4, (jbyte*) &ipaddr->sin_addr.s_addr);
+        (*env)->SetIntField(env, packet, packetAddrLenFieldId, 4);
+        (*env)->SetIntField(env, packet, packetScopeIdFieldId, 0);
+        (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ipaddr->sin_port));
+    } else {
+        int addrLen = netty_unix_socket_ipAddressLength(addr);
+        struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) addr;
+
+        if (addrLen == 4) {
+            // IPV4 mapped IPV6 address
+            jbyte* addr = (jbyte*) &ip6addr->sin6_addr.s6_addr;
+            (*env)->SetByteArrayRegion(env, address, 0, 4, addr + 12);
+        } else {
+            (*env)->SetByteArrayRegion(env, address, 0, 16, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+        }
+        (*env)->SetIntField(env, packet, packetAddrLenFieldId, addrLen);
+        (*env)->SetIntField(env, packet, packetScopeIdFieldId, ip6addr->sin6_scope_id);
+        (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ip6addr->sin6_port));
+    }
+    struct cmsghdr *cmsg = NULL;
+    uint16_t gso_size = 0;
+    uint16_t *gsosizeptr = NULL;
+    for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg)) {
+       if (cmsg->cmsg_level == SOL_UDP && cmsg->cmsg_type == UDP_GRO) {
+           gsosizeptr = (uint16_t *) CMSG_DATA(cmsg);
+           gso_size = *gsosizeptr;
+           break;
+       }
+    }
+    (*env)->SetIntField(env, packet, packetSegmentSizeFieldId, gso_size);
+}
+
+static jint netty_epoll_native_recvmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobject packet) {
+    struct msghdr msg = { 0 };
+    struct sockaddr_storage sock_address;
+    int addrSize = sizeof(sock_address);
+    // Enough space for GRO
+    char control[CMSG_SPACE(sizeof(uint16_t))] = { 0 };
+    msg.msg_name = &sock_address;
+    msg.msg_namelen = (socklen_t) addrSize;
+    msg.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
+    msg.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
+    msg.msg_control = control;
+    msg.msg_controllen = sizeof(control);
+    ssize_t res;
+    int err;
+    do {
+        res = recvmsg(fd, &msg, 0);
+        // keep on reading if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+    if (res < 0) {
+        return -err;
+    }
+    init_packet(env, packet, &msg, res);
+    return (jint) res;
+}
+
+static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
+    struct mmsghdr msg[len];
+    memset(msg, 0, sizeof(msg));
+    struct sockaddr_storage addr[len];
+    int addrSize = sizeof(addr);
+    memset(addr, 0, addrSize);
+
+    int i;
+
+    for (i = 0; i < len; i++) {
+        jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
+        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
+
+        msg[i].msg_hdr.msg_name = addr + i;
+        msg[i].msg_hdr.msg_namelen = (socklen_t) addrSize;
+    }
+
+    ssize_t res;
+    int err;
+    do {
+        // We directly use the syscall to prevent depending on GLIBC 2.12.
+        res = syscall(SYS_recvmmsg, fd, &msg, len, 0, NULL);
+
+        // keep on reading if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+
+    for (i = 0; i < res; i++) {
+        jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        init_packet(env, packet, &msg[i].msg_hdr, msg[i].msg_len);
+    }
+
     return (jint) res;
 }
 
@@ -316,21 +503,44 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
 }
 
 static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
-    // Use & to avoid warnings with -Wtautological-pointer-compare when sendmmsg is
-    // not weakly defined.
-    if (&sendmmsg != NULL) {
-        return JNI_TRUE;
+    if (SYS_sendmmsg == -1) {
+        return JNI_FALSE;
     }
-    return JNI_FALSE;
+    if (syscall(SYS_sendmmsg, -1, NULL, 0, 0) == -1) {
+        if (errno == ENOSYS) {
+            return JNI_FALSE;
+        }
+    }
+    return JNI_TRUE;
 }
 
-static jboolean netty_epoll_native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz) {
+static jboolean netty_epoll_native_isSupportingUdpSegment(JNIEnv* env, jclass clazz) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        return JNI_FALSE;
+    }
+    int gso_size = 512;
+    int ret = setsockopt(fd, SOL_UDP, UDP_SEGMENT, &gso_size, sizeof(gso_size));
+    close(fd);
+    return ret == -1 ? JNI_FALSE : JNI_TRUE;
+}
+
+static jboolean netty_epoll_native_isSupportingRecvmmsg(JNIEnv* env, jclass clazz) {
+    if (SYS_recvmmsg == -1) {
+        return JNI_FALSE;
+    }
+    if (syscall(SYS_recvmmsg, -1, NULL, 0, 0, NULL) == -1) {
+        if (errno == ENOSYS) {
+            return JNI_FALSE;
+        }
+    }
+    return JNI_TRUE;
+}
+
+static jint netty_epoll_native_tcpFastopenMode(JNIEnv* env, jclass clazz) {
     int fastopen = 0;
     getSysctlValue("/proc/sys/net/ipv4/tcp_fastopen", &fastopen);
-    if (fastopen > 0) {
-        return JNI_TRUE;
-    }
-    return JNI_FALSE;
+    return fastopen;
 }
 
 static jint netty_epoll_native_epollet(JNIEnv* env, jclass clazz) {
@@ -368,7 +578,7 @@ static jint netty_epoll_native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong
     loff_t off_out = (loff_t) offOut;
 
     loff_t* p_off_in = off_in >= 0 ? &off_in : NULL;
-    loff_t* p_off_out = off_in >= 0 ? &off_out : NULL;
+    loff_t* p_off_out = off_out >= 0 ? &off_out : NULL;
 
     do {
        res = splice(fd, p_off_in, fdOut, p_off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
@@ -391,6 +601,12 @@ static jint netty_epoll_native_tcpMd5SigMaxKeyLen(JNIEnv* env, jclass clazz) {
 
     return TCP_MD5SIG_MAXKEYLEN;
 }
+
+static jint netty_epoll_native_registerUnix(JNIEnv* env, jclass clazz) {
+    register_unix_called = 1;
+    return netty_unix_register(env, staticPackagePrefix);
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -402,7 +618,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "epollerr", "()I", (void *) netty_epoll_native_epollerr },
   { "tcpMd5SigMaxKeyLen", "()I", (void *) netty_epoll_native_tcpMd5SigMaxKeyLen },
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
-  { "isSupportingTcpFastopen", "()Z", (void *) netty_epoll_native_isSupportingTcpFastopen },
+  { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
+  { "tcpFastopenMode", "()I", (void *) netty_epoll_native_tcpFastopenMode },
   { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
@@ -412,8 +629,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
   { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
+  { "timerFdSetTime", "(III)V", (void *) netty_epoll_native_timerFdSetTime },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
-  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 }, // This method is deprecated!
+  { "epollWait", "(IJII)I", (void *) netty_epoll_native_epollWait },
   { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
@@ -421,171 +640,159 @@ static const JNINativeMethod fixed_method_table[] = {
   // "sendmmsg0" has a dynamic signature
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
   { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
-  { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 }
+  { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 },
+  { "isSupportingUdpSegment", "()Z", (void *) netty_epoll_native_isSupportingUdpSegment },
+  { "registerUnix", "()I", (void *) netty_epoll_native_registerUnix },
+
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    return fixed_method_table_size + 1; // 1 is for the dynamic method signatures.
+    return fixed_method_table_size + 3; // 3 is for the dynamic method signatures.
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
-    JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * dynamicMethodsTableSize());
+    char* dynamicTypeName = NULL;
+    size_t size = sizeof(JNINativeMethod) * dynamicMethodsTableSize();
+    JNINativeMethod* dynamicMethods = malloc(size);
+    if (dynamicMethods == NULL) {
+        return NULL;
+    }
+    memset(dynamicMethods, 0, size);
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
-    char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I");
+    
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendmmsg0";
-    dynamicMethod->signature = netty_unix_util_prepend("(I[L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
-    free(dynamicTypeName);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
+
+    ++dynamicMethod;
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
+    dynamicMethod->name = "recvmmsg0";
+    dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmmsg0;
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
+
+    ++dynamicMethod;
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IZL", dynamicTypeName,  dynamicMethod->signature, error);
+    dynamicMethod->name = "recvmsg0";
+    dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmsg0;
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
+
     return dynamicMethods;
+error:
+    free(dynamicTypeName);
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    return NULL;
 }
 
-static void freeDynamicMethodsTable(JNINativeMethod* dynamicMethods) {
-    jint fullMethodTableSize = dynamicMethodsTableSize();
-    jint i = fixed_method_table_size;
-    for (; i < fullMethodTableSize; ++i) {
-        free(dynamicMethods[i].signature);
-    }
-    free(dynamicMethods);
-}
 // JNI Method Registration Table End
 
 static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    int limitsOnLoadCalled = 0;
-    int errorsOnLoadCalled = 0;
-    int filedescriptorOnLoadCalled = 0;
-    int socketOnLoadCalled = 0;
-    int bufferOnLoadCalled = 0;
+    int ret = JNI_ERR;
+    int staticallyRegistered = 0;
+    int nativeRegistered = 0;
     int linuxsocketOnLoadCalled = 0;
+    char* nettyClassName = NULL;
+    jclass nativeDatagramPacketCls = NULL;
+    JNINativeMethod* dynamicMethods = NULL;
 
     // We must register the statically referenced methods first!
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/epoll/NativeStaticallyReferencedJniMethods",
+            STATICALLY_CLASSNAME,
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
-        goto error;
+        goto done;
     }
+    staticallyRegistered = 1;
+
     // Register the methods which are not referenced by static member variables
-    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
-    if (netty_unix_util_register_natives(env,
+    dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        goto done;
+    }
+
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/epoll/Native",
+            NATIVE_CLASSNAME,
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
-        freeDynamicMethodsTable(dynamicMethods);
-        goto error;
+        goto done;
     }
-    freeDynamicMethodsTable(dynamicMethods);
-    dynamicMethods = NULL;
-    // Load all c modules that we depend upon
-    if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    limitsOnLoadCalled = 1;
-
-    if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    errorsOnLoadCalled = 1;
-
-    if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    filedescriptorOnLoadCalled = 1;
-
-    if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    socketOnLoadCalled = 1;
-
-    if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
-    }
-    bufferOnLoadCalled = 1;
+    nativeRegistered = 1;
 
     if (netty_epoll_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        goto error;
+        goto done;
     }
     linuxsocketOnLoadCalled = 1;
 
     // Initialize this module
-    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
-    jclass nativeDatagramPacketCls = (*env)->FindClass(env, nettyClassName);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket", nettyClassName, done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, nativeDatagramPacketCls, nettyClassName, done);
+    netty_jni_util_free_dynamic_name(&nettyClassName);
+
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrFieldId, "addr", "[B", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetAddrLenFieldId, "addrLen", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetSegmentSizeFieldId, "segmentSize", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetScopeIdFieldId, "scopeId", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetPortFieldId, "port", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetMemoryAddressFieldId, "memoryAddress", "J", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetCountFieldId, "count", "I", done);
+
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
+
+    if (packagePrefix != NULL) {
+        staticPackagePrefix = strdup(packagePrefix);
+    }
+done:
+
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
-    nettyClassName = NULL;
-    if (nativeDatagramPacketCls == NULL) {
-        // pending exception...
-        goto error;
-    }
 
-    packetAddrFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addr", "[B");
-    if (packetAddrFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addr");
-        goto error;
+    if (ret == JNI_ERR) {
+        if (staticallyRegistered == 1) {
+            netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+        }
+        if (nativeRegistered == 1) {
+            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
+        }
+        if (linuxsocketOnLoadCalled == 1) {
+            netty_epoll_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
+        }
+        packetAddrFieldId = NULL;
+        packetAddrLenFieldId = NULL;
+        packetSegmentSizeFieldId = NULL;
+        packetScopeIdFieldId = NULL;
+        packetPortFieldId = NULL;
+        packetMemoryAddressFieldId = NULL;
+        packetCountFieldId = NULL;
     }
-    packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
-    if (packetScopeIdFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.scopeId");
-        goto error;
-    }
-    packetPortFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "port", "I");
-    if (packetPortFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.port");
-        goto error;
-    }
-    packetMemoryAddressFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "memoryAddress", "J");
-    if (packetMemoryAddressFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.memoryAddress");
-        goto error;
-    }
-
-    packetCountFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "count", "I");
-    if (packetCountFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.count");
-        goto error;
-    }
-
-    return NETTY_JNI_VERSION;
-
-error:
-   if (limitsOnLoadCalled == 1) {
-       netty_unix_limits_JNI_OnUnLoad(env);
-   }
-   if (errorsOnLoadCalled == 1) {
-       netty_unix_errors_JNI_OnUnLoad(env);
-   }
-   if (filedescriptorOnLoadCalled == 1) {
-       netty_unix_filedescriptor_JNI_OnUnLoad(env);
-   }
-   if (socketOnLoadCalled == 1) {
-       netty_unix_socket_JNI_OnUnLoad(env);
-   }
-   if (bufferOnLoadCalled == 1) {
-       netty_unix_buffer_JNI_OnUnLoad(env);
-   }
-   if (linuxsocketOnLoadCalled == 1) {
-       netty_epoll_linuxsocket_JNI_OnUnLoad(env);
-   }
-   packetAddrFieldId = NULL;
-   packetScopeIdFieldId = NULL;
-   packetPortFieldId = NULL;
-   packetMemoryAddressFieldId = NULL;
-   packetCountFieldId = NULL;
-
-   return JNI_ERR;
+    return ret;
 }
 
-static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
-    netty_unix_limits_JNI_OnUnLoad(env);
-    netty_unix_errors_JNI_OnUnLoad(env);
-    netty_unix_filedescriptor_JNI_OnUnLoad(env);
-    netty_unix_socket_JNI_OnUnLoad(env);
-    netty_unix_buffer_JNI_OnUnLoad(env);
-    netty_epoll_linuxsocket_JNI_OnUnLoad(env);
+static void netty_epoll_native_JNI_OnUnload(JNIEnv* env) {
+    netty_epoll_linuxsocket_JNI_OnUnLoad(env, staticPackagePrefix);
+
+    if (register_unix_called == 1) {
+        register_unix_called = 0;
+        netty_unix_unregister(env, staticPackagePrefix);
+    }
+
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, STATICALLY_CLASSNAME);
+    netty_jni_util_unregister_natives(env, staticPackagePrefix, NATIVE_CLASSNAME);
+
+    if (staticPackagePrefix != NULL) {
+        free((void *) staticPackagePrefix);
+        staticPackagePrefix = NULL;
+    }
 
     packetAddrFieldId = NULL;
+    packetAddrLenFieldId = NULL;
+    packetSegmentSizeFieldId = NULL;
     packetScopeIdFieldId = NULL;
     packetPortFieldId = NULL;
     packetMemoryAddressFieldId = NULL;
@@ -593,65 +800,26 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
 }
 
 // Invoked by the JVM when statically linked
-static jint JNI_OnLoad_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        return JNI_ERR;
-    }
-    char* packagePrefix = NULL;
-#ifndef NETTY_BUILD_STATIC
-    Dl_info dlinfo;
-    jint status = 0;
-    // We need to use an address of a function that is uniquely part of this library, so choose a static
-    // function. See https://github.com/netty/netty/issues/4840.
-    if (!dladdr((void*) netty_epoll_native_JNI_OnUnLoad, &dlinfo)) {
-        fprintf(stderr, "FATAL: transport-native-epoll JNI call to dladdr failed!\n");
-        return JNI_ERR;
-    }
-    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty_transport_native_epoll", &status);
-    if (status == JNI_ERR) {
-        fprintf(stderr, "FATAL: transport-native-epoll JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
-        return JNI_ERR;
-    }
-#endif /* NETTY_BUILD_STATIC */
-    jint ret = netty_epoll_native_JNI_OnLoad(env, packagePrefix);
-
-    if (packagePrefix != NULL) {
-      free(packagePrefix);
-      packagePrefix = NULL;
-    }
-
-    return ret;
-}
-
-static void JNI_OnUnload_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
-    JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
-        // Something is wrong but nothing we can do about this :(
-        return;
-    }
-    netty_epoll_native_JNI_OnUnLoad(env);
-}
 
 // We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
-// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+// https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty_epoll_native_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
 JNIEXPORT void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
-    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_epoll_native_JNI_OnUnload);
 }
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty_epoll_native_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_epoll_native_JNI_OnUnload);
 }
 #endif /* NETTY_BUILD_STATIC */

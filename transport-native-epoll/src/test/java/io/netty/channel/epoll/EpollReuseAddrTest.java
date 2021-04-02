@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,9 +23,14 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.internal.logging.InternalLogLevel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
@@ -42,6 +47,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EpollReuseAddrTest {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollReuseAddrTest.class);
+
     private static final int MAJOR;
     private static final int MINOR;
     private static final int BUGFIX;
@@ -56,12 +63,24 @@ public class EpollReuseAddrTest {
             MAJOR = Integer.parseInt(versionParts[0]);
             MINOR = Integer.parseInt(versionParts[1]);
             if (versionParts.length == 3) {
-                BUGFIX = Integer.parseInt(versionParts[2]);
+                int bugFix;
+                try {
+                    bugFix = Integer.parseInt(versionParts[2]);
+                } catch (NumberFormatException ignore) {
+                    // the last part of the version may include all kind of different things. Especially when
+                    // someone compiles his / her own kernel.
+                    // Just ignore a parse error here and use 0.
+                    bugFix = 0;
+                }
+                BUGFIX = bugFix;
             } else {
                 BUGFIX = 0;
             }
         } else {
-            throw new IllegalStateException("Can not parse kernel version " + kernelVersion);
+            LOGGER.log(InternalLogLevel.INFO, "Unable to parse kernel version: " + kernelVersion);
+            MAJOR = 0;
+            MINOR = 0;
+            BUGFIX = 0;
         }
     }
 
@@ -78,7 +97,7 @@ public class EpollReuseAddrTest {
     }
 
     private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap) {
-        bootstrap.handler(new DummyHandler());
+        bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
         try {
             bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();

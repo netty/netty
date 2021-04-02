@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ public final class ClassResolvers {
     }
 
     /**
-     * non-agressive non-concurrent cache
+     * non-aggressive non-concurrent cache
      * good for non-shared default cache
      *
      * @param classLoader - specific classLoader to use, or null if you want to revert to default
@@ -45,7 +45,7 @@ public final class ClassResolvers {
     }
 
     /**
-     * agressive non-concurrent cache
+     * aggressive non-concurrent cache
      * good for non-shared cache, when we're not worried about class unloading
      *
      * @param classLoader - specific classLoader to use, or null if you want to revert to default
@@ -58,7 +58,7 @@ public final class ClassResolvers {
     }
 
     /**
-     * non-agressive concurrent cache
+     * non-aggressive concurrent cache
      * good for shared cache, when we're worried about class unloading
      *
      * @param classLoader - specific classLoader to use, or null if you want to revert to default
@@ -72,7 +72,7 @@ public final class ClassResolvers {
     }
 
     /**
-     * agressive concurrent cache
+     * aggressive concurrent cache
      * good for shared cache, when we're not worried about class unloading
      *
      * @param classLoader - specific classLoader to use, or null if you want to revert to default

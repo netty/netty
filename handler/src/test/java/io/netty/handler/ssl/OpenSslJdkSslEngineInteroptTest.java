@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,12 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -35,21 +34,33 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}, useTasks = {3}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false, false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false, true });
 
-            if (PlatformDependent.javaVersion() >= 11 && OpenSsl.isTlsv13Supported()) {
-                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13() });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, false});
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, true });
+
+            if (SslProvider.isTlsv13Supported(SslProvider.JDK) && SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, false });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, true });
+
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true, false });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true, true });
             }
         }
         return params;
     }
 
-    public OpenSslJdkSslEngineInteroptTest(BufferType type, ProtocolCipherCombo combo) {
-        super(type, combo);
+    private final boolean useTasks;
+
+    public OpenSslJdkSslEngineInteroptTest(BufferType type, ProtocolCipherCombo combo,
+                                           boolean delegate, boolean useTasks) {
+        super(type, combo, delegate);
+        this.useTasks = useTasks;
     }
 
     @BeforeClass
@@ -100,16 +111,9 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
+    public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
     }
 
     @Override
@@ -119,7 +123,38 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
+    }
+
+    @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
+    }
+
+    @Override
+    @Test
+    public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionLocalWhenNonMutualWithKeyManager();
+    }
+
+    @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    protected SslContext wrapContext(SslContext context) {
+        if (context instanceof OpenSslContext) {
+            ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
+        }
+        return context;
     }
 }

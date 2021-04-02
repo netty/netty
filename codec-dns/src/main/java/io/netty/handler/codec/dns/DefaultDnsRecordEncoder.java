@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,10 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
-
-import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
@@ -93,7 +90,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
                     sourcePrefixLength + " (expected: 0 >= " + addressBits + ')');
         }
 
-        // See http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
+        // See https://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
         final short addressNumber = (short) (bytes.length == 4 ?
                 InternetProtocolFamily.IPv4.addressNumber() : InternetProtocolFamily.IPv6.addressNumber());
         int payloadLength = calculateEcsAddressLength(sourcePrefixLength, lowOrderBitsToPreserve);
@@ -141,25 +138,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     }
 
     protected void encodeName(String name, ByteBuf buf) throws Exception {
-        if (ROOT.equals(name)) {
-            // Root domain
-            buf.writeByte(0);
-            return;
-        }
-
-        final String[] labels = name.split("\\.");
-        for (String label : labels) {
-            final int labelLen = label.length();
-            if (labelLen == 0) {
-                // zero-length label means the end of the name.
-                break;
-            }
-
-            buf.writeByte(labelLen);
-            ByteBufUtil.writeAscii(buf, label);
-        }
-
-        buf.writeByte(0); // marks end of name field
+        DnsCodecUtil.encodeDomainName(name, buf);
     }
 
     private static byte padWithZeros(byte b, int lowOrderBitsToPreserve) {

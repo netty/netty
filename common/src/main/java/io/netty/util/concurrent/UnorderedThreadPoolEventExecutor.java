@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -161,12 +162,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
         return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, runnable, task);
+                task : new RunnableScheduledFutureTask<V>(this, task, false);
     }
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<V>(this, callable, task);
+        return new RunnableScheduledFutureTask<V>(this, task, true);
     }
 
     @Override
@@ -212,17 +213,31 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     private static final class RunnableScheduledFutureTask<V> extends PromiseTask<V>
             implements RunnableScheduledFuture<V>, ScheduledFuture<V> {
         private final RunnableScheduledFuture<V> future;
+        private final boolean wasCallable;
 
-        RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
-                                           RunnableScheduledFuture<V> future) {
-            super(executor, runnable, null);
+        RunnableScheduledFutureTask(EventExecutor executor, RunnableScheduledFuture<V> future, boolean wasCallable) {
+            super(executor, future);
             this.future = future;
+            this.wasCallable = wasCallable;
         }
 
-        RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable,
-                                           RunnableScheduledFuture<V> future) {
-            super(executor, callable);
-            this.future = future;
+        @Override
+        V runTask() throws Throwable {
+            V result =  super.runTask();
+            if (result == null && wasCallable) {
+                // If this RunnableScheduledFutureTask wraps a RunnableScheduledFuture that wraps a Callable we need
+                // to ensure that we return the correct result by calling future.get().
+                //
+                // See https://github.com/netty/netty/issues/11072
+                assert future.isDone();
+                try {
+                    return future.get();
+                } catch (ExecutionException e) {
+                    // unwrap exception.
+                    throw e.getCause();
+                }
+            }
+            return result;
         }
 
         @Override
@@ -232,7 +247,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             } else if (!isDone()) {
                 try {
                     // Its a periodic task so we need to ignore the return value
-                    task.call();
+                    runTask();
                 } catch (Throwable cause) {
                     if (!tryFailureInternal(cause)) {
                         logger.warn("Failure during execution of task", cause);

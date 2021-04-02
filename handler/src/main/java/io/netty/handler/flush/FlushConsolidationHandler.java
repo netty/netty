@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Future;
 
@@ -47,8 +48,8 @@ import java.util.concurrent.Future;
  *     high throughput, this gives the opportunity to process other flushes before the task gets executed, thus
  *     batching multiple flushes into one.</li>
  * </ul>
- * If {@code explicitFlushAfterFlushes} is reached the flush will also be forwarded as well (whether while in a read
- * loop, or while batching outside of a read loop).
+ * If {@code explicitFlushAfterFlushes} is reached the flush will be forwarded as well (whether while in a read loop, or
+ * while batching outside of a read loop).
  * <p>
  * If the {@link Channel} becomes non-writable it will also try to execute any pending flush operations.
  * <p>
@@ -65,10 +66,17 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     private Future<?> nextScheduledFlush;
 
     /**
-     * Create new instance which explicit flush after 256 pending flush operations latest.
+     * The default number of flushes after which a flush will be forwarded to downstream handlers (whether while in a
+     * read loop, or while batching outside of a read loop).
+     */
+    public static final int DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES = 256;
+
+    /**
+     * Create new instance which explicit flush after {@value DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES} pending flush
+     * operations at the latest.
      */
     public FlushConsolidationHandler() {
-        this(256, false);
+        this(DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, false);
     }
 
     /**
@@ -88,20 +96,17 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
      *                                        ongoing.
      */
     public FlushConsolidationHandler(int explicitFlushAfterFlushes, boolean consolidateWhenNoReadInProgress) {
-        if (explicitFlushAfterFlushes <= 0) {
-            throw new IllegalArgumentException("explicitFlushAfterFlushes: "
-                    + explicitFlushAfterFlushes + " (expected: > 0)");
-        }
-        this.explicitFlushAfterFlushes = explicitFlushAfterFlushes;
+        this.explicitFlushAfterFlushes =
+                ObjectUtil.checkPositive(explicitFlushAfterFlushes, "explicitFlushAfterFlushes");
         this.consolidateWhenNoReadInProgress = consolidateWhenNoReadInProgress;
-        flushTask = consolidateWhenNoReadInProgress ?
+        this.flushTask = consolidateWhenNoReadInProgress ?
                 new Runnable() {
                     @Override
                     public void run() {
                         if (flushPendingCount > 0 && !readInProgress) {
                             flushPendingCount = 0;
-                            ctx.flush();
                             nextScheduledFlush = null;
+                            ctx.flush();
                         } // else we'll flush when the read completes
                     }
                 }

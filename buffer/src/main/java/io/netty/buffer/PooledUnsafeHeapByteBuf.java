@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,20 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
 
-    private static final Recycler<PooledUnsafeHeapByteBuf> RECYCLER = new Recycler<PooledUnsafeHeapByteBuf>() {
+    private static final ObjectPool<PooledUnsafeHeapByteBuf> RECYCLER = ObjectPool.newPool(
+            new ObjectCreator<PooledUnsafeHeapByteBuf>() {
         @Override
-        protected PooledUnsafeHeapByteBuf newObject(Handle<PooledUnsafeHeapByteBuf> handle) {
+        public PooledUnsafeHeapByteBuf newObject(Handle<PooledUnsafeHeapByteBuf> handle) {
             return new PooledUnsafeHeapByteBuf(handle, 0);
         }
-    };
+    });
 
     static PooledUnsafeHeapByteBuf newUnsafeInstance(int maxCapacity) {
         PooledUnsafeHeapByteBuf buf = RECYCLER.get();

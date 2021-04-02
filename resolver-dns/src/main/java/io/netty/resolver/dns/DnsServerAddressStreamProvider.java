@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Provides an opportunity to override which {@link DnsServerAddressStream} is used to resolve a specific hostname.
  * <p>
@@ -24,7 +22,6 @@ import io.netty.util.internal.UnstableApi;
  * <a href="https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man5/resolver.5.html">
  * /etc/resolver</a>.
  */
-@UnstableApi
 public interface DnsServerAddressStreamProvider {
     /**
      * Ask this provider for the name servers to query for {@code hostname}.

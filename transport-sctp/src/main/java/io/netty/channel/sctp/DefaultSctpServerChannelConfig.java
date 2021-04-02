@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-* http://www.apache.org/licenses/LICENSE-2.0
+* https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
 * under the License.
 */
 package io.netty.channel.sctp;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
@@ -25,6 +27,7 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
@@ -43,10 +46,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
         super(channel);
-        if (javaChannel == null) {
-            throw new NullPointerException("javaChannel");
-        }
-        this.javaChannel = javaChannel;
+        this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
     }
 
     @Override
@@ -152,9 +152,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
 
     @Override
     public SctpServerChannelConfig setBacklog(int backlog) {
-        if (backlog < 0) {
-            throw new IllegalArgumentException("backlog: " + backlog);
-        }
+        checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
     }

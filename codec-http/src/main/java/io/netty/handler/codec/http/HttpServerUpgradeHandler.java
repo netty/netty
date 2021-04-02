@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -13,9 +13,6 @@
  * the License.
  */
 package io.netty.handler.codec.http;
-
-import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
-import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -30,7 +27,10 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
+import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.COMMA;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
@@ -169,6 +169,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
+    private final boolean validateHeaders;
     private boolean handlingUpgrade;
 
     /**
@@ -199,10 +200,25 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
+        this(sourceCodec, upgradeCodecFactory, maxContentLength, true);
+    }
+
+    /**
+     * Constructs the upgrader with the supported codecs.
+     *
+     * @param sourceCodec the codec that is being used initially
+     * @param upgradeCodecFactory the factory that creates a new upgrade codec
+     *                            for one of the requested upgrade protocols
+     * @param maxContentLength the maximum length of the content of an upgrade request
+     * @param validateHeaders validate the header names and values of the upgrade response.
+     */
+    public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
+                                    int maxContentLength, boolean validateHeaders) {
         super(maxContentLength);
 
         this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
         this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -284,16 +300,23 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         // Make sure the CONNECTION header is present.
-        CharSequence connectionHeader = request.headers().get(HttpHeaderNames.CONNECTION);
-        if (connectionHeader == null) {
+        List<String> connectionHeaderValues = request.headers().getAll(HttpHeaderNames.CONNECTION);
+
+        if (connectionHeaderValues == null) {
             return false;
         }
 
+        final StringBuilder concatenatedConnectionValue = new StringBuilder(connectionHeaderValues.size() * 10);
+        for (CharSequence connectionHeaderValue : connectionHeaderValues) {
+            concatenatedConnectionValue.append(connectionHeaderValue).append(COMMA);
+        }
+        concatenatedConnectionValue.setLength(concatenatedConnectionValue.length() - 1);
+
         // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
         Collection<CharSequence> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
-        List<CharSequence> values = splitHeader(connectionHeader);
+        List<CharSequence> values = splitHeader(concatenatedConnectionValue);
         if (!containsContentEqualsIgnoreCase(values, HttpHeaderNames.UPGRADE) ||
-            !containsAllContentEqualsIgnoreCase(values, requiredHeaders)) {
+                !containsAllContentEqualsIgnoreCase(values, requiredHeaders)) {
             return false;
         }
 
@@ -345,9 +368,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     /**
      * Creates the 101 Switching Protocols response message.
      */
-    private static FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS,
-                Unpooled.EMPTY_BUFFER, false);
+    private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
+        DefaultFullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, validateHeaders);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

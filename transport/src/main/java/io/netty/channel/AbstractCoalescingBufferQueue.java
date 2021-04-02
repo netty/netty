@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -40,7 +40,7 @@ public abstract class AbstractCoalescingBufferQueue {
      *
      * @param channel the {@link Channel} which will have the {@link Channel#isWritable()} reflect the amount of queued
      *                buffers or {@code null} if there is no writability state updated.
-     * @param initSize theinitial size of the underlying queue.
+     * @param initSize the initial size of the underlying queue.
      */
     protected AbstractCoalescingBufferQueue(Channel channel, int initSize) {
         bufAndListenerPairs = new ArrayDeque<Object>(initSize);
@@ -140,6 +140,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {
+            assert readableBytes == 0;
             return removeEmptyValue();
         }
         bytes = Math.min(bytes, readableBytes);
@@ -221,7 +222,6 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param ctx The context to write all elements to.
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
-        decrementReadableBytes(readableBytes);
         Throwable pending = null;
         ByteBuf previousBuf = null;
         for (;;) {
@@ -229,6 +229,7 @@ public abstract class AbstractCoalescingBufferQueue {
             try {
                 if (entry == null) {
                     if (previousBuf != null) {
+                        decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
                     break;
@@ -236,13 +237,16 @@ public abstract class AbstractCoalescingBufferQueue {
 
                 if (entry instanceof ByteBuf) {
                     if (previousBuf != null) {
+                        decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
                     previousBuf = (ByteBuf) entry;
                 } else if (entry instanceof ChannelPromise) {
+                    decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf, (ChannelPromise) entry);
                     previousBuf = null;
                 } else {
+                    decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf).addListener((ChannelFutureListener) entry);
                     previousBuf = null;
                 }
@@ -257,6 +261,11 @@ public abstract class AbstractCoalescingBufferQueue {
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "bytes: " + readableBytes + " buffers: " + (size() >> 1);
     }
 
     /**
@@ -326,7 +335,6 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void releaseAndCompleteAll(ChannelFuture future) {
-        decrementReadableBytes(readableBytes);
         Throwable pending = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
@@ -335,7 +343,9 @@ public abstract class AbstractCoalescingBufferQueue {
             }
             try {
                 if (entry instanceof ByteBuf) {
-                    safeRelease(entry);
+                    ByteBuf buffer = (ByteBuf) entry;
+                    decrementReadableBytes(buffer.readableBytes());
+                    safeRelease(buffer);
                 } else {
                     ((ChannelFutureListener) entry).operationComplete(future);
                 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -459,7 +459,7 @@ public class OcspTest {
 
         private volatile byte[] response;
 
-        public TestClientOcspContext(boolean valid) {
+        TestClientOcspContext(boolean valid) {
             this.valid = valid;
         }
 
@@ -481,7 +481,7 @@ public class OcspTest {
 
         private final OcspClientCallback callback;
 
-        public OcspClientCallbackHandler(ReferenceCountedOpenSslEngine engine, OcspClientCallback callback) {
+        OcspClientCallbackHandler(ReferenceCountedOpenSslEngine engine, OcspClientCallback callback) {
             super(engine);
             this.callback = callback;
         }
@@ -496,7 +496,7 @@ public class OcspTest {
     private static final class OcspTestException extends IllegalStateException {
         private static final long serialVersionUID = 4516426833250228159L;
 
-        public OcspTestException(String message) {
+        OcspTestException(String message) {
             super(message);
         }
     }

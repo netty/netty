@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,6 @@ import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.xxhash.XXHashFactory;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
@@ -50,13 +49,12 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
- * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
+ * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
  * Since the original LZ4 block format does not contains size of compressed block and size of original data
@@ -69,9 +67,6 @@ import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
 public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
-    private static final EncoderException ENCODE_FINSHED_EXCEPTION = unknownStackTrace(new EncoderException(
-                    new IllegalStateException("encode finished and not enough space to write remaining data")),
-                    Lz4FrameEncoder.class, "encode");
     static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
 
     private final int blockSize;
@@ -129,8 +124,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *                        and is slower but compresses more efficiently
      */
     public Lz4FrameEncoder(boolean highCompressor) {
-        this(LZ4Factory.fastestInstance(), highCompressor, DEFAULT_BLOCK_SIZE,
-                XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum());
+        this(LZ4Factory.fastestInstance(), highCompressor, DEFAULT_BLOCK_SIZE, new Lz4XXHash32(DEFAULT_SEED));
     }
 
     /**
@@ -164,12 +158,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
          */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (checksum == null) {
-            throw new NullPointerException("checksum");
-        }
+        ObjectUtil.checkNotNull(factory, "factory");
+        ObjectUtil.checkNotNull(checksum, "checksum");
 
         compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
         this.checksum = ByteBufChecksum.wrapChecksum(checksum);
@@ -246,7 +236,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         if (finished) {
             if (!out.isWritable(in.readableBytes())) {
                 // out should be EMPTY_BUFFER because we should have allocated enough space above in allocateBuffer.
-                throw ENCODE_FINSHED_EXCEPTION;
+                throw new IllegalStateException("encode finished and not enough space to write remaining data");
             }
             out.writeBytes(in);
             return;

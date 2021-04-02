@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -29,6 +30,7 @@ import java.util.Set;
  * Provides {@link ChannelOption} over a given {@link java.net.SocketOption} which is then passed through the underlying
  * {@link java.nio.channels.NetworkChannel}.
  */
+@SuppressJava6Requirement(reason = "Usage explicit by the user")
 public final class NioChannelOption<T> extends ChannelOption<T> {
 
     private final java.net.SocketOption<T> option;
@@ -53,6 +55,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
     // See https://github.com/netty/netty/issues/8166
 
     // Internal helper methods to remove code duplication between Nio*Channel implementations.
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <T> boolean setOption(Channel jdkChannel, NioChannelOption<T> option, T value) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
         if (!channel.supportedOptions().contains(option.option)) {
@@ -60,7 +63,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
-            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return false;
         }
         try {
@@ -71,6 +74,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <T> T getOption(Channel jdkChannel, NioChannelOption<T> option) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
 
@@ -79,7 +83,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
-            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return null;
         }
         try {
@@ -89,6 +93,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @SuppressWarnings("unchecked")
     static ChannelOption[] getOptions(Channel jdkChannel) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
@@ -99,7 +104,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
             for (java.net.SocketOption<?> opt : supportedOpts) {
                 if (opt == java.net.StandardSocketOptions.IP_TOS) {
                     // Skip IP_TOS as a workaround for a JDK bug:
-                    // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+                    // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
                     continue;
                 }
                 extraOpts.add(new NioChannelOption(opt));

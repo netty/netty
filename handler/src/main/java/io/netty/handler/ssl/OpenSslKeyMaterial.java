@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,10 +17,17 @@ package io.netty.handler.ssl;
 
 import io.netty.util.ReferenceCounted;
 
+import java.security.cert.X509Certificate;
+
 /**
  * Holds references to the native key-material that is used by OpenSSL.
  */
 interface OpenSslKeyMaterial extends ReferenceCounted {
+
+    /**
+     * Returns the configured {@link X509Certificate}s.
+     */
+    X509Certificate[] certificateChain();
 
     /**
      * Returns the pointer to the {@code STACK_OF(X509)} which holds the certificate chain.

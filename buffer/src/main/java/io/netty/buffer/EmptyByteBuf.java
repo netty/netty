@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,11 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -62,11 +65,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-
-        this.alloc = alloc;
+        this.alloc = ObjectUtil.checkNotNull(alloc, "alloc");
         this.order = order;
         str = StringUtil.simpleClassName(this) + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
     }
@@ -118,10 +117,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
-        if (endianness == order()) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order()) {
             return this;
         }
 
@@ -223,9 +219,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException("minWritableBytes: " + minWritableBytes + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
         if (minWritableBytes != 0) {
             throw new IndexOutOfBoundsException();
         }
@@ -234,9 +228,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException("minWritableBytes: " + minWritableBytes + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
 
         if (minWritableBytes == 0) {
             return 0;
@@ -686,7 +678,7 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
         checkLength(length);
-        return null;
+        return StringUtil.EMPTY_STRING;
     }
 
     @Override
@@ -965,6 +957,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isContiguous() {
+        return true;
+    }
+
+    @Override
     public String toString(Charset charset) {
         return "";
     }
@@ -1048,9 +1045,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private ByteBuf checkIndex(int index, int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException("length: " + length);
-        }
+        checkPositiveOrZero(length, "length");
         if (index != 0 || length != 0) {
             throw new IndexOutOfBoundsException();
         }
@@ -1058,9 +1053,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private ByteBuf checkLength(int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException("length: " + length + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(length, "length");
         if (length != 0) {
             throw new IndexOutOfBoundsException();
         }

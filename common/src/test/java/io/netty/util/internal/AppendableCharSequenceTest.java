@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -62,6 +62,16 @@ public class AppendableCharSequenceTest {
         AppendableCharSequence master = new AppendableCharSequence(26);
         master.append("abcdefghijlkmonpqrstuvwxyz");
         assertEquals("abcdefghij", master.subSequence(0, 10).toString());
+    }
+
+    @Test
+    public void testEmptySubSequence() {
+        AppendableCharSequence master = new AppendableCharSequence(26);
+        master.append("abcdefghijlkmonpqrstuvwxyz");
+        AppendableCharSequence sub =  master.subSequence(0, 0);
+        assertEquals(0, sub.length());
+        sub.append('b');
+        assertEquals('b', sub.charAt(0));
     }
 
     private static void testSimpleAppend0(AppendableCharSequence seq) {

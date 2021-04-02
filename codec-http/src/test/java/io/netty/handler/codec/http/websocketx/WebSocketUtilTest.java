@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,15 @@ package io.netty.handler.codec.http.websocketx;
 
 import org.junit.Test;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class WebSocketUtilTest {
@@ -40,4 +49,26 @@ public class WebSocketUtilTest {
         }
     }
 
+    @Test
+    public void testBase64() {
+        String base64 = WebSocketUtil.base64(EmptyArrays.EMPTY_BYTES);
+        assertNotNull(base64);
+        assertTrue(base64.isEmpty());
+
+        base64 = WebSocketUtil.base64("foo".getBytes(CharsetUtil.UTF_8));
+        assertEquals(base64, "Zm9v");
+
+        base64 = WebSocketUtil.base64("bar".getBytes(CharsetUtil.UTF_8));
+        ByteBuf src = Unpooled.wrappedBuffer(base64.getBytes(CharsetUtil.UTF_8));
+        try {
+            ByteBuf dst = Base64.decode(src);
+            try {
+                assertEquals(new String(ByteBufUtil.getBytes(dst), CharsetUtil.UTF_8), "bar");
+            } finally {
+                dst.release();
+            }
+        } finally {
+            src.release();
+        }
+    }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -33,13 +36,15 @@ import java.util.List;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertSame;
 
 public class HttpObjectAggregatorTest {
 
@@ -140,8 +145,59 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
+    public void testOversizedRequestWithContentLengthAndDecoder() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4, false));
+        assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
+                "PUT /upload HTTP/1.1\r\n" +
+                        "Content-Length: 5\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        assertNull(embedder.readInbound());
+
+        FullHttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+
+        assertTrue(embedder.isOpen());
+
+        assertFalse(embedder.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 })));
+        assertFalse(embedder.writeInbound(Unpooled.wrappedBuffer(new byte[] { 5 })));
+
+        assertNull(embedder.readOutbound());
+
+        assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
+                "PUT /upload HTTP/1.1\r\n" +
+                        "Content-Length: 2\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+
+        assertThat(response, instanceOf(LastHttpContent.class));
+        ReferenceCountUtil.release(response);
+
+        assertTrue(embedder.isOpen());
+
+        assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(new byte[] { 1 })));
+        assertNull(embedder.readOutbound());
+        assertTrue(embedder.writeInbound(Unpooled.copiedBuffer(new byte[] { 2 })));
+        assertNull(embedder.readOutbound());
+
+        FullHttpRequest request = embedder.readInbound();
+        assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
+        assertEquals(HttpMethod.PUT, request.method());
+        assertEquals("/upload", request.uri());
+        assertEquals(2, HttpUtil.getContentLength(request));
+
+        byte[] actual = new byte[request.content().readableBytes()];
+        request.content().readBytes(actual);
+        assertArrayEquals(new byte[] { 1, 2 }, actual);
+        request.release();
+
+        assertFalse(embedder.finish());
+    }
+
+    @Test
     public void testOversizedRequestWithoutKeepAlive() {
-        // send a HTTP/1.0 request with no keep-alive header
+        // send an HTTP/1.0 request with no keep-alive header
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
         HttpUtil.setContentLength(message, 5);
         checkOversizedRequest(message);
@@ -162,11 +218,48 @@ public class HttpObjectAggregatorTest {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
+        assertThat(response, instanceOf(LastHttpContent.class));
+        ReferenceCountUtil.release(response);
+
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
+
+            try {
+                embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+                fail();
+            } catch (Exception e) {
+                assertThat(e, instanceOf(ClosedChannelException.class));
+                // expected
+            }
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[8]))));
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[8]))));
+
+            // Now start a new message and ensure we will not reject it again.
+            HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
+            HttpUtil.setContentLength(message, 2);
+
+            assertFalse(embedder.writeInbound(message2));
+            assertNull(embedder.readOutbound());
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[] { 1 }))));
+            assertNull(embedder.readOutbound());
+            assertTrue(embedder.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer(new byte[] { 2 }))));
+            assertNull(embedder.readOutbound());
+
+            FullHttpRequest request = embedder.readInbound();
+            assertEquals(message2.protocolVersion(), request.protocolVersion());
+            assertEquals(message2.method(), request.method());
+            assertEquals(message2.uri(), request.uri());
+            assertEquals(2, HttpUtil.getContentLength(request));
+
+            byte[] actual = new byte[request.content().readableBytes()];
+            request.content().readBytes(actual);
+            assertArrayEquals(new byte[] { 1, 2 }, actual);
+            request.release();
+
+            assertFalse(embedder.finish());
         }
     }
 
@@ -516,5 +609,124 @@ public class HttpObjectAggregatorTest {
         assertEquals(replacedRep.decoderResult(), aggregatedRep.decoderResult());
         aggregatedRep.release();
         replacedRep.release();
+    }
+
+    @Test
+    public void testSelectiveRequestAggregation() {
+        HttpObjectAggregator myPostAggregator = new HttpObjectAggregator(1024 * 1024) {
+            @Override
+            protected boolean isStartMessage(HttpObject msg) throws Exception {
+                if (msg instanceof HttpRequest) {
+                    HttpRequest request = (HttpRequest) msg;
+                    HttpMethod method = request.method();
+
+                    if (method.equals(HttpMethod.POST)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        };
+
+        EmbeddedChannel channel = new EmbeddedChannel(myPostAggregator);
+
+        try {
+            // Aggregate: POST
+            HttpRequest request1 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+            HttpContent content1 = new DefaultHttpContent(Unpooled.copiedBuffer("Hello, World!", CharsetUtil.UTF_8));
+            request1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+
+            assertTrue(channel.writeInbound(request1, content1, LastHttpContent.EMPTY_LAST_CONTENT));
+
+            // Getting an aggregated response out
+            Object msg1 = channel.readInbound();
+            try {
+                assertTrue(msg1 instanceof FullHttpRequest);
+            } finally {
+                ReferenceCountUtil.release(msg1);
+            }
+
+            // Don't aggregate: non-POST
+            HttpRequest request2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/");
+            HttpContent content2 = new DefaultHttpContent(Unpooled.copiedBuffer("Hello, World!", CharsetUtil.UTF_8));
+            request2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+
+            try {
+                assertTrue(channel.writeInbound(request2, content2, LastHttpContent.EMPTY_LAST_CONTENT));
+
+                // Getting the same response objects out
+                assertSame(request2, channel.readInbound());
+                assertSame(content2, channel.readInbound());
+                assertSame(LastHttpContent.EMPTY_LAST_CONTENT, channel.readInbound());
+            } finally {
+              ReferenceCountUtil.release(request2);
+              ReferenceCountUtil.release(content2);
+            }
+
+            assertFalse(channel.finish());
+        } finally {
+          channel.close();
+        }
+    }
+
+    @Test
+    public void testSelectiveResponseAggregation() {
+        HttpObjectAggregator myTextAggregator = new HttpObjectAggregator(1024 * 1024) {
+            @Override
+            protected boolean isStartMessage(HttpObject msg) throws Exception {
+                if (msg instanceof HttpResponse) {
+                    HttpResponse response = (HttpResponse) msg;
+                    HttpHeaders headers = response.headers();
+
+                    String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+                    if (AsciiString.contentEqualsIgnoreCase(contentType, HttpHeaderValues.TEXT_PLAIN)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        };
+
+        EmbeddedChannel channel = new EmbeddedChannel(myTextAggregator);
+
+        try {
+            // Aggregate: text/plain
+            HttpResponse response1 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            HttpContent content1 = new DefaultHttpContent(Unpooled.copiedBuffer("Hello, World!", CharsetUtil.UTF_8));
+            response1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+
+            assertTrue(channel.writeInbound(response1, content1, LastHttpContent.EMPTY_LAST_CONTENT));
+
+            // Getting an aggregated response out
+            Object msg1 = channel.readInbound();
+            try {
+                assertTrue(msg1 instanceof FullHttpResponse);
+            } finally {
+                ReferenceCountUtil.release(msg1);
+            }
+
+            // Don't aggregate: application/json
+            HttpResponse response2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            HttpContent content2 = new DefaultHttpContent(Unpooled.copiedBuffer("{key: 'value'}", CharsetUtil.UTF_8));
+            response2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+
+            try {
+                assertTrue(channel.writeInbound(response2, content2, LastHttpContent.EMPTY_LAST_CONTENT));
+
+                // Getting the same response objects out
+                assertSame(response2, channel.readInbound());
+                assertSame(content2, channel.readInbound());
+                assertSame(LastHttpContent.EMPTY_LAST_CONTENT, channel.readInbound());
+            } finally {
+                ReferenceCountUtil.release(response2);
+                ReferenceCountUtil.release(content2);
+            }
+
+            assertFalse(channel.finish());
+        } finally {
+          channel.close();
+        }
     }
 }

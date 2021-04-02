@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,8 @@ import java.nio.charset.Charset;
  * Mixed implementation using both in Memory and in File with a limit of size
  */
 public class MixedAttribute implements Attribute {
+    private String baseDir;
+    private boolean deleteOnExit;
     private Attribute attribute;
 
     private final long limitSize;
@@ -41,24 +43,45 @@ public class MixedAttribute implements Attribute {
     }
 
     public MixedAttribute(String name, long limitSize, Charset charset) {
+        this(name, limitSize, charset, DiskAttribute.baseDirectory, DiskAttribute.deleteOnExitTemporaryFile);
+    }
+
+    public MixedAttribute(String name, long limitSize, Charset charset, String baseDir, boolean deleteOnExit) {
         this.limitSize = limitSize;
         attribute = new MemoryAttribute(name, charset);
+        this.baseDir = baseDir;
+        this.deleteOnExit = deleteOnExit;
     }
 
     public MixedAttribute(String name, long definedSize, long limitSize, Charset charset) {
+        this(name, definedSize, limitSize, charset,
+                DiskAttribute.baseDirectory, DiskAttribute.deleteOnExitTemporaryFile);
+    }
+
+    public MixedAttribute(String name, long definedSize, long limitSize, Charset charset,
+                          String baseDir, boolean deleteOnExit) {
         this.limitSize = limitSize;
         attribute = new MemoryAttribute(name, definedSize, charset);
+        this.baseDir = baseDir;
+        this.deleteOnExit = deleteOnExit;
     }
 
     public MixedAttribute(String name, String value, long limitSize) {
-        this(name, value, limitSize, HttpConstants.DEFAULT_CHARSET);
+        this(name, value, limitSize, HttpConstants.DEFAULT_CHARSET,
+                DiskAttribute.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
     }
 
     public MixedAttribute(String name, String value, long limitSize, Charset charset) {
+        this(name, value, limitSize, charset,
+                DiskAttribute.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
+    }
+
+    public MixedAttribute(String name, String value, long limitSize, Charset charset,
+                          String baseDir, boolean deleteOnExit) {
         this.limitSize = limitSize;
         if (value.length() > this.limitSize) {
             try {
-                attribute = new DiskAttribute(name, value, charset);
+                attribute = new DiskAttribute(name, value, charset, baseDir, deleteOnExit);
             } catch (IOException e) {
                 // revert to Memory mode
                 try {
@@ -74,6 +97,8 @@ public class MixedAttribute implements Attribute {
                 throw new IllegalArgumentException(e);
             }
         }
+        this.baseDir = baseDir;
+        this.deleteOnExit = deleteOnExit;
     }
 
     @Override
@@ -100,7 +125,7 @@ public class MixedAttribute implements Attribute {
             checkSize(attribute.length() + buffer.readableBytes());
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
-                        .getName(), attribute.definedLength());
+                        .getName(), attribute.definedLength(), baseDir, deleteOnExit);
                 diskAttribute.setMaxSize(maxSize);
                 if (((MemoryAttribute) attribute).getByteBuf() != null) {
                     diskAttribute.addContent(((MemoryAttribute) attribute)
@@ -178,7 +203,7 @@ public class MixedAttribute implements Attribute {
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
-                attribute = new DiskAttribute(attribute.getName(), attribute.definedLength());
+                attribute = new DiskAttribute(attribute.getName(), attribute.definedLength(), baseDir, deleteOnExit);
                 attribute.setMaxSize(maxSize);
             }
         }
@@ -191,7 +216,7 @@ public class MixedAttribute implements Attribute {
         if (file.length() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
-                attribute = new DiskAttribute(attribute.getName(), attribute.definedLength());
+                attribute = new DiskAttribute(attribute.getName(), attribute.definedLength(), baseDir, deleteOnExit);
                 attribute.setMaxSize(maxSize);
             }
         }
@@ -202,7 +227,7 @@ public class MixedAttribute implements Attribute {
     public void setContent(InputStream inputStream) throws IOException {
         if (attribute instanceof MemoryAttribute) {
             // change to Disk even if we don't know the size
-            attribute = new DiskAttribute(attribute.getName(), attribute.definedLength());
+            attribute = new DiskAttribute(attribute.getName(), attribute.definedLength(), baseDir, deleteOnExit);
             attribute.setMaxSize(maxSize);
         }
         attribute.setContent(inputStream);
@@ -245,9 +270,6 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setValue(String value) throws IOException {
-        if (value != null) {
-            checkSize(value.getBytes().length);
-        }
         attribute.setValue(value);
     }
 

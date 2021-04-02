@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package io.netty.util.internal.logging;
+
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Creates an {@link InternalLogger} or changes the default factory
@@ -37,24 +39,66 @@ public abstract class InternalLoggerFactory {
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
-        InternalLoggerFactory f;
-        try {
-            f = new Slf4JLoggerFactory(true);
-            f.newInstance(name).debug("Using SLF4J as the default logging framework");
-        } catch (Throwable ignore1) {
-            try {
-                f = Log4JLoggerFactory.INSTANCE;
-                f.newInstance(name).debug("Using Log4J as the default logging framework");
-            } catch (Throwable ignore2) {
-                try {
-                    f = Log4J2LoggerFactory.INSTANCE;
-                    f.newInstance(name).debug("Using Log4J2 as the default logging framework");
-                } catch (Throwable ignore3) {
-                    f = JdkLoggerFactory.INSTANCE;
-                    f.newInstance(name).debug("Using java.util.logging as the default logging framework");
-                }
-            }
+        InternalLoggerFactory f = useSlf4JLoggerFactory(name);
+        if (f != null) {
+            return f;
         }
+
+        f = useLog4J2LoggerFactory(name);
+        if (f != null) {
+            return f;
+        }
+
+        f = useLog4JLoggerFactory(name);
+        if (f != null) {
+            return f;
+        }
+
+        return useJdkLoggerFactory(name);
+    }
+
+    private static InternalLoggerFactory useSlf4JLoggerFactory(String name) {
+        try {
+            InternalLoggerFactory f = new Slf4JLoggerFactory(true);
+            f.newInstance(name).debug("Using SLF4J as the default logging framework");
+            return f;
+        } catch (LinkageError ignore) {
+            return null;
+        } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
+            return null;
+        }
+    }
+
+    private static InternalLoggerFactory useLog4J2LoggerFactory(String name) {
+        try {
+            InternalLoggerFactory f = Log4J2LoggerFactory.INSTANCE;
+            f.newInstance(name).debug("Using Log4J2 as the default logging framework");
+            return f;
+        } catch (LinkageError ignore) {
+            return null;
+        } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
+            return null;
+        }
+    }
+
+    private static InternalLoggerFactory useLog4JLoggerFactory(String name) {
+        try {
+            InternalLoggerFactory f = Log4JLoggerFactory.INSTANCE;
+            f.newInstance(name).debug("Using Log4J as the default logging framework");
+            return f;
+        } catch (LinkageError ignore) {
+            return null;
+        } catch (Exception ignore) {
+            // We catch Exception and not ReflectiveOperationException as we still support java 6
+            return null;
+        }
+    }
+
+    private static InternalLoggerFactory useJdkLoggerFactory(String name) {
+        InternalLoggerFactory f = JdkLoggerFactory.INSTANCE;
+        f.newInstance(name).debug("Using java.util.logging as the default logging framework");
         return f;
     }
 
@@ -73,10 +117,7 @@ public abstract class InternalLoggerFactory {
      * Changes the default factory.
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
-        if (defaultFactory == null) {
-            throw new NullPointerException("defaultFactory");
-        }
-        InternalLoggerFactory.defaultFactory = defaultFactory;
+        InternalLoggerFactory.defaultFactory = ObjectUtil.checkNotNull(defaultFactory, "defaultFactory");
     }
 
     /**

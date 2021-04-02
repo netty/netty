@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -124,9 +126,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
 
     @Override
     public DefaultMaxBytesRecvByteBufAllocator maxBytesPerRead(int maxBytesPerRead) {
-        if (maxBytesPerRead <= 0) {
-            throw new IllegalArgumentException("maxBytesPerRead: " + maxBytesPerRead + " (expected: > 0)");
-        }
+        checkPositive(maxBytesPerRead, "maxBytesPerRead");
         // There is a dependency between this.maxBytesPerRead and this.maxBytesPerIndividualRead (a < b).
         // Write operations must be synchronized, but independent read operations can just be volatile.
         synchronized (this) {
@@ -149,10 +149,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
 
     @Override
     public DefaultMaxBytesRecvByteBufAllocator maxBytesPerIndividualRead(int maxBytesPerIndividualRead) {
-        if (maxBytesPerIndividualRead <= 0) {
-            throw new IllegalArgumentException(
-                    "maxBytesPerIndividualRead: " + maxBytesPerIndividualRead + " (expected: > 0)");
-        }
+        checkPositive(maxBytesPerIndividualRead, "maxBytesPerIndividualRead");
         // There is a dependency between this.maxBytesPerRead and this.maxBytesPerIndividualRead (a < b).
         // Write operations must be synchronized, but independent read operations can just be volatile.
         synchronized (this) {
@@ -174,13 +171,8 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
     }
 
     private static void checkMaxBytesPerReadPair(int maxBytesPerRead, int maxBytesPerIndividualRead) {
-        if (maxBytesPerRead <= 0) {
-            throw new IllegalArgumentException("maxBytesPerRead: " + maxBytesPerRead + " (expected: > 0)");
-        }
-        if (maxBytesPerIndividualRead <= 0) {
-            throw new IllegalArgumentException(
-                    "maxBytesPerIndividualRead: " + maxBytesPerIndividualRead + " (expected: > 0)");
-        }
+        checkPositive(maxBytesPerRead, "maxBytesPerRead");
+        checkPositive(maxBytesPerIndividualRead, "maxBytesPerIndividualRead");
         if (maxBytesPerRead < maxBytesPerIndividualRead) {
             throw new IllegalArgumentException(
                     "maxBytesPerRead cannot be less than " +

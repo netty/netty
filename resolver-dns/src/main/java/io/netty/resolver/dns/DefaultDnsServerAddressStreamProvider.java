@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,23 +16,16 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
 import java.lang.reflect.Method;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Hashtable;
 import java.util.List;
 
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
@@ -43,7 +36,6 @@ import static io.netty.resolver.dns.DnsServerAddresses.sequential;
  * <p>
  * This may use the JDK's blocking DNS resolution to bootstrap the default DNS server addresses.
  */
-@UnstableApi
 public final class DefaultDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultDnsServerAddressStreamProvider.class);
@@ -55,44 +47,15 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
 
     static {
         final List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
-
-        // Using jndi-dns to obtain the default name servers.
-        //
-        // See:
-        // - http://docs.oracle.com/javase/8/docs/technotes/guides/jndi/jndi-dns.html
-        // - http://mail.openjdk.java.net/pipermail/net-dev/2017-March/010695.html
-        Hashtable<String, String> env = new Hashtable<String, String>();
-        env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.dns.DnsContextFactory");
-        env.put("java.naming.provider.url", "dns://");
-        try {
-            DirContext ctx = new InitialDirContext(env);
-            String dnsUrls = (String) ctx.getEnvironment().get("java.naming.provider.url");
-            // Only try if not empty as otherwise we will produce an exception
-            if (dnsUrls != null && !dnsUrls.isEmpty()) {
-                String[] servers = dnsUrls.split(" ");
-                for (String server : servers) {
-                    try {
-                        URI uri = new URI(server);
-                        String host = new URI(server).getHost();
-
-                        if (host == null || host.isEmpty()) {
-                            logger.debug(
-                                    "Skipping a nameserver URI as host portion could not be extracted: {}", server);
-                            // If the host portion can not be parsed we should just skip this entry.
-                            continue;
-                        }
-                        int port  = uri.getPort();
-                        defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ? DNS_PORT : port));
-                    } catch (URISyntaxException e) {
-                        logger.debug("Skipping a malformed nameserver URI: {}", server, e);
-                    }
-                }
-            }
-        } catch (NamingException ignore) {
-            // Will try reflection if this fails.
+        if (!PlatformDependent.isAndroid()) {
+            // Only try to use when not on Android as the classes not exists there:
+            // See https://github.com/netty/netty/issues/8654
+            DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
         }
 
-        if (defaultNameServers.isEmpty()) {
+        // Only try when using Java8 and lower as otherwise it will produce:
+        // WARNING: Illegal reflective access by io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider
+        if (PlatformDependent.javaVersion() < 9 && defaultNameServers.isEmpty()) {
             try {
                 Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
                 Method open = configClass.getMethod("open");

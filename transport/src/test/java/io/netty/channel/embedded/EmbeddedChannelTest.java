@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -53,6 +53,17 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
 
 public class EmbeddedChannelTest {
+
+    @Test
+    public void testParent() {
+        EmbeddedChannel parent = new EmbeddedChannel();
+        EmbeddedChannel channel = new EmbeddedChannel(parent, EmbeddedChannelId.INSTANCE, true, false);
+        assertSame(parent, channel.parent());
+        assertNull(parent.parent());
+
+        assertFalse(channel.finish());
+        assertFalse(parent.finish());
+    }
 
     @Test
     public void testNotRegistered() throws Exception {
@@ -279,6 +290,17 @@ public class EmbeddedChannelTest {
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertNull(handler.pollEvent());
+    }
+
+    @Test
+    public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
+        EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                promise.tryFailure(new Throwable());
+            }
+        });
+        assertFalse(channel.disconnect().isSuccess());
     }
 
     @Test

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -98,14 +98,14 @@ public class HttpRequestDecoderBenchmark extends AbstractMicrobenchmark {
                 amount = headerLength -  a;
             }
 
-            // if header is done it should produce a HttpRequest
-            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
+            // if header is done it should produce an HttpRequest
+            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount).asReadOnly());
             a += amount;
         }
 
         for (int i = CONTENT_LENGTH; i > 0; i --) {
             // Should produce HttpContent
-            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1).asReadOnly());
         }
     }
 }

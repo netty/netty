@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,6 +24,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,14 +83,8 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
      */
     DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
-        if (futures == null) {
-            throw new NullPointerException("futures");
-        }
-
-        this.group = group;
+        this.group = ObjectUtil.checkNotNull(group, "group");
+        ObjectUtil.checkNotNull(futures, "futures");
 
         Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<Channel, ChannelFuture>();
         for (ChannelFuture f: futures) {

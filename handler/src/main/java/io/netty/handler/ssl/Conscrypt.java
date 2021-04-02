@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,33 +27,43 @@ import java.lang.reflect.Method;
 final class Conscrypt {
     // This class exists to avoid loading other conscrypt related classes using features only available in JDK8+,
     // because we need to maintain JDK6+ runtime compatibility.
-    private static final Method IS_CONSCRYPT_SSLENGINE = loadIsConscryptEngine();
+    private static final Method IS_CONSCRYPT_SSLENGINE;
 
-    private static Method loadIsConscryptEngine() {
-        try {
-            Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
-                    ConscryptAlpnSslEngine.class.getClassLoader());
-            return conscryptClass.getMethod("isConscrypt", SSLEngine.class);
-        } catch (Throwable ignore) {
-            // Conscrypt was not loaded.
-            return null;
+    static {
+        Method isConscryptSSLEngine = null;
+
+        if ((PlatformDependent.javaVersion() >= 8 &&
+                // Only works on Java14 and earlier for now
+                // See https://github.com/google/conscrypt/issues/838
+                PlatformDependent.javaVersion() < 15) || PlatformDependent.isAndroid()) {
+            try {
+                Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
+                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                providerClass.newInstance();
+
+                Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
+                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                isConscryptSSLEngine = conscryptClass.getMethod("isConscrypt", SSLEngine.class);
+            } catch (Throwable ignore) {
+                // ignore
+            }
         }
+        IS_CONSCRYPT_SSLENGINE = isConscryptSSLEngine;
     }
 
     /**
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return IS_CONSCRYPT_SSLENGINE != null && PlatformDependent.javaVersion() >= 8;
+        return IS_CONSCRYPT_SSLENGINE != null;
     }
 
+    /**
+     * Returns {@code true} if the passed in {@link SSLEngine} is handled by Conscrypt, {@code false} otherwise.
+     */
     static boolean isEngineSupported(SSLEngine engine) {
-        return isAvailable() && isConscryptEngine(engine);
-    }
-
-    private static boolean isConscryptEngine(SSLEngine engine) {
         try {
-            return (Boolean) IS_CONSCRYPT_SSLENGINE.invoke(null, engine);
+            return IS_CONSCRYPT_SSLENGINE != null && (Boolean) IS_CONSCRYPT_SSLENGINE.invoke(null, engine);
         } catch (IllegalAccessException ignore) {
             return false;
         } catch (InvocationTargetException ex) {

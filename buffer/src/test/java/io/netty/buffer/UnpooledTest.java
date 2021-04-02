@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,14 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -306,6 +308,30 @@ public class UnpooledTest {
         assertFalse(wrapped.release()); // EMPTY_BUFFER cannot be released
         assertEquals(0, buf1.refCnt());
         assertEquals(0, buf2.refCnt());
+    }
+
+    @Test
+    public void testCopiedBufferUtf8() {
+        testCopiedBufferCharSequence("Some UTF_8 like äÄ∏ŒŒ", CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testCopiedBufferAscii() {
+        testCopiedBufferCharSequence("Some US_ASCII", CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testCopiedBufferSomeOtherCharset() {
+        testCopiedBufferCharSequence("Some ISO_8859_1", CharsetUtil.ISO_8859_1);
+    }
+
+    private static void testCopiedBufferCharSequence(CharSequence sequence, Charset charset) {
+        ByteBuf copied = copiedBuffer(sequence, charset);
+        try {
+            assertEquals(sequence, copied.toString(charset));
+        } finally {
+            copied.release();
+        }
     }
 
     @Test

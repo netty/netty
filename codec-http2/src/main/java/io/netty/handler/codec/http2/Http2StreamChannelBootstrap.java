@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,15 +35,25 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @UnstableApi
 public final class Http2StreamChannelBootstrap {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2StreamChannelBootstrap.class);
+    @SuppressWarnings("unchecked")
+    private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
+    @SuppressWarnings("unchecked")
+    private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
+    // The order in which ChannelOptions are applied is important they may depend on each other for validation
+    // purposes.
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final Channel channel;
     private volatile ChannelHandler handler;
+
+    // Cache the ChannelHandlerContext to speed up open(...) operations.
+    private volatile ChannelHandlerContext multiplexCtx;
 
     public Http2StreamChannelBootstrap(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
@@ -55,15 +65,12 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
-        if (value == null) {
-            synchronized (options) {
+        ObjectUtil.checkNotNull(option, "option");
+
+        synchronized (options) {
+            if (value == null) {
                 options.remove(option);
-            }
-        } else {
-            synchronized (options) {
+            } else {
                 options.put(option, value);
             }
         }
@@ -76,17 +83,11 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
-            synchronized (attrs) {
-                attrs.remove(key);
-            }
+            attrs.remove(key);
         } else {
-            synchronized (attrs) {
-                attrs.put(key, value);
-            }
+            attrs.put(key, value);
         }
         return this;
     }
@@ -94,44 +95,93 @@ public final class Http2StreamChannelBootstrap {
     /**
      * the {@link ChannelHandler} to use for serving the requests.
      */
-    @SuppressWarnings("unchecked")
     public Http2StreamChannelBootstrap handler(ChannelHandler handler) {
         this.handler = ObjectUtil.checkNotNull(handler, "handler");
         return this;
     }
 
+    /**
+     * Open a new {@link Http2StreamChannel} to use.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
     public Future<Http2StreamChannel> open() {
         return open(channel.eventLoop().<Http2StreamChannel>newPromise());
     }
 
+    /**
+     * Open a new {@link Http2StreamChannel} to use and notifies the given {@link Promise}.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
+    @SuppressWarnings("deprecation")
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
-        final ChannelHandlerContext ctx = channel.pipeline().context(Http2MultiplexCodec.class);
-        if (ctx == null) {
-            if (channel.isActive()) {
-                promise.setFailure(new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) +
-                        " must be in the ChannelPipeline of Channel " + channel));
-            } else {
-                promise.setFailure(new ClosedChannelException());
-            }
-        } else {
+        try {
+            ChannelHandlerContext ctx = findCtx();
             EventExecutor executor = ctx.executor();
             if (executor.inEventLoop()) {
                 open0(ctx, promise);
             } else {
+                final ChannelHandlerContext finalCtx = ctx;
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        open0(ctx, promise);
+                        if (channel.isActive()) {
+                            open0(finalCtx, promise);
+                        } else {
+                            promise.setFailure(new ClosedChannelException());
+                        }
                     }
                 });
             }
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
         }
         return promise;
     }
 
+    private ChannelHandlerContext findCtx() throws ClosedChannelException {
+        // First try to use cached context and if this not work lets try to lookup the context.
+        ChannelHandlerContext ctx = this.multiplexCtx;
+        if (ctx != null && !ctx.isRemoved()) {
+            return ctx;
+        }
+        ChannelPipeline pipeline = channel.pipeline();
+        ctx = pipeline.context(Http2MultiplexCodec.class);
+        if (ctx == null) {
+            ctx = pipeline.context(Http2MultiplexHandler.class);
+        }
+        if (ctx == null) {
+            if (channel.isActive()) {
+                throw new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) + " or "
+                        + StringUtil.simpleClassName(Http2MultiplexHandler.class)
+                        + " must be in the ChannelPipeline of Channel " + channel);
+            } else {
+                throw new ClosedChannelException();
+            }
+        }
+        this.multiplexCtx = ctx;
+        return ctx;
+    }
+
+    /**
+     * @deprecated should not be used directly. Use {@link #open()} or {@link #open(Promise)}
+     */
+    @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
-        final Http2StreamChannel streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        final Http2StreamChannel streamChannel;
+        try {
+            if (ctx.handler() instanceof Http2MultiplexCodec) {
+                streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+            } else {
+                streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+            }
+        } catch (Exception e) {
+            promise.setFailure(e);
+            return;
+        }
         try {
             init(streamChannel);
         } catch (Exception e) {
@@ -143,7 +193,7 @@ public final class Http2StreamChannelBootstrap {
         ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
         future.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else if (future.isCancelled()) {
@@ -161,41 +211,48 @@ public final class Http2StreamChannelBootstrap {
         });
     }
 
-    @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
+    private void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         ChannelHandler handler = this.handler;
         if (handler != null) {
             p.addLast(handler);
         }
+        final Map.Entry<ChannelOption<?>, Object> [] optionArray;
         synchronized (options) {
-            setChannelOptions(channel, options, logger);
+            optionArray = options.entrySet().toArray(EMPTY_OPTION_ARRAY);
         }
 
-        synchronized (attrs) {
-            for (Map.Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-            }
-        }
+        setChannelOptions(channel, optionArray);
+        setAttributes(channel, attrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
     }
 
     private static void setChannelOptions(
-            Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options) {
+        for (Map.Entry<ChannelOption<?>, Object> e: options) {
+            setChannelOption(channel, e.getKey(), e.getValue());
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static void setChannelOption(
-            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
+            Channel channel, ChannelOption<?> option, Object value) {
         try {
-            if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
+            @SuppressWarnings("unchecked")
+            ChannelOption<Object> opt = (ChannelOption<Object>) option;
+            if (!channel.config().setOption(opt, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
             }
         } catch (Throwable t) {
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
+        }
+    }
+
+    private static void setAttributes(
+            Channel channel, Map.Entry<AttributeKey<?>, Object>[] options) {
+        for (Map.Entry<AttributeKey<?>, Object> e: options) {
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
         }
     }
 }

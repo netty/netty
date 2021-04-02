@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,6 +31,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 @UnstableApi
 public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
@@ -77,6 +78,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         return true;
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
@@ -85,6 +87,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public KQueueServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
@@ -94,6 +97,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
@@ -102,6 +106,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public KQueueServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
@@ -111,14 +116,14 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public int getBacklog() {
         return backlog;
     }
 
+    @Override
     public KQueueServerChannelConfig setBacklog(int backlog) {
-        if (backlog < 0) {
-            throw new IllegalArgumentException("backlog: " + backlog);
-        }
+        checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
     }

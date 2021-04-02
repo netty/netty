@@ -8,6 +8,7 @@
 *.ipr
 *.iws
 .idea/
+.shelf/
 
 # Geany project file
 .geany
@@ -37,3 +38,11 @@ dependency-reduced-pom.xml
 # exclude mainframer files
 mainframer
 .mainframer
+
+# exclude docker-sync stuff
+.docker-sync
+*/.docker-sync
+
+# exclude vscode files
+.vscode/
+*.factorypath

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -26,7 +25,6 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * Default implementation of a {@link DnsCnameCache}.
  */
-@UnstableApi
 public final class DefaultDnsCnameCache implements DnsCnameCache {
     private final int minTtl;
     private final int maxTtl;
@@ -69,8 +67,7 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
     @SuppressWarnings("unchecked")
     @Override
     public String get(String hostname) {
-        checkNotNull(hostname, "hostname");
-        List<? extends String> cached =  cache.get(hostname);
+        List<? extends String> cached =  cache.get(checkNotNull(hostname, "hostname"));
         if (cached == null || cached.isEmpty()) {
             return null;
         }
@@ -93,7 +90,6 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
-        return cache.clear(hostname);
+        return cache.clear(checkNotNull(hostname, "hostname"));
     }
 }

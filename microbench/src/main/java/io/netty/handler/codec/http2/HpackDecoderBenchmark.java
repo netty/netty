@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -72,7 +72,7 @@ public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public void decode(final Blackhole bh) throws Http2Exception {
-        HpackDecoder hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
+        HpackDecoder hpackDecoder = new HpackDecoder(Integer.MAX_VALUE);
         @SuppressWarnings("unchecked")
         Http2Headers headers =
                 new DefaultHttp2Headers() {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -79,10 +78,10 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 return null;
             }
         },
-        ALPN_JAVA9 {
+        ALPN_JAVA {
             @Override
             boolean isAvailable() {
-                return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+                return JdkAlpnSslUtils.supportsAlpn();
             }
 
             @Override
@@ -142,14 +141,17 @@ public class JdkSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
     private static final String APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE = "my-protocol-FOO";
 
-    @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}")
+    @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}, delegate = {3}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (ProviderType providerType : ProviderType.values()) {
             for (BufferType bufferType : BufferType.values()) {
-                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12()});
-                if (PlatformDependent.javaVersion() >= 11) {
-                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13() });
+                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
+                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
+
+                if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
+                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
+                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
                 }
             }
         }
@@ -160,8 +162,9 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
     private Provider provider;
 
-    public JdkSslEngineTest(ProviderType providerType, BufferType bufferType, ProtocolCipherCombo protocolCipherCombo) {
-        super(bufferType, protocolCipherCombo);
+    public JdkSslEngineTest(ProviderType providerType, BufferType bufferType,
+                            ProtocolCipherCombo protocolCipherCombo, boolean delegate) {
+        super(bufferType, protocolCipherCombo, delegate);
         this.providerType = providerType;
     }
 
@@ -234,7 +237,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
                 SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
                     ssc.certificate(), ssc.privateKey(), null, null,
-                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
+                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0, null);
                 SslContext clientSslCtx = new JdkSslClientContext(providerType.provider(), null,
                     InsecureTrustManagerFactory.INSTANCE, null,
                     IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);

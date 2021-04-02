@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.traffic;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -174,7 +175,6 @@ public class TrafficCounter {
             if (trafficShapingHandler != null) {
                 trafficShapingHandler.doAccounting(TrafficCounter.this);
             }
-            scheduledFuture = executor.schedule(this, checkInterval.get(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -192,7 +192,7 @@ public class TrafficCounter {
             monitorActive = true;
             monitor = new TrafficMonitoringTask();
             scheduledFuture =
-                executor.schedule(monitor, localCheckInterval, TimeUnit.MILLISECONDS);
+                executor.scheduleAtFixedRate(monitor, 0, localCheckInterval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -251,13 +251,10 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
 
+        this.name = ObjectUtil.checkNotNull(name, "name");
         trafficShapingHandler = null;
         this.executor = executor;
-        this.name = name;
 
         init(checkInterval);
     }
@@ -283,13 +280,10 @@ public class TrafficCounter {
         if (trafficShapingHandler == null) {
             throw new IllegalArgumentException("trafficShapingHandler");
         }
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
 
+        this.name = ObjectUtil.checkNotNull(name, "name");
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
-        this.name = name;
 
         init(checkInterval);
     }
@@ -317,7 +311,8 @@ public class TrafficCounter {
                 // No more active monitoring
                 lastTime.set(milliSecondFromNano());
             } else {
-                // Start if necessary
+                // Restart
+                stop();
                 start();
             }
         }

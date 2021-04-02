@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,22 +20,23 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SESSION_STREAM_ID;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.isServerId;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Manages streams within a SPDY session.
  */
 public class SpdySessionHandler extends ChannelDuplexHandler {
 
-    private static final SpdyProtocolException PROTOCOL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new SpdyProtocolException(), SpdySessionHandler.class, "handleOutboundMessage(...)");
-    private static final SpdyProtocolException STREAM_CLOSED = ThrowableUtil.unknownStackTrace(
-            new SpdyProtocolException("Stream closed"), SpdySessionHandler.class, "removeStream(...)");
+    private static final SpdyProtocolException PROTOCOL_EXCEPTION =
+            SpdyProtocolException.newStatic(null, SpdySessionHandler.class, "handleOutboundMessage(...)");
+    private static final SpdyProtocolException STREAM_CLOSED =
+            SpdyProtocolException.newStatic("Stream closed", SpdySessionHandler.class, "removeStream(...)");
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
     private int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
@@ -69,24 +70,19 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(SpdyVersion version, boolean server) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
+        this.minorVersion = ObjectUtil.checkNotNull(version, "version").getMinorVersion();
         this.server = server;
-        minorVersion = version.getMinorVersion();
     }
 
     public void setSessionReceiveWindowSize(int sessionReceiveWindowSize) {
-      if (sessionReceiveWindowSize < 0) {
-        throw new IllegalArgumentException("sessionReceiveWindowSize");
-      }
-      // This will not send a window update frame immediately.
-      // If this value increases the allowed receive window size,
-      // a WINDOW_UPDATE frame will be sent when only half of the
-      // session window size remains during data frame processing.
-      // If this value decreases the allowed receive window size,
-      // the window will be reduced as data frames are processed.
-      initialSessionReceiveWindowSize = sessionReceiveWindowSize;
+        checkPositiveOrZero(sessionReceiveWindowSize, "sessionReceiveWindowSize");
+        // This will not send a window update frame immediately.
+        // If this value increases the allowed receive window size,
+        // a WINDOW_UPDATE frame will be sent when only half of the
+        // session window size remains during data frame processing.
+        // If this value decreases the allowed receive window size,
+        // the window will be reduced as data frames are processed.
+        initialSessionReceiveWindowSize = sessionReceiveWindowSize;
     }
 
     @Override

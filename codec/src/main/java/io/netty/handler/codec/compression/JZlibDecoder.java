@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,9 @@ package io.netty.handler.codec.compression;
 import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -34,7 +36,21 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder() {
-        this(ZlibWrapper.ZLIB);
+        this(ZlibWrapper.ZLIB, 0);
+    }
+
+    /**
+     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB})
+     * and specified maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *
+     * @throws DecompressionException if failed to initialize zlib
+     */
+    public JZlibDecoder(int maxAllocation) {
+        this(ZlibWrapper.ZLIB, maxAllocation);
     }
 
     /**
@@ -43,9 +59,22 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(ZlibWrapper wrapper) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        this(wrapper, 0);
+    }
+
+    /**
+     * Creates a new instance with the specified wrapper and maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *
+     * @throws DecompressionException if failed to initialize zlib
+     */
+    public JZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
+        super(maxAllocation);
+
+        ObjectUtil.checkNotNull(wrapper, "wrapper");
 
         int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
@@ -61,11 +90,23 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(byte[] dictionary) {
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
-        this.dictionary = dictionary;
+        this(dictionary, 0);
+    }
 
+    /**
+     * Creates a new instance with the specified preset dictionary and maximum buffer allocation.
+     * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *
+     * @throws DecompressionException if failed to initialize zlib
+     */
+    public JZlibDecoder(byte[] dictionary, int maxAllocation) {
+        super(maxAllocation);
+        this.dictionary = ObjectUtil.checkNotNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
         if (resultCode != JZlib.Z_OK) {
@@ -110,11 +151,11 @@ public class JZlibDecoder extends ZlibDecoder {
             final int oldNextInIndex = z.next_in_index;
 
             // Configure output.
-            ByteBuf decompressed = ctx.alloc().heapBuffer(inputLength << 1);
+            ByteBuf decompressed = prepareDecompressBuffer(ctx, null, inputLength << 1);
 
             try {
                 loop: for (;;) {
-                    decompressed.ensureWritable(z.avail_in << 1);
+                    decompressed = prepareDecompressBuffer(ctx, decompressed, z.avail_in << 1);
                     z.avail_out = decompressed.writableBytes();
                     z.next_out = decompressed.array();
                     z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();
@@ -169,5 +210,10 @@ public class JZlibDecoder extends ZlibDecoder {
             z.next_in = null;
             z.next_out = null;
         }
+    }
+
+    @Override
+    protected void decompressionBufferExhausted(ByteBuf buffer) {
+        finished = true;
     }
 }

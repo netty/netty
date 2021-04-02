@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package io.netty.handler.ssl.util;
 
+import io.netty.util.internal.SuppressJava6Requirement;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateIssuerName;
@@ -42,8 +43,9 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
  */
 final class OpenJdkSelfSignedCertGenerator {
 
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter)
-            throws Exception {
+    @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
+    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
+                             String algorithm) throws Exception {
         PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
@@ -64,16 +66,17 @@ final class OpenJdkSelfSignedCertGenerator {
         info.set(X509CertInfo.VALIDITY, new CertificateValidity(notBefore, notAfter));
         info.set(X509CertInfo.KEY, new CertificateX509Key(keypair.getPublic()));
         info.set(X509CertInfo.ALGORITHM_ID,
-                new CertificateAlgorithmId(new AlgorithmId(AlgorithmId.sha256WithRSAEncryption_oid)));
+                // sha256WithRSAEncryption
+                new CertificateAlgorithmId(AlgorithmId.get("1.2.840.113549.1.1.11")));
 
         // Sign the cert to identify the algorithm that's used.
         X509CertImpl cert = new X509CertImpl(info);
-        cert.sign(key, "SHA256withRSA");
+        cert.sign(key, algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256withRSA");
 
         // Update the algorithm and sign again.
         info.set(CertificateAlgorithmId.NAME + '.' + CertificateAlgorithmId.ALGORITHM, cert.get(X509CertImpl.SIG_ALG));
         cert = new X509CertImpl(info);
-        cert.sign(key, "SHA256withRSA");
+        cert.sign(key, algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256withRSA");
         cert.verify(keypair.getPublic());
 
         return newSelfSignedCertificate(fqdn, key, cert);
