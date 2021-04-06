@@ -149,9 +149,13 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
-        if (isExistingStream(streamId) || connection().goAwayReceived()) {
+        if (isExistingStream(streamId)) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
+        }
+        if (connection().goAwayReceived()) {
+            promise.setFailure(new Http2Exception(Http2Error.NO_ERROR, "GOAWAY received"));
+            return promise;
         }
         if (canCreateStream()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
