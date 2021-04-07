@@ -20,15 +20,15 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
-import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
-import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -78,9 +78,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         // Should produce the close_notify messages
         channel.releaseOutbound();
         channel.close();
-        ByteBuf close_notify = channel.readOutbound();
-        assertTrue("close_notify: " + close_notify.toString(CharsetUtil.UTF_8), close_notify.readableBytes() >= 7);
-        close_notify.release();
+        assertCloseNotify((ByteBuf) channel.readOutbound());
         channel.finishAndReleaseAll();
         assertTrue(configureCalled.get());
     }

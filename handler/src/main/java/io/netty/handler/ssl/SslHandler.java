@@ -1492,10 +1492,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (wrapLater) {
                 wrap(ctx, true);
             }
-
-            if (notifyClosure) {
-                notifyClosePromise(null);
-            }
         } finally {
             if (decodeOut != null) {
                 if (decodeOut.isReadable()) {
@@ -1505,6 +1501,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 } else {
                     decodeOut.release();
                 }
+            }
+
+            if (notifyClosure) {
+                notifyClosePromise(null);
             }
         }
         return originalLength - length;
