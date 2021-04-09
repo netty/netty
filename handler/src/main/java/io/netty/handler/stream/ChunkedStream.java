@@ -79,6 +79,9 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
         if (closed) {
             return true;
         }
+        if (in.available() > 0) {
+            return false;
+        }
 
         int b = in.read();
         if (b < 0) {
