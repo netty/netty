@@ -121,7 +121,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     void delete();
 
     /**
-     * Returns the contents of the file item as an array of bytes.
+     * Returns the contents of the file item as an array of bytes.<br>
+     * Note: this method will allocate a lot of memory, if the data is currently stored on the file system.
      *
      * @return the contents of the file item as an array of bytes.
      * @throws IOException
@@ -129,7 +130,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     byte[] get() throws IOException;
 
     /**
-     * Returns the content of the file item as a ByteBuf
+     * Returns the content of the file item as a ByteBuf.<br>
+     * Note: this method will allocate a lot of memory, if the data is currently stored on the file system.
      *
      * @return the content of the file item as a ByteBuf
      * @throws IOException
