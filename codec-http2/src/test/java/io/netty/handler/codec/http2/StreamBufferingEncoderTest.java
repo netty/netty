@@ -250,11 +250,9 @@ public class StreamBufferingEncoderTest {
             futures.add(encoderWriteHeaders(streamId, newPromise()));
             streamId += 2;
         }
-        assertEquals(4, encoder.numBufferedStreams());
-
-        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
-
         assertEquals(5, connection.numActiveStreams());
+        assertEquals(4, encoder.numBufferedStreams());
+        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         int failCount = 0;
         for (ChannelFuture f : futures) {
             if (f.cause() != null) {
@@ -264,13 +262,16 @@ public class StreamBufferingEncoderTest {
                 failCount++;
             }
         }
+        assertEquals(4, failCount);
     }
 
     @Test
-    public void receivingGoAwayFailsNewStreams() throws Http2Exception {
+    public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
         encoder.writeSettingsAck(ctx, newPromise());
+        setMaxConcurrentStreams(1);
+        encoderWriteHeaders(3, newPromise());
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
-        ChannelFuture f = encoderWriteHeaders(3, newPromise());
+        ChannelFuture f = encoderWriteHeaders(5, newPromise());
 
         assertTrue(f.cause() instanceof Http2Exception);
         Http2Exception e = (Http2Exception) f.cause();
