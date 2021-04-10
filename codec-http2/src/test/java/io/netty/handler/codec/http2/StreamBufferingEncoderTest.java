@@ -252,7 +252,10 @@ public class StreamBufferingEncoderTest {
         }
         assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
+
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+        assertEquals(5, connection.numActiveStreams());
+        assertEquals(0, encoder.numBufferedStreams());
         int failCount = 0;
         for (ChannelFuture f : futures) {
             if (f.cause() != null) {
