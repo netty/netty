@@ -155,7 +155,7 @@ public class EpollSocketChannelConfigTest {
             if (!(e.getCause() instanceof ClosedChannelException)) {
                 AssertionError error = new AssertionError(
                         "Expected the suppressed exception to be an instance of ClosedChannelException.");
-                error.addSuppressed(e.getCause());
+                error.addSuppressed(e);
                 throw error;
             }
         }
