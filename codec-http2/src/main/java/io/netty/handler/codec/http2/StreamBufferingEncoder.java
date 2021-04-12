@@ -106,6 +106,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
     private int maxConcurrentStreams;
     private boolean closed;
+    private Http2GoAwayException goAwayException;
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
@@ -118,7 +119,9 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
             @Override
             public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-                cancelGoAwayStreams(lastStreamId, errorCode, debugData);
+                goAwayException = new Http2GoAwayException(
+                    lastStreamId, errorCode, ByteBufUtil.getBytes(debugData));
+                cancelGoAwayStreams(lastStreamId);
             }
 
             @Override
@@ -153,8 +156,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
         }
-        if (connection().goAwayReceived()) {
-            promise.setFailure(new Http2Exception(Http2Error.NO_ERROR, "GOAWAY received"));
+        if (goAwayException != null) {
+            promise.setFailure(goAwayException);
             return promise;
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
@@ -248,14 +251,13 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
-    private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
+    private void cancelGoAwayStreams(int lastStreamId) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        Exception e = new Http2GoAwayException(lastStreamId, errorCode, ByteBufUtil.getBytes(debugData));
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
             if (stream.streamId > lastStreamId) {
                 iter.remove();
-                stream.close(e);
+                stream.close(goAwayException);
             }
         }
     }

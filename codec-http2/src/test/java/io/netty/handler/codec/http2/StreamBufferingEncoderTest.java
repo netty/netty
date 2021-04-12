@@ -49,6 +49,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -254,14 +255,13 @@ public class StreamBufferingEncoderTest {
         assertEquals(4, encoder.numBufferedStreams());
 
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+
         assertEquals(5, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
         int failCount = 0;
         for (ChannelFuture f : futures) {
             if (f.cause() != null) {
-                assertTrue(f.cause() instanceof Http2Exception);
-                Http2Exception e = (Http2Exception) f.cause();
-                assertEquals(Http2Error.STREAM_CLOSED, e.error());
+                assertTrue(f.cause() instanceof Http2GoAwayException);
                 failCount++;
             }
         }
@@ -276,10 +276,7 @@ public class StreamBufferingEncoderTest {
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         ChannelFuture f = encoderWriteHeaders(5, newPromise());
 
-        assertTrue(f.cause() instanceof Http2Exception);
-        Http2Exception e = (Http2Exception) f.cause();
-        assertEquals(Http2Error.NO_ERROR, e.error());
-        assertEquals("GOAWAY received", e.getMessage());
+        assertTrue(f.cause() instanceof Http2GoAwayException);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
