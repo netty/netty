@@ -130,7 +130,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 
     private static final String EMPTY_VALUE = "";
-    private static final Pattern COMMA_PATTERN = Pattern.compile(",");
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
