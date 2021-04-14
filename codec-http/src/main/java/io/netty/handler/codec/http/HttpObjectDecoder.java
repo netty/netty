@@ -29,7 +29,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
