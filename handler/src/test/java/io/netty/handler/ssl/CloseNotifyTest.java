@@ -38,6 +38,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -100,7 +101,7 @@ public class CloseNotifyTest {
             // send data:
             clientChannel.writeOutbound(writeAscii(ALLOC, "request_msg"));
             forwardData(clientChannel, serverChannel);
-            assertThat(serverEventQueue.poll(), equalTo((Object) writeAscii(ALLOC, "request_msg")));
+            assertThat(serverEventQueue.poll(), equalTo((Object) "request_msg"));
 
             // respond with data and close_notify:
             serverChannel.writeOutbound(writeAscii(ALLOC, "response_msg"));
@@ -110,7 +111,7 @@ public class CloseNotifyTest {
 
             // consume server response with close_notify:
             forwardAllWithCloseNotify(serverChannel, clientChannel);
-            assertThat(clientEventQueue.poll(), equalTo((Object) writeAscii(ALLOC, "response_msg")));
+            assertThat(clientEventQueue.poll(), equalTo((Object) "response_msg"));
             assertThat(clientEventQueue.poll(), instanceOf(SslCloseCompletionEvent.class));
 
             // make sure client automatically responds with close_notify:
@@ -159,15 +160,15 @@ public class CloseNotifyTest {
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();
-        final EmbeddedChannel channel = new EmbeddedChannel(
+        return new EmbeddedChannel(
                 // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
                 // non-JDK compatible OpenSSL engine that can process partial packets:
                 sslContext.newHandler(ALLOC),
-                new SimpleChannelInboundHandler<ByteBuf>(false) {
+                new SimpleChannelInboundHandler<ByteBuf>() {
 
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
-                        eventQueue.add(msg);
+                        eventQueue.add(msg.toString(US_ASCII));
                     }
 
                     @Override
@@ -182,8 +183,6 @@ public class CloseNotifyTest {
                     }
                 }
         );
-        channel.config().setAllocator(ALLOC);
-        return channel;
     }
 
     private static void forwardData(EmbeddedChannel from, EmbeddedChannel to) {
