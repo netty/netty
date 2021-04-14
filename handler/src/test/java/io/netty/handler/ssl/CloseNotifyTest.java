@@ -46,6 +46,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class CloseNotifyTest {
@@ -78,6 +79,8 @@ public class CloseNotifyTest {
 
     @Test(timeout = 5000)
     public void eventsOrder() throws Exception {
+        assumeTrue("OpenSSL is not available", provider != SslProvider.OPENSSL || OpenSsl.isAvailable());
+
         BlockingQueue<Object> clientEventQueue = new LinkedBlockingQueue<Object>();
         BlockingQueue<Object> serverEventQueue = new LinkedBlockingQueue<Object>();
 
