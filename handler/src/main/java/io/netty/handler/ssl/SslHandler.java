@@ -190,6 +190,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * when {@link ChannelConfig#isAutoRead()} is {@code false}.
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
+    private static final int STATE_UNWRAP_REENTRY = 1 << 9;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -877,10 +878,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             }
                             break;
                         case FINISHED:
+                        case NOT_HANDSHAKING: // work around for android bug that skips the FINISHED state.
                             setHandshakeSuccess();
-                            break;
-                        case NOT_HANDSHAKING:
-                            setHandshakeSuccessIfStillHandshaking();
                             break;
                         case NEED_WRAP:
                             // If we are expected to wrap again and we produced some data we need to ensure there
@@ -951,12 +950,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 HandshakeStatus status = result.getHandshakeStatus();
                 switch (status) {
                     case FINISHED:
-                        setHandshakeSuccess();
                         // We may be here because we read data and discovered the remote peer initiated a renegotiation
                         // and this write is to complete the new handshake. The user may have previously done a
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
                         // attempt to wrap application data here if any is pending.
-                        if (inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
                             wrap(ctx, true);
                         }
                         return false;
@@ -978,7 +976,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NEED_WRAP:
                         break;
                     case NOT_HANDSHAKING:
-                        setHandshakeSuccessIfStillHandshaking();
+                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                            wrap(ctx, true);
+                        }
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
                         if (!inUnwrap) {
@@ -1355,22 +1355,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 length -= consumed;
 
                 // The expected sequence of events is:
-                // - notify handshake success
-                // - fireChannelRead if any data has been unwrapped
-                // - other methods which may be re-entry (e.g. channel.read(), wrap())
-                if (handshakeStatus == HandshakeStatus.FINISHED) {
-                    setHandshakeSuccess();
-                    wrapLater = true;
-                } else if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING &&
-                        setHandshakeSuccessIfStillHandshaking()) {
-                    wrapLater = true;
+                // 1. Notify of handshake success
+                // 2. fireChannelRead for unwrapped data
+                if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
+                    wrapLater |= (decodeOut.isReadable() ?
+                            setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
+                            handshakeStatus == HandshakeStatus.FINISHED;
                 }
 
-                // Dispatch pending data before we invoke other callbacks (e.g. channel.read()) which may result in
-                // re-entry and out of order dispatching scenarios (e.g. LocalChannel).
+                // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
+                // in a re-entry fashion we execute a task on the executor queue to process after the stack unwinds
+                // to preserve order of events.
                 if (decodeOut.isReadable()) {
                     setState(STATE_FIRE_CHANNEL_READ);
-                    ctx.fireChannelRead(decodeOut);
+                    if (isStateSet(STATE_UNWRAP_REENTRY)) {
+                        executeChannelRead(ctx, decodeOut);
+                    } else {
+                        ctx.fireChannelRead(decodeOut);
+                    }
                     decodeOut = null;
                 }
 
@@ -1447,6 +1449,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         }
         return originalLength - length;
+    }
+
+    private boolean setHandshakeSuccessUnwrapMarkReentry() {
+        // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to
+        // preserve ordering of fireChannelRead for decodeOut relative to re-entry data.
+        setState(STATE_UNWRAP_REENTRY);
+        try {
+            return setHandshakeSuccess();
+        } finally {
+            clearState(STATE_UNWRAP_REENTRY);
+        }
+    }
+
+    private void executeChannelRead(final ChannelHandlerContext ctx, final ByteBuf decodedOut) {
+        ctx.executor().execute(new Runnable() {
+            @Override
+            public void run() {
+                ctx.fireChannelRead(decodedOut);
+            }
+        });
     }
 
     private static ByteBuffer toByteBuffer(ByteBuf out, int index, int len) {
@@ -1575,13 +1597,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     // The handshake finished, lets notify about the completion of it and resume processing.
                     case FINISHED:
-                        setHandshakeSuccess();
-
-                        // deliberate fall-through
-
                     // Not handshaking anymore, lets notify about the completion if not done yet and resume processing.
                     case NOT_HANDSHAKING:
-                        setHandshakeSuccessIfStillHandshaking();
+                        setHandshakeSuccess(); // NOT_HANDSHAKING -> workaround for android skipping FINISHED state.
                         try {
                             // Lets call wrap to ensure we produce the alert if there is any pending and also to
                             // ensure we flush any queued data..
@@ -1690,17 +1708,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * Works around some Android {@link SSLEngine} implementations that skip {@link HandshakeStatus#FINISHED} and
-     * go straight into {@link HandshakeStatus#NOT_HANDSHAKING} when handshake is finished.
-     *
-     * @return {@code true} if and only if the workaround has been applied and thus {@link #handshakeFuture} has been
-     *         marked as success by this method
-     */
-    private boolean setHandshakeSuccessIfStillHandshaking() {
-        return setHandshakeSuccess();
-    }
-
-    /**
      * Notify all the handshake futures about the successfully handshake
      * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
      * was fired. {@code false} otherwise.
@@ -1708,10 +1715,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean setHandshakeSuccess() {
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
-        // NOT_HANDSHAKING which invokes setHandshakeSuccessIfStillHandshaking, and then wrapNonAppData also directly
-        // invokes this method.
+        // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
         final boolean notified;
-        if (notified = handshakePromise.trySuccess(ctx.channel())) {
+        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
                 SSLSession session = engine.getSession();
                 logger.debug(
@@ -2068,8 +2074,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f)
-                    throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }
