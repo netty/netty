@@ -1496,10 +1496,6 @@ public class SslHandler extends ByteToMessageDecoder {
             if (wrapLater) {
                 wrap(ctx, true);
             }
-
-            if (notifyClosure) {
-                notifyClosePromise(null);
-            }
         } finally {
             if (decodeOut != null) {
                 if (decodeOut.isReadable()) {
@@ -1509,6 +1505,10 @@ public class SslHandler extends ByteToMessageDecoder {
                 } else {
                     decodeOut.release();
                 }
+            }
+
+            if (notifyClosure) {
+                notifyClosePromise(null);
             }
         }
         return originalLength - length;
