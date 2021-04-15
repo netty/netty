@@ -167,14 +167,29 @@ import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  */
 public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
-
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslHandler.class);
-
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
             "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
+    private static final int STATE_SENT_FIRST_MESSAGE = 1;
+    private static final int STATE_FLUSHED_BEFORE_HANDSHAKE = 1 << 1;
+    private static final int STATE_READ_DURING_HANDSHAKE = 1 << 2;
+    private static final int STATE_HANDSHAKE_STARTED = 1 << 3;
+    /**
+     * Set by wrap*() methods when something is produced.
+     * {@link #channelReadComplete(ChannelHandlerContext)} will check this flag, clear it, and call ctx.flush().
+     */
+    private static final int STATE_NEEDS_FLUSH = 1 << 4;
+    private static final int STATE_OUTBOUND_CLOSED = 1 << 5;
+    private static final int STATE_CLOSE_NOTIFY = 1 << 6;
+    private static final int STATE_PROCESS_TASK = 1 << 7;
+    /**
+     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
+     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
+     */
+    private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -380,32 +395,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
 
     private final boolean startTls;
-    private boolean sentFirstMessage;
-    private boolean flushedBeforeHandshake;
-    private boolean readDuringHandshake;
-    private boolean handshakeStarted;
 
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
-    /**
-     * Set by wrap*() methods when something is produced.
-     * {@link #channelReadComplete(ChannelHandlerContext)} will check this flag, clear it, and call ctx.flush().
-     */
-    private boolean needsFlush;
-
-    private boolean outboundClosed;
-    private boolean closeNotify;
-    private boolean processTask;
-
     private int packetLength;
-
-    /**
-     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
-     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
-     */
-    private boolean firedChannelRead;
+    private short state;
 
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyFlushTimeoutMillis = 3000;
@@ -664,7 +660,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void closeOutbound0(ChannelPromise promise) {
-        outboundClosed = true;
+        setState(STATE_OUTBOUND_CLOSED);
         engine.closeOutbound();
         try {
             flush(ctx, promise);
@@ -748,7 +744,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         if (!handshakePromise.isDone()) {
-            readDuringHandshake = true;
+            setState(STATE_READ_DURING_HANDSHAKE);
         }
 
         ctx.read();
@@ -776,8 +772,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void flush(ChannelHandlerContext ctx) throws Exception {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
-        if (startTls && !sentFirstMessage) {
-            sentFirstMessage = true;
+        if (startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
+            setState(STATE_SENT_FIRST_MESSAGE);
             pendingUnencryptedWrites.writeAndRemoveAll(ctx);
             forceFlush(ctx);
             // Explicit start handshake processing once we send the first message. This will also ensure
@@ -786,7 +782,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        if (processTask) {
+        if (isStateSet(STATE_PROCESS_TASK)) {
             return;
         }
 
@@ -807,7 +803,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
         }
         if (!handshakePromise.isDone()) {
-            flushedBeforeHandshake = true;
+            setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
         }
         try {
             wrap(ctx, false);
@@ -917,7 +913,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 out.release();
             }
             if (inUnwrap) {
-                needsFlush = true;
+                setState(STATE_NEEDS_FLUSH);
             }
         }
     }
@@ -953,7 +949,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                     });
                     if (inUnwrap) {
-                        needsFlush = true;
+                        setState(STATE_NEEDS_FLUSH);
                     }
                     out = null;
                 }
@@ -1083,7 +1079,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, exception, !outboundClosed, handshakeStarted, false);
+        setHandshakeFailure(ctx, exception, !isStateSet(STATE_OUTBOUND_CLOSED), isStateSet(STATE_HANDSHAKE_STARTED),
+                false);
 
         // Ensure we always notify the sslClosePromise as well
         notifyClosePromise(exception);
@@ -1293,7 +1290,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
-        if (processTask) {
+        if (isStateSet(STATE_PROCESS_TASK)) {
             return;
         }
         if (jdkCompatibilityMode) {
@@ -1315,13 +1312,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         flushIfNeeded(ctx);
         readIfNeeded(ctx);
 
-        firedChannelRead = false;
+        clearState(STATE_FIRE_CHANNEL_READ);
         ctx.fireChannelReadComplete();
     }
 
     private void readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
-        if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
+        if (!ctx.channel().config().isAutoRead() &&
+                (!isStateSet(STATE_FIRE_CHANNEL_READ) || !handshakePromise.isDone())) {
             // No auto-read used and no message passed through the ChannelPipeline or the handshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
@@ -1329,7 +1327,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void flushIfNeeded(ChannelHandlerContext ctx) {
-        if (needsFlush) {
+        if (isStateSet(STATE_NEEDS_FLUSH)) {
             forceFlush(ctx);
         }
     }
@@ -1372,7 +1370,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     overflowReadableBytes = readableBytes;
                     int bufferSize = engine.getSession().getApplicationBufferSize() - readableBytes;
                     if (readableBytes > 0) {
-                        firedChannelRead = true;
+                        setState(STATE_FIRE_CHANNEL_READ);
                         ctx.fireChannelRead(decodeOut);
 
                         // This buffer was handled, null it out.
@@ -1480,12 +1478,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             }
 
-            if (flushedBeforeHandshake && handshakePromise.isDone()) {
+            if (isStateSet(STATE_FLUSHED_BEFORE_HANDSHAKE) && handshakePromise.isDone()) {
                 // We need to call wrap(...) in case there was a flush done before the handshake completed to ensure
                 // we do not stale.
                 //
                 // See https://github.com/netty/netty/pull/2437
-                flushedBeforeHandshake = false;
+                clearState(STATE_FLUSHED_BEFORE_HANDSHAKE);
                 wrapLater = true;
             }
 
@@ -1495,7 +1493,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } finally {
             if (decodeOut != null) {
                 if (decodeOut.isReadable()) {
-                    firedChannelRead = true;
+                    setState(STATE_FIRE_CHANNEL_READ);
 
                     ctx.fireChannelRead(decodeOut);
                 } else {
@@ -1548,11 +1546,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void executeDelegatedTasks(boolean inUnwrap) {
-        processTask = true;
+        setState(STATE_PROCESS_TASK);
         try {
             delegatedTaskExecutor.execute(new SslTasksRunner(inUnwrap));
         } catch (RejectedExecutionException e) {
-            processTask = false;
+            clearState(STATE_PROCESS_TASK);
             throw e;
         }
     }
@@ -1624,9 +1622,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
          */
         private void resumeOnEventExecutor() {
             assert ctx.executor().inEventLoop();
-
-            processTask = false;
-
+            clearState(STATE_PROCESS_TASK);
             try {
                 HandshakeStatus status = engine.getHandshakeStatus();
                 switch (status) {
@@ -1731,19 +1727,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         private void handleException(final Throwable cause) {
             if (ctx.executor().inEventLoop()) {
-                processTask = false;
+                clearState(STATE_PROCESS_TASK);
                 safeExceptionCaught(cause);
             } else {
                 try {
                     ctx.executor().execute(new Runnable() {
                         @Override
                         public void run() {
-                            processTask = false;
+                            clearState(STATE_PROCESS_TASK);
                             safeExceptionCaught(cause);
                         }
                     });
                 } catch (RejectedExecutionException ignore) {
-                    processTask = false;
+                    clearState(STATE_PROCESS_TASK);
                     // the context itself will handle the rejected exception when try to schedule the operation so
                     // ignore the RejectedExecutionException
                     ctx.fireExceptionCaught(cause);
@@ -1769,8 +1765,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * was fired. {@code false} otherwise.
      */
     private boolean setHandshakeSuccess() {
-        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
-            readDuringHandshake = false;
+        if (isStateSet(STATE_READ_DURING_HANDSHAKE) && !ctx.channel().config().isAutoRead()) {
+            clearState(STATE_READ_DURING_HANDSHAKE);
             ctx.read();
         }
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
@@ -1805,9 +1801,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound,
                                      boolean notify, boolean alwaysFlushAndClose) {
         try {
-            // Release all resources such as internal buffers that SSLEngine
-            // is managing.
-            outboundClosed = true;
+            // Release all resources such as internal buffers that SSLEngine is managing.
+            setState(STATE_OUTBOUND_CLOSED);
             engine.closeOutbound();
 
             if (closeInbound) {
@@ -1871,7 +1866,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void closeOutboundAndChannel(
             final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect) throws Exception {
-        outboundClosed = true;
+        setState(STATE_OUTBOUND_CLOSED);
         engine.closeOutbound();
 
         if (!ctx.channel().isActive()) {
@@ -1887,8 +1882,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             flush(ctx, closeNotifyPromise);
         } finally {
-            if (!closeNotify) {
-                closeNotify = true;
+            if (!isStateSet(STATE_CLOSE_NOTIFY)) {
+                setState(STATE_CLOSE_NOTIFY);
                 // It's important that we do not pass the original ChannelPromise to safeClose(...) as when flush(....)
                 // throws an Exception it will be propagated to the AbstractChannelHandlerContext which will try
                 // to fail the promise because of this. This will then fail as it was already completed by
@@ -1936,14 +1931,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
             // flush pending data in the outbound buffer later in channelActive().
             final ChannelOutboundBuffer outboundBuffer;
-            needsFlush |= fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
-                    outboundBuffer.totalPendingWriteBytes() > 0);
+            if (fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
+                    outboundBuffer.totalPendingWriteBytes() > 0)) {
+                setState(STATE_NEEDS_FLUSH);
+            }
         }
     }
 
     private void startHandshakeProcessing(boolean flushAtEnd) {
-        if (!handshakeStarted) {
-            handshakeStarted = true;
+        if (!isStateSet(STATE_HANDSHAKE_STARTED)) {
+            setState(STATE_HANDSHAKE_STARTED);
             if (engine.getUseClientMode()) {
                 // Begin the initial handshake.
                 // channelActive() event has been fired already, which means this.channelActive() will
@@ -1951,7 +1948,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 handshake(flushAtEnd);
             }
             applyHandshakeTimeout();
-        } else if (needsFlush) {
+        } else if (isStateSet(STATE_NEEDS_FLUSH)) {
             forceFlush(ctx);
         }
     }
@@ -2079,7 +2076,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void forceFlush(ChannelHandlerContext ctx) {
-        needsFlush = false;
+        clearState(STATE_NEEDS_FLUSH);
         ctx.flush();
     }
 
@@ -2203,6 +2200,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes, int numComponents) {
         return engineType.allocateWrapBuffer(this, ctx.alloc(), pendingBytes, numComponents);
+    }
+
+    private boolean isStateSet(int bit) {
+        return (state & bit) == bit;
+    }
+
+    private void setState(int bit) {
+        state |= bit;
+    }
+
+    private void clearState(int bit) {
+        state &= ~bit;
     }
 
     /**
