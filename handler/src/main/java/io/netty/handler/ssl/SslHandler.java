@@ -1337,6 +1337,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         final int originalLength = length;
         boolean wrapLater = false;
         boolean notifyClosure = false;
+        boolean executedRead = false;
         ByteBuf decodeOut = allocate(ctx, length);
         try {
             // Only continue to loop if the handler was not removed in the meantime.
@@ -1369,6 +1370,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (decodeOut.isReadable()) {
                     setState(STATE_FIRE_CHANNEL_READ);
                     if (isStateSet(STATE_UNWRAP_REENTRY)) {
+                        executedRead = true;
                         executeChannelRead(ctx, decodeOut);
                     } else {
                         ctx.fireChannelRead(decodeOut);
@@ -1445,7 +1447,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (notifyClosure) {
-                notifyClosePromise(null);
+                if (executedRead) {
+                    executeNotifyClosePromise(ctx);
+                } else {
+                    notifyClosePromise(null);
+                }
             }
         }
         return originalLength - length;
@@ -1469,13 +1475,31 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
+    private void executeNotifyClosePromise(final ChannelHandlerContext ctx) {
+        try {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    notifyClosePromise(null);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            notifyClosePromise(e);
+        }
+    }
+
     private void executeChannelRead(final ChannelHandlerContext ctx, final ByteBuf decodedOut) {
-        ctx.executor().execute(new Runnable() {
-            @Override
-            public void run() {
-                ctx.fireChannelRead(decodedOut);
-            }
-        });
+        try {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.fireChannelRead(decodedOut);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            decodedOut.release();
+            throw e;
+        }
     }
 
     private static ByteBuffer toByteBuffer(ByteBuf out, int index, int len) {
