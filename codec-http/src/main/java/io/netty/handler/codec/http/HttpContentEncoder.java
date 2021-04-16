@@ -67,7 +67,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private EmbeddedChannel encoder;
-    private volatile State state = State.AWAIT_HEADERS;
+    private State state = State.AWAIT_HEADERS;
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
