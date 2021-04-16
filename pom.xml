@@ -576,6 +576,7 @@
     <module>testsuite-native-image</module>
     <module>testsuite-native-image-client</module>
     <module>testsuite-native-image-client-runtime-init</module>
+    <module>testsuite-native-image-epoll</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
