@@ -19,7 +19,6 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpRequest;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -38,6 +37,15 @@ import java.util.Map.Entry;
  * <li>MemoryAttribute, DiskAttribute or MixedAttribute</li>
  * <li>MemoryFileUpload, DiskFileUpload or MixedFileUpload</li>
  * </ul>
+ * A good example of releasing HttpData once all work is done is as follow:<br>
+ * <pre>{@code
+ *   for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
+ *     httpData.release();
+ *     factory.removeHttpDataFromClean(request, httpData);
+ *   }
+ *   factory.cleanAllHttpData();
+ *   decoder.destroy();
+ *  }</pre>
  */
 public class DefaultHttpDataFactory implements HttpDataFactory {
 

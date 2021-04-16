@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -1003,27 +1004,44 @@ public class HttpPostRequestDecoderTest {
 
         HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(prefix.getBytes(CharsetUtil.UTF_8))));
+        assertNotNull(((HttpData) decoder.currentPartialHttpData()).content());
 
         byte[] body = new byte[bytesPerChunk];
         Arrays.fill(body, (byte) 1);
+        // Set first bytes as CRLF to ensure it is correctly getting the last CRLF
+        body[0] = HttpConstants.CR;
+        body[1] = HttpConstants.LF;
         for (int i = 0; i < nbChunks; i++) {
             ByteBuf content = Unpooled.wrappedBuffer(body, 0, bytesPerChunk);
-            decoder.offer(new DefaultHttpContent(content)); // **OutOfMemory here**
+            decoder.offer(new DefaultHttpContent(content)); // **OutOfMemory previously here**
+            assertNotNull(((HttpData) decoder.currentPartialHttpData()).content());
             content.release();
         }
 
         byte[] bsuffix1 = suffix1.getBytes(CharsetUtil.UTF_8);
-        byte[] lastbody = new byte[bytesLastChunk + bsuffix1.length];
-        Arrays.fill(body, (byte) 1);
+        byte[] previousLastbody = new byte[bytesLastChunk - bsuffix1.length];
+        byte[] lastbody = new byte[2 * bsuffix1.length];
+        Arrays.fill(previousLastbody, (byte) 1);
+        previousLastbody[0] = HttpConstants.CR;
+        previousLastbody[1] = HttpConstants.LF;
+        Arrays.fill(lastbody, (byte) 1);
+        lastbody[0] = HttpConstants.CR;
+        lastbody[1] = HttpConstants.LF;
         for (int i = 0; i < bsuffix1.length; i++) {
-            lastbody[bytesLastChunk + i] = bsuffix1[i];
+            lastbody[bsuffix1.length + i] = bsuffix1[i];
         }
 
-        ByteBuf content2 = Unpooled.wrappedBuffer(lastbody, 0, lastbody.length);
+        ByteBuf content2 = Unpooled.wrappedBuffer(previousLastbody, 0, previousLastbody.length);
         decoder.offer(new DefaultHttpContent(content2));
+        assertNotNull(((HttpData) decoder.currentPartialHttpData()).content());
+        content2.release();
+        content2 = Unpooled.wrappedBuffer(lastbody, 0, lastbody.length);
+        decoder.offer(new DefaultHttpContent(content2));
+        assertNotNull(((HttpData) decoder.currentPartialHttpData()).content());
         content2.release();
         content2 = Unpooled.wrappedBuffer(suffix2.getBytes(CharsetUtil.UTF_8));
         decoder.offer(new DefaultHttpContent(content2));
+        assertNull(decoder.currentPartialHttpData());
         content2.release();
         decoder.offer(new DefaultLastHttpContent());
 
