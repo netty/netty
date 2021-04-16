@@ -93,7 +93,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             this(new GoAwayDetail(lastStreamId, errorCode, debugData));
         }
 
-        private Http2GoAwayException(GoAwayDetail goAwayDetail) {
+        Http2GoAwayException(GoAwayDetail goAwayDetail) {
             super(Http2Error.STREAM_CLOSED);
             this.goAwayDetail = goAwayDetail;
         }
@@ -107,7 +107,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
 
         public byte[] debugData() {
-            return goAwayDetail.debugData;
+            return goAwayDetail.debugData.clone();
         }
     }
 
@@ -169,8 +169,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                     exclusive, padding, endOfStream, promise);
         }
         if (goAwayDetail != null) {
-            promise.setFailure(new Http2GoAwayException(
-                goAwayDetail.lastStreamId, goAwayDetail.lastStreamId, goAwayDetail.debugData));
+            promise.setFailure(new Http2GoAwayException(goAwayDetail));
             return promise;
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
