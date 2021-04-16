@@ -43,6 +43,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     protected AbstractMemoryHttpData(String name, Charset charset, long size) {
         super(name, charset, size);
+        byteBuf = EMPTY_BUFFER;
     }
 
     @Override
@@ -109,6 +110,10 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             } else if (localsize == 0) {
                 // Nothing to add and byteBuf already exists
                 buffer.release();
+            } else if (byteBuf.readableBytes() == 0) {
+                // Previous buffer is empty, so just replace it
+                byteBuf.release();
+                byteBuf = buffer;
             } else if (byteBuf instanceof CompositeByteBuf) {
                 CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
                 cbb.addComponent(true, buffer);
