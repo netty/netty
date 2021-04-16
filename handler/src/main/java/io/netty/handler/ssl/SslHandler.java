@@ -1452,13 +1452,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private boolean setHandshakeSuccessUnwrapMarkReentry() {
-        // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to
-        // preserve ordering of fireChannelRead for decodeOut relative to re-entry data.
-        setState(STATE_UNWRAP_REENTRY);
+        // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to preserve ordering of
+        // fireChannelRead for decodeOut relative to re-entry data.
+        final boolean setReentryState = !isStateSet(STATE_UNWRAP_REENTRY);
+        if (setReentryState) {
+            setState(STATE_UNWRAP_REENTRY);
+        }
         try {
             return setHandshakeSuccess();
         } finally {
-            clearState(STATE_UNWRAP_REENTRY);
+            // It is unlikely this specific method will be re-entry because handshake completion is infrequent, but just
+            // in case we only clear the state if we set it in the first place.
+            if (setReentryState) {
+                clearState(STATE_UNWRAP_REENTRY);
+            }
         }
     }
 
