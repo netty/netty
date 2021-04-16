@@ -190,6 +190,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * when {@link ChannelConfig#isAutoRead()} is {@code false}.
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
+    private static final int STATE_UNWRAP_REENTRY = 1 << 9;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -200,8 +201,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private enum SslEngineType {
         TCNATIVE(true, COMPOSITE_CUMULATOR) {
             @Override
-            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
-                    throws SSLException {
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int nioBufferCount = in.nioBufferCount();
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
@@ -213,14 +213,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                      */
                     ReferenceCountedOpenSslEngine opensslEngine = (ReferenceCountedOpenSslEngine) handler.engine;
                     try {
-                        handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
-                            out.writableBytes());
-                        result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
+                        handler.singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
+                        result = opensslEngine.unwrap(in.nioBuffers(in.readerIndex(), len), handler.singleBuffer);
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
                 } else {
-                    result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                    result = handler.engine.unwrap(toByteBuffer(in, in.readerIndex(), len),
                         toByteBuffer(out, writerIndex, out.writableBytes()));
                 }
                 out.writerIndex(writerIndex + result.bytesProduced());
@@ -247,8 +246,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         },
         CONSCRYPT(true, COMPOSITE_CUMULATOR) {
             @Override
-            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
-                    throws SSLException {
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int nioBufferCount = in.nioBufferCount();
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
@@ -259,13 +257,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
                         result = ((ConscryptAlpnSslEngine) handler.engine).unwrap(
-                                in.nioBuffers(readerIndex, len),
+                                in.nioBuffers(in.readerIndex(), len),
                                 handler.singleBuffer);
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
                 } else {
-                    result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                    result = handler.engine.unwrap(toByteBuffer(in, in.readerIndex(), len),
                             toByteBuffer(out, writerIndex, out.writableBytes()));
                 }
                 out.writerIndex(writerIndex + result.bytesProduced());
@@ -291,10 +289,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         },
         JDK(false, MERGE_CUMULATOR) {
             @Override
-            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
-                    throws SSLException {
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int writerIndex = out.writerIndex();
-                ByteBuffer inNioBuffer = toByteBuffer(in, readerIndex, len);
+                ByteBuffer inNioBuffer = toByteBuffer(in, in.readerIndex(), len);
                 int position = inNioBuffer.position();
                 final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
                     toByteBuffer(out, writerIndex, out.writableBytes()));
@@ -350,8 +347,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             this.cumulator = cumulator;
         }
 
-        abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
-                throws SSLException;
+        abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException;
 
         abstract int calculatePendingData(SslHandler handler, int guess);
 
@@ -836,7 +832,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
-
                 if (buf.isReadable()) {
                     pendingUnencryptedWrites.addFirst(buf, promise);
                     // When we add the buffer/promise pair back we need to be sure we don't complete the promise
@@ -883,10 +878,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             }
                             break;
                         case FINISHED:
+                        case NOT_HANDSHAKING: // work around for android bug that skips the FINISHED state.
                             setHandshakeSuccess();
-                            break;
-                        case NOT_HANDSHAKING:
-                            setHandshakeSuccessIfStillHandshaking();
                             break;
                         case NEED_WRAP:
                             // If we are expected to wrap again and we produced some data we need to ensure there
@@ -957,12 +950,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 HandshakeStatus status = result.getHandshakeStatus();
                 switch (status) {
                     case FINISHED:
-                        setHandshakeSuccess();
                         // We may be here because we read data and discovered the remote peer initiated a renegotiation
                         // and this write is to complete the new handshake. The user may have previously done a
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
                         // attempt to wrap application data here if any is pending.
-                        if (inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
                             wrap(ctx, true);
                         }
                         return false;
@@ -974,19 +966,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                         break;
                     case NEED_UNWRAP:
-                        if (inUnwrap) {
+                        if (inUnwrap || unwrapNonAppData(ctx) <= 0) {
                             // If we asked for a wrap, the engine requested an unwrap, and we are in unwrap there is
                             // no use in trying to call wrap again because we have already attempted (or will after we
                             // return) to feed more data to the engine.
                             return false;
                         }
-
-                        unwrapNonAppData(ctx);
                         break;
                     case NEED_WRAP:
                         break;
                     case NOT_HANDSHAKING:
-                        setHandshakeSuccessIfStillHandshaking();
+                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                            wrap(ctx, true);
+                        }
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
                         if (!inUnwrap) {
@@ -1247,11 +1239,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // be consumed by the SSLEngine.
         this.packetLength = 0;
         try {
-            int bytesConsumed = unwrap(ctx, in, in.readerIndex(), packetLength);
+            final int bytesConsumed = unwrap(ctx, in, packetLength);
             assert bytesConsumed == packetLength || engine.isInboundDone() :
                     "we feed the SSLEngine a packets worth of data: " + packetLength + " but it only consumed: " +
                             bytesConsumed;
-            in.skipBytes(bytesConsumed);
         } catch (Throwable cause) {
             handleUnwrapThrowable(ctx, cause);
         }
@@ -1259,7 +1250,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void decodeNonJdkCompatible(ChannelHandlerContext ctx, ByteBuf in) {
         try {
-            in.skipBytes(unwrap(ctx, in, in.readerIndex(), in.readableBytes()));
+            unwrap(ctx, in, in.readableBytes());
         } catch (Throwable cause) {
             handleUnwrapThrowable(ctx, cause);
         }
@@ -1335,139 +1326,97 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
-    private void unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
-        unwrap(ctx, Unpooled.EMPTY_BUFFER, 0, 0);
+    private int unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
+        return unwrap(ctx, Unpooled.EMPTY_BUFFER, 0);
     }
 
     /**
      * Unwraps inbound SSL records.
      */
-    private int unwrap(
-            ChannelHandlerContext ctx, ByteBuf packet, int offset, int length) throws SSLException {
+    private int unwrap(ChannelHandlerContext ctx, ByteBuf packet, int length) throws SSLException {
         final int originalLength = length;
         boolean wrapLater = false;
         boolean notifyClosure = false;
-        int overflowReadableBytes = -1;
+        boolean executedRead = false;
         ByteBuf decodeOut = allocate(ctx, length);
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            unwrapLoop: while (!ctx.isRemoved()) {
-                final SSLEngineResult result = engineType.unwrap(this, packet, offset, length, decodeOut);
+            do {
+                final SSLEngineResult result = engineType.unwrap(this, packet, length, decodeOut);
                 final Status status = result.getStatus();
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 final int produced = result.bytesProduced();
                 final int consumed = result.bytesConsumed();
 
-                // Update indexes for the next iteration
-                offset += consumed;
+                // Skip bytes now in case unwrap is called in a re-entry scenario. For example LocalChannel.read()
+                // may entry this method in a re-entry fashion and if the peer is writing into a shared buffer we may
+                // unwrap the same data multiple times.
+                packet.skipBytes(consumed);
                 length -= consumed;
 
-                switch (status) {
-                case BUFFER_OVERFLOW:
-                    final int readableBytes = decodeOut.readableBytes();
-                    final int previousOverflowReadableBytes = overflowReadableBytes;
-                    overflowReadableBytes = readableBytes;
-                    int bufferSize = engine.getSession().getApplicationBufferSize() - readableBytes;
-                    if (readableBytes > 0) {
-                        setState(STATE_FIRE_CHANNEL_READ);
-                        ctx.fireChannelRead(decodeOut);
-
-                        // This buffer was handled, null it out.
-                        decodeOut = null;
-                        if (bufferSize <= 0) {
-                            // It may happen that readableBytes >= engine.getSession().getApplicationBufferSize()
-                            // while there is still more to unwrap, in this case we will just allocate a new buffer
-                            // with the capacity of engine.getSession().getApplicationBufferSize() and call unwrap
-                            // again.
-                            bufferSize = engine.getSession().getApplicationBufferSize();
-                        }
-                    } else {
-                        // This buffer was handled, null it out.
-                        decodeOut.release();
-                        decodeOut = null;
-                    }
-                    if (readableBytes == 0 && previousOverflowReadableBytes == 0) {
-                        // If there is two consecutive loops where we overflow and are not able to consume any data,
-                        // assume the amount of data exceeds the maximum amount for the engine and bail
-                        throw new IllegalStateException("Two consecutive overflows but no content was consumed. " +
-                                 SSLSession.class.getSimpleName() + " getApplicationBufferSize: " +
-                                 engine.getSession().getApplicationBufferSize() + " maybe too small.");
-                    }
-                    // Allocate a new buffer which can hold all the rest data and loop again.
-                    // TODO: We may want to reconsider how we calculate the length here as we may
-                    // have more then one ssl message to decode.
-                    decodeOut = allocate(ctx, engineType.calculatePendingData(this, bufferSize));
-                    continue;
-                case CLOSED:
-                    // notify about the CLOSED state of the SSLEngine. See #137
-                    notifyClosure = true;
-                    overflowReadableBytes = -1;
-                    break;
-                default:
-                    overflowReadableBytes = -1;
-                    break;
+                // The expected sequence of events is:
+                // 1. Notify of handshake success
+                // 2. fireChannelRead for unwrapped data
+                if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
+                    wrapLater |= (decodeOut.isReadable() ?
+                            setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
+                            handshakeStatus == HandshakeStatus.FINISHED;
                 }
 
-                switch (handshakeStatus) {
-                    case NEED_UNWRAP:
-                        break;
-                    case NEED_WRAP:
-                        // If the wrap operation transitions the status to NOT_HANDSHAKING and there is no more data to
-                        // unwrap then the next call to unwrap will not produce any data. We can avoid the potentially
-                        // costly unwrap operation and break out of the loop.
-                        if (wrapNonAppData(ctx, true) && length == 0) {
-                            break unwrapLoop;
-                        }
-                        break;
-                    case NEED_TASK:
-                        if (!runDelegatedTasks(true)) {
-                            // We scheduled a task on the delegatingTaskExecutor, so stop processing as we will
-                            // resume once the task completes.
-                            //
-                            // We break out of the loop only and do NOT return here as we still may need to notify
-                            // about the closure of the SSLEngine.
-                            //
-                            wrapLater = false;
-                            break unwrapLoop;
-                        }
-                        break;
-                    case FINISHED:
-                        setHandshakeSuccess();
-                        wrapLater = true;
+                // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
+                // in a re-entry fashion we execute a task on the executor queue to process after the stack unwinds
+                // to preserve order of events.
+                if (decodeOut.isReadable()) {
+                    setState(STATE_FIRE_CHANNEL_READ);
+                    if (isStateSet(STATE_UNWRAP_REENTRY)) {
+                        executedRead = true;
+                        executeChannelRead(ctx, decodeOut);
+                    } else {
+                        ctx.fireChannelRead(decodeOut);
+                    }
+                    decodeOut = null;
+                }
 
-                        // We 'break' here and NOT 'continue' as android API version 21 has a bug where they consume
-                        // data from the buffer but NOT correctly set the SSLEngineResult.bytesConsumed().
-                        // Because of this it will raise an exception on the next iteration of the for loop on android
-                        // API version 21. Just doing a break will work here as produced and consumed will both be 0
-                        // and so we break out of the complete for (;;) loop and so call decode(...) again later on.
-                        // On other platforms this will have no negative effect as we will just continue with the
-                        // for (;;) loop if something was either consumed or produced.
+                if (status == Status.CLOSED) {
+                    notifyClosure = true; // notify about the CLOSED state of the SSLEngine. See #137
+                } else if (status == Status.BUFFER_OVERFLOW) {
+                    if (decodeOut != null) {
+                        decodeOut.release();
+                    }
+                    final int applicationBufferSize = engine.getSession().getApplicationBufferSize();
+                    // Allocate a new buffer which can hold all the rest data and loop again.
+                    // It may happen that applicationBufferSize < produced while there is still more to unwrap, in this
+                    // case we will just allocate a new buffer with the capacity of applicationBufferSize and call
+                    // unwrap again.
+                    decodeOut = allocate(ctx, engineType.calculatePendingData(this, applicationBufferSize < produced ?
+                            applicationBufferSize : applicationBufferSize - produced));
+                    continue;
+                }
+
+                if (handshakeStatus == HandshakeStatus.NEED_TASK) {
+                    if (!runDelegatedTasks(true)) {
+                        // We scheduled a task on the delegatingTaskExecutor, so stop processing as we will
+                        // resume once the task completes.
                         //
-                        // See:
-                        //  - https://github.com/netty/netty/issues/4116
-                        //  - https://code.google.com/p/android/issues/detail?id=198639&thanks=198639&ts=1452501203
+                        // We break out of the loop only and do NOT return here as we still may need to notify
+                        // about the closure of the SSLEngine.
+                        wrapLater = false;
                         break;
-                    case NOT_HANDSHAKING:
-                        if (setHandshakeSuccessIfStillHandshaking()) {
-                            wrapLater = true;
-                            continue;
-                        }
-
-                        // If we are not handshaking and there is no more data to unwrap then the next call to unwrap
-                        // will not produce any data. We can avoid the potentially costly unwrap operation and break
-                        // out of the loop.
-                        if (length == 0) {
-                            break unwrapLoop;
-                        }
+                    }
+                } else if (handshakeStatus == HandshakeStatus.NEED_WRAP) {
+                    // If the wrap operation transitions the status to NOT_HANDSHAKING and there is no more data to
+                    // unwrap then the next call to unwrap will not produce any data. We can avoid the potentially
+                    // costly unwrap operation and break out of the loop.
+                    if (wrapNonAppData(ctx, true) && length == 0) {
                         break;
-                    default:
-                        throw new IllegalStateException("unknown handshake status: " + handshakeStatus);
+                    }
                 }
 
                 if (status == Status.BUFFER_UNDERFLOW ||
                         // If we processed NEED_TASK we should try again even we did not consume or produce anything.
-                        handshakeStatus != HandshakeStatus.NEED_TASK && consumed == 0 && produced == 0) {
+                        handshakeStatus != HandshakeStatus.NEED_TASK && (consumed == 0 && produced == 0 ||
+                                (length == 0 && handshakeStatus == HandshakeStatus.NOT_HANDSHAKING))) {
                     if (handshakeStatus == HandshakeStatus.NEED_UNWRAP) {
                         // The underlying engine is starving so we need to feed it with more data.
                         // See https://github.com/netty/netty/pull/5039
@@ -1475,8 +1424,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
 
                     break;
+                } else if (decodeOut == null) {
+                    decodeOut = allocate(ctx, length);
                 }
-            }
+            } while (!ctx.isRemoved());
 
             if (isStateSet(STATE_FLUSHED_BEFORE_HANDSHAKE) && handshakePromise.isDone()) {
                 // We need to call wrap(...) in case there was a flush done before the handshake completed to ensure
@@ -1492,20 +1443,63 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         } finally {
             if (decodeOut != null) {
-                if (decodeOut.isReadable()) {
-                    setState(STATE_FIRE_CHANNEL_READ);
-
-                    ctx.fireChannelRead(decodeOut);
-                } else {
-                    decodeOut.release();
-                }
+                decodeOut.release();
             }
 
             if (notifyClosure) {
-                notifyClosePromise(null);
+                if (executedRead) {
+                    executeNotifyClosePromise(ctx);
+                } else {
+                    notifyClosePromise(null);
+                }
             }
         }
         return originalLength - length;
+    }
+
+    private boolean setHandshakeSuccessUnwrapMarkReentry() {
+        // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to preserve ordering of
+        // fireChannelRead for decodeOut relative to re-entry data.
+        final boolean setReentryState = !isStateSet(STATE_UNWRAP_REENTRY);
+        if (setReentryState) {
+            setState(STATE_UNWRAP_REENTRY);
+        }
+        try {
+            return setHandshakeSuccess();
+        } finally {
+            // It is unlikely this specific method will be re-entry because handshake completion is infrequent, but just
+            // in case we only clear the state if we set it in the first place.
+            if (setReentryState) {
+                clearState(STATE_UNWRAP_REENTRY);
+            }
+        }
+    }
+
+    private void executeNotifyClosePromise(final ChannelHandlerContext ctx) {
+        try {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    notifyClosePromise(null);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            notifyClosePromise(e);
+        }
+    }
+
+    private void executeChannelRead(final ChannelHandlerContext ctx, final ByteBuf decodedOut) {
+        try {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.fireChannelRead(decodedOut);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            decodedOut.release();
+            throw e;
+        }
     }
 
     private static ByteBuffer toByteBuffer(ByteBuf out, int index, int len) {
@@ -1634,13 +1628,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     // The handshake finished, lets notify about the completion of it and resume processing.
                     case FINISHED:
-                        setHandshakeSuccess();
-
-                        // deliberate fall-through
-
                     // Not handshaking anymore, lets notify about the completion if not done yet and resume processing.
                     case NOT_HANDSHAKING:
-                        setHandshakeSuccessIfStillHandshaking();
+                        setHandshakeSuccess(); // NOT_HANDSHAKING -> workaround for android skipping FINISHED state.
                         try {
                             // Lets call wrap to ensure we produce the alert if there is any pending and also to
                             // ensure we flush any queued data..
@@ -1749,31 +1739,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * Works around some Android {@link SSLEngine} implementations that skip {@link HandshakeStatus#FINISHED} and
-     * go straight into {@link HandshakeStatus#NOT_HANDSHAKING} when handshake is finished.
-     *
-     * @return {@code true} if and only if the workaround has been applied and thus {@link #handshakeFuture} has been
-     *         marked as success by this method
-     */
-    private boolean setHandshakeSuccessIfStillHandshaking() {
-        return setHandshakeSuccess();
-    }
-
-    /**
      * Notify all the handshake futures about the successfully handshake
      * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
      * was fired. {@code false} otherwise.
      */
     private boolean setHandshakeSuccess() {
-        if (isStateSet(STATE_READ_DURING_HANDSHAKE) && !ctx.channel().config().isAutoRead()) {
-            clearState(STATE_READ_DURING_HANDSHAKE);
-            ctx.read();
-        }
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
-        // NOT_HANDSHAKING which invokes setHandshakeSuccessIfStillHandshaking, and then wrapNonAppData also directly
-        // invokes this method.
-        if (handshakePromise.trySuccess(ctx.channel())) {
+        // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
+        final boolean notified;
+        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
                 SSLSession session = engine.getSession();
                 logger.debug(
@@ -1783,9 +1758,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         session.getCipherSuite());
             }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
-            return true;
         }
-        return false;
+        if (isStateSet(STATE_READ_DURING_HANDSHAKE)) {
+            clearState(STATE_READ_DURING_HANDSHAKE);
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        }
+        return notified;
     }
 
     /**
@@ -2125,8 +2105,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f)
-                    throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }

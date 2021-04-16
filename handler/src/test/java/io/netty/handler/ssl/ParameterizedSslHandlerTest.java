@@ -25,8 +25,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -50,6 +56,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -61,6 +68,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
+import static io.netty.util.internal.ThreadLocalRandom.current;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -501,7 +509,41 @@ public class ParameterizedSslHandlerTest {
     }
 
     @Test(timeout = 30000)
-    public void reentryWriteOnHandshakeComplete() throws Exception {
+    public void reentryOnHandshakeCompleteNioChannel() throws Exception {
+        EventLoopGroup group = new NioEventLoopGroup();
+        try {
+            Class<? extends ServerChannel> serverClass = NioServerSocketChannel.class;
+            Class<? extends Channel> clientClass = NioSocketChannel.class;
+            SocketAddress bindAddress = new InetSocketAddress(0);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, false, false);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, false, true);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, true, false);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, true, true);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 30000)
+    public void reentryOnHandshakeCompleteLocalChannel() throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup();
+        try {
+            Class<? extends ServerChannel> serverClass = LocalServerChannel.class;
+            Class<? extends Channel> clientClass = LocalChannel.class;
+            SocketAddress bindAddress = new LocalAddress(String.valueOf(current().nextLong()));
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, false, false);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, false, true);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, true, false);
+            reentryOnHandshakeComplete(group, bindAddress, serverClass, clientClass, true, true);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    private void reentryOnHandshakeComplete(EventLoopGroup group, SocketAddress bindAddress,
+                                            Class<? extends ServerChannel> serverClass,
+                                            Class<? extends Channel> clientClass, boolean serverAutoRead,
+                                            boolean clientAutoRead) throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(serverProvider)
@@ -512,7 +554,6 @@ public class ParameterizedSslHandlerTest {
                 .sslProvider(clientProvider)
                 .build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
         Channel sc = null;
         Channel cc = null;
         try {
@@ -524,23 +565,25 @@ public class ParameterizedSslHandlerTest {
 
             sc = new ServerBootstrap()
                     .group(group)
-                    .channel(NioServerSocketChannel.class)
+                    .channel(serverClass)
+                    .childOption(ChannelOption.AUTO_READ, serverAutoRead)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(disableHandshakeTimeout(sslServerCtx.newHandler(ch.alloc())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(bindAddress).syncUninterruptibly().channel();
 
             cc = new Bootstrap()
                     .group(group)
-                    .channel(NioSocketChannel.class)
+                    .channel(clientClass)
+                    .option(ChannelOption.AUTO_READ, clientAutoRead)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(disableHandshakeTimeout(sslClientCtx.newHandler(ch.alloc())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
@@ -557,11 +600,15 @@ public class ParameterizedSslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    private static SslHandler disableHandshakeTimeout(SslHandler handler) {
+        handler.setHandshakeTimeoutMillis(0);
+        return handler;
     }
 
     private static final class ReentryWriteSslHandshakeHandler extends SimpleChannelInboundHandler<ByteBuf> {
