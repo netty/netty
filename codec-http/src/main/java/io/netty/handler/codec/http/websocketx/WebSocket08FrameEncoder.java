@@ -179,7 +179,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int random = PlatformDependent.threadLocalRandom().nextInt();
+                int random = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 buf.writeBytes(mask);
 
