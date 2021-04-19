@@ -29,9 +29,11 @@ final class QuicheQuicStreamChannelConfig extends DefaultChannelConfig implement
     // If you receive a FIN you should still keep the stream open until you write a FIN as well.
     private volatile boolean allowHalfClosure = true;
     private volatile boolean readFrames;
+    volatile DirectIoByteBufAllocator allocator;
 
     QuicheQuicStreamChannelConfig(QuicStreamChannel channel) {
         super(channel);
+        allocator = new DirectIoByteBufAllocator(super.getAllocator());
     }
 
     @Override
@@ -102,7 +104,7 @@ final class QuicheQuicStreamChannelConfig extends DefaultChannelConfig implement
 
     @Override
     public QuicStreamChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
+        this.allocator = new DirectIoByteBufAllocator(allocator);
         return this;
     }
 
@@ -155,6 +157,11 @@ final class QuicheQuicStreamChannelConfig extends DefaultChannelConfig implement
         }
         this.allowHalfClosure = allowHalfClosure;
         return this;
+    }
+
+    @Override
+    public ByteBufAllocator getAllocator() {
+        return allocator.wrapped();
     }
 
     @Override

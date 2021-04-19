@@ -747,8 +747,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             inRecv = true;
             try {
                 ChannelPipeline pipeline = pipeline();
-                QuicStreamChannelConfig config = config();
-                ByteBufAllocator allocator = config.getAllocator();
+                QuicheQuicStreamChannelConfig config = (QuicheQuicStreamChannelConfig) config();
+                // Directly access the DirectIoByteBufAllocator as we need an direct buffer to read into in all cases
+                // even if there is no Unsafe present and the direct buffer is not pooled.
+                DirectIoByteBufAllocator allocator = config.allocator;
                 @SuppressWarnings("deprecation")
                 RecvByteBufAllocator.Handle allocHandle = this.recvBufAllocHandle();
                 boolean readFrames = config.isReadFrames();

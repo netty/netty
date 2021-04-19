@@ -15,11 +15,14 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledDirectByteBuf;
+import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -76,7 +79,39 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         if (directBuffer) {
             allocator = new UnpooledByteBufAllocator(true);
         } else {
-            allocator = new UnpooledByteBufAllocator(false);
+            // Force usage of heap buffers and also ensure memoryAddress() is not not supported.
+            allocator = new AbstractByteBufAllocator(false) {
+
+                @Override
+                public ByteBuf ioBuffer() {
+                    return heapBuffer();
+                }
+
+                @Override
+                public ByteBuf ioBuffer(int initialCapacity) {
+                    return heapBuffer(initialCapacity);
+                }
+
+                @Override
+                public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
+                    return heapBuffer(initialCapacity, maxCapacity);
+                }
+
+                @Override
+                protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+                    return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+                }
+
+                @Override
+                protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+                    return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+                }
+
+                @Override
+                public boolean isDirectBufferPooled() {
+                    return false;
+                }
+            };
         }
         this.composite = composite;
     }
@@ -141,6 +176,8 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
                         }
                     })
                     .streamHandler(ch)
+                    // Use the same allocator for the streams.
+                    .streamOption(ChannelOption.ALLOCATOR, allocator)
                     .remoteAddress(address)
                     .option(ChannelOption.AUTO_READ, autoRead)
                     .option(ChannelOption.ALLOCATOR, allocator)
@@ -226,6 +263,8 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
                         }
                     })
                     .streamHandler(ch)
+                    // Use the same allocator for the streams.
+                    .streamOption(ChannelOption.ALLOCATOR, allocator)
                     .remoteAddress(address)
                     .option(ChannelOption.AUTO_READ, autoRead)
                     .option(ChannelOption.ALLOCATOR, allocator)
