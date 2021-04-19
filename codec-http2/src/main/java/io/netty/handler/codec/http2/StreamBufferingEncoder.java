@@ -132,7 +132,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             @Override
             public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
                 goAwayDetail = new GoAwayDetail(
-                    lastStreamId, errorCode, ByteBufUtil.getBytes(debugData));
+                    // Using getBytes(..., false) is safe here as GoAwayDetail(...) will clone the byte[].
+                    lastStreamId, errorCode, ByteBufUtil.getBytes(debugData, debugData.readerIndex(), debugData.readableBytes(), false));
                 cancelGoAwayStreams(goAwayDetail);
             }
 
