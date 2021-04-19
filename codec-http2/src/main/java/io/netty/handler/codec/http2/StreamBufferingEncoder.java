@@ -170,8 +170,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                     exclusive, padding, endOfStream, promise);
         }
         if (goAwayDetail != null) {
-            promise.setFailure(new Http2GoAwayException(goAwayDetail));
-            return promise;
+            return promise.setFailure(new Http2GoAwayException(goAwayDetail));
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
         if (pendingStream == null) {
