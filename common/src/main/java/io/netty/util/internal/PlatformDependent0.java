@@ -125,7 +125,11 @@ final class PlatformDependent0 {
             if (maybeUnsafe instanceof Throwable) {
                 unsafe = null;
                 unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
-                logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                if (logger.isTraceEnabled()) {
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                } else {
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", ((Throwable) maybeUnsafe).getMessage());
+                }
             } else {
                 unsafe = (Unsafe) maybeUnsafe;
                 logger.debug("sun.misc.Unsafe.theUnsafe: available");
@@ -157,7 +161,12 @@ final class PlatformDependent0 {
                     // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
                     unsafe = null;
                     unsafeUnavailabilityCause = (Throwable) maybeException;
-                    logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
+                    if (logger.isTraceEnabled()) {
+                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
+                    } else {
+                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable: {}",
+                                ((Throwable) maybeException).getMessage());
+                    }
                 }
             }
 
@@ -193,7 +202,12 @@ final class PlatformDependent0 {
                     logger.debug("java.nio.Buffer.address: available");
                 } else {
                     unsafeUnavailabilityCause = (Throwable) maybeAddressField;
-                    logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
+                    if (logger.isTraceEnabled()) {
+                        logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
+                    } else {
+                        logger.debug("java.nio.Buffer.address: unavailable: {}",
+                                ((Throwable) maybeAddressField).getMessage());
+                    }
 
                     // If we cannot access the address of a direct buffer, there's no point of using unsafe.
                     // Let's just pretend unsafe is unavailable for overall simplicity.
@@ -264,9 +278,13 @@ final class PlatformDependent0 {
                         directBufferConstructor = null;
                     }
                 } else {
-                    logger.debug(
-                            "direct buffer constructor: unavailable",
-                            (Throwable) maybeDirectBufferConstructor);
+                    if (logger.isTraceEnabled()) {
+                        logger.debug("direct buffer constructor: unavailable",
+                                (Throwable) maybeDirectBufferConstructor);
+                    } else {
+                        logger.debug("direct buffer constructor: unavailable: {}",
+                                ((Throwable) maybeDirectBufferConstructor).getMessage());
+                    }
                     directBufferConstructor = null;
                 }
             } finally {
@@ -335,7 +353,11 @@ final class PlatformDependent0 {
                 //noinspection DynamicRegexReplaceableByCompiledPattern
                 unaligned = arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
                 Throwable t = (Throwable) maybeUnaligned;
-                logger.debug("java.nio.Bits.unaligned: unavailable {}", unaligned, t);
+                if (logger.isTraceEnabled()) {
+                    logger.debug("java.nio.Bits.unaligned: unavailable, {}", unaligned, t);
+                } else {
+                    logger.debug("java.nio.Bits.unaligned: unavailable, {}, {}", unaligned, t.getMessage());
+                }
             }
 
             UNALIGNED = unaligned;
@@ -388,8 +410,13 @@ final class PlatformDependent0 {
                 }
 
                 if (maybeException instanceof Throwable) {
-                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
-                            (Throwable) maybeException);
+                    if (logger.isTraceEnabled()) {
+                        logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
+                                (Throwable) maybeException);
+                    } else {
+                        logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable: {}",
+                                ((Throwable) maybeException).getMessage());
+                    }
                 } else {
                     logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
                 }

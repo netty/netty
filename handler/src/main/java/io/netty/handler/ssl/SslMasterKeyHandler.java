@@ -71,7 +71,11 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
             cause = ReflectionUtil.trySetAccessible(field, true);
         } catch (Throwable e) {
             cause = e;
-            logger.debug("sun.security.ssl.SSLSessionImpl is unavailable.", e);
+            if (logger.isTraceEnabled()) {
+                logger.debug("sun.security.ssl.SSLSessionImpl is unavailable.", e);
+            } else {
+                logger.debug("sun.security.ssl.SSLSessionImpl is unavailable: {}", e.getMessage());
+            }
         }
         UNAVAILABILITY_CAUSE = cause;
         SSL_SESSIONIMPL_CLASS = clazz;
