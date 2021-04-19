@@ -87,7 +87,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      */
     public static final class Http2GoAwayException extends Http2Exception {
         private static final long serialVersionUID = 1326785622777291198L;
-        private GoAwayDetail goAwayDetail;
+        private final GoAwayDetail goAwayDetail;
 
         public Http2GoAwayException(int lastStreamId, long errorCode, byte[] debugData) {
             this(new GoAwayDetail(lastStreamId, errorCode, debugData));
