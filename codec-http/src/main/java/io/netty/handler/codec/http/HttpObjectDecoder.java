@@ -29,7 +29,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -121,7 +120,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 
     private static final String EMPTY_VALUE = "";
-    private static final Pattern COMMA_PATTERN = Pattern.compile(",");
 
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
