@@ -91,7 +91,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
-    private static final String HOST_NAME;
+    private static final String WINDOWS_HOST_NAME;
     private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
@@ -135,7 +135,7 @@ public class DnsNameResolver extends InetNameResolver {
         } catch (Exception ignore) {
             hostName = null;
         }
-        HOST_NAME = hostName;
+        WINDOWS_HOST_NAME = hostName;
     }
 
     static {
@@ -697,7 +697,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
             if (address == null && PlatformDependent.isWindows() &&
                     (LOCALHOST.equalsIgnoreCase(hostname) ||
-                            (HOST_NAME != null && HOST_NAME.equalsIgnoreCase(hostname)))) {
+                            (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)))) {
                 // If we tried to resolve localhost we need workaround that windows removed localhost from its
                 // hostfile in later versions.
                 // See https://github.com/netty/netty/issues/5386
