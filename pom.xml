@@ -91,7 +91,7 @@
     <quicheHomeBuildDir>${quicheHomeDir}/build</quicheHomeBuildDir>
     <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>53b10f60ef1c9d27c898a04b131cea0e57e22867</quicheCommitSha>
+    <quicheCommitSha>4236ad60162058b4f182dfadca047d8be0477377</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
