@@ -49,6 +49,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -111,6 +112,11 @@ public class StreamBufferingEncoderTest {
         when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
                 any(ChannelPromise.class)))
                 .thenAnswer(successAnswer());
+        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+            anyInt(), anyBoolean(), any(ChannelPromise.class))).thenAnswer(noopAnswer());
+        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+            anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(), any(ChannelPromise.class)))
+            .thenAnswer(noopAnswer());
 
         connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
@@ -167,7 +173,7 @@ public class StreamBufferingEncoderTest {
         encoder.writeData(ctx, 3, data(), 0, false, newPromise());
         encoderWriteHeaders(3, newPromise());
 
-        writeVerifyWriteHeaders(times(2), 3);
+        writeVerifyWriteHeaders(times(1), 3);
         // Contiguous data writes are coalesced
         ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(writer, times(1))
@@ -245,18 +251,32 @@ public class StreamBufferingEncoderTest {
             futures.add(encoderWriteHeaders(streamId, newPromise()));
             streamId += 2;
         }
+        assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
 
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
 
         assertEquals(5, connection.numActiveStreams());
+        assertEquals(0, encoder.numBufferedStreams());
         int failCount = 0;
         for (ChannelFuture f : futures) {
             if (f.cause() != null) {
+                assertTrue(f.cause() instanceof Http2GoAwayException);
                 failCount++;
             }
         }
-        assertEquals(9, failCount);
+        assertEquals(4, failCount);
+    }
+
+    @Test
+    public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
+        encoder.writeSettingsAck(ctx, newPromise());
+        setMaxConcurrentStreams(1);
+        encoderWriteHeaders(3, newPromise());
+        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+        ChannelFuture f = encoderWriteHeaders(5, newPromise());
+
+        assertTrue(f.cause() instanceof Http2GoAwayException);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
@@ -529,6 +549,20 @@ public class StreamBufferingEncoderTest {
                 ChannelPromise future = newPromise();
                 future.setSuccess();
                 return future;
+            }
+        };
+    }
+
+    private Answer<ChannelFuture> noopAnswer() {
+        return new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+                for (Object a : invocation.getArguments()) {
+                    if (a instanceof ChannelPromise) {
+                        return (ChannelFuture) a;
+                    }
+                }
+                return newPromise();
             }
         };
     }

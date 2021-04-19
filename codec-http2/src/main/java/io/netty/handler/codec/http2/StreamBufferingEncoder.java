@@ -69,33 +69,45 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
+    private static final class GoAwayDetail {
+        private final int lastStreamId;
+        private final long errorCode;
+        private final byte[] debugData;
+
+        GoAwayDetail(int lastStreamId, long errorCode, byte[] debugData) {
+            this.lastStreamId = lastStreamId;
+            this.errorCode = errorCode;
+            this.debugData = debugData.clone();
+        }
+    }
+
     /**
      * Thrown by {@link StreamBufferingEncoder} if buffered streams are terminated due to
      * receipt of a {@code GOAWAY}.
      */
     public static final class Http2GoAwayException extends Http2Exception {
         private static final long serialVersionUID = 1326785622777291198L;
-        private final int lastStreamId;
-        private final long errorCode;
-        private final byte[] debugData;
+        private final GoAwayDetail goAwayDetail;
 
         public Http2GoAwayException(int lastStreamId, long errorCode, byte[] debugData) {
+            this(new GoAwayDetail(lastStreamId, errorCode, debugData));
+        }
+
+        Http2GoAwayException(GoAwayDetail goAwayDetail) {
             super(Http2Error.STREAM_CLOSED);
-            this.lastStreamId = lastStreamId;
-            this.errorCode = errorCode;
-            this.debugData = debugData;
+            this.goAwayDetail = goAwayDetail;
         }
 
         public int lastStreamId() {
-            return lastStreamId;
+            return goAwayDetail.lastStreamId;
         }
 
         public long errorCode() {
-            return errorCode;
+            return goAwayDetail.errorCode;
         }
 
         public byte[] debugData() {
-            return debugData;
+            return goAwayDetail.debugData.clone();
         }
     }
 
@@ -106,6 +118,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
     private int maxConcurrentStreams;
     private boolean closed;
+    private GoAwayDetail goAwayDetail;
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
@@ -118,7 +131,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
             @Override
             public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-                cancelGoAwayStreams(lastStreamId, errorCode, debugData);
+                goAwayDetail = new GoAwayDetail(
+                    // Using getBytes(..., false) is safe here as GoAwayDetail(...) will clone the byte[].
+                    lastStreamId, errorCode,
+                    ByteBufUtil.getBytes(debugData, debugData.readerIndex(), debugData.readableBytes(), false));
+                cancelGoAwayStreams(goAwayDetail);
             }
 
             @Override
@@ -149,13 +166,12 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
-        if (isExistingStream(streamId) || connection().goAwayReceived()) {
+        if (isExistingStream(streamId) || canCreateStream()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
         }
-        if (canCreateStream()) {
-            return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endOfStream, promise);
+        if (goAwayDetail != null) {
+            return promise.setFailure(new Http2GoAwayException(goAwayDetail));
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
         if (pendingStream == null) {
@@ -248,12 +264,12 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
-    private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
+    private void cancelGoAwayStreams(GoAwayDetail goAwayDetail) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        Exception e = new Http2GoAwayException(lastStreamId, errorCode, ByteBufUtil.getBytes(debugData));
+        Exception e = new Http2GoAwayException(goAwayDetail);
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
-            if (stream.streamId > lastStreamId) {
+            if (stream.streamId > goAwayDetail.lastStreamId) {
                 iter.remove();
                 stream.close(e);
             }
