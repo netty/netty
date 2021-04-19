@@ -30,7 +30,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpNativeEpollServerHandler extends SimpleChannelInboundHandler<HttpObject> {
+final class HttpNativeEpollServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'N', 'a', 't', 'i', 'v', 'e' };
 
     private static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
