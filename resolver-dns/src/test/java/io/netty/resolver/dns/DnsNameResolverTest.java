@@ -110,8 +110,10 @@ import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty.handler.codec.dns.DnsRecordType.SRV;
+import static io.netty.resolver.dns.DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -317,6 +319,18 @@ public class DnsNameResolverTest {
                 "blogspot.in",
                 "localhost",
                 StringUtil.EMPTY_STRING);
+    }
+
+    private static final String HOST_NAME;
+
+    static {
+        String hostName;
+        try {
+            hostName = PlatformDependent.isWindows() ? InetAddress.getLocalHost().getHostName() : null;
+        } catch (Exception ignore) {
+            hostName = null;
+        }
+        HOST_NAME = hostName;
     }
 
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
@@ -744,6 +758,34 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testResolveLocalhostIpv4() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, "localhost");
+    }
+
+    @Test
+    public void testResolveLocalhostIpv6() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, "localhost");
+    }
+
+    @Test
+    public void testResolveHostNameIpv4() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, HOST_NAME);
+    }
+
+    @Test
+    public void testResolveHostNameIpv6() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, HOST_NAME);
+    }
+
+    @Test
     public void testResolveNullIpv4() {
         testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, null);
     }
@@ -774,6 +816,34 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveAllEmptyIpv6() {
         testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveAllLocalhostIpv4() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolveAll0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, "localhost");
+    }
+
+    @Test
+    public void testResolveAllLocalhostIpv6() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, "localhost");
+    }
+
+    @Test
+    public void testResolveAllHostNameIpv4() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolveAll0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, HOST_NAME);
+    }
+
+    @Test
+    public void testResolveAllHostNameIpv6() {
+        assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
+        testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, HOST_NAME);
     }
 
     @Test

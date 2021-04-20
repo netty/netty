@@ -91,6 +91,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
+    private static final String WINDOWS_HOST_NAME;
     private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
@@ -127,6 +128,14 @@ public class DnsNameResolver extends InetNameResolver {
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
+
+        String hostName;
+        try {
+            hostName = PlatformDependent.isWindows() ? InetAddress.getLocalHost().getHostName() : null;
+        } catch (Exception ignore) {
+            hostName = null;
+        }
+        WINDOWS_HOST_NAME = hostName;
     }
 
     static {
@@ -686,10 +695,14 @@ public class DnsNameResolver extends InetNameResolver {
             return null;
         } else {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            if (address == null && PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname)) {
+            if (address == null && PlatformDependent.isWindows() &&
+                    (LOCALHOST.equalsIgnoreCase(hostname) ||
+                            (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)))) {
                 // If we tried to resolve localhost we need workaround that windows removed localhost from its
                 // hostfile in later versions.
                 // See https://github.com/netty/netty/issues/5386
+                // Need a workaround for resolving the host (computer) name in case it cannot be resolved from hostfile
+                // See https://github.com/netty/netty/issues/11142
                 return LOCALHOST_ADDRESS;
             }
             return address;
