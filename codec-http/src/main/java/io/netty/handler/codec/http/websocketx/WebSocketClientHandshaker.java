@@ -18,7 +18,9 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -491,7 +493,10 @@ public abstract class WebSocketClientHandshaker {
     protected abstract WebSocketFrameEncoder newWebSocketEncoder();
 
     /**
-     * Performs the closing handshake
+     * Performs the closing handshake.
+     *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame)}.
      *
      * @param channel
      *            Channel
@@ -506,6 +511,9 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Performs the closing handshake
      *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
+     *
      * @param channel
      *            Channel
      * @param frame
@@ -515,21 +523,49 @@ public abstract class WebSocketClientHandshaker {
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         ObjectUtil.checkNotNull(channel, "channel");
-        channel.writeAndFlush(frame, promise);
-        applyForceCloseTimeout(channel, promise);
-        return promise;
+        return close0(channel, channel, frame, promise);
     }
 
-    private void applyForceCloseTimeout(final Channel channel, ChannelFuture flushFuture) {
+    /**
+     * Performs the closing handshake
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param frame
+     *            Closing Frame that was received
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return close(ctx, frame, ctx.newPromise());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param frame
+     *            Closing Frame that was received
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return close0(ctx, ctx.channel(), frame, promise);
+    }
+
+    private ChannelFuture close0(final ChannelOutboundInvoker invoker, final Channel channel,
+                                 CloseWebSocketFrame frame, ChannelPromise promise) {
+        invoker.writeAndFlush(frame, promise);
         final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
         final WebSocketClientHandshaker handshaker = this;
         if (forceCloseTimeoutMillis <= 0 || !channel.isActive() || forceCloseInit != 0) {
-            return;
+            return promise;
         }
 
-        flushFuture.addListener(new ChannelFutureListener() {
+        promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 // If flush operation failed, there is no reason to expect
                 // a server to receive CloseFrame. Thus this should be handled
                 // by the application separately.
@@ -540,7 +576,7 @@ public abstract class WebSocketClientHandshaker {
                         @Override
                         public void run() {
                             if (channel.isActive()) {
-                                channel.close();
+                                invoker.close();
                                 forceCloseComplete = true;
                             }
                         }
@@ -555,6 +591,7 @@ public abstract class WebSocketClientHandshaker {
                 }
             }
         });
+        return promise;
     }
 
     /**

@@ -237,7 +237,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
                 frame.retain();
-                handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+                handshaker.close(ctx, (CloseWebSocketFrame) frame);
             } else {
                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
             }

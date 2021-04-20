@@ -18,7 +18,9 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -329,12 +331,15 @@ public abstract class WebSocketServerHandshaker {
     protected abstract FullHttpResponse newHandshakeResponse(FullHttpRequest req,
                                          HttpHeaders responseHeaders);
     /**
-     * Performs the closing handshake
+     * Performs the closing handshake.
+     *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame)}.
      *
      * @param channel
-     *            Channel
+     *            the {@link Channel} to use.
      * @param frame
-     *            Closing Frame that was received
+     *            Closing Frame that was received.
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
         ObjectUtil.checkNotNull(channel, "channel");
@@ -342,18 +347,52 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Performs the closing handshake
+     * Performs the closing handshake.
+     *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
      *
      * @param channel
-     *            Channel
+     *            the {@link Channel} to use.
      * @param frame
-     *            Closing Frame that was received
+     *            Closing Frame that was received.
      * @param promise
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        ObjectUtil.checkNotNull(channel, "channel");
-        return channel.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
+        return close0(channel, frame, promise);
+    }
+
+    /**
+     * Performs the closing handshake.
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param frame
+     *            Closing Frame that was received.
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return close(ctx, frame, ctx.newPromise());
+    }
+
+    /**
+     * Performs the closing handshake.
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param frame
+     *            Closing Frame that was received.
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return close0(ctx, frame, promise).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private ChannelFuture close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame, ChannelPromise promise) {
+        return invoker.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**
