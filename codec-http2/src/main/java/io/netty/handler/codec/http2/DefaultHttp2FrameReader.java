@@ -287,7 +287,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void verifyDataFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         if (payloadLength < flags.getPaddingPresenceFieldLength()) {
             throw streamError(streamId, FRAME_SIZE_ERROR,
@@ -298,7 +297,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void verifyHeadersFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         int requiredLength = flags.getPaddingPresenceFieldLength() + flags.getNumPriorityBytes();
         if (payloadLength < requiredLength) {
@@ -328,7 +326,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifySettingsFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
         if (streamId != 0) {
             throw connectionError(PROTOCOL_ERROR, "A stream ID must be zero.");
         }
@@ -342,7 +339,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyPushPromiseFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         // Subtract the length of the promised stream ID field, to determine the length of the
         // rest of the payload (header block fragment + payload).
@@ -366,7 +362,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyGoAwayFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         if (streamId != 0) {
             throw connectionError(PROTOCOL_ERROR, "A stream ID must be zero.");
@@ -387,7 +382,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyContinuationFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
-        verifyPayloadLength(payloadLength);
 
         if (headersContinuation == null) {
             throw connectionError(PROTOCOL_ERROR, "Received %s frame but not currently processing headers.",
@@ -768,12 +762,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         if (headersContinuation != null) {
             throw connectionError(PROTOCOL_ERROR, "Received frame of type %s while processing headers on stream %d.",
                                   frameType, headersContinuation.getStreamId());
-        }
-    }
-
-    private void verifyPayloadLength(int payloadLength) throws Http2Exception {
-        if (payloadLength > maxFrameSize) {
-            throw connectionError(PROTOCOL_ERROR, "Total payload length %d exceeds max frame length.", payloadLength);
         }
     }
 
