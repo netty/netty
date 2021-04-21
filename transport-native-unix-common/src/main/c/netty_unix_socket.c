@@ -339,43 +339,9 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
     socklen_t addrlen = sizeof(addr);
     ssize_t res;
     int err;
-    jobject local = NULL;
-
-#ifdef IP_RECVORIGDSTADDR
-    struct sockaddr_storage daddr;
-    struct iovec iov;
-    struct cmsghdr* cmsg;
-    struct msghdr msg;
-    char cntrlbuf[64];
-
-    int readLocalAddr;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
-            &readLocalAddr, sizeof(readLocalAddr)) < 0) {
-        readLocalAddr = 0;
-    }
-
-    if (readLocalAddr) {
-        iov.iov_base = buffer + pos;
-        iov.iov_len  = (size_t) (limit - pos);
-        msg.msg_name = (struct sockaddr*) &addr;
-        msg.msg_namelen = addrlen;
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
-        msg.msg_control = cntrlbuf;
-        msg.msg_controllen = sizeof(cntrlbuf);
-    }
-#endif
 
     do {
-#ifdef IP_RECVORIGDSTADDR
-        if (readLocalAddr) {
-            res = recvmsg(fd, &msg, 0);
-        } else {
-#endif
-            res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
-#ifdef IP_RECVORIGDSTADDR
-        }
-#endif
+        res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
         // Keep on reading if we was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
@@ -396,24 +362,7 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
         return NULL;
     }
 
-#ifdef IP_RECVORIGDSTADDR
-#if !defined(SOL_IP) && defined(IPPROTO_IP)
-#define SOL_IP IPPROTO_IP
-#endif /* !SOL_IP && IPPROTO_IP */
-    if (readLocalAddr) {
-        for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-            if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {
-                memcpy (&daddr, CMSG_DATA(cmsg), sizeof (struct sockaddr_storage));
-                local = createDatagramSocketAddress(env, &daddr, res, NULL);
-                if (local == NULL) {
-                    return NULL;
-                }
-                break;
-            }
-        }
-    }
-#endif
-    return createDatagramSocketAddress(env, &addr, res, local);
+    return createDatagramSocketAddress(env, &addr, res, NULL);
 }
 
 void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err) {
