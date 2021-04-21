@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 
