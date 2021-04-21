@@ -101,7 +101,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (frame instanceof CloseWebSocketFrame) {
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx, (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
         } else if (frame instanceof TextWebSocketFrame ||
