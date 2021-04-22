@@ -73,6 +73,7 @@ import java.util.regex.Pattern;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -460,16 +461,11 @@ public class SslHandler extends ByteToMessageDecoder {
 
     public void setHandshakeTimeout(long handshakeTimeout, TimeUnit unit) {
         requireNonNull(unit, "unit");
-
         setHandshakeTimeoutMillis(unit.toMillis(handshakeTimeout));
     }
 
     public void setHandshakeTimeoutMillis(long handshakeTimeoutMillis) {
-        if (handshakeTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "handshakeTimeoutMillis: " + handshakeTimeoutMillis + " (expected: >= 0)");
-        }
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
     /**
@@ -543,11 +539,8 @@ public class SslHandler extends ByteToMessageDecoder {
      * See {@link #setCloseNotifyFlushTimeout(long, TimeUnit)}.
      */
     public final void setCloseNotifyFlushTimeoutMillis(long closeNotifyFlushTimeoutMillis) {
-        if (closeNotifyFlushTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "closeNotifyFlushTimeoutMillis: " + closeNotifyFlushTimeoutMillis + " (expected: >= 0)");
-        }
-        this.closeNotifyFlushTimeoutMillis = closeNotifyFlushTimeoutMillis;
+        this.closeNotifyFlushTimeoutMillis = checkPositiveOrZero(closeNotifyFlushTimeoutMillis,
+                "closeNotifyFlushTimeoutMillis");
     }
 
     /**
@@ -572,11 +565,8 @@ public class SslHandler extends ByteToMessageDecoder {
      * See {@link #setCloseNotifyReadTimeout(long, TimeUnit)}.
      */
     public final void setCloseNotifyReadTimeoutMillis(long closeNotifyReadTimeoutMillis) {
-        if (closeNotifyReadTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "closeNotifyReadTimeoutMillis: " + closeNotifyReadTimeoutMillis + " (expected: >= 0)");
-        }
-        this.closeNotifyReadTimeoutMillis = closeNotifyReadTimeoutMillis;
+        this.closeNotifyReadTimeoutMillis = checkPositiveOrZero(closeNotifyReadTimeoutMillis,
+                "closeNotifyReadTimeoutMillis");
     }
 
     /**

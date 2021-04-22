@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.math.BigInteger;
 import java.security.Principal;
@@ -56,9 +57,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     static PemEncoded toPEM(ByteBufAllocator allocator, boolean useDirect,
             X509Certificate... chain) throws CertificateEncodingException {
 
-        if (chain == null || chain.length == 0) {
-            throw new IllegalArgumentException("X.509 certificate chain can't be null or empty");
-        }
+        checkNonEmpty(chain, "chain");
 
         // We can take a shortcut if there is only one certificate and
         // it already happens to be a PemEncoded instance. This is the

@@ -15,6 +15,7 @@
  */
 package io.netty.handler.stream;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
@@ -55,13 +56,8 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedNioStream(ReadableByteChannel in, int chunkSize) {
-        requireNonNull(in, "in");
-        if (chunkSize <= 0) {
-            throw new IllegalArgumentException("chunkSize: " + chunkSize +
-                    " (expected: a positive integer)");
-        }
-        this.in = in;
-        this.chunkSize = chunkSize;
+        this.in = requireNonNull(in, "in");
+        this.chunkSize = checkPositive(chunkSize, "chunkSize");
         byteBuffer = ByteBuffer.allocate(chunkSize);
     }
 

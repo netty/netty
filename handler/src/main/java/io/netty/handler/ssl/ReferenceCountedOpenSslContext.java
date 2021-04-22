@@ -45,7 +45,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
@@ -64,6 +63,7 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
@@ -530,7 +530,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Deprecated
     @UnstableApi
     public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
-        Objects.requireNonNull(method, "method");
+        requireNonNull(method, "method");
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {
@@ -848,9 +848,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             return 0;
         }
 
-        if (certChain.length == 0) {
-            throw new IllegalArgumentException("certChain can't be empty");
-        }
+        checkNonEmpty(certChain, "certChain");
 
         PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
         try {
