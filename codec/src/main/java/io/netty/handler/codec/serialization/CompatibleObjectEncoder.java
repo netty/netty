@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
@@ -53,11 +55,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
      *        the long term.
      */
     public CompatibleObjectEncoder(int resetInterval) {
-        if (resetInterval < 0) {
-            throw new IllegalArgumentException(
-                    "resetInterval: " + resetInterval);
-        }
-        this.resetInterval = resetInterval;
+        this.resetInterval = checkPositiveOrZero(resetInterval, "resetInterval");
     }
 
     /**
