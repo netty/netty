@@ -15,7 +15,10 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -243,10 +246,10 @@ public class HashedWheelTimer implements Timer {
             long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
             long maxPendingTimeouts) {
 
-        ObjectUtil.checkNotNull(threadFactory, "threadFactory");
-        ObjectUtil.checkNotNull(unit, "unit");
-        ObjectUtil.checkPositive(tickDuration, "tickDuration");
-        ObjectUtil.checkPositive(ticksPerWheel, "ticksPerWheel");
+        checkNotNull(threadFactory, "threadFactory");
+        checkNotNull(unit, "unit");
+        checkPositive(tickDuration, "tickDuration");
+        checkPositive(ticksPerWheel, "ticksPerWheel");
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
@@ -296,14 +299,8 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
-        if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel must be greater than 0: " + ticksPerWheel);
-        }
-        if (ticksPerWheel > 1073741824) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel may not be greater than 2^30: " + ticksPerWheel);
-        }
+        //ticksPerWheel may not be greater than 2^30
+        checkInRange(ticksPerWheel, 1, 1073741824, "ticksPerWheel");
 
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
@@ -401,8 +398,8 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        ObjectUtil.checkNotNull(task, "task");
-        ObjectUtil.checkNotNull(unit, "unit");
+        checkNotNull(task, "task");
+        checkNotNull(unit, "unit");
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 

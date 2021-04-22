@@ -16,7 +16,9 @@
 
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.ConcurrentMap;
@@ -38,9 +40,9 @@ public abstract class ConstantPool<T extends Constant<T>> {
      */
     public T valueOf(Class<?> firstNameComponent, String secondNameComponent) {
         return valueOf(
-                ObjectUtil.checkNotNull(firstNameComponent, "firstNameComponent").getName() +
+                checkNotNull(firstNameComponent, "firstNameComponent").getName() +
                 '#' +
-                ObjectUtil.checkNotNull(secondNameComponent, "secondNameComponent"));
+                checkNotNull(secondNameComponent, "secondNameComponent"));
     }
 
     /**
@@ -52,8 +54,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * @param name the name of the {@link Constant}
      */
     public T valueOf(String name) {
-        checkNotNullAndNotEmpty(name);
-        return getOrCreate(name);
+        return getOrCreate(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -78,8 +79,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * Returns {@code true} if a {@link AttributeKey} exists for the given {@code name}.
      */
     public boolean exists(String name) {
-        checkNotNullAndNotEmpty(name);
-        return constants.containsKey(name);
+        return constants.containsKey(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -87,8 +87,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * {@link IllegalArgumentException} if a {@link Constant} for the given {@code name} exists.
      */
     public T newInstance(String name) {
-        checkNotNullAndNotEmpty(name);
-        return createOrThrow(name);
+        return createOrThrow(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -107,16 +106,6 @@ public abstract class ConstantPool<T extends Constant<T>> {
         }
 
         throw new IllegalArgumentException(String.format("'%s' is already in use", name));
-    }
-
-    private static String checkNotNullAndNotEmpty(String name) {
-        ObjectUtil.checkNotNull(name, "name");
-
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
-        return name;
     }
 
     protected abstract T newConstant(int id, String name);

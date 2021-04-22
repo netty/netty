@@ -22,6 +22,8 @@
 
 package io.netty.util.internal;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -312,9 +314,7 @@ public final class ThreadLocalRandom extends Random {
      * @throws IllegalArgumentException if n is not positive
      */
     public long nextLong(long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException("n must be positive");
-        }
+        checkPositive(n, "n");
 
         // Divide n by two until small enough for nextInt. On each
         // iteration (at most 31 of them but usually much less),
@@ -361,9 +361,7 @@ public final class ThreadLocalRandom extends Random {
      * @throws IllegalArgumentException if n is not positive
      */
     public double nextDouble(double n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException("n must be positive");
-        }
+        checkPositive(n, "n");
         return nextDouble() * n;
     }
 
