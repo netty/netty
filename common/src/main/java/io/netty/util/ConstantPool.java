@@ -16,6 +16,7 @@
 
 package io.netty.util;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,10 +38,9 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
      */
     public T valueOf(Class<?> firstNameComponent, String secondNameComponent) {
-        requireNonNull(firstNameComponent, "firstNameComponent");
-        requireNonNull(secondNameComponent, "secondNameComponent");
-
-        return valueOf(firstNameComponent.getName() + '#' + secondNameComponent);
+        return valueOf(
+                requireNonNull(firstNameComponent, "firstNameComponent").getName() + '#' +
+                        requireNonNull(secondNameComponent, "secondNameComponent"));
     }
 
     /**
@@ -52,8 +52,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * @param name the name of the {@link Constant}
      */
     public T valueOf(String name) {
-        checkNotNullAndNotEmpty(name);
-        return getOrCreate(name);
+        return getOrCreate(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -78,8 +77,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * Returns {@code true} if a {@link AttributeKey} exists for the given {@code name}.
      */
     public boolean exists(String name) {
-        checkNotNullAndNotEmpty(name);
-        return constants.containsKey(name);
+        return constants.containsKey(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -87,8 +85,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * {@link IllegalArgumentException} if a {@link Constant} for the given {@code name} exists.
      */
     public T newInstance(String name) {
-        checkNotNullAndNotEmpty(name);
-        return createOrThrow(name);
+        return createOrThrow(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -107,16 +104,6 @@ public abstract class ConstantPool<T extends Constant<T>> {
         }
 
         throw new IllegalArgumentException(String.format("'%s' is already in use", name));
-    }
-
-    private static String checkNotNullAndNotEmpty(String name) {
-        requireNonNull(name, "name");
-
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
-        return name;
     }
 
     protected abstract T newConstant(int id, String name);

@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.util.Arrays;
 
@@ -23,17 +25,11 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     private int pos;
 
     public AppendableCharSequence(int length) {
-        if (length < 1) {
-            throw new IllegalArgumentException("length: " + length + " (length: >= 1)");
-        }
-        chars = new char[length];
+        chars = new char[checkPositive(length, "length")];
     }
 
     private AppendableCharSequence(char[] chars) {
-        if (chars.length < 1) {
-            throw new IllegalArgumentException("length: " + chars.length + " (length: >= 1)");
-        }
-        this.chars = chars;
+        this.chars = checkNonEmpty(chars, "chars");
         pos = chars.length;
     }
 

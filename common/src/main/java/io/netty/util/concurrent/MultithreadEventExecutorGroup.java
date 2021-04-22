@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 /**
  * {@link EventExecutorGroup} implementation that handles their tasks with multiple threads at
  * the same time.
@@ -115,9 +117,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor, int maxPendingTasks,
                                             RejectedExecutionHandler rejectedHandler, Object... args) {
-        if (nThreads <= 0) {
-            throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
-        }
+        checkPositive(nThreads, "nThreads");
 
         if (executor == null) {
             executor = new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass()));

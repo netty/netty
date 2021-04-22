@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 import static java.util.Objects.requireNonNull;
 
@@ -244,12 +246,8 @@ public class HashedWheelTimer implements Timer {
             long maxPendingTimeouts) {
         requireNonNull(threadFactory, "threadFactory");
         requireNonNull(unit, "unit");
-        if (tickDuration <= 0) {
-            throw new IllegalArgumentException("tickDuration must be greater than 0: " + tickDuration);
-        }
-        if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException("ticksPerWheel must be greater than 0: " + ticksPerWheel);
-        }
+        checkPositive(tickDuration, "tickDuration");
+        checkPositive(ticksPerWheel, "ticksPerWheel");
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
@@ -299,14 +297,8 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
-        if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel must be greater than 0: " + ticksPerWheel);
-        }
-        if (ticksPerWheel > 1073741824) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel may not be greater than 2^30: " + ticksPerWheel);
-        }
+        //ticksPerWheel may not be greater than 2^30
+        checkInRange(ticksPerWheel, 1, 1073741824, "ticksPerWheel");
 
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
@@ -404,7 +396,7 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        requireNonNull(task, "taks");
+        requireNonNull(task, "task");
         requireNonNull(unit, "unit");
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();

@@ -15,7 +15,7 @@
  */
 package io.netty.util.internal;
 
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,10 +58,7 @@ public final class SystemPropertyUtil {
      *         specified property is not allowed.
      */
     public static String get(final String key, String def) {
-        requireNonNull(key, "key");
-        if (key.isEmpty()) {
-            throw new IllegalArgumentException("key must not be empty.");
-        }
+        checkNonEmpty(key, "key");
 
         String value = null;
         try {
