@@ -22,6 +22,7 @@ import javax.net.ssl.SSLEngine;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * Provides an {@link SSLEngine} agnostic way to configure a {@link ApplicationProtocolNegotiator}.
@@ -80,9 +81,7 @@ public final class ApplicationProtocolConfig {
         if (protocol == Protocol.NONE) {
             throw new IllegalArgumentException("protocol (" + Protocol.NONE + ") must not be " + Protocol.NONE + '.');
         }
-        if (supportedProtocols.isEmpty()) {
-            throw new IllegalArgumentException("supportedProtocols must be not empty");
-        }
+        checkNonEmpty(supportedProtocols, "supportedProtocols");
     }
 
     /**

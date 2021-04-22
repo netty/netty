@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
@@ -204,9 +206,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                             destroy();
                         }
                     }
-                    if (materialMap.isEmpty()) {
-                        throw new IllegalArgumentException("aliases must be non-empty");
-                    }
+                    checkNonEmpty(materialMap, "materialMap");
                 }
 
                 @Override

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.stream;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -81,10 +83,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
      */
     @Deprecated
     public ChunkedWriteHandler(int maxPendingWrites) {
-        if (maxPendingWrites <= 0) {
-            throw new IllegalArgumentException(
-                    "maxPendingWrites: " + maxPendingWrites + " (expected: > 0)");
-        }
+        checkPositive(maxPendingWrites, "maxPendingWrites");
     }
 
     @Override

@@ -40,6 +40,8 @@ import java.util.Map;
 import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -427,19 +429,14 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
-            checkNotNull(keyCertChain, "keyCertChain required for servers");
-            if (keyCertChain.length == 0) { // lgtm[java/dereferenced-value-may-be-null]
-                throw new IllegalArgumentException("keyCertChain must be non-empty");
-            }
+            checkNonEmpty(keyCertChain, "keyCertChain"); // lgtm[java/dereferenced-value-may-be-null]
             checkNotNull(key, "key required for servers");
         }
         if (keyCertChain == null || keyCertChain.length == 0) {
             this.keyCertChain = null;
         } else {
             for (X509Certificate cert: keyCertChain) {
-                if (cert == null) {
-                    throw new IllegalArgumentException("keyCertChain contains null entry");
-                }
+                checkNotNullWithIAE(cert, "cert");
             }
             this.keyCertChain = keyCertChain.clone();
         }

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.traffic;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+
 import io.netty.handler.traffic.GlobalChannelTrafficShapingHandler.PerChannel;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,9 +38,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     public GlobalChannelTrafficCounter(GlobalChannelTrafficShapingHandler trafficShapingHandler,
             ScheduledExecutorService executor, String name, long checkInterval) {
         super(trafficShapingHandler, executor, name, checkInterval);
-        if (executor == null) {
-            throw new IllegalArgumentException("Executor must not be null");
-        }
+        checkNotNullWithIAE(executor, "executor");
     }
 
     /**
