@@ -15,6 +15,8 @@
  */
 package io.netty.channel.pool;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.util.concurrent.EventExecutor;
@@ -173,12 +175,8 @@ public class FixedChannelPool extends SimpleChannelPool {
                             int maxConnections, int maxPendingAcquires,
                             boolean releaseHealthCheck, boolean lastRecentUsed) {
         super(bootstrap, handler, healthCheck, releaseHealthCheck, lastRecentUsed);
-        if (maxConnections < 1) {
-            throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: >= 1)");
-        }
-        if (maxPendingAcquires < 1) {
-            throw new IllegalArgumentException("maxPendingAcquires: " + maxPendingAcquires + " (expected: >= 1)");
-        }
+        checkPositive(maxConnections, "maxConnections");
+        checkPositive(maxPendingAcquires, "maxPendingAcquires");
         if (action == null && acquireTimeoutMillis == -1) {
             timeoutTask = null;
             acquireTimeoutNanos = -1;

@@ -21,6 +21,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.unix.Limits.SIZEOF_JLONG;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 final class NativeLongArray {
     private ByteBuffer memory;
@@ -29,12 +30,9 @@ final class NativeLongArray {
     private int size;
 
     NativeLongArray(int capacity) {
-        if (capacity < 1) {
-            throw new IllegalArgumentException("capacity must be >= 1 but was " + capacity);
-        }
+        this.capacity = checkPositive(capacity, "capacity");
         memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(capacity));
         memoryAddress = Buffer.memoryAddress(memory);
-        this.capacity = capacity;
     }
 
     private static int idx(int index) {
