@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,10 +46,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      */
     public ZlibDecoder(int maxAllocation) {
-        if (maxAllocation < 0) {
-            throw new IllegalArgumentException("maxAllocation must be >= 0");
-        }
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     /**

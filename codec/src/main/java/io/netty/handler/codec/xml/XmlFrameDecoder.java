@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.xml;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -78,10 +80,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
     private final int maxFrameLength;
 
     public XmlFrameDecoder(int maxFrameLength) {
-        if (maxFrameLength < 1) {
-            throw new IllegalArgumentException("maxFrameLength must be a positive int");
-        }
-        this.maxFrameLength = maxFrameLength;
+        this.maxFrameLength = checkPositive(maxFrameLength, "maxFrameLength");
     }
 
     @Override

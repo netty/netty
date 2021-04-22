@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.json;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -80,10 +82,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
      *
      */
     public JsonObjectDecoder(int maxObjectLength, boolean streamArrayElements) {
-        if (maxObjectLength < 1) {
-            throw new IllegalArgumentException("maxObjectLength must be a positive int");
-        }
-        this.maxObjectLength = maxObjectLength;
+        this.maxObjectLength = checkPositive(maxObjectLength, "maxObjectLength");
         this.streamArrayElements = streamArrayElements;
     }
 
