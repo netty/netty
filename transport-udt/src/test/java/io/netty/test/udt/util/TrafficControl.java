@@ -16,6 +16,8 @@
 
 package io.netty.test.udt.util;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -62,9 +64,7 @@ public final class TrafficControl {
      * @param time - delay in milliseconds; use zero to remove delay.
      */
     public static void delay(final int time) throws Exception {
-        if (time < 0) {
-            throw new IllegalArgumentException("negative latency");
-        }
+        checkPositiveOrZero(time, "time");
         final int delay = time / 2;
         if (delay == 0) {
             UnitHelp.process(String.format(TC_RESET, "lo"));

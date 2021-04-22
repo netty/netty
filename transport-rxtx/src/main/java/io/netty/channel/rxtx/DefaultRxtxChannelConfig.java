@@ -33,6 +33,7 @@ import static io.netty.channel.rxtx.RxtxChannelOption.READ_TIMEOUT;
 import static io.netty.channel.rxtx.RxtxChannelOption.RTS;
 import static io.netty.channel.rxtx.RxtxChannelOption.STOP_BITS;
 import static io.netty.channel.rxtx.RxtxChannelOption.WAIT_TIME;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default configuration class for RXTX device connections.
@@ -190,19 +191,13 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     @Override
     public RxtxChannelConfig setWaitTimeMillis(final int waitTimeMillis) {
-        if (waitTimeMillis < 0) {
-            throw new IllegalArgumentException("Wait time must be >= 0");
-        }
-        waitTime = waitTimeMillis;
+        this.waitTime = checkPositiveOrZero(waitTimeMillis, "waitTimeMillis");
         return this;
     }
 
     @Override
     public RxtxChannelConfig setReadTimeout(int readTimeout) {
-        if (readTimeout < 0) {
-            throw new IllegalArgumentException("readTime must be >= 0");
-        }
-        this.readTimeout = readTimeout;
+        this.readTimeout = checkPositiveOrZero(readTimeout, "readTimeout");
         return this;
     }
 
