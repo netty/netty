@@ -250,9 +250,13 @@ public final class ByteBufUtil {
      * {@code a[aStartIndex : aStartIndex + length] == b[bStartIndex : bStartIndex + length]}
      */
     public static boolean equals(ByteBuf a, int aStartIndex, ByteBuf b, int bStartIndex, int length) {
-        if (aStartIndex < 0 || bStartIndex < 0 || length < 0) {
-            throw new IllegalArgumentException("All indexes and lengths must be non-negative");
-        }
+        checkNotNull(a, "a");
+        checkNotNull(b, "b");
+        // All indexes and lengths must be non-negative
+        checkPositiveOrZero(aStartIndex, "aStartIndex");
+        checkPositiveOrZero(bStartIndex, "bStartIndex");
+        checkPositiveOrZero(length, "length");
+
         if (a.writerIndex() - length < aStartIndex || b.writerIndex() - length < bStartIndex) {
             return false;
         }

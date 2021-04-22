@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -108,7 +110,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
             if (releaseOnClose) {
                 buffer.release();
             }
-            throw new IllegalArgumentException("length: " + length);
+            checkPositiveOrZero(length, "length");
         }
         if (length > buffer.readableBytes()) {
             if (releaseOnClose) {
