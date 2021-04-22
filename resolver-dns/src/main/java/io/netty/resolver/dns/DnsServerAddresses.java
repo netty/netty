@@ -17,6 +17,7 @@
 package io.netty.resolver.dns;
 
 import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -176,11 +177,7 @@ public abstract class DnsServerAddresses {
             list.add(a);
         }
 
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("empty addresses");
-        }
-
-        return list;
+        return checkNonEmpty(list, "list");
     }
 
     private static List<InetSocketAddress> sanitize(InetSocketAddress[] addresses) {

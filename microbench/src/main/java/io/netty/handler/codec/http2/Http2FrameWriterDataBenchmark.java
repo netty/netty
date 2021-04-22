@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeaderInternal;
 import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -124,7 +125,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
             boolean needToReleaseHeaders = true;
             boolean needToReleaseData = true;
             try {
-                verifyStreamId(streamId, "Stream ID");
+                checkPositive(streamId, "streamId");
                 verifyPadding(padding);
 
                 boolean lastFrame;
@@ -173,12 +174,6 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                 return promiseAggregator;
             }
             return promiseAggregator.doneAllocatingPromises();
-        }
-
-        private static void verifyStreamId(int streamId, String argumentName) {
-            if (streamId <= 0) {
-                throw new IllegalArgumentException(argumentName + " must be > 0");
-            }
         }
 
         private static int paddingBytes(int padding) {
