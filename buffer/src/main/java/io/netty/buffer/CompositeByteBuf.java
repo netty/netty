@@ -1660,6 +1660,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             if (buf.nioBufferCount() == 1) {
                 return buf.nioBuffer(c.idx(index), length);
             }
+            break;
+        default:
+            break;
         }
 
         ByteBuffer[] buffers = nioBuffers(index, length);
