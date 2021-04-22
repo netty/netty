@@ -19,6 +19,8 @@
 
 package io.netty.example.worldclock;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 @SuppressWarnings("all")
 public final class WorldClockProtocol {
   private WorldClockProtocol() {}
@@ -822,9 +824,7 @@ public final class WorldClockProtocol {
        * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
        */
       public Builder setContinent(io.netty.example.worldclock.WorldClockProtocol.Continent value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
+        checkNotNull(value, "value");
         bitField0_ |= 0x00000001;
         continent_ = value;
         onChanged();
@@ -886,9 +886,7 @@ public final class WorldClockProtocol {
        */
       public Builder setCity(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
+        checkNotNull(value, "value");
   bitField0_ |= 0x00000002;
         city_ = value;
         onChanged();
@@ -908,9 +906,7 @@ public final class WorldClockProtocol {
        */
       public Builder setCityBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
+        checkNotNull(value, "value");
   bitField0_ |= 0x00000002;
         city_ = value;
         onChanged();
@@ -1438,9 +1434,7 @@ public final class WorldClockProtocol {
       public Builder setLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocationIsMutable();
           location_.set(index, value);
           onChanged();
@@ -1468,9 +1462,7 @@ public final class WorldClockProtocol {
        */
       public Builder addLocation(io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocationIsMutable();
           location_.add(value);
           onChanged();
@@ -1485,9 +1477,7 @@ public final class WorldClockProtocol {
       public Builder addLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocationIsMutable();
           location_.add(index, value);
           onChanged();
@@ -2501,9 +2491,7 @@ public final class WorldClockProtocol {
        * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
        */
       public Builder setDayOfWeek(io.netty.example.worldclock.WorldClockProtocol.DayOfWeek value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
+        checkNotNull(value, "value");
         bitField0_ |= 0x00000008;
         dayOfWeek_ = value;
         onChanged();
@@ -3145,9 +3133,7 @@ public final class WorldClockProtocol {
       public Builder setLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocalTimeIsMutable();
           localTime_.set(index, value);
           onChanged();
@@ -3175,9 +3161,7 @@ public final class WorldClockProtocol {
        */
       public Builder addLocalTime(io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocalTimeIsMutable();
           localTime_.add(value);
           onChanged();
@@ -3192,9 +3176,7 @@ public final class WorldClockProtocol {
       public Builder addLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+          checkNotNull(value, "value");
           ensureLocalTimeIsMutable();
           localTime_.add(index, value);
           onChanged();
