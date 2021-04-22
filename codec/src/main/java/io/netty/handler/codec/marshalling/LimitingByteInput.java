@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.marshalling;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import org.jboss.marshalling.ByteInput;
 
 import java.io.IOException;
@@ -33,11 +35,8 @@ class LimitingByteInput implements ByteInput {
     private long read;
 
     LimitingByteInput(ByteInput input, long limit) {
-        if (limit <= 0) {
-            throw new IllegalArgumentException("The limit MUST be > 0");
-        }
         this.input = input;
-        this.limit = limit;
+        this.limit = checkPositive(limit, "limit");
     }
 
     @Override
