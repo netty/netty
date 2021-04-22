@@ -16,6 +16,8 @@
 package io.netty.channel.epoll;
 
 import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -36,13 +38,8 @@ final class TcpMd5Util {
         // Validate incoming values
         for (Entry<InetAddress, byte[]> e : newKeys.entrySet()) {
             final byte[] key = e.getValue();
-            if (e.getKey() == null) {
-                throw new IllegalArgumentException("newKeys contains an entry with null address: " + newKeys);
-            }
-            requireNonNull(key, "newKeys[" + e.getKey() + "]");
-            if (key.length == 0) {
-                throw new IllegalArgumentException("newKeys[" + e.getKey() + "] has an empty key.");
-            }
+            checkNotNullWithIAE(e.getKey(), "e.getKey");
+            checkNonEmpty(key, e.getKey().toString());
             if (key.length > Native.TCP_MD5SIG_MAXKEYLEN) {
                 throw new IllegalArgumentException("newKeys[" + e.getKey() +
                     "] has a key with invalid length; should not exceed the maximum length (" +

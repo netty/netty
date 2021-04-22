@@ -316,10 +316,11 @@ public class DefaultChannelConfig implements ChannelConfig {
      * is of type {@link MaxMessagesRecvByteBufAllocator}.
      */
     private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+        requireNonNull(allocator, "allocator");
+        requireNonNull(metadata, "metadata");
         if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
             ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
         }
-        requireNonNull(allocator, "allocator");
         setRecvByteBufAllocator(allocator);
     }
 
