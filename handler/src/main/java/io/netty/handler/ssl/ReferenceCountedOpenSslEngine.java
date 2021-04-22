@@ -28,7 +28,6 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -75,6 +74,8 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -717,12 +718,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final SSLEngineResult wrap(
             final ByteBuffer[] srcs, int offset, final int length, final ByteBuffer dst) throws SSLException {
         // Throw required runtime exceptions
-        if (srcs == null) {
-            throw new IllegalArgumentException("srcs is null");
-        }
-        if (dst == null) {
-            throw new IllegalArgumentException("dst is null");
-        }
+        checkNotNullWithIAE(srcs, "srcs");
+        checkNotNullWithIAE(dst, "dst");
 
         if (offset >= srcs.length || offset + length > srcs.length) {
             throw new IndexOutOfBoundsException(
@@ -1090,16 +1087,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final ByteBuffer[] dsts, int dstsOffset, final int dstsLength) throws SSLException {
 
         // Throw required runtime exceptions
-        ObjectUtil.checkNotNull(srcs, "srcs");
+        checkNotNullWithIAE(srcs, "srcs");
         if (srcsOffset >= srcs.length
                 || srcsOffset + srcsLength > srcs.length) {
             throw new IndexOutOfBoundsException(
                     "offset: " + srcsOffset + ", length: " + srcsLength +
                             " (expected: offset <= offset + length <= srcs.length (" + srcs.length + "))");
         }
-        if (dsts == null) {
-            throw new IllegalArgumentException("dsts is null");
-        }
+        checkNotNullWithIAE(dsts, "dsts");
         if (dstsOffset >= dsts.length || dstsOffset + dstsLength > dsts.length) {
             throw new IndexOutOfBoundsException(
                     "offset: " + dstsOffset + ", length: " + dstsLength +
@@ -1108,10 +1103,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         long capacity = 0;
         final int dstsEndOffset = dstsOffset + dstsLength;
         for (int i = dstsOffset; i < dstsEndOffset; i ++) {
-            ByteBuffer dst = dsts[i];
-            if (dst == null) {
-                throw new IllegalArgumentException("dsts[" + i + "] is null");
-            }
+            ByteBuffer dst = checkNotNullArrayParam(dsts[i], i, "dsts");
             if (dst.isReadOnly()) {
                 throw new ReadOnlyBufferException();
             }
@@ -1121,10 +1113,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final int srcsEndOffset = srcsOffset + srcsLength;
         long len = 0;
         for (int i = srcsOffset; i < srcsEndOffset; i++) {
-            ByteBuffer src = srcs[i];
-            if (src == null) {
-                throw new IllegalArgumentException("srcs[" + i + "] is null");
-            }
+            ByteBuffer src = checkNotNullArrayParam(srcs[i], i, "srcs");
             len += src.remaining();
         }
 
@@ -1706,10 +1695,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private void setEnabledProtocols0(String[] protocols, boolean cache) {
-        if (protocols == null) {
-            // This is correct from the API docs
-            throw new IllegalArgumentException();
-        }
+        // This is correct from the API docs
+        checkNotNullWithIAE(protocols, "protocols");
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
         for (String p: protocols) {
@@ -2349,8 +2336,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void putValue(String name, Object value) {
-            ObjectUtil.checkNotNull(name, "name");
-            ObjectUtil.checkNotNull(value, "value");
+            checkNotNull(name, "name");
+            checkNotNull(value, "value");
 
             final Object old;
             synchronized (this) {
@@ -2371,7 +2358,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Object getValue(String name) {
-            ObjectUtil.checkNotNull(name, "name");
+            checkNotNull(name, "name");
             synchronized (this) {
                 if (values == null) {
                     return null;
@@ -2382,7 +2369,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void removeValue(String name) {
-            ObjectUtil.checkNotNull(name, "name");
+            checkNotNull(name, "name");
 
             final Object old;
             synchronized (this) {

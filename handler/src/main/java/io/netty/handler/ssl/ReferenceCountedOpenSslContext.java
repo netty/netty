@@ -27,7 +27,6 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -66,6 +65,7 @@ import javax.net.ssl.X509TrustManager;
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -531,7 +531,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Deprecated
     @UnstableApi
     public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
-        ObjectUtil.checkNotNull(method, "method");
+        checkNotNull(method, "method");
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {
@@ -861,9 +861,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             return 0;
         }
 
-        if (certChain.length == 0) {
-            throw new IllegalArgumentException("certChain can't be empty");
-        }
+        checkNonEmpty(certChain, "certChain");
 
         PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
         try {

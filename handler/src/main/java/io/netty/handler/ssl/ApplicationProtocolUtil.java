@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,17 +40,10 @@ final class ApplicationProtocolUtil {
 
         List<String> result = new ArrayList<String>(initialListSize);
         for (String p : protocols) {
-            if (p == null || p.isEmpty()) {
-                throw new IllegalArgumentException("protocol cannot be null or empty");
-            }
-            result.add(p);
+            result.add(checkNonEmpty(p, "p"));
         }
 
-        if (result.isEmpty()) {
-            throw new IllegalArgumentException("protocols cannot empty");
-        }
-
-        return result;
+        return checkNonEmpty(result, "result");
     }
 
     static List<String> toList(String... protocols) {
@@ -62,16 +57,9 @@ final class ApplicationProtocolUtil {
 
         List<String> result = new ArrayList<String>(initialListSize);
         for (String p : protocols) {
-            if (p == null || p.isEmpty()) {
-                throw new IllegalArgumentException("protocol cannot be null or empty");
-            }
-            result.add(p);
+            result.add(checkNonEmpty(p, "p"));
         }
 
-        if (result.isEmpty()) {
-            throw new IllegalArgumentException("protocols cannot empty");
-        }
-
-        return result;
+        return checkNonEmpty(result, "result");
     }
 }

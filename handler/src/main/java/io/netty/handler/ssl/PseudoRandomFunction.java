@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.EmptyArrays;
 
 import javax.crypto.Mac;
@@ -59,9 +61,7 @@ final class PseudoRandomFunction {
      * @throws IllegalArgumentException if the algo could not be found.
      */
     static byte[] hash(byte[] secret, byte[] label, byte[] seed, int length, String algo) {
-        if (length < 0) {
-            throw new IllegalArgumentException("You must provide a length greater than zero.");
-        }
+        checkPositiveOrZero(length, "length");
         try {
             Mac hmac = Mac.getInstance(algo);
             hmac.init(new SecretKeySpec(secret, algo));
