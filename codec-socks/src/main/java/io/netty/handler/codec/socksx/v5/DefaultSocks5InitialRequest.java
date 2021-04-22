@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v5;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -41,11 +43,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
             list.add(m);
         }
 
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("authMethods is empty");
-        }
-
-        this.authMethods = Collections.unmodifiableList(list);
+        this.authMethods = Collections.unmodifiableList(checkNonEmpty(list, "list"));
     }
 
     public DefaultSocks5InitialRequest(Iterable<Socks5AuthMethod> authMethods) {
@@ -59,11 +57,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
             list.add(m);
         }
 
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("authMethods is empty");
-        }
-
-        this.authMethods = Collections.unmodifiableList(list);
+        this.authMethods = Collections.unmodifiableList(checkNonEmpty(list, "list"));
     }
 
     @Override
