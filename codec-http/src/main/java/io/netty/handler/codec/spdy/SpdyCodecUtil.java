@@ -15,8 +15,10 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.ObjectUtil;
 
 final class SpdyCodecUtil {
 
@@ -287,11 +289,7 @@ final class SpdyCodecUtil {
      * Validate a SPDY header name.
      */
     static void validateHeaderName(CharSequence name) {
-        ObjectUtil.checkNotNull(name, "name");
-        if (name.length() == 0) {
-            throw new IllegalArgumentException(
-                    "name cannot be length zero");
-        }
+        checkNonEmpty(name, "name");
         // Since name may only contain ascii characters, for valid names
         // name.length() returns the number of bytes when UTF-8 encoded.
         if (name.length() > SPDY_MAX_NV_LENGTH) {
@@ -318,7 +316,7 @@ final class SpdyCodecUtil {
      * Validate a SPDY header value. Does not validate max length.
      */
     static void validateHeaderValue(CharSequence value) {
-        ObjectUtil.checkNotNull(value, "value");
+        checkNotNull(value, "value");
         for (int i = 0; i < value.length(); i ++) {
             char c = value.charAt(i);
             if (c == 0) {

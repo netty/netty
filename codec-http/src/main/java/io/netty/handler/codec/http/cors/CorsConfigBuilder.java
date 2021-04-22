@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 
@@ -378,10 +380,7 @@ public final class CorsConfigBuilder {
          * @param value the value that will be returned when the call method is invoked.
          */
         private ConstantValueGenerator(final Object value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value must not be null");
-            }
-            this.value = value;
+            this.value = checkNotNullWithIAE(value, "value");
         }
 
         @Override

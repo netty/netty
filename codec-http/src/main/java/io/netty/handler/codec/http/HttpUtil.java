@@ -32,6 +32,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.StringUtil.COMMA;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -604,12 +605,7 @@ public final class HttpUtil {
         }
         try {
             final long value = Long.parseLong(firstField);
-            if (value < 0) {
-                // Reject the message as invalid
-                throw new IllegalArgumentException(
-                        "Content-Length value must be >=0: " + value);
-            }
-            return value;
+            return checkPositiveOrZero(value, "Content-Length value");
         } catch (NumberFormatException e) {
             // Reject the message as invalid
             throw new IllegalArgumentException(

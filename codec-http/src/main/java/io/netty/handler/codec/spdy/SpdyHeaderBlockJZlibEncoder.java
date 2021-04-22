@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.CompressionException;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
@@ -122,9 +123,8 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     @Override
     public ByteBuf encode(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
-        if (frame == null) {
-            throw new IllegalArgumentException("frame");
-        }
+        checkNotNullWithIAE(alloc, "alloc");
+        checkNotNullWithIAE(frame, "frame");
 
         if (finished) {
             return Unpooled.EMPTY_BUFFER;

@@ -15,8 +15,9 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -118,13 +119,7 @@ public final class RtspMethods {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        ObjectUtil.checkNotNull(name, "name");
-
-        name = name.trim().toUpperCase();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
+        name = checkNonEmptyAfterTrim(name, "name").toUpperCase();
         HttpMethod result = methodMap.get(name);
         if (result != null) {
             return result;
