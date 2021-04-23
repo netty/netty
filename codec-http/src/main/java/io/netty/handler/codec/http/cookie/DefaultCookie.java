@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeValue;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * The default {@link Cookie} implementation.
@@ -40,11 +41,7 @@ public class DefaultCookie implements Cookie {
      * Creates a new cookie with the specified name and value.
      */
     public DefaultCookie(String name, String value) {
-        name = checkNotNull(name, "name").trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-        this.name = name;
+        this.name = checkNonEmptyAfterTrim(name, "name");
         setValue(value);
     }
 

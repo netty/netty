@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -25,7 +27,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,11 +57,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      *      with fallback configuration.
      */
     public WebSocketServerExtensionHandler(WebSocketServerExtensionHandshaker... extensionHandshakers) {
-        ObjectUtil.checkNotNull(extensionHandshakers, "extensionHandshakers");
-        if (extensionHandshakers.length == 0) {
-            throw new IllegalArgumentException("extensionHandshakers must contains at least one handshaker");
-        }
-        this.extensionHandshakers = Arrays.asList(extensionHandshakers);
+        this.extensionHandshakers = Arrays.asList(checkNonEmpty(extensionHandshakers, "extensionHandshakers"));
     }
 
     @Override

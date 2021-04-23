@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
@@ -46,11 +48,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         name = REPLACE_PATTERN.matcher(name).replaceAll(" ");
         name = STRIP_PATTERN.matcher(name).replaceAll("");
 
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
-        this.name = name;
+        this.name = checkNonEmpty(name, "name");
         if (charset != null) {
             setCharset(charset);
         }

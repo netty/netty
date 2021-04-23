@@ -24,6 +24,7 @@ import io.netty.util.internal.SuppressJava6Requirement;
 import java.util.zip.Deflater;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
@@ -89,9 +90,8 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     @Override
     public ByteBuf encode(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
-        if (frame == null) {
-            throw new IllegalArgumentException("frame");
-        }
+        checkNotNullWithIAE(alloc, "alloc");
+        checkNotNullWithIAE(frame, "frame");
 
         if (finished) {
             return Unpooled.EMPTY_BUFFER;
