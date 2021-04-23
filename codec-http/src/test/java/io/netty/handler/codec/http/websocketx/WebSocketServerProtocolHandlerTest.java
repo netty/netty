@@ -196,6 +196,38 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testCheckWebSocketPathStartWithSlash() {
+        WebSocketRequestBuilder builder = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/")
+                .checkStartsWith(true)
+                .build();
+
+        FullHttpResponse response;
+
+        createChannel(config, null).writeInbound(builder.uri("/test").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/?q=v").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
     public void testCheckValidWebSocketPath() {
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
@@ -402,6 +434,10 @@ public class WebSocketServerProtocolHandlerTest {
             .websocketPath("/test")
             .sendCloseFrame(null)
             .build();
+        return createChannel(serverConfig, handler);
+    }
+
+    private EmbeddedChannel createChannel(WebSocketServerProtocolConfig serverConfig, ChannelHandler handler) {
         return new EmbeddedChannel(
                 new WebSocketServerProtocolHandler(serverConfig),
                 new HttpRequestDecoder(),
