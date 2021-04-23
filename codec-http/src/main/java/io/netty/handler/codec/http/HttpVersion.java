@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
@@ -108,12 +109,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
      *        the {@code "Connection"} header is set to {@code "close"} explicitly.
      */
     public HttpVersion(String text, boolean keepAliveDefault) {
-        requireNonNull(text, "text");
-
-        text = text.trim().toUpperCase();
-        if (text.isEmpty()) {
-            throw new IllegalArgumentException("empty text");
-        }
+        text = checkNonEmptyAfterTrim(text, "text").toUpperCase();
 
         Matcher m = VERSION_PATTERN.matcher(text);
         if (!m.matches()) {
@@ -148,12 +144,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private HttpVersion(
             String protocolName, int majorVersion, int minorVersion,
             boolean keepAliveDefault, boolean bytes) {
-        requireNonNull(protocolName, "protocolName");
-
-        protocolName = protocolName.trim().toUpperCase();
-        if (protocolName.isEmpty()) {
-            throw new IllegalArgumentException("empty protocolName");
-        }
+        protocolName = checkNonEmptyAfterTrim(protocolName, "protocolName").toUpperCase();
 
         for (int i = 0; i < protocolName.length(); i ++) {
             if (Character.isISOControl(protocolName.charAt(i)) ||

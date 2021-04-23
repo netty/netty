@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -52,11 +52,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
      *      with fallback configuration.
      */
     public WebSocketClientExtensionHandler(WebSocketClientExtensionHandshaker... extensionHandshakers) {
-        requireNonNull(extensionHandshakers, "extensionHandshakers");
-        if (extensionHandshakers.length == 0) {
-            throw new IllegalArgumentException("extensionHandshakers must contains at least one handshaker");
-        }
-        this.extensionHandshakers = Arrays.asList(extensionHandshakers);
+        this.extensionHandshakers = Arrays.asList(checkNonEmpty(extensionHandshakers, "extensionHandshakers"));
     }
 
     @Override

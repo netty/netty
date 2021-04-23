@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 import io.netty.handler.codec.http.HttpMethod;
 
@@ -119,13 +119,7 @@ public final class RtspMethods {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        requireNonNull(name, "name");
-
-        name = name.trim().toUpperCase();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
+        name = checkNonEmptyAfterTrim(name, "name").toUpperCase();
         HttpMethod result = methodMap.get(name);
         if (result != null) {
             return result;

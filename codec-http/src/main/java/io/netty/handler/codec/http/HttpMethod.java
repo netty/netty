@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.util.AsciiString;
 
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * The request method of HTTP or its derived protocols, such as
@@ -120,10 +120,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
     public HttpMethod(String name) {
-        name = requireNonNull(name, "name").trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
+        name = checkNonEmptyAfterTrim(name, "name");
 
         for (int i = 0; i < name.length(); i ++) {
             char c = name.charAt(i);
