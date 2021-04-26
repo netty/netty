@@ -31,6 +31,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
 
+import static io.netty.handler.ssl.SslUtils.getSSLContext;
+
 final class BouncyCastleAlpnSslUtils {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastleAlpnSslUtils.class);
     private static final Class BC_SSL_PARAMETERS;
@@ -76,8 +78,7 @@ final class BouncyCastleAlpnSslUtils {
                 }
             });
 
-            SSLContext context = SSLContext.getInstance("TLSV1.2", "BCJSSE");
-            context.init(null, null, null);
+            SSLContext context = getSSLContext("BCJSSE");
             SSLEngine engine = context.createSSLEngine();
             setParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                 @Override
