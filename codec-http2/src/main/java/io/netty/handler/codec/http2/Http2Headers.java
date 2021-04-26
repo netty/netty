@@ -55,7 +55,13 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
         /**
          * {@code :status}.
          */
-        STATUS(":status", false);
+        STATUS(":status", false),
+
+        /**
+         * {@code :protocol}, as defined in <a href="https://datatracker.ietf.org/doc/rfc8441/">RFC 8441,
+         * Bootstrapping WebSockets with HTTP/2</a>.
+         */
+        PROTOCOL(":protocol", true);
 
         private static final char PSEUDO_HEADER_PREFIX = ':';
         private static final byte PSEUDO_HEADER_PREFIX_BYTE = (byte) PSEUDO_HEADER_PREFIX;

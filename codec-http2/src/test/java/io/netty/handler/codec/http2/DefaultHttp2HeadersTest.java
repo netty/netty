@@ -180,6 +180,7 @@ public class DefaultHttp2HeadersTest {
         headers.authority(of("netty.io"));
         headers.add(of("name3"), of("value4"));
         headers.scheme(of("https"));
+        headers.add(of(":protocol"), of("websocket"));
         return headers;
     }
 }
