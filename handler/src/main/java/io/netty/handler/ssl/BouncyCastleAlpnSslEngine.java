@@ -16,8 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.SuppressJava6Requirement;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import java.util.List;
@@ -26,8 +24,6 @@ import java.util.function.BiFunction;
 
 @SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class BouncyCastleAlpnSslEngine extends JdkAlpnSslEngine {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastleAlpnSslEngine.class);
 
     BouncyCastleAlpnSslEngine(SSLEngine engine,
                      @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,

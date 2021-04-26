@@ -25,13 +25,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
+
+import static io.netty.handler.ssl.SslUtils.getSSLContext;
 
 @SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class BouncyCastleAlpnSslUtils {
@@ -79,8 +80,7 @@ final class BouncyCastleAlpnSslUtils {
                 }
             });
 
-            SSLContext context = SSLContext.getInstance("TLSV1.2", "BCJSSE");
-            context.init(null, null, null);
+            SSLContext context = getSSLContext("BCJSSE");
             SSLEngine engine = context.createSSLEngine();
             setParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                 @Override
