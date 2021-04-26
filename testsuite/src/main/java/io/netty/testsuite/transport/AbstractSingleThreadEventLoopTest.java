@@ -42,7 +42,7 @@ import io.netty.util.concurrent.Future;
 
 public abstract class AbstractSingleThreadEventLoopTest {
 
-    @Test
+    @Test(timeout = 5000)
     public void testChannelsRegistered() throws Exception {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
@@ -61,15 +61,22 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
             assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(2, registeredChannels(loop));
+                checkNumRegisteredChannels(loop, 2);
             }
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(1, registeredChannels(loop));
+                checkNumRegisteredChannels(loop, 1);
             }
         } finally {
             group.shutdownGracefully();
+        }
+    }
+
+    private static void checkNumRegisteredChannels(SingleThreadEventLoop loop, int numChannels) throws Exception {
+        // We need to loop as some EventLoop implementations may need some time to update the counter correctly.
+        while (registeredChannels(loop) != numChannels) {
+            Thread.sleep(50);
         }
     }
 
