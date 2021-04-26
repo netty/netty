@@ -112,7 +112,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         String websocketPath = serverConfig.websocketPath();
         String uri = req.uri();
         boolean checkStartUri = uri.startsWith(websocketPath);
-        boolean checkNextUri = checkNextUri(uri, websocketPath);
+        boolean checkNextUri = "/".equals(websocketPath) || checkNextUri(uri, websocketPath);
         return serverConfig.checkStartsWith() ? (checkStartUri && checkNextUri) : uri.equals(websocketPath);
     }
 
