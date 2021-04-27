@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,19 +20,17 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal {@link AddressResolver} implementation.
  */
-@UnstableApi
 public abstract class AbstractAddressResolver<T extends SocketAddress> implements AddressResolver<T> {
 
     private final EventExecutor executor;
@@ -43,7 +41,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      *                 by {@link #resolve(SocketAddress)}
      */
     protected AbstractAddressResolver(EventExecutor executor) {
-        this.executor = checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
         matcher = TypeParameterMatcher.find(this, AbstractAddressResolver.class, "T");
     }
 
@@ -53,7 +51,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      * @param addressType the type of the {@link SocketAddress} supported by this resolver
      */
     protected AbstractAddressResolver(EventExecutor executor, Class<? extends T> addressType) {
-        this.executor = checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
         matcher = TypeParameterMatcher.get(addressType);
     }
 
@@ -89,7 +87,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
     @Override
     public final Future<T> resolve(SocketAddress address) {
-        if (!isSupported(checkNotNull(address, "address"))) {
+        if (!isSupported(requireNonNull(address, "address"))) {
             // Address type not supported by the resolver
             return executor().newFailedFuture(new UnsupportedAddressTypeException());
         }
@@ -114,8 +112,8 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
     @Override
     public final Future<T> resolve(SocketAddress address, Promise<T> promise) {
-        checkNotNull(address, "address");
-        checkNotNull(promise, "promise");
+        requireNonNull(address, "address");
+        requireNonNull(promise, "promise");
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
@@ -141,7 +139,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
     @Override
     public final Future<List<T>> resolveAll(SocketAddress address) {
-        if (!isSupported(checkNotNull(address, "address"))) {
+        if (!isSupported(requireNonNull(address, "address"))) {
             // Address type not supported by the resolver
             return executor().newFailedFuture(new UnsupportedAddressTypeException());
         }
@@ -166,8 +164,8 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
     @Override
     public final Future<List<T>> resolveAll(SocketAddress address, Promise<List<T>> promise) {
-        checkNotNull(address, "address");
-        checkNotNull(promise, "promise");
+        requireNonNull(address, "address");
+        requireNonNull(promise, "promise");
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
