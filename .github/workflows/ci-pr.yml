@@ -48,7 +48,7 @@ jobs:
             ${{ runner.os }}-pr-${{ env.cache-name }}-
             ${{ runner.os }}-pr-
 
-      - uses: uraimo/run-on-arch-action@v2.0.5
+      - uses: uraimo/run-on-arch-action@v2.0.9
         name: Run commands
         id: runcmd
         with:
