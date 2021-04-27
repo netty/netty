@@ -1359,7 +1359,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
                 // in a re-entry fashion we execute a task on the executor queue to process after the stack unwinds
                 // to preserve order of events.
-                if (decodeOut.isReadable()) {
+                if (decodeOut.isReadable() && handshakePromise.isDone()) {
                     setState(STATE_FIRE_CHANNEL_READ);
                     if (isStateSet(STATE_UNWRAP_REENTRY)) {
                         executedRead = true;
