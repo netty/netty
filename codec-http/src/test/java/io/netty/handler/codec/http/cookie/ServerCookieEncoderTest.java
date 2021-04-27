@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.matchers.JUnitMatchers.containsString;
+
 import io.netty.handler.codec.DateFormatter;
 
 import java.text.ParseException;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import org.junit.Test;
 
 public class ServerCookieEncoderTest {
@@ -41,13 +43,14 @@ public class ServerCookieEncoderTest {
 
         int maxAge = 50;
 
-        String result =
-                "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
-        Cookie cookie = new DefaultCookie("myCookie", "myValue");
+        String result = "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere;" +
+                " Domain=.adomainsomewhere; Secure; SameSite=Lax";
+        DefaultCookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setDomain(".adomainsomewhere");
         cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
+        cookie.setSameSite(SameSite.Lax);
 
         String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
 
@@ -70,7 +73,7 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookiesStrict() {
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         result.add("cookie2=value2");
         result.add("cookie1=value3");
         Cookie cookie1 = new DefaultCookie("cookie1", "value1");
@@ -82,7 +85,7 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void illegalCharInCookieNameMakesStrictEncoderThrowsException() {
-        Set<Character> illegalChars = new HashSet<Character>();
+        Set<Character> illegalChars = new HashSet<>();
         // CTLs
         for (int i = 0x00; i <= 0x1F; i++) {
             illegalChars.add((char) i);
@@ -109,7 +112,7 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void illegalCharInCookieValueMakesStrictEncoderThrowsException() {
-        Set<Character> illegalChars = new HashSet<Character>();
+        Set<Character> illegalChars = new HashSet<>();
         // CTLs
         for (int i = 0x00; i <= 0x1F; i++) {
             illegalChars.add((char) i);
@@ -144,7 +147,7 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookiesLax() {
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         result.add("cookie1=value1");
         result.add("cookie2=value2");
         result.add("cookie1=value3");

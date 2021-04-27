@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package io.netty.util;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.StringUtil;
@@ -51,7 +53,7 @@ public final class ThreadDeathWatcher {
 
     // Use a MPMC queue as we may end up checking isEmpty() from multiple threads which may not be allowed to do
     // concurrently depending on the implementation of it in a MPSC queue.
-    private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<Entry>();
+    private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<>();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
     private static volatile Thread watcherThread;
@@ -77,12 +79,8 @@ public final class ThreadDeathWatcher {
      * @throws IllegalArgumentException if the specified {@code thread} is not alive
      */
     public static void watch(Thread thread, Runnable task) {
-        if (thread == null) {
-            throw new NullPointerException("thread");
-        }
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(thread, "thread");
+        requireNonNull(task, "task");
         if (!thread.isAlive()) {
             throw new IllegalArgumentException("thread must be alive.");
         }
@@ -94,12 +92,8 @@ public final class ThreadDeathWatcher {
      * Cancels the task scheduled via {@link #watch(Thread, Runnable)}.
      */
     public static void unwatch(Thread thread, Runnable task) {
-        if (thread == null) {
-            throw new NullPointerException("thread");
-        }
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(thread, "thread");
+        requireNonNull(task, "taks");
 
         schedule(thread, task, false);
     }
@@ -114,12 +108,9 @@ public final class ThreadDeathWatcher {
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    watcherThread.setContextClassLoader(null);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                watcherThread.setContextClassLoader(null);
+                return null;
             });
 
             watcherThread.start();
@@ -137,9 +128,7 @@ public final class ThreadDeathWatcher {
      * @return {@code true} if and only if the watcher thread has been terminated
      */
     public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         Thread watcherThread = ThreadDeathWatcher.watcherThread;
         if (watcherThread != null) {
@@ -154,7 +143,7 @@ public final class ThreadDeathWatcher {
 
     private static final class Watcher implements Runnable {
 
-        private final List<Entry> watchees = new ArrayList<Entry>();
+        private final List<Entry> watchees = new ArrayList<>();
 
         @Override
         public void run() {

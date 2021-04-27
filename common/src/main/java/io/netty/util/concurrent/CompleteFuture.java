@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,14 +16,20 @@
 
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link Future} implementation which represents a {@link Future} which has been completed already.
  */
-public abstract class CompleteFuture<V> extends AbstractFuture<V> {
+public abstract class CompleteFuture<V> implements Future<V> {
 
     private final EventExecutor executor;
+
+    // It is fine to not make this volatile as even if we override the value in there it does not matter as
+    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this CompletableFuture instance.
+    private DefaultFutureCompletionStage<V> stage;
 
     /**
      * Creates a new instance.
@@ -37,31 +43,32 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     /**
      * Return the {@link EventExecutor} which is used by this {@link CompleteFuture}.
      */
-    protected EventExecutor executor() {
+    @Override
+    public EventExecutor executor() {
         return executor;
     }
 
     @Override
     public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        if (listener == null) {
-            throw new NullPointerException("listener");
-        }
-        DefaultPromise.notifyListener(executor(), this, listener);
+        requireNonNull(listener, "listener");
+        DefaultPromise.safeExecute(executor(), () -> DefaultPromise.notifyListener0(this, listener));
         return this;
     }
 
     @Override
     public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        if (listeners == null) {
-            throw new NullPointerException("listeners");
-        }
-        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
+        requireNonNull(listeners, "listeners");
+        DefaultPromise.safeExecute(executor(), () -> notifyListeners(listeners));
+        return this;
+    }
+
+    private void notifyListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l : listeners) {
             if (l == null) {
                 break;
             }
-            DefaultPromise.notifyListener(executor(), this, l);
+            DefaultPromise.notifyListener0(this, l);
         }
-        return this;
     }
 
     @Override
@@ -148,5 +155,14 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
+    }
+
+    @Override
+    public FutureCompletionStage<V> asStage() {
+        DefaultFutureCompletionStage<V> stageAdapter = stage;
+        if (stageAdapter == null) {
+            stage = stageAdapter = new DefaultFutureCompletionStage<>(this);
+        }
+        return stageAdapter;
     }
 }

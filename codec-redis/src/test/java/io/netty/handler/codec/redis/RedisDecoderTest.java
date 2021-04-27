@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,6 +30,7 @@ import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 /**
@@ -305,5 +306,13 @@ public class RedisDecoderTest {
         ByteBuf childBuf = ((FullBulkStringRedisMessage) children.get(0)).content();
         ReferenceCountUtil.release(msg);
         ReferenceCountUtil.release(childBuf);
+    }
+
+    @Test
+    public void testPredefinedMessagesNotEqual() {
+        // both EMPTY_INSTANCE and NULL_INSTANCE have EMPTY_BUFFER as their 'data',
+        // however we need to check that they are not equal between themselves.
+        assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
+        assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,13 +19,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -66,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 /**
  * In extra class to be able to run tests with java7 without trying to load classes that not exists in java7.
@@ -75,11 +77,11 @@ final class SniClientJava8TestUtil {
     private SniClientJava8TestUtil() { }
 
     static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
-            throws Exception {
+            throws Throwable {
         final String sniHost = "sni.netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
         LocalAddress address = new LocalAddress("test");
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;
 
@@ -107,7 +109,7 @@ final class SniClientJava8TestUtil {
                     handler.engine().setSSLParameters(parameters);
 
                     ch.pipeline().addFirst(handler);
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                             if (evt instanceof SslHandshakeCompletionEvent) {
@@ -149,6 +151,8 @@ final class SniClientJava8TestUtil {
 
             promise.syncUninterruptibly();
             sslHandler.handshakeFuture().syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -260,7 +264,7 @@ final class SniClientJava8TestUtil {
                    IOException, CertificateException {
         return new SniX509KeyManagerFactory(
                 new SNIHostName(hostname), SslContext.buildKeyManagerFactory(
-                new X509Certificate[] { cert.cert() }, cert.key(), null, null, null));
+                new X509Certificate[] { cert.cert() }, null,  cert.key(), null, null, null));
     }
 
     private static final class SniX509KeyManagerFactory extends KeyManagerFactory {
@@ -281,7 +285,7 @@ final class SniClientJava8TestUtil {
 
                 @Override
                 protected KeyManager[] engineGetKeyManagers() {
-                    List<KeyManager> managers = new ArrayList<KeyManager>();
+                    List<KeyManager> managers = new ArrayList<>();
                     for (final KeyManager km: factory.getKeyManagers()) {
                         if (km instanceof X509ExtendedKeyManager) {
                             managers.add(new X509ExtendedKeyManager() {

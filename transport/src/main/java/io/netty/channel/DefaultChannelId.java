@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.MacAddressUtil.defaultMachineId;
@@ -145,7 +146,7 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         if (pid < 0) {
-            pid = PlatformDependent.threadLocalRandom().nextInt();
+            pid = ThreadLocalRandom.current().nextInt();
             logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 
@@ -176,7 +177,7 @@ public final class DefaultChannelId implements ChannelId {
         i = writeLong(i, Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
 
         // random
-        int random = PlatformDependent.threadLocalRandom().nextInt();
+        int random = ThreadLocalRandom.current().nextInt();
         i = writeInt(i, random);
         assert i == data.length;
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -339,7 +339,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getApplicationProtocol(getWrappedEngine());
+                return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
@@ -350,7 +350,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getHandshakeApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+                return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
@@ -361,7 +361,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                Java9SslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+                JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
             } finally {
                 assertErrorStackEmpty();
             }
@@ -372,7 +372,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+                return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
@@ -435,6 +435,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     }
 
     private static void assertErrorStackEmpty() {
-        Assert.assertEquals("SSL error stack non-empty", 0, SSL.getLastErrorNumber());
+        long error = SSL.getLastErrorNumber();
+        Assert.assertEquals("SSL error stack non-empty: " + SSL.getErrorString(error), 0, error);
     }
 }

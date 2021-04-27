@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -262,7 +262,7 @@ public final class Http2CodecUtil {
         private final ChannelPromise promise;
         private int expectedCount;
         private int doneCount;
-        private Throwable lastFailure;
+        private Throwable aggregateFailure;
         private boolean doneAllocating;
 
         SimpleChannelPromiseAggregator(ChannelPromise promise, Channel c, EventExecutor e) {
@@ -301,7 +301,7 @@ public final class Http2CodecUtil {
         public boolean tryFailure(Throwable cause) {
             if (allowFailure()) {
                 ++doneCount;
-                lastFailure = cause;
+                setAggregateFailure(cause);
                 if (allPromisesDone()) {
                     return tryPromise();
                 }
@@ -322,7 +322,7 @@ public final class Http2CodecUtil {
         public ChannelPromise setFailure(Throwable cause) {
             if (allowFailure()) {
                 ++doneCount;
-                lastFailure = cause;
+                setAggregateFailure(cause);
                 if (allPromisesDone()) {
                     return setPromise();
                 }
@@ -368,22 +368,28 @@ public final class Http2CodecUtil {
         }
 
         private ChannelPromise setPromise() {
-            if (lastFailure == null) {
+            if (aggregateFailure == null) {
                 promise.setSuccess();
                 return super.setSuccess(null);
             } else {
-                promise.setFailure(lastFailure);
-                return super.setFailure(lastFailure);
+                promise.setFailure(aggregateFailure);
+                return super.setFailure(aggregateFailure);
             }
         }
 
         private boolean tryPromise() {
-            if (lastFailure == null) {
+            if (aggregateFailure == null) {
                 promise.trySuccess();
                 return super.trySuccess(null);
             } else {
-                promise.tryFailure(lastFailure);
-                return super.tryFailure(lastFailure);
+                promise.tryFailure(aggregateFailure);
+                return super.tryFailure(aggregateFailure);
+            }
+        }
+
+        private void setAggregateFailure(Throwable cause) {
+            if (aggregateFailure == null) {
+                aggregateFailure = cause;
             }
         }
     }

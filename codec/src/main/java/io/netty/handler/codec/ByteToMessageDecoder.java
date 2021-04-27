@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,32 +16,46 @@
 package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.StringUtil;
 
-import java.util.List;
+import java.net.SocketAddress;
+
+import static java.lang.Integer.MAX_VALUE;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * {@link ChannelHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
  * other Message type.
  *
  * For example here is an implementation which reads all readable bytes from
- * the input {@link ByteBuf} and create a new {@link ByteBuf}.
+ * the input {@link ByteBuf}, creates a new {@link ByteBuf} and forward it to the next {@link ChannelHandler}
+ * in the {@link ChannelPipeline}.
  *
  * <pre>
  *     public class SquareDecoder extends {@link ByteToMessageDecoder} {
  *         {@code @Override}
- *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, List&lt;Object&gt; out)
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in)
  *                 throws {@link Exception} {
- *             out.add(in.readBytes(in.readableBytes()));
+ *             ctx.fireChannelRead(in.readBytes(in.readableBytes()));
  *         }
  *     }
  * </pre>
@@ -67,39 +81,39 @@ import java.util.List;
  * annotated with {@link @Sharable}.
  * <p>
  * Some methods such as {@link ByteBuf#readBytes(int)} will cause a memory leak if the returned buffer
- * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
- * to avoid leaking memory.
+ * is not released or fired through the {@link ChannelPipeline} via
+ * {@link ChannelHandlerContext#fireChannelRead(Object)}. Use derived buffers like {@link ByteBuf#readSlice(int)} to
+ * avoid leaking memory.
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
-    public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
-        @Override
-        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            try {
-                final ByteBuf buffer;
-                if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                        || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
-                    // Expand cumulation (by replace it) when either there is not more room in the buffer
-                    // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
-                    // duplicate().retain() or if its read-only.
-                    //
-                    // See:
-                    // - https://github.com/netty/netty/issues/2327
-                    // - https://github.com/netty/netty/issues/1764
-                    buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-                } else {
-                    buffer = cumulation;
-                }
-                buffer.writeBytes(in);
-                return buffer;
-            } finally {
-                // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
-                // for whatever release (for example because of OutOfMemoryError)
-                in.release();
+    public static final Cumulator MERGE_CUMULATOR = (alloc, cumulation, in) -> {
+        if (!cumulation.isReadable() && in.isContiguous()) {
+            // If cumulation is empty and input buffer is contiguous, use it directly
+            cumulation.release();
+            return in;
+        }
+        try {
+            final int required = in.readableBytes();
+            if (required > cumulation.maxWritableBytes() ||
+                    (required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1) ||
+                    cumulation.isReadOnly()) {
+                // Expand cumulation (by replacing it) under the following conditions:
+                // - cumulation cannot be resized to accommodate the additional data
+                // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
+                //   assumed to be shared (e.g. refCnt() > 1) and the reallocation may not be safe.
+                return expandCumulation(alloc, cumulation, in);
             }
+            cumulation.writeBytes(in, in.readerIndex(), required);
+            in.readerIndex(in.writerIndex());
+            return cumulation;
+        } finally {
+            // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
+            // for whatever release (for example because of OutOfMemoryError)
+            in.release();
         }
     };
 
@@ -108,46 +122,38 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Be aware that {@link CompositeByteBuf} use a more complex indexing implementation so depending on your use-case
      * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
      */
-    public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
-        @Override
-        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            ByteBuf buffer;
-            try {
-                if (cumulation.refCnt() > 1) {
-                    // Expand cumulation (by replace it) when the refCnt is greater then 1 which may happen when the
-                    // user use slice().retain() or duplicate().retain().
-                    //
-                    // See:
-                    // - https://github.com/netty/netty/issues/2327
-                    // - https://github.com/netty/netty/issues/1764
-                    buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-                    buffer.writeBytes(in);
-                } else {
-                    CompositeByteBuf composite;
-                    if (cumulation instanceof CompositeByteBuf) {
-                        composite = (CompositeByteBuf) cumulation;
-                    } else {
-                        composite = alloc.compositeBuffer(Integer.MAX_VALUE);
-                        composite.addComponent(true, cumulation);
-                    }
-                    composite.addComponent(true, in);
-                    in = null;
-                    buffer = composite;
+
+    public static final Cumulator COMPOSITE_CUMULATOR = (alloc, cumulation, in) -> {
+        if (!cumulation.isReadable()) {
+            cumulation.release();
+            return in;
+        }
+        CompositeByteBuf composite = null;
+        try {
+            if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
+                composite = (CompositeByteBuf) cumulation;
+                // Writer index must equal capacity if we are going to "write"
+                // new components to the end
+                if (composite.writerIndex() != composite.capacity()) {
+                    composite.capacity(composite.writerIndex());
                 }
-                return buffer;
-            } finally {
-                if (in != null) {
-                    // We must release if the ownership was not transferred as otherwise it may produce a leak if
-                    // writeBytes(...) throw for whatever release (for example because of OutOfMemoryError).
-                    in.release();
+            } else {
+                composite = alloc.compositeBuffer(Integer.MAX_VALUE).addFlattenedComponents(true, cumulation);
+            }
+            composite.addFlattenedComponents(true, in);
+            in = null;
+            return composite;
+        } finally {
+            if (in != null) {
+                // We must release if the ownership was not transferred as otherwise it may produce a leak
+                in.release();
+                // Also release any new buffer allocated if we're not returning it
+                if (composite != null && composite != cumulation) {
+                    composite.release();
                 }
             }
         }
     };
-
-    private static final byte STATE_INIT = 0;
-    private static final byte STATE_CALLING_CHILD_DECODE = 1;
-    private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
@@ -160,29 +166,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     private boolean firedChannelRead;
 
-    /**
-     * A bitmask where the bits are defined as
-     * <ul>
-     *     <li>{@link #STATE_INIT}</li>
-     *     <li>{@link #STATE_CALLING_CHILD_DECODE}</li>
-     *     <li>{@link #STATE_HANDLER_REMOVED_PENDING}</li>
-     * </ul>
-     *
-     * 解码状态
-     *  *
-     *  * 0 - 初始化
-     *  * 1 - 调用 {@link #decode(ChannelHandlerContext, ByteBuf, List)} 方法中，正在进行解码
-     *  * 2 - 准备移除
-     */
-
-    private byte decodeState = STATE_INIT;
     private int discardAfterReads = 16;
-    /**
-     * 已读取次数。
-     *
-     * 再读取 {@link #discardAfterReads} 次数据后，如果无法全部解码完，则进行释放，避免 OOM
-     */
     private int numReads;
+    private ByteToMessageDecoderContext context;
 
     protected ByteToMessageDecoder() {
         ensureNotSharable();
@@ -212,9 +198,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Set the {@link Cumulator} to use for cumulate the received {@link ByteBuf}s.
      */
     public void setCumulator(Cumulator cumulator) {
-        if (cumulator == null) {
-            throw new NullPointerException("cumulator");
-        }
+        requireNonNull(cumulator, "cumulator");
         this.cumulator = cumulator;
     }
 
@@ -251,11 +235,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     @Override
+    public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.context = new ByteToMessageDecoderContext(ctx);
+        handlerAdded0(this.context);
+    }
+
+    protected void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+    }
+
+    @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (decodeState == STATE_CALLING_CHILD_DECODE) {
-            decodeState = STATE_HANDLER_REMOVED_PENDING;
-            return;
-        }
         ByteBuf buf = cumulation;
         if (buf != null) {
             // Directly set this to null so we are sure we not access it in any other method here anymore.
@@ -269,7 +258,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 buf.release();
             }
         }
-        handlerRemoved0(ctx);
+        handlerRemoved0(this.context);
     }
 
     /**
@@ -280,17 +269,18 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
-            CodecOutputList out = CodecOutputList.newInstance();
+        if (msg instanceof ByteBufConvertible) {
             try {
-                ByteBuf data = (ByteBuf) msg;
+                ByteBuf data = ((ByteBufConvertible) msg).asByteBuf();
                 first = cumulation == null;
                 if (first) {
                     cumulation = data;
                 } else {
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
-                callDecode(ctx, cumulation, out);
+                assert context.ctx == ctx || ctx == context;
+
+                callDecode(context, cumulation);
             } catch (DecoderException e) {
                 throw e;
             } catch (Exception e) {
@@ -307,35 +297,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     discardSomeReadBytes();
                 }
 
-                int size = out.size();
-                firedChannelRead |= out.insertSinceRecycled();
-                fireChannelRead(ctx, out, size);
-                out.recycle();
+                firedChannelRead |= context.fireChannelReadCallCount() > 0;
+                context.reset();
             }
         } else {
             ctx.fireChannelRead(msg);
-        }
-    }
-
-    /**
-     * Get {@code numElements} out of the {@link List} and forward these through the pipeline.
-     */
-    static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
-        if (msgs instanceof CodecOutputList) {
-            fireChannelRead(ctx, (CodecOutputList) msgs, numElements);
-        } else {
-            for (int i = 0; i < numElements; i++) {
-                ctx.fireChannelRead(msgs.get(i));
-            }
-        }
-    }
-
-    /**
-     * Get {@code numElements} out of the {@link CodecOutputList} and forward these through the pipeline.
-     */
-    static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
-        for (int i = 0; i < numElements; i ++) {
-            ctx.fireChannelRead(msgs.getUnsafe(i));
         }
     }
 
@@ -365,46 +331,41 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        channelInputClosed(ctx, true);
+        assert context.ctx == ctx || ctx == context;
+        channelInputClosed(context, true);
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggered(evt);
         if (evt instanceof ChannelInputShutdownEvent) {
             // The decodeLast method is invoked when a channelInactive event is encountered.
             // This method is responsible for ending requests in some situations and must be called
             // when the input has been shutdown.
-            channelInputClosed(ctx, false);
+            assert context.ctx == ctx || ctx == context;
+            channelInputClosed(context, false);
         }
-        super.userEventTriggered(ctx, evt);
     }
 
-    private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
-        CodecOutputList out = CodecOutputList.newInstance();
+    private void channelInputClosed(ByteToMessageDecoderContext ctx, boolean callChannelInactive) {
         try {
-            channelInputClosed(ctx, out);
+            channelInputClosed(ctx);
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
             throw new DecoderException(e);
         } finally {
-            try {
-                if (cumulation != null) {
-                    cumulation.release();
-                    cumulation = null;
-                }
-                int size = out.size();
-                fireChannelRead(ctx, out, size);
-                if (size > 0) {
-                    // Something was read, call fireChannelReadComplete()
-                    ctx.fireChannelReadComplete();
-                }
-                if (callChannelInactive) {
-                    ctx.fireChannelInactive();
-                }
-            } finally {
-                // Recycle in all cases
-                out.recycle();
+            if (cumulation != null) {
+                cumulation.release();
+                cumulation = null;
+            }
+            if (ctx.fireChannelReadCallCount() > 0) {
+                ctx.reset();
+                // Something was read, call fireChannelReadComplete()
+                ctx.fireChannelReadComplete();
+            }
+            if (callChannelInactive) {
+                ctx.fireChannelInactive();
             }
         }
     }
@@ -413,45 +374,36 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
      * {@link ChannelInputShutdownEvent}.
      */
-    void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
+    void channelInputClosed(ByteToMessageDecoderContext ctx) throws Exception {
         if (cumulation != null) {
-            callDecode(ctx, cumulation, out);
-            decodeLast(ctx, cumulation, out);
+            callDecode(ctx, cumulation);
+            // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
+            // be unexpected.
+            if (!ctx.isRemoved()) {
+                // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
+                // See https://github.com/netty/netty/issues/10802.
+                ByteBuf buffer = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
+                decodeLast(ctx, buffer);
+            }
         } else {
-            decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
+            decodeLast(ctx, Unpooled.EMPTY_BUFFER);
         }
     }
 
     /**
      * Called once data should be decoded from the given {@link ByteBuf}. This method will call
-     * {@link #decode(ChannelHandlerContext, ByteBuf, List)} as long as decoding should take place.
+     * {@link #decode(ChannelHandlerContext, ByteBuf)} as long as decoding should take place.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link List} to which decoded messages should be added
      */
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    void callDecode(ByteToMessageDecoderContext ctx, ByteBuf in) {
         try {
-            while (in.isReadable()) {
-                int outSize = out.size();
-
-                if (outSize > 0) {
-                    fireChannelRead(ctx, out, outSize);
-                    out.clear();
-
-                    // Check if this handler was removed before continuing with decoding.
-                    // If it was removed, it is not safe to continue to operate on the buffer.
-                    //
-                    // See:
-                    // - https://github.com/netty/netty/issues/4635
-                    if (ctx.isRemoved()) {
-                        break;
-                    }
-                    outSize = 0;
-                }
+            while (in.isReadable() && !ctx.isRemoved()) {
 
                 int oldInputLength = in.readableBytes();
-                decodeRemovalReentryProtection(ctx, in, out);
+                int numReadCalled = ctx.fireChannelReadCallCount();
+                decodeRemovalReentryProtection(ctx, in);
 
                 // Check if this handler was removed before continuing the loop.
                 // If it was removed, it is not safe to continue to operate on the buffer.
@@ -461,7 +413,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     break;
                 }
 
-                if (outSize == out.size()) {
+                if (numReadCalled == ctx.fireChannelReadCallCount()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
@@ -493,10 +445,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 
     /**
      * Decode the from one {@link ByteBuf} to an other. This method will be called till either the input
@@ -505,46 +456,40 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
-        decodeState = STATE_CALLING_CHILD_DECODE;
-        try {
-            decode(ctx, in, out);
-        } finally {
-            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
-            decodeState = STATE_INIT;
-            if (removePending) {
-                fireChannelRead(ctx, out, out.size());
-                out.clear();
-                handlerRemoved(ctx);
-            }
-        }
+        decode(ctx, in);
     }
 
     /**
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
      * {@link #channelInactive(ChannelHandlerContext)} was triggered.
      *
-     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, List)} but sub-classes may
+     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf)} but sub-classes may
      * override this for some special cleanup operation.
      */
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.isReadable()) {
             // Only call decode() if there is something left in the buffer to decode.
             // See https://github.com/netty/netty/issues/4386
-            decodeRemovalReentryProtection(ctx, in, out);
+            decodeRemovalReentryProtection(ctx, in);
         }
     }
 
-    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf cumulation, int readable) {
-        ByteBuf oldCumulation = cumulation;
-        cumulation = alloc.buffer(oldCumulation.readableBytes() + readable);
-        cumulation.writeBytes(oldCumulation);
-        oldCumulation.release();
-        return cumulation;
+    private static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
+        ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(
+                oldCumulation.readableBytes() + in.readableBytes(), MAX_VALUE));
+        ByteBuf toRelease = newCumulation;
+        try {
+            newCumulation.writeBytes(oldCumulation);
+            newCumulation.writeBytes(in);
+            toRelease = oldCumulation;
+            return newCumulation;
+        } finally {
+            toRelease.release();
+        }
     }
 
     /**
@@ -557,5 +502,252 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
          * call {@link ByteBuf#release()} if a {@link ByteBuf} is fully consumed.
          */
         ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in);
+    }
+
+    // Package private so we can also make use of it in ReplayingDecoder.
+    static final class ByteToMessageDecoderContext implements ChannelHandlerContext {
+        private final ChannelHandlerContext ctx;
+        private int fireChannelReadCalled;
+
+        private ByteToMessageDecoderContext(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+
+        void reset() {
+            fireChannelReadCalled = 0;
+        }
+
+        int fireChannelReadCallCount() {
+            return fireChannelReadCalled;
+        }
+
+        @Override
+        public Channel channel() {
+            return ctx.channel();
+        }
+
+        @Override
+        public EventExecutor executor() {
+            return ctx.executor();
+        }
+
+        @Override
+        public String name() {
+            return ctx.name();
+        }
+
+        @Override
+        public ChannelHandler handler() {
+            return ctx.handler();
+        }
+
+        @Override
+        public boolean isRemoved() {
+            return ctx.isRemoved();
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelRegistered() {
+            ctx.fireChannelRegistered();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelUnregistered() {
+            ctx.fireChannelUnregistered();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelActive() {
+            ctx.fireChannelActive();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelInactive() {
+            ctx.fireChannelInactive();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+            ctx.fireExceptionCaught(cause);
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireUserEventTriggered(Object evt) {
+            ctx.fireUserEventTriggered(evt);
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelRead(Object msg) {
+            fireChannelReadCalled ++;
+            ctx.fireChannelRead(msg);
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelReadComplete() {
+            ctx.fireChannelReadComplete();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelWritabilityChanged() {
+            ctx.fireChannelWritabilityChanged();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext read() {
+            ctx.read();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext flush() {
+            ctx.flush();
+            return this;
+        }
+
+        @Override
+        public ChannelPipeline pipeline() {
+            return ctx.pipeline();
+        }
+
+        @Override
+        public ByteBufAllocator alloc() {
+            return ctx.alloc();
+        }
+
+        @Override
+        @Deprecated
+        public <T> Attribute<T> attr(AttributeKey<T> key) {
+            return ctx.attr(key);
+        }
+
+        @Override
+        @Deprecated
+        public <T> boolean hasAttr(AttributeKey<T> key) {
+            return ctx.hasAttr(key);
+        }
+
+        @Override
+        public ChannelFuture bind(SocketAddress localAddress) {
+            return ctx.bind(localAddress);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress) {
+            return ctx.connect(remoteAddress);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            return ctx.connect(remoteAddress, localAddress);
+        }
+
+        @Override
+        public ChannelFuture disconnect() {
+            return ctx.disconnect();
+        }
+
+        @Override
+        public ChannelFuture close() {
+            return ctx.close();
+        }
+
+        @Override
+        public ChannelFuture deregister() {
+            return ctx.deregister();
+        }
+
+        @Override
+        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+            return ctx.bind(localAddress, promise);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+            return ctx.connect(remoteAddress, promise);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            return ctx.connect(remoteAddress, localAddress, promise);
+        }
+
+        @Override
+        public ChannelFuture disconnect(ChannelPromise promise) {
+            return ctx.disconnect(promise);
+        }
+
+        @Override
+        public ChannelFuture close(ChannelPromise promise) {
+            return ctx.close(promise);
+        }
+
+        @Override
+        public ChannelFuture register() {
+            return ctx.register();
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return ctx.register(promise);
+        }
+
+        @Override
+        public ChannelFuture deregister(ChannelPromise promise) {
+            return ctx.deregister(promise);
+        }
+
+        @Override
+        public ChannelFuture write(Object msg) {
+            return ctx.write(msg);
+        }
+
+        @Override
+        public ChannelFuture write(Object msg, ChannelPromise promise) {
+            return ctx.write(msg, promise);
+        }
+
+        @Override
+        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+            return ctx.writeAndFlush(msg, promise);
+        }
+
+        @Override
+        public ChannelFuture writeAndFlush(Object msg) {
+            return ctx.writeAndFlush(msg);
+        }
+
+        @Override
+        public ChannelPromise newPromise() {
+            return ctx.newPromise();
+        }
+
+        @Override
+        public ChannelProgressivePromise newProgressivePromise() {
+            return ctx.newProgressivePromise();
+        }
+
+        @Override
+        public ChannelFuture newSucceededFuture() {
+            return ctx.newSucceededFuture();
+        }
+
+        @Override
+        public ChannelFuture newFailedFuture(Throwable cause) {
+            return ctx.newFailedFuture(cause);
+        }
+
+        @Override
+        public ChannelPromise voidPromise() {
+            return ctx.voidPromise();
+        }
     }
 }

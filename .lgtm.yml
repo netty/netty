@@ -1,0 +1,13 @@
+extraction:
+  java:
+    prepare:
+      packages:
+      - "autoconf"
+      - "automake"
+      - "libtool"
+      - "make"
+      - "tar"
+      - "libaio-dev"
+      - "libssl-dev"
+      - "libapr1-dev"
+      - "lksctp-tools"

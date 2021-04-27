@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An HTTP/2 exception for a specific {@link Http2FrameStream}.
@@ -33,8 +33,8 @@ public final class Http2FrameStreamException extends Exception {
 
     public Http2FrameStreamException(Http2FrameStream stream, Http2Error error, Throwable cause) {
         super(cause.getMessage(), cause);
-        this.stream = checkNotNull(stream, "stream");
-        this.error = checkNotNull(error, "error");
+        this.stream = requireNonNull(stream, "stream");
+        this.error = requireNonNull(error, "error");
     }
 
     public Http2Error error() {

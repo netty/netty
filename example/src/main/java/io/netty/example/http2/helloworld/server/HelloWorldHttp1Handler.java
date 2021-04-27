@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -44,11 +44,11 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     private final String establishApproach;
 
     public HelloWorldHttp1Handler(String establishApproach) {
-        this.establishApproach = checkNotNull(establishApproach, "establishApproach");
+        this.establishApproach = requireNonNull(establishApproach, "establishApproach");
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
         }

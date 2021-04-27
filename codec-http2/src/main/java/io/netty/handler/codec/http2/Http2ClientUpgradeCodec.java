@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -34,7 +34,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.ReferenceCountUtil.release;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Client-side cleartext upgrade codec from HTTP to HTTP/2.
@@ -105,8 +105,8 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     private Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler, ChannelHandler
         upgradeToHandler, Http2MultiplexHandler http2MultiplexHandler) {
         this.handlerName = handlerName;
-        this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
-        this.upgradeToHandler = checkNotNull(upgradeToHandler, "upgradeToHandler");
+        this.connectionHandler = requireNonNull(connectionHandler, "connectionHandler");
+        this.upgradeToHandler = requireNonNull(upgradeToHandler, "upgradeToHandler");
         this.http2MultiplexHandler = http2MultiplexHandler;
     }
 

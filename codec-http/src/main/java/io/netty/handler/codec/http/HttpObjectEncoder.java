@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -41,8 +42,8 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
  *
  * Please note that this encoder is designed to be extended to implement
  * a protocol derived from HTTP, such as
- * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
- * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
@@ -110,18 +111,19 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
-        if (msg instanceof ByteBuf) {
-            final ByteBuf potentialEmptyBuf = (ByteBuf) msg;
+        if (msg instanceof ByteBufConvertible) {
+            final ByteBuf potentialEmptyBuf = ((ByteBufConvertible) msg).asByteBuf();
             if (!potentialEmptyBuf.isReadable()) {
                 out.add(potentialEmptyBuf.retain());
                 return;
             }
         }
 
-        if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+        if (msg instanceof HttpContent || msg instanceof ByteBufConvertible || msg instanceof FileRegion) {
             switch (state) {
                 case ST_INIT:
-                    throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+                    throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
+                        + ", state: " + state);
                 case ST_CONTENT_NON_CHUNK:
                     final long contentLength = contentLength(msg);
                     if (contentLength > 0) {
@@ -243,12 +245,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof HttpObject || msg instanceof ByteBuf || msg instanceof FileRegion;
+        return msg instanceof HttpObject || msg instanceof ByteBufConvertible || msg instanceof FileRegion;
     }
 
     private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).retain();
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().retain();
         }
         if (msg instanceof HttpContent) {
             return ((HttpContent) msg).content().retain();
@@ -263,8 +265,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof HttpContent) {
             return ((HttpContent) msg).content().readableBytes();
         }
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();

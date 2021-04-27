@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.RoundRobinInetAddressResolver;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -33,7 +32,6 @@ import java.net.InetSocketAddress;
  * multiple are provided by the nameserver. This is ideal for use in applications that use a pool of connections, for
  * which connecting to a single resolved address would be inefficient.
  */
-@UnstableApi
 public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
 
     public RoundRobinDnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {

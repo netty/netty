@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,10 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
@@ -41,14 +41,15 @@ public class LocalTransportThreadModelTest2 {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
-                .group(new DefaultEventLoopGroup(), new DefaultEventLoopGroup())
+                .group(new MultithreadEventLoopGroup(io.netty.channel.local.LocalHandler.newFactory()),
+                        new MultithreadEventLoopGroup(io.netty.channel.local.LocalHandler.newFactory()))
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
         LocalHandler clientHandler = new LocalHandler("CLIENT");
         clientBootstrap
-                .group(new DefaultEventLoopGroup())
+                .group(new MultithreadEventLoopGroup(io.netty.channel.local.LocalHandler.newFactory()))
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 
@@ -82,19 +83,14 @@ public class LocalTransportThreadModelTest2 {
             return;
         }
 
-        localChannel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                close(localChannel, localRegistrationHandler);
-            }
-        });
+        localChannel.eventLoop().execute(() -> close(localChannel, localRegistrationHandler));
 
         // Wait until the connection is closed or the connection attempt fails.
         localChannel.closeFuture().awaitUninterruptibly();
     }
 
     @Sharable
-    static class LocalHandler extends ChannelInboundHandlerAdapter {
+    static class LocalHandler implements ChannelHandler {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;

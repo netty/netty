@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,13 +18,13 @@ package io.netty.channel.local;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.SingleThreadEventLoop;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -36,19 +36,14 @@ import java.util.Queue;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
+    private final Queue<Object> inboundBuffer = new ArrayDeque<>();
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
-    public LocalServerChannel() {
+    public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
@@ -78,18 +73,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return localAddress;
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -108,11 +93,6 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     @Override
@@ -135,12 +115,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         if (eventLoop().inEventLoop()) {
             serve0(child);
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    serve0(child);
-                }
-            });
+            eventLoop().execute(() -> serve0(child));
         }
         return child;
     }
@@ -158,6 +133,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         } while (handle.continueReading());
 
         pipeline.fireChannelReadComplete();
+        readIfIsAutoRead();
     }
 
     /**
@@ -165,7 +141,7 @@ public class LocalServerChannel extends AbstractServerChannel {
      * to create custom instances of {@link LocalChannel}s.
      */
     protected LocalChannel newLocalChannel(LocalChannel peer) {
-        return new LocalChannel(this, peer);
+        return new LocalChannel(this, childEventLoopGroup().next(), peer);
     }
 
     private void serve0(final LocalChannel child) {
@@ -174,6 +150,26 @@ public class LocalServerChannel extends AbstractServerChannel {
             acceptInProgress = false;
 
             readInbound();
+        }
+    }
+
+    @Override
+    protected AbstractUnsafe newUnsafe() {
+        return new DefaultServerUnsafe();
+    }
+
+    private final class DefaultServerUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            safeSetFailure(promise, new UnsupportedOperationException());
+        }
+
+        @Override
+        public void register0() {
+        }
+
+        @Override
+        public void deregister0() {
         }
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,8 +24,8 @@ import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -69,7 +69,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
-        this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+        this.mapping = (AsyncMapping<String, SslContext>) requireNonNull(mapping, "mapping");
     }
 
     /**
@@ -94,7 +94,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @Override
     protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
-        return mapping.map(hostname, ctx.executor().<SslContext>newPromise());
+        return mapping.map(hostname, ctx.executor().newPromise());
     }
 
     @Override
@@ -114,7 +114,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             replaceHandler(ctx, hostname, sslContext);
         } catch (Throwable cause) {
             selection = EMPTY_SELECTION;
-            PlatformDependent.throwException(cause);
+            throw cause;
         }
     }
 
@@ -155,7 +155,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
         private final Mapping<? super String, ? extends SslContext> mapping;
 
         private AsyncMappingAdapter(Mapping<? super String, ? extends SslContext> mapping) {
-            this.mapping = ObjectUtil.checkNotNull(mapping, "mapping");
+            this.mapping = requireNonNull(mapping, "mapping");
         }
 
         @Override

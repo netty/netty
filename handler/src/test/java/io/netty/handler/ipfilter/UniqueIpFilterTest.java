@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -57,17 +57,14 @@ public class UniqueIpFilterTest {
     private static Future<EmbeddedChannel> newChannelAsync(final CyclicBarrier barrier,
             ExecutorService executorService,
             final ChannelHandler... handler) {
-        return executorService.submit(new Callable<EmbeddedChannel>() {
-            @Override
-            public EmbeddedChannel call() throws Exception {
-                barrier.await();
-                return new EmbeddedChannel(handler) {
-                    @Override
-                    protected SocketAddress remoteAddress0() {
-                        return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
-                    }
-                };
-            }
+        return executorService.submit(() -> {
+            barrier.await();
+            return new EmbeddedChannel(handler) {
+                @Override
+                protected SocketAddress remoteAddress0() {
+                    return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
+                }
+            };
         });
     }
 

@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,11 +25,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -72,14 +73,14 @@ public class CipherSuiteCanaryTest {
 
     @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}, rfcCipherName = {2}, delegate = {3}")
     public static Collection<Object[]> parameters() {
-       List<Object[]> dst = new ArrayList<Object[]>();
+       List<Object[]> dst = new ArrayList<>();
        dst.addAll(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
        return dst;
     }
 
     @BeforeClass
     public static void init() throws Exception {
-        GROUP = new DefaultEventLoopGroup();
+        GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         CERT = new SelfSignedCertificate();
     }
 
@@ -173,7 +174,7 @@ public class CipherSuiteCanaryTest {
                             }
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 if (serverPromise.trySuccess(null)) {
                                     ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
@@ -209,7 +210,7 @@ public class CipherSuiteCanaryTest {
                                 }
 
                                 @Override
-                                public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     clientPromise.trySuccess(null);
                                     ctx.close();
                                 }
@@ -274,7 +275,7 @@ public class CipherSuiteCanaryTest {
     }
 
     private static List<Object[]> expand(String rfcCipherName) {
-        List<Object[]> dst = new ArrayList<Object[]>();
+        List<Object[]> dst = new ArrayList<>();
         SslProvider[] sslProviders = SslProvider.values();
 
         for (int i = 0; i < sslProviders.length; i++) {

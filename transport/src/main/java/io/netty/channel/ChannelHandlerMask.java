@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,9 +17,9 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
-
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
@@ -49,22 +49,23 @@ final class ChannelHandlerMask {
     static final int MASK_CONNECT = 1 << 10;
     static final int MASK_DISCONNECT = 1 << 11;
     static final int MASK_CLOSE = 1 << 12;
-    static final int MASK_DEREGISTER = 1 << 13;
-    static final int MASK_READ = 1 << 14;
-    static final int MASK_WRITE = 1 << 15;
-    static final int MASK_FLUSH = 1 << 16;
+    static final int MASK_REGISTER = 1 << 13;
+    static final int MASK_DEREGISTER = 1 << 14;
+    static final int MASK_READ = 1 << 15;
+    static final int MASK_WRITE = 1 << 16;
+    static final int MASK_FLUSH = 1 << 17;
 
     private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
             MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
-    private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
-            MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
+    private static final int MASK_ALL_OUTBOUND = MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
+            MASK_CLOSE | MASK_REGISTER | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
                 @Override
                 protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
-                    return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(32);
+                    return new WeakHashMap<>(32);
                 }
             };
 
@@ -83,75 +84,80 @@ final class ChannelHandlerMask {
         return mask;
     }
 
+    static boolean isInbound(Class<? extends ChannelHandler> clazz) {
+        return (mask(clazz) & MASK_ALL_INBOUND) != 0;
+    }
+
+    static boolean isOutbound(Class<? extends ChannelHandler> clazz) {
+        return (mask(clazz) & MASK_ALL_OUTBOUND) != 0;
+    }
+
     /**
      * Calculate the {@code executionMask}.
      */
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
-        int mask = MASK_EXCEPTION_CAUGHT;
+        int mask = 0;
+        mask |= MASK_ALL_INBOUND;
+        mask |= MASK_ALL_OUTBOUND;
+
         try {
-            if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
-                mask |= MASK_ALL_INBOUND;
-
-                if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_REGISTERED;
-                }
-                if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_UNREGISTERED;
-                }
-                if (isSkippable(handlerType, "channelActive", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_ACTIVE;
-                }
-                if (isSkippable(handlerType, "channelInactive", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_INACTIVE;
-                }
-                if (isSkippable(handlerType, "channelRead", ChannelHandlerContext.class, Object.class)) {
-                    mask &= ~MASK_CHANNEL_READ;
-                }
-                if (isSkippable(handlerType, "channelReadComplete", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_READ_COMPLETE;
-                }
-                if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
-                }
-                if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
-                    mask &= ~MASK_USER_EVENT_TRIGGERED;
-                }
-            }
-
-            if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
-                mask |= MASK_ALL_OUTBOUND;
-
-                if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
-                        SocketAddress.class, ChannelPromise.class)) {
-                    mask &= ~MASK_BIND;
-                }
-                if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
-                        SocketAddress.class, ChannelPromise.class)) {
-                    mask &= ~MASK_CONNECT;
-                }
-                if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_DISCONNECT;
-                }
-                if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_CLOSE;
-                }
-                if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_DEREGISTER;
-                }
-                if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_READ;
-                }
-                if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
-                        Object.class, ChannelPromise.class)) {
-                    mask &= ~MASK_WRITE;
-                }
-                if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_FLUSH;
-                }
-            }
-
             if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
                 mask &= ~MASK_EXCEPTION_CAUGHT;
+            }
+
+            if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_REGISTERED;
+            }
+            if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_UNREGISTERED;
+            }
+            if (isSkippable(handlerType, "channelActive", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_ACTIVE;
+            }
+            if (isSkippable(handlerType, "channelInactive", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_INACTIVE;
+            }
+            if (isSkippable(handlerType, "channelRead", ChannelHandlerContext.class, Object.class)) {
+                mask &= ~MASK_CHANNEL_READ;
+            }
+            if (isSkippable(handlerType, "channelReadComplete", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_READ_COMPLETE;
+            }
+            if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
+                mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
+            }
+            if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
+                mask &= ~MASK_USER_EVENT_TRIGGERED;
+            }
+            if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
+                    SocketAddress.class, ChannelPromise.class)) {
+                mask &= ~MASK_BIND;
+            }
+            if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
+                    SocketAddress.class, ChannelPromise.class)) {
+                mask &= ~MASK_CONNECT;
+            }
+            if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
+                mask &= ~MASK_DISCONNECT;
+            }
+            if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
+                mask &= ~MASK_CLOSE;
+            }
+            if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
+                mask &= ~MASK_REGISTER;
+            }
+            if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
+                mask &= ~MASK_DEREGISTER;
+            }
+            if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
+                mask &= ~MASK_READ;
+            }
+            if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
+                    Object.class, ChannelPromise.class)) {
+                mask &= ~MASK_WRITE;
+            }
+            if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
+                mask &= ~MASK_FLUSH;
             }
         } catch (Exception e) {
             // Should never reach here.
@@ -161,22 +167,20 @@ final class ChannelHandlerMask {
         return mask;
     }
 
-    @SuppressWarnings("rawtypes")
     private static boolean isSkippable(
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
-        return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-                Method m;
-                try {
-                    m = handlerType.getMethod(methodName, paramTypes);
-                } catch (NoSuchMethodException e) {
+        return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () -> {
+            Method m;
+            try {
+                m = handlerType.getMethod(methodName, paramTypes);
+            } catch (NoSuchMethodException e) {
+                if (logger.isDebugEnabled()) {
                     logger.debug(
-                        "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
-                    return false;
+                            "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
                 }
-                return m != null && m.isAnnotationPresent(Skip.class);
+                return false;
             }
+            return m != null && m.isAnnotationPresent(Skip.class);
         });
     }
 

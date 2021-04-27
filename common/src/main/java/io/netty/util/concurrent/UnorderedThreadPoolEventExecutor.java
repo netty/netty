@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,7 +44,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
-    private final Set<EventExecutor> executorSet = Collections.singleton((EventExecutor) this);
+    private final Set<EventExecutor> executorSet = Collections.singleton(this);
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}
@@ -83,11 +83,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public EventExecutorGroup parent() {
-        return this;
-    }
-
-    @Override
     public boolean inEventLoop() {
         return false;
     }
@@ -99,22 +94,22 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new DefaultPromise<V>(this);
+        return new DefaultPromise<>(this);
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<V>(this);
+        return new DefaultProgressivePromise<>(this);
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new SucceededFuture<V>(this, result);
+        return new SucceededFuture<>(this, result);
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new FailedFuture<V>(this, cause);
+        return new FailedFuture<>(this, cause);
     }
 
     @Override
@@ -161,12 +156,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
         return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, runnable, task);
+                task : new RunnableScheduledFutureTask<>(this, runnable, task);
     }
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<V>(this, callable, task);
+        return new RunnableScheduledFutureTask<>(this, callable, task);
     }
 
     @Override
@@ -215,7 +210,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
         RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
                                            RunnableScheduledFuture<V> future) {
-            super(executor, runnable);
+            super(executor, runnable, null);
             this.future = future;
         }
 
@@ -232,7 +227,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             } else if (!isDone()) {
                 try {
                     // Its a periodic task so we need to ignore the return value
-                    runTask();
+                    future.run();
                 } catch (Throwable cause) {
                     if (!tryFailureInternal(cause)) {
                         logger.warn("Failure during execution of task", cause);

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -35,7 +35,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURREN
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Settings for one endpoint in an HTTP/2 connection. Each of the values are optional as defined in
@@ -203,7 +203,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
     }
 
     private static void verifyStandardSetting(int key, Long value) {
-        checkNotNull(value, "value");
+        requireNonNull(value, "value");
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
                 if (value < MIN_HEADER_TABLE_SIZE || value > MAX_HEADER_TABLE_SIZE) {

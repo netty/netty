@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,12 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
 /**
@@ -70,10 +69,10 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
     private JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
             ProtocolSelectorFactory selectorFactory, ProtocolSelectionListenerFactory listenerFactory,
             List<String> protocols) {
-        this.wrapperFactory = checkNotNull(wrapperFactory, "wrapperFactory");
-        this.selectorFactory = checkNotNull(selectorFactory, "selectorFactory");
-        this.listenerFactory = checkNotNull(listenerFactory, "listenerFactory");
-        this.protocols = Collections.unmodifiableList(checkNotNull(protocols, "protocols"));
+        this.wrapperFactory = requireNonNull(wrapperFactory, "wrapperFactory");
+        this.selectorFactory = requireNonNull(selectorFactory, "selectorFactory");
+        this.listenerFactory = requireNonNull(listenerFactory, "listenerFactory");
+        this.protocols = Collections.unmodifiableList(requireNonNull(protocols, "protocols"));
     }
 
     @Override
@@ -96,35 +95,17 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
         return wrapperFactory;
     }
 
-    static final ProtocolSelectorFactory FAIL_SELECTOR_FACTORY = new ProtocolSelectorFactory() {
-        @Override
-        public ProtocolSelector newSelector(SSLEngine engine, Set<String> supportedProtocols) {
-            return new FailProtocolSelector((JdkSslEngine) engine, supportedProtocols);
-        }
-    };
+    static final ProtocolSelectorFactory FAIL_SELECTOR_FACTORY = (engine, supportedProtocols) ->
+            new FailProtocolSelector((JdkSslEngine) engine, supportedProtocols);
 
-    static final ProtocolSelectorFactory NO_FAIL_SELECTOR_FACTORY = new ProtocolSelectorFactory() {
-        @Override
-        public ProtocolSelector newSelector(SSLEngine engine, Set<String> supportedProtocols) {
-            return new NoFailProtocolSelector((JdkSslEngine) engine, supportedProtocols);
-        }
-    };
+    static final ProtocolSelectorFactory NO_FAIL_SELECTOR_FACTORY = (engine, supportedProtocols) ->
+            new NoFailProtocolSelector((JdkSslEngine) engine, supportedProtocols);
 
-    static final ProtocolSelectionListenerFactory FAIL_SELECTION_LISTENER_FACTORY =
-            new ProtocolSelectionListenerFactory() {
-        @Override
-        public ProtocolSelectionListener newListener(SSLEngine engine, List<String> supportedProtocols) {
-            return new FailProtocolSelectionListener((JdkSslEngine) engine, supportedProtocols);
-        }
-    };
+    static final ProtocolSelectionListenerFactory FAIL_SELECTION_LISTENER_FACTORY = (engine, supportedProtocols) ->
+                    new FailProtocolSelectionListener((JdkSslEngine) engine, supportedProtocols);
 
-    static final ProtocolSelectionListenerFactory NO_FAIL_SELECTION_LISTENER_FACTORY =
-            new ProtocolSelectionListenerFactory() {
-        @Override
-        public ProtocolSelectionListener newListener(SSLEngine engine, List<String> supportedProtocols) {
-            return new NoFailProtocolSelectionListener((JdkSslEngine) engine, supportedProtocols);
-        }
-    };
+    static final ProtocolSelectionListenerFactory NO_FAIL_SELECTION_LISTENER_FACTORY = (engine, supportedProtocols) ->
+            new NoFailProtocolSelectionListener((JdkSslEngine) engine, supportedProtocols);
 
     static class NoFailProtocolSelector implements ProtocolSelector {
         private final JdkSslEngine engineWrapper;

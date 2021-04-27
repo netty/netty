@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -64,32 +64,4 @@ public final class MathUtil {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }
 
-    /**
-     * Compares two {@code int} values.
-     *
-     * @param  x the first {@code int} to compare
-     * @param  y the second {@code int} to compare
-     * @return the value {@code 0} if {@code x == y};
-     *         {@code -1} if {@code x < y}; and
-     *         {@code 1} if {@code x > y}
-     */
-    public static int compare(final int x, final int y) {
-        // do not subtract for comparison, it could overflow
-        return x < y ? -1 : (x > y ? 1 : 0);
-    }
-
-    /**
-     * Compare two {@code long} values.
-     * @param x the first {@code long} to compare.
-     * @param y the second {@code long} to compare.
-     * @return
-     * <ul>
-     * <li>0 if {@code x == y}</li>
-     * <li>{@code > 0} if {@code x > y}</li>
-     * <li>{@code < 0} if {@code x < y}</li>
-     * </ul>
-     */
-    public static int compare(long x, long y) {
-        return (x < y) ? -1 : (x > y) ? 1 : 0;
-    }
 }

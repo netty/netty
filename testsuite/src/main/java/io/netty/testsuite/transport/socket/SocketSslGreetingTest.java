@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-*   http://www.apache.org/licenses/LICENSE-2.0
+*   https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,6 +33,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -80,10 +81,10 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}, delegate = {2}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -96,7 +97,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 params.add(new Object[] { sc, cc, true });
@@ -186,11 +187,11 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
             assertEquals('a', buf.readByte());
             assertFalse(buf.isReadable());
             latch.countDown();
@@ -211,10 +212,10 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     private static class ServerHandler extends SimpleChannelInboundHandler<String> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             // discard
         }
 
@@ -253,6 +254,12 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                         fail();
                     } catch (SSLPeerUnverifiedException e) {
                         // expected
+                    } catch (UnsupportedOperationException e) {
+                        // Starting from Java15 this method throws UnsupportedOperationException as it was
+                        // deprecated before and getPeerCertificates() should be used
+                        if (PlatformDependent.javaVersion() < 15) {
+                            throw e;
+                        }
                     }
                     try {
                         session.getPeerPrincipal();

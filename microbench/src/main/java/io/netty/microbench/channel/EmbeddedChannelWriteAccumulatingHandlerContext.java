@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -14,6 +14,8 @@
  */
 package io.netty.microbench.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -21,7 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.internal.ObjectUtil;
 
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
     private ByteBuf cumulation;
@@ -36,7 +37,7 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                                                           ByteToMessageDecoder.Cumulator writeCumulator,
                                                           EmbeddedChannel channel) {
         super(alloc, handler, channel);
-        this.cumulator = ObjectUtil.checkNotNull(writeCumulator, "writeCumulator");
+        this.cumulator = requireNonNull(writeCumulator, "writeCumulator");
     }
 
     public final ByteBuf cumulation() {

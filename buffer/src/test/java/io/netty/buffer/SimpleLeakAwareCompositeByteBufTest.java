@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ResourceLeakTracker;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,17 +24,19 @@ import org.junit.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBufTest {
 
     private final Class<? extends ByteBuf> clazz = leakClass();
-    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<NoopResourceLeakTracker<ByteBuf>>();
+    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<>();
 
     @Override
     protected final WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
+        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<>();
         WrappedCompositeByteBuf leakAwareBuf = wrap(buffer, tracker);
         trackers.add(tracker);
         return leakAwareBuf;
@@ -129,6 +132,21 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
     @Test
     public void testWrapReadOnly() {
         assertWrapped(newBuffer(8).asReadOnly());
+    }
+
+    @Test
+    public void forEachByteUnderLeakDetectionShouldNotThrowException() {
+        CompositeByteBuf buf = (CompositeByteBuf) newBuffer(8);
+        assertThat(buf, CoreMatchers.instanceOf(SimpleLeakAwareCompositeByteBuf.class));
+        CompositeByteBuf comp = (CompositeByteBuf) newBuffer(8);
+        assertThat(comp, CoreMatchers.instanceOf(SimpleLeakAwareCompositeByteBuf.class));
+
+        ByteBuf inner = comp.alloc().directBuffer(1).writeByte(0);
+        comp.addComponent(true, inner);
+        buf.addComponent(true, comp);
+
+        assertEquals(-1, buf.forEachByte(value -> true));
+        assertTrue(buf.release());
     }
 
     protected final void assertWrapped(ByteBuf buf) {

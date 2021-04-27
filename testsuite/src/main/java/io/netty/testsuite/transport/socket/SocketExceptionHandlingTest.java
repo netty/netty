@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -83,7 +83,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
         }
     }
 
-    private static class BuggyChannelHandler extends ChannelInboundHandlerAdapter {
+    private static class BuggyChannelHandler implements ChannelHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ReferenceCountUtil.release(msg);
@@ -91,7 +91,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
         }
     }
 
-    private static class ExceptionHandler extends ChannelInboundHandlerAdapter {
+    private static class ExceptionHandler implements ChannelHandler {
         final AtomicLong count = new AtomicLong();
         /**
          * We expect to get 1 call to {@link #exceptionCaught(ChannelHandlerContext, Throwable)}.

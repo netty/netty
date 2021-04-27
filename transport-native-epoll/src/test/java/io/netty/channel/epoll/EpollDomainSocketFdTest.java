@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,10 +18,9 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -52,25 +51,22 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
     }
 
     public void testSendRecvFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final BlockingQueue<Object> queue = new LinkedBlockingQueue<Object>(1);
-        sb.childHandler(new ChannelInboundHandlerAdapter() {
+        final BlockingQueue<Object> queue = new LinkedBlockingQueue<>(1);
+        sb.childHandler(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final EpollDomainSocketChannel ch = new EpollDomainSocketChannel();
+                final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().eventLoop());
 
-                ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            Throwable cause = future.cause();
-                            queue.offer(cause);
-                        }
+                ctx.writeAndFlush(ch.fd()).addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        Throwable cause = future.cause();
+                        queue.offer(cause);
                     }
                 });
             }
         });
-        cb.handler(new ChannelInboundHandlerAdapter() {
+        cb.handler(new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 FileDescriptor fd = (FileDescriptor) msg;

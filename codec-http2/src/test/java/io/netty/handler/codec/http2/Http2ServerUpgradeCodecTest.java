@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -68,7 +67,7 @@ public class Http2ServerUpgradeCodecTest {
 
         ServerChannel parent = Mockito.mock(ServerChannel.class);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new ChannelInboundHandlerAdapter());
+                new ChannelHandler() { });
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
         Http2ServerUpgradeCodec codec;
         if (multiplexer == null) {
@@ -76,8 +75,11 @@ public class Http2ServerUpgradeCodecTest {
         } else {
             codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
         }
-        assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
-        codec.upgradeTo(ctx, request);
+        channel.eventLoop().execute(() -> {
+            assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
+            codec.upgradeTo(ctx, request);
+        });
+
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
@@ -103,5 +105,5 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class HttpInboundHandler extends ChannelInboundHandlerAdapter { }
+    private static final class HttpInboundHandler implements ChannelHandler { }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,13 +35,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,7 +62,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
     private static final File CERT_FILE;
     private static final File KEY_FILE;
-    private static EventExecutorGroup executor;
 
     static {
         SelfSignedCertificate ssc;
@@ -81,10 +76,10 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -97,23 +92,13 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 params.add(new Object[] { sc, cc });
             }
         }
         return params;
-    }
-
-    @BeforeClass
-    public static void createExecutor() {
-        executor = new DefaultEventExecutorGroup(2);
-    }
-
-    @AfterClass
-    public static void shutdownExecutor() throws Exception {
-        executor.shutdownGracefully().sync();
     }
 
     private final SslContext serverCtx;
@@ -146,7 +131,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        final EventExecutorGroup executor = SocketStartTlsTest.executor;
         SSLEngine sse = serverCtx.newEngine(PooledByteBufAllocator.DEFAULT);
         SSLEngine cse = clientCtx.newEngine(PooledByteBufAllocator.DEFAULT);
 
@@ -159,7 +143,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, sh);
+                p.addLast(sh);
             }
         });
 
@@ -169,7 +153,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, ch);
+                p.addLast(ch);
             }
         });
 
@@ -228,7 +212,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         private Future<Channel> handshakeFuture;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StartTlsClientHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(true);
@@ -246,7 +230,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsResponse".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 handshakeFuture = sslHandler.handshakeFuture();
@@ -283,7 +267,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StartTlsServerHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(false);
@@ -300,7 +284,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsRequest".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 ctx.writeAndFlush("StartTlsResponse\n");

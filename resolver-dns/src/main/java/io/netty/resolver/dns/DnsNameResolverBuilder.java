@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,40 +24,39 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.UnstableApi;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.resolver.dns.DnsServerAddressStreamProviders.platformDefault;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link DnsNameResolver} builder.
  */
-@UnstableApi
 public final class DnsNameResolverBuilder {
-    private EventLoop eventLoop;
+    volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private SocketAddress localAddress;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
-    private long queryTimeoutMillis = 5000;
+    private long queryTimeoutMillis = -1;
     private ResolvedAddressTypes resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
     private boolean completeOncePreferredResolved;
     private boolean recursionDesired = true;
-    private int maxQueriesPerResolve = 16;
-    private boolean traceEnabled;
+    private int maxQueriesPerResolve = -1;
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
-    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
+    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+            DnsServerAddressStreamProviders.platformDefault();
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;
@@ -175,7 +174,7 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory
                                                                            lifecycleObserverFactory) {
-        this.dnsQueryLifecycleObserverFactory = checkNotNull(lifecycleObserverFactory, "lifecycleObserverFactory");
+        this.dnsQueryLifecycleObserverFactory = requireNonNull(lifecycleObserverFactory, "lifecycleObserverFactory");
         return this;
     }
 
@@ -200,6 +199,16 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder authoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
+        return this;
+    }
+
+    /**
+     * Configure the address that will be used to bind too. If `null` the default will be used.
+     * @param localAddress the bind address
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder localAddress(SocketAddress localAddress) {
+        this.localAddress = localAddress;
         return this;
     }
 
@@ -321,18 +330,6 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets if this resolver should generate the detailed trace information in an exception message so that
-     * it is easier to understand the cause of resolution failure.
-     *
-     * @param traceEnabled true if trace is enabled
-     * @return {@code this}
-     */
-    public DnsNameResolverBuilder traceEnabled(boolean traceEnabled) {
-        this.traceEnabled = traceEnabled;
-        return this;
-    }
-
-    /**
      * Sets the capacity of the datagram packet buffer (in bytes).  The default value is {@code 4096} bytes.
      *
      * @param maxPayloadSize the capacity of the datagram packet buffer
@@ -377,7 +374,7 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder nameServerProvider(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         this.dnsServerAddressStreamProvider =
-                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+                requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         return this;
     }
 
@@ -388,9 +385,9 @@ public final class DnsNameResolverBuilder {
      * @return {@code this}
      */
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
-        checkNotNull(searchDomains, "searchDomains");
+        requireNonNull(searchDomains, "searchDomains");
 
-        final List<String> list = new ArrayList<String>(4);
+        final List<String> list = new ArrayList<>(4);
 
         for (String f : searchDomains) {
             if (f == null) {
@@ -479,12 +476,12 @@ public final class DnsNameResolverBuilder {
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
+                localAddress,
                 dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
                 resolvedAddressTypes,
                 recursionDesired,
                 maxQueriesPerResolve,
-                traceEnabled,
                 maxPayloadSize,
                 optResourceEnabled,
                 hostsFileEntriesResolver,
@@ -542,7 +539,6 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.resolvedAddressTypes(resolvedAddressTypes);
         copiedBuilder.recursionDesired(recursionDesired);
         copiedBuilder.maxQueriesPerResolve(maxQueriesPerResolve);
-        copiedBuilder.traceEnabled(traceEnabled);
         copiedBuilder.maxPayloadSize(maxPayloadSize);
         copiedBuilder.optResourceEnabled(optResourceEnabled);
         copiedBuilder.hostsFileEntriesResolver(hostsFileEntriesResolver);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 package io.netty.channel.sctp.nio;
 
+import static java.util.Objects.requireNonNull;
+
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
 import io.netty.channel.ChannelException;
@@ -22,6 +24,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
@@ -57,14 +61,21 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         }
     }
 
+    private final EventLoopGroup childEventLoopGroup;
     private final SctpServerChannelConfig config;
 
     /**
      * Create a new instance
      */
-    public NioSctpServerChannel() {
-        super(null, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(null, eventLoop, newSocket(), SelectionKey.OP_ACCEPT);
         config = new NioSctpServerChannelConfig(this, javaChannel());
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -76,7 +87,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     public Set<InetSocketAddress> allLocalAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getAllLocalAddresses();
-            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
                 addresses.add((InetSocketAddress) socketAddress);
             }
@@ -140,7 +151,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, ch));
+        buf.add(new NioSctpChannel(this, childEventLoopGroup().next(), ch));
         return 1;
     }
 
@@ -159,12 +170,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    bindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> bindAddress(localAddress, promise));
         }
         return promise;
     }
@@ -184,12 +190,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    unbindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> unbindAddress(localAddress, promise));
         }
         return promise;
     }

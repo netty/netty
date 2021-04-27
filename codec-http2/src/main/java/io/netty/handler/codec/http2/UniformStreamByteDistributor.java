@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -23,10 +23,10 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link StreamByteDistributor} that ignores stream priority and uniformly allocates bytes to all
@@ -37,7 +37,7 @@ import static java.lang.Math.min;
 @UnstableApi
 public final class UniformStreamByteDistributor implements StreamByteDistributor {
     private final Http2Connection.PropertyKey stateKey;
-    private final Deque<State> queue = new ArrayDeque<State>(4);
+    private final Deque<State> queue = new ArrayDeque<>(4);
 
     /**
      * The minimum number of bytes that we will attempt to allocate to a stream. This is to
@@ -125,7 +125,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     }
 
     private State state(Http2Stream stream) {
-        return checkNotNull(stream, "stream").getProperty(stateKey);
+        return requireNonNull(stream, "stream").getProperty(stateKey);
     }
 
     /**

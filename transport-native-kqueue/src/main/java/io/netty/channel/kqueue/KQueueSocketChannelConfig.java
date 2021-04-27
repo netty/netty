@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,6 @@ import io.netty.util.internal.UnstableApi;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.IP_TOS;
 import static io.netty.channel.ChannelOption.SO_KEEPALIVE;
 import static io.netty.channel.ChannelOption.SO_LINGER;
@@ -40,8 +39,7 @@ import static io.netty.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
 
 @UnstableApi
-public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
-    private volatile boolean allowHalfClosure;
+public final class KQueueSocketChannelConfig extends KQueueDuplexChannelConfig implements SocketChannelConfig {
 
     KQueueSocketChannelConfig(KQueueSocketChannel channel) {
         super(channel);
@@ -56,7 +54,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE, SO_SNDLOWAT, TCP_NOPUSH);
+                SO_SNDLOWAT, TCP_NOPUSH);
     }
 
     @SuppressWarnings("unchecked")
@@ -82,9 +80,6 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         }
         if (option == IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
-        }
-        if (option == ALLOW_HALF_CLOSURE) {
-            return (T) Boolean.valueOf(isAllowHalfClosure());
         }
         if (option == SO_SNDLOWAT) {
             return (T) Integer.valueOf(getSndLowAt());
@@ -113,8 +108,6 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
             setSoLinger((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
-        } else if (option == ALLOW_HALF_CLOSURE) {
-            setAllowHalfClosure((Boolean) value);
         } else if (option == SO_SNDLOWAT) {
             setSndLowAt((Integer) value);
         } else if (option == TCP_NOPUSH) {
@@ -293,11 +286,6 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     }
 
     @Override
-    public boolean isAllowHalfClosure() {
-        return allowHalfClosure;
-    }
-
-    @Override
     public KQueueSocketChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
         super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
         return this;
@@ -311,7 +299,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     @Override
     public KQueueSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
-        this.allowHalfClosure = allowHalfClosure;
+        super.setAllowHalfClosure(allowHalfClosure);
         return this;
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
@@ -127,7 +128,7 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeSimpleArray() {
-        List<RedisMessage> children = new ArrayList<RedisMessage>();
+        List<RedisMessage> children = new ArrayList<>();
         children.add(new FullBulkStringRedisMessage(byteBufOf("foo").retain()));
         children.add(new FullBulkStringRedisMessage(byteBufOf("bar").retain()));
         RedisMessage msg = new ArrayRedisMessage(children);
@@ -166,10 +167,10 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeNestedArray() {
-        List<RedisMessage> grandChildren = new ArrayList<RedisMessage>();
+        List<RedisMessage> grandChildren = new ArrayList<>();
         grandChildren.add(new FullBulkStringRedisMessage(byteBufOf("bar")));
         grandChildren.add(new IntegerRedisMessage(-1234L));
-        List<RedisMessage> children = new ArrayList<RedisMessage>();
+        List<RedisMessage> children = new ArrayList<>();
         children.add(new SimpleStringRedisMessage("foo"));
         children.add(new ArrayRedisMessage(grandChildren));
         RedisMessage msg = new ArrayRedisMessage(children);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,15 +54,8 @@ public final class ThrowableUtil {
         }
     }
 
-    public static boolean haveSuppressed() {
-        return PlatformDependent.javaVersion() >= 7;
-    }
-
     @SuppressJava6Requirement(reason = "Throwable addSuppressed is only available for >= 7. Has check for < 7.")
     public static void addSuppressed(Throwable target, Throwable suppressed) {
-        if (!haveSuppressed()) {
-            return;
-        }
         target.addSuppressed(suppressed);
     }
 

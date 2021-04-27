@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,8 @@
 package io.netty.channel.sctp.nio;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpLimitStreamsTest;
 import io.netty.channel.sctp.SctpServerChannel;
@@ -24,7 +25,7 @@ import io.netty.channel.sctp.SctpServerChannel;
 public class NioSctpLimitStreamsTest extends SctpLimitStreamsTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
+        return new MultithreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @Override

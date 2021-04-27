@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel.sctp;
+
+import static java.util.Objects.requireNonNull;
 
 import com.sun.nio.sctp.AbstractNotificationHandler;
 import com.sun.nio.sctp.AssociationChangeNotification;
@@ -25,7 +27,6 @@ import com.sun.nio.sctp.ShutdownNotification;
 
 import io.netty.channel.ChannelPipeline;
 
-
 /**
  * {@link AbstractNotificationHandler} implementation which will handle all {@link Notification}s by trigger a
  * {@link Notification} user event in the {@link ChannelPipeline} of a {@link SctpChannel}.
@@ -35,9 +36,7 @@ public final class SctpNotificationHandler extends AbstractNotificationHandler<O
     private final SctpChannel sctpChannel;
 
     public SctpNotificationHandler(SctpChannel sctpChannel) {
-        if (sctpChannel == null) {
-            throw new NullPointerException("sctpChannel");
-        }
+        requireNonNull(sctpChannel, "sctpChannel");
         this.sctpChannel = sctpChannel;
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -56,11 +58,11 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
      */
     public NonStickyEventExecutorGroup(EventExecutorGroup group, int maxTaskExecutePerRun) {
         this.group = verify(group);
-        this.maxTaskExecutePerRun = ObjectUtil.checkPositive(maxTaskExecutePerRun, "maxTaskExecutePerRun");
+        this.maxTaskExecutePerRun = checkPositive(maxTaskExecutePerRun, "maxTaskExecutePerRun");
     }
 
     private static EventExecutorGroup verify(EventExecutorGroup group) {
-        Iterator<EventExecutor> executors = ObjectUtil.checkNotNull(group, "group").iterator();
+        Iterator<EventExecutor> executors = requireNonNull(group, "group").iterator();
         while (executors.hasNext()) {
             EventExecutor executor = executors.next();
             if (executor instanceof OrderedEventExecutor) {
@@ -224,7 +226,6 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private final int maxTaskExecutePerRun;
 
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
-            super(executor);
             this.executor = executor;
             this.maxTaskExecutePerRun = maxTaskExecutePerRun;
         }
@@ -288,11 +289,6 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public boolean inEventLoop() {
-            return false;
-        }
-
-        @Override
         public boolean isShuttingDown() {
             return executor.isShutdown();
         }
@@ -335,14 +331,31 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (state.compareAndSet(NONE, SUBMITTED)) {
                 // Actually it could happen that the runnable was picked up in between but we not care to much and just
                 // execute ourself. At worst this will be a NOOP when run() is called.
-                try {
-                    executor.execute(this);
-                } catch (Throwable e) {
-                    // Not reset the state as some other Runnable may be added to the queue already in the meantime.
-                    tasks.remove(command);
-                    PlatformDependent.throwException(e);
-                }
+                executor.execute(this);
             }
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay,
+                                           TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(
+                Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
         }
     }
 }

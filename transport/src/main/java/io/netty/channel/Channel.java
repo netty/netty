@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -59,7 +59,7 @@ import java.net.SocketAddress;
  * implementation where the {@link Channel} belongs to.  For example, you could
  * write a new {@link Channel} implementation that creates the sub-channels that
  * share one socket connection, as <a href="http://beepcore.org/">BEEP</a> and
- * <a href="http://en.wikipedia.org/wiki/Secure_Shell">SSH</a> do.
+ * <a href="https://en.wikipedia.org/wiki/Secure_Shell">SSH</a> do.
  *
  * <h3>Downcast to access transport-specific operations</h3>
  * <p>
@@ -201,7 +201,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #register(ChannelPromise)}</li>
      *   <li>{@link #deregister(ChannelPromise)}</li>
      *   <li>{@link #voidPromise()}</li>
      * </ul>
@@ -230,7 +230,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * Register the {@link Channel} of the {@link ChannelPromise} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(EventLoop eventLoop, ChannelPromise promise);
+        void register(ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
@@ -272,7 +272,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         void deregister(ChannelPromise promise);
 
         /**
-         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
+         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
          * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
          */
         void beginRead();

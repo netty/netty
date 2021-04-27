@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpVersion;
@@ -70,21 +69,16 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         http2ConnectionHandler = new Http2ConnectionHandlerBuilder()
                 .frameListener(frameListener).build();
 
-        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new Http2ServerUpgradeCodec(http2ConnectionHandler);
-            }
-        };
+        UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2ConnectionHandler);
 
-        userEvents = new ArrayList<Object>();
+        userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2ConnectionHandler);
-        channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 userEvents.add(evt);
@@ -200,22 +194,17 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
             }
         }).build();
-        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new Http2ServerUpgradeCodec(http2Codec);
-            }
-        };
+        UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2Codec);
         http2ConnectionHandler = http2Codec;
 
-        userEvents = new ArrayList<Object>();
+        userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2Codec);
-        channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 userEvents.add(evt);

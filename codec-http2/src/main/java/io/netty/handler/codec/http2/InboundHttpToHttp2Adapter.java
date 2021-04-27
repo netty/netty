@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpScheme;
@@ -26,7 +26,7 @@ import io.netty.util.internal.UnstableApi;
  * Translates HTTP/1.x object reads into HTTP/2 frames.
  */
 @UnstableApi
-public class InboundHttpToHttp2Adapter extends ChannelInboundHandlerAdapter {
+public class InboundHttpToHttp2Adapter implements ChannelHandler {
     private final Http2Connection connection;
     private final Http2FrameListener listener;
 
@@ -45,7 +45,7 @@ public class InboundHttpToHttp2Adapter extends ChannelInboundHandlerAdapter {
         if (msg instanceof FullHttpMessage) {
             handle(ctx, connection, listener, (FullHttpMessage) msg);
         } else {
-            super.channelRead(ctx, msg);
+            ctx.fireChannelRead(msg);
         }
     }
 

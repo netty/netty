@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * the License.
  */
 package io.netty.handler.codec.http.cors;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
@@ -68,11 +70,11 @@ public final class CorsConfigBuilder {
     boolean allowNullOrigin;
     boolean enabled = true;
     boolean allowCredentials;
-    final Set<String> exposeHeaders = new HashSet<String>();
+    final Set<String> exposeHeaders = new HashSet<>();
     long maxAge;
-    final Set<HttpMethod> requestMethods = new HashSet<HttpMethod>();
-    final Set<String> requestHeaders = new HashSet<String>();
-    final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
+    final Set<HttpMethod> requestMethods = new HashSet<>();
+    final Set<String> requestHeaders = new HashSet<>();
+    final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<>();
     private boolean noPreflightHeaders;
     boolean shortCircuit;
 
@@ -82,7 +84,7 @@ public final class CorsConfigBuilder {
      * @param origins the origin to be used for this builder.
      */
     CorsConfigBuilder(final String... origins) {
-        this.origins = new LinkedHashSet<String>(Arrays.asList(origins));
+        this.origins = new LinkedHashSet<>(Arrays.asList(origins));
         anyOrigin = false;
     }
 
@@ -378,10 +380,7 @@ public final class CorsConfigBuilder {
          * @param value the value that will be returned when the call method is invoked.
          */
         private ConstantValueGenerator(final Object value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value must not be null");
-            }
-            this.value = value;
+            this.value = checkNotNullWithIAE(value, "value");
         }
 
         @Override

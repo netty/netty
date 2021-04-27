@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.serialization;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
@@ -63,9 +65,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
      *        cost, please specify the properly estimated value.
      */
     public ObjectEncoderOutputStream(OutputStream out, int estimatedLength) {
-        if (out == null) {
-            throw new NullPointerException("out");
-        }
+        requireNonNull(out, "out");
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }
@@ -82,12 +82,9 @@ public class ObjectEncoderOutputStream extends OutputStream implements
     public void writeObject(Object obj) throws IOException {
         ByteBuf buf = Unpooled.buffer(estimatedLength);
         try {
-            ObjectOutputStream oout = new CompactObjectOutputStream(new ByteBufOutputStream(buf));
-            try {
+            try (ObjectOutputStream oout = new CompactObjectOutputStream(new ByteBufOutputStream(buf))) {
                 oout.writeObject(obj);
                 oout.flush();
-            } finally {
-                oout.close();
             }
 
             int objectSize = buf.readableBytes();

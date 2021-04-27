@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,13 @@
 package io.netty.util.internal;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * String utility class.
@@ -39,6 +41,7 @@ public final class StringUtil {
 
     private static final String[] BYTE2HEX_PAD = new String[256];
     private static final String[] BYTE2HEX_NOPAD = new String[256];
+    private static final byte[] HEX2B;
 
     /**
      * 2 - Quote character at beginning and end.
@@ -51,9 +54,36 @@ public final class StringUtil {
         // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
         for (int i = 0; i < BYTE2HEX_PAD.length; i++) {
             String str = Integer.toHexString(i);
-            BYTE2HEX_PAD[i] = i > 0xf ? str : ('0' + str);
+            BYTE2HEX_PAD[i] = i > 0xf ? str : '0' + str;
             BYTE2HEX_NOPAD[i] = str;
         }
+        // Generate the lookup table that converts an hex char into its decimal value:
+        // the size of the table is such that the JVM is capable of save any bounds-check
+        // if a char type is used as an index.
+        HEX2B = new byte[Character.MAX_VALUE + 1];
+        Arrays.fill(HEX2B, (byte) -1);
+        HEX2B['0'] = 0;
+        HEX2B['1'] = 1;
+        HEX2B['2'] = 2;
+        HEX2B['3'] = 3;
+        HEX2B['4'] = 4;
+        HEX2B['5'] = 5;
+        HEX2B['6'] = 6;
+        HEX2B['7'] = 7;
+        HEX2B['8'] = 8;
+        HEX2B['9'] = 9;
+        HEX2B['A'] = 10;
+        HEX2B['B'] = 11;
+        HEX2B['C'] = 12;
+        HEX2B['D'] = 13;
+        HEX2B['E'] = 14;
+        HEX2B['F'] = 15;
+        HEX2B['a'] = 10;
+        HEX2B['b'] = 11;
+        HEX2B['c'] = 12;
+        HEX2B['d'] = 13;
+        HEX2B['e'] = 14;
+        HEX2B['f'] = 15;
     }
 
     private StringUtil() {
@@ -99,7 +129,7 @@ public final class StringUtil {
         try {
             buf.append(byteToHexStringPadded(value));
         } catch (IOException e) {
-            PlatformDependent.throwException(e);
+            throw new UncheckedIOException(e);
         }
         return buf;
     }
@@ -150,7 +180,7 @@ public final class StringUtil {
         try {
             buf.append(byteToHexString(value));
         } catch (IOException e) {
-            PlatformDependent.throwException(e);
+            throw new UncheckedIOException(e);
         }
         return buf;
     }
@@ -211,18 +241,10 @@ public final class StringUtil {
      * given, or {@code -1} if the character is invalid.
      */
     public static int decodeHexNibble(final char c) {
+        assert HEX2B.length == Character.MAX_VALUE + 1;
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        if (c >= '0' && c <= '9') {
-            return c - '0';
-        }
-        if (c >= 'A' && c <= 'F') {
-            return c - ('A' - 0xA);
-        }
-        if (c >= 'a' && c <= 'f') {
-            return c - ('a' - 0xA);
-        }
-        return -1;
+        return HEX2B[c];
     }
 
     /**
@@ -239,7 +261,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes part of a string with <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes part of a string with <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      *
      * @param hexDump a {@link CharSequence} which contains the hex dump
      * @param fromIndex start of hex dump in {@code hexDump}
@@ -260,7 +282,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      */
     public static byte[] decodeHexDump(CharSequence hexDump) {
         return decodeHexDump(hexDump, 0, hexDump.length());
@@ -282,7 +304,7 @@ public final class StringUtil {
      * with anonymous classes.
      */
     public static String simpleClassName(Class<?> clazz) {
-        String className = checkNotNull(clazz, "clazz").getName();
+        String className = requireNonNull(clazz, "clazz").getName();
         final int lastDotIdx = className.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
         if (lastDotIdx > -1) {
             return className.substring(lastDotIdx + 1);
@@ -313,7 +335,7 @@ public final class StringUtil {
      * @return {@link CharSequence} the escaped value if necessary, or the value unchanged
      */
     public static CharSequence escapeCsv(CharSequence value, boolean trimWhiteSpace) {
-        int length = checkNotNull(value, "value").length();
+        int length = requireNonNull(value, "value").length();
         int start;
         int last;
         if (trimWhiteSpace) {
@@ -399,7 +421,7 @@ public final class StringUtil {
      * @return {@link CharSequence} the unescaped value if necessary, or the value unchanged
      */
     public static CharSequence unescapeCsv(CharSequence value) {
-        int length = checkNotNull(value, "value").length();
+        int length = requireNonNull(value, "value").length();
         if (length == 0) {
             return value;
         }
@@ -436,37 +458,36 @@ public final class StringUtil {
      * @return {@link List} the list of unescaped fields
      */
     public static List<CharSequence> unescapeCsvFields(CharSequence value) {
-        List<CharSequence> unescaped = new ArrayList<CharSequence>(2);
+        List<CharSequence> unescaped = new ArrayList<>(2);
         StringBuilder current = InternalThreadLocalMap.get().stringBuilder();
         boolean quoted = false;
         int last = value.length() - 1;
         for (int i = 0; i <= last; i++) {
             char c = value.charAt(i);
             if (quoted) {
-                switch (c) {
-                    case DOUBLE_QUOTE:
-                        if (i == last) {
-                            // Add the last field and return
-                            unescaped.add(current.toString());
-                            return unescaped;
-                        }
-                        char next = value.charAt(++i);
-                        if (next == DOUBLE_QUOTE) {
-                            // 2 double-quotes should be unescaped to one
-                            current.append(DOUBLE_QUOTE);
-                            break;
-                        }
-                        if (next == COMMA) {
-                            // This is the end of a field. Let's start to parse the next field.
-                            quoted = false;
-                            unescaped.add(current.toString());
-                            current.setLength(0);
-                            break;
-                        }
-                        // double-quote followed by other character is invalid
-                        throw newInvalidEscapedCsvFieldException(value, i - 1);
-                    default:
-                        current.append(c);
+                if (c == DOUBLE_QUOTE) {
+                    if (i == last) {
+                        // Add the last field and return
+                        unescaped.add(current.toString());
+                        return unescaped;
+                    }
+                    char next = value.charAt(++i);
+                    if (next == DOUBLE_QUOTE) {
+                        // 2 double-quotes should be unescaped to one
+                        current.append(DOUBLE_QUOTE);
+                        continue;
+                    }
+                    if (next == COMMA) {
+                        // This is the end of a field. Let's start to parse the next field.
+                        quoted = false;
+                        unescaped.add(current.toString());
+                        current.setLength(0);
+                        continue;
+                    }
+                    // double-quote followed by other character is invalid
+                    throw newInvalidEscapedCsvFieldException(value, i - 1);
+                } else {
+                    current.append(c);
                 }
             } else {
                 switch (c) {
@@ -542,7 +563,7 @@ public final class StringUtil {
      *
      * @param seq    The string to search.
      * @param offset The offset to start searching at.
-     * @return the index of the first non-white space character or &lt;{@code 0} if none was found.
+     * @return the index of the first non-white space character or &lt;{@code -1} if none was found.
      */
     public static int indexOfNonWhiteSpace(CharSequence seq, int offset) {
         for (; offset < seq.length(); ++offset) {
@@ -554,12 +575,28 @@ public final class StringUtil {
     }
 
     /**
+     * Find the index of the first white space character in {@code s} starting at {@code offset}.
+     *
+     * @param seq    The string to search.
+     * @param offset The offset to start searching at.
+     * @return the index of the first white space character or &lt;{@code -1} if none was found.
+     */
+    public static int indexOfWhiteSpace(CharSequence seq, int offset) {
+        for (; offset < seq.length(); ++offset) {
+            if (Character.isWhitespace(seq.charAt(offset))) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Determine if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
      *
      * @param c the character to check.
      * @return {@code true} if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
      */
     public static boolean isSurrogate(char c) {
         return c >= '\uD800' && c <= '\uDFFF';
@@ -607,8 +644,8 @@ public final class StringUtil {
      * @return a char sequence joined by a given separator.
      */
     public static CharSequence join(CharSequence separator, Iterable<? extends CharSequence> elements) {
-        ObjectUtil.checkNotNull(separator, "separator");
-        ObjectUtil.checkNotNull(elements, "elements");
+        requireNonNull(separator, "separator");
+        requireNonNull(elements, "elements");
 
         Iterator<? extends CharSequence> iterator = elements.iterator();
         if (!iterator.hasNext()) {

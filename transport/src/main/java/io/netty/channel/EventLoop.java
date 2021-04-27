@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,25 @@ import io.netty.util.concurrent.OrderedEventExecutor;
  *
  */
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
-    @Override
-    EventLoopGroup parent();
+
+    /**
+     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
+     */
+    Unsafe unsafe();
+
+    /**
+     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
+     * are only provided to implement the actual transport, and must be invoked from the {@link EventLoop} itself.
+     */
+    interface Unsafe {
+        /**
+         * Register the {@link Channel} to the {@link EventLoop}.
+         */
+        void register(Channel channel) throws Exception;
+
+        /**
+         * Deregister the {@link Channel} from the {@link EventLoop}.
+         */
+        void deregister(Channel channel) throws Exception;
+    }
 }

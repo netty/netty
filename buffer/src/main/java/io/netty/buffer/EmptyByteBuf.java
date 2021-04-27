@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.EmptyArrays;
@@ -64,9 +65,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+        requireNonNull(alloc, "alloc");
 
         this.alloc = alloc;
         this.order = order;
@@ -120,9 +119,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        requireNonNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }
@@ -190,26 +187,6 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf clear() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf markReaderIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetReaderIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf markWriterIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetWriterIndex() {
         return this;
     }
 

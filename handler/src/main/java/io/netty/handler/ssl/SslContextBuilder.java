@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,15 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
+import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.internal.UnstableApi;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.InputStream;
@@ -29,16 +33,22 @@ import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
  */
 public final class SslContextBuilder {
+    @SuppressWarnings("rawtypes")
+    private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
 
     /**
      * Creates a builder for new client-side {@link SslContext}.
@@ -61,8 +71,13 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
-     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
-     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
+     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
+     *
      * @see #keyManager(InputStream, InputStream)
      */
     public static SslContextBuilder forServer(InputStream keyCertChainInputStream, InputStream keyInputStream) {
@@ -108,8 +123,12 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
-     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
-     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
+     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
      *     password-protected
      * @see #keyManager(InputStream, InputStream, String)
@@ -160,6 +179,15 @@ public final class SslContextBuilder {
         return new SslContextBuilder(true).keyManager(keyManagerFactory);
     }
 
+    /**
+     * Creates a builder for new server-side {@link SslContext} with {@link KeyManager}.
+     *
+     * @param keyManager non-{@code null} KeyManager for server's private key
+     */
+    public static SslContextBuilder forServer(KeyManager keyManager) {
+        return new SslContextBuilder(true).keyManager(keyManager);
+    }
+
     private final boolean forServer;
     private SslProvider provider;
     private Provider sslContextProvider;
@@ -179,9 +207,22 @@ public final class SslContextBuilder {
     private boolean startTls;
     private boolean enableOcsp;
     private String keyStoreType = KeyStore.getDefaultType();
+    private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
+    }
+
+    /**
+     * Configure a {@link SslContextOption}.
+     */
+    public <T> SslContextBuilder option(SslContextOption<T> option, T value) {
+        if (value == null) {
+            options.remove(option);
+        } else {
+            options.put(option, value);
+        }
+        return this;
     }
 
     /**
@@ -225,6 +266,8 @@ public final class SslContextBuilder {
     /**
      * Trusted certificates for verifying the remote endpoint's certificate. The input stream should
      * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
+     *
+     * The caller is responsible for calling {@link InputStream#close()} after {@link #build()} has been called.
      */
     public SslContextBuilder trustManager(InputStream trustCertCollectionInputStream) {
         try {
@@ -260,6 +303,19 @@ public final class SslContextBuilder {
     }
 
     /**
+     * A single trusted manager for verifying the remote endpoint's certificate.
+     * This is helpful when custom implementation of {@link TrustManager} is needed.
+     * Internally, a simple wrapper of {@link TrustManagerFactory} that only produces this
+     * specified {@link TrustManager} will be created, thus all the requirements specified in
+     * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
+     */
+    public SslContextBuilder trustManager(TrustManager trustManager) {
+        this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        trustCertCollection = null;
+        return this;
+    }
+
+    /**
      * Identifying certificate for this host. {@code keyCertChainFile} and {@code keyFile} may
      * be {@code null} for client contexts, which disables mutual authentication.
      *
@@ -274,8 +330,12 @@ public final class SslContextBuilder {
      * Identifying certificate for this host. {@code keyCertChainInputStream} and {@code keyInputStream} may
      * be {@code null} for client contexts, which disables mutual authentication.
      *
-     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
-     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
+     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      */
     public SslContextBuilder keyManager(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return keyManager(keyCertChainInputStream, keyInputStream, null);
@@ -332,8 +392,12 @@ public final class SslContextBuilder {
      * Identifying certificate for this host. {@code keyCertChainInputStream} and {@code keyInputStream} may
      * be {@code null} for client contexts, which disables mutual authentication.
      *
-     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
-     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyCertChainInputStream   an input stream for an X.509 certificate chain in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
+     * @param keyInputStream            an input stream for a PKCS#8 private key in PEM format. The caller is
+     *                                  responsible for calling {@link InputStream#close()} after {@link #build()}
+     *                                  has been called.
      * @param keyPassword the password of the {@code keyInputStream}, or {@code null} if it's not
      *     password-protected
      */
@@ -365,19 +429,14 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
-            checkNotNull(keyCertChain, "keyCertChain required for servers");
-            if (keyCertChain.length == 0) {
-                throw new IllegalArgumentException("keyCertChain must be non-empty");
-            }
-            checkNotNull(key, "key required for servers");
+            checkNonEmpty(keyCertChain, "keyCertChain"); // lgtm[java/dereferenced-value-may-be-null]
+            requireNonNull(key, "key required for servers");
         }
         if (keyCertChain == null || keyCertChain.length == 0) {
             this.keyCertChain = null;
         } else {
             for (X509Certificate cert: keyCertChain) {
-                if (cert == null) {
-                    throw new IllegalArgumentException("keyCertChain contains null entry");
-                }
+                checkNotNullWithIAE(cert, "cert");
             }
             this.keyCertChain = keyCertChain.clone();
         }
@@ -414,12 +473,34 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {
-            checkNotNull(keyManagerFactory, "keyManagerFactory required for servers");
+            requireNonNull(keyManagerFactory, "keyManagerFactory required for servers");
         }
         keyCertChain = null;
         key = null;
         keyPassword = null;
         this.keyManagerFactory = keyManagerFactory;
+        return this;
+    }
+
+    /**
+     * A single key manager managing the identity information of this host.
+     * This is helpful when custom implementation of {@link KeyManager} is needed.
+     * Internally, a wrapper of {@link KeyManagerFactory} that only produces this specified
+     * {@link KeyManager} will be created, thus all the requirements specified in
+     * {@link #keyManager(KeyManagerFactory keyManagerFactory)} also apply here.
+     */
+    public SslContextBuilder keyManager(KeyManager keyManager) {
+        if (forServer) {
+            requireNonNull(keyManager, "keyManager required for servers");
+        }
+        if (keyManager != null) {
+            this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
+        } else {
+            this.keyManagerFactory = null;
+        }
+        keyCertChain = null;
+        key = null;
+        keyPassword = null;
         return this;
     }
 
@@ -437,7 +518,7 @@ public final class SslContextBuilder {
      * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-        checkNotNull(cipherFilter, "cipherFilter");
+        requireNonNull(cipherFilter, "cipherFilter");
         this.ciphers = ciphers;
         this.cipherFilter = cipherFilter;
         return this;
@@ -473,7 +554,7 @@ public final class SslContextBuilder {
      * Sets the client authentication mode.
      */
     public SslContextBuilder clientAuth(ClientAuth clientAuth) {
-        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        this.clientAuth = requireNonNull(clientAuth, "clientAuth");
         return this;
     }
 
@@ -526,11 +607,12 @@ public final class SslContextBuilder {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStoreType);
+                enableOcsp, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType);
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
+                    toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
@@ -538,7 +620,7 @@ public final class SslContextBuilder {
         if (iterable == null) {
             return null;
         }
-        final List<T> list = new ArrayList<T>();
+        final List<T> list = new ArrayList<>();
         for (T element : iterable) {
             list.add(element);
         }

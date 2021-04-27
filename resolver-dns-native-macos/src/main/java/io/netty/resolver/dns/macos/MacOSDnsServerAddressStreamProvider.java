@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -41,10 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * current nameserver configuration of the system.
  */
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
-
-    // Fallback provider
-    private static final DnsServerAddressStreamProvider DEFAULT_PROVIDER =
-            DnsServerAddressStreamProviders.platformDefault();
 
     private static final Throwable UNAVAILABILITY_CAUSE;
 
@@ -113,7 +109,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         if (resolvers == null || resolvers.length == 0) {
             return Collections.emptyMap();
         }
-        Map<String, DnsServerAddresses> resolverMap = new HashMap<String, DnsServerAddresses>(resolvers.length);
+        Map<String, DnsServerAddresses> resolverMap = new HashMap<>(resolvers.length);
         for (DnsResolver resolver: resolvers) {
             // Skip mdns
             if ("mdns".equalsIgnoreCase(resolver.options())) {
@@ -167,7 +163,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
                 if (addresses != null) {
                     return addresses.stream();
                 }
-                return DEFAULT_PROVIDER.nameServerAddressStream(originalHostname);
+                return DnsServerAddressStreamProviders.unixDefault().nameServerAddressStream(originalHostname);
             }
 
             DnsServerAddresses addresses = resolverMap.get(hostname);

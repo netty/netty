@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,8 +17,9 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
@@ -30,35 +31,27 @@ import static org.junit.Assert.assertTrue;
 
 public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
-    @Override
-    protected EventLoopGroup newEventLoopGroup() {
-        return new KQueueEventLoopGroup();
-    }
-
-    @Override
-    protected ServerSocketChannel newChannel() {
-        return new KQueueServerSocketChannel();
-    }
-
-    @Override
-    protected Class<? extends ServerChannel> serverChannelClass() {
-        return KQueueServerSocketChannel.class;
-    }
-
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new KQueueEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, newIoHandlerFactory());
 
         final EventLoop el = group.next();
-        Future<?> future = el.schedule(new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
+        Future<?> future = el.schedule(() -> {
+            // NOOP
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         assertFalse(future.awaitUninterruptibly(1000));
         assertTrue(future.cancel(true));
         group.shutdownGracefully();
+    }
+
+    @Override
+    protected IoHandlerFactory newIoHandlerFactory() {
+        return KQueueHandler.newFactory();
+    }
+
+    @Override
+    protected Class<? extends ServerChannel> serverChannelClass() {
+        return KQueueServerSocketChannel.class;
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
@@ -36,24 +37,24 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
-    public EpollDomainSocketChannel() {
-        super(newSocketDomain(), false);
+    public EpollDomainSocketChannel(EventLoop eventLoop) {
+        super(eventLoop, newSocketDomain(), false);
     }
 
-    EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        super(parent, new LinuxSocket(fd.intValue()));
+    EpollDomainSocketChannel(Channel parent, EventLoop eventLoop, FileDescriptor fd) {
+        super(parent, eventLoop, new LinuxSocket(fd.intValue()));
     }
 
-    public EpollDomainSocketChannel(int fd) {
-        super(fd);
+    public EpollDomainSocketChannel(EventLoop eventLoop, int fd) {
+        super(eventLoop, fd);
     }
 
-    public EpollDomainSocketChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd);
+    public EpollDomainSocketChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd) {
+        super(parent, eventLoop, fd);
     }
 
-    public EpollDomainSocketChannel(int fd, boolean active) {
-        super(new LinuxSocket(fd), active);
+    public EpollDomainSocketChannel(int fd, EventLoop eventLoop, boolean active) {
+        super(eventLoop, new LinuxSocket(fd), active);
     }
 
     @Override
@@ -123,7 +124,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
 
     /**
      * Returns the unix credentials (uid, gid, pid) of the peer
-     * <a href=http://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
+     * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
      */
     @UnstableApi
     public PeerCredentials peerCredentials() throws IOException {
@@ -152,7 +153,6 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             }
             final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -185,6 +185,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
             } finally {
+                readIfIsAutoRead();
                 epollInFinally(config);
             }
         }

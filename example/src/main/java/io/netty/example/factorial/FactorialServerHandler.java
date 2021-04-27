@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,7 +33,7 @@ public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteg
     private BigInteger factorial = new BigInteger("1");
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, BigInteger msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, BigInteger msg) throws Exception {
         // Calculate the cumulative factorial and send it to the client.
         lastMultiplier = msg;
         factorial = factorial.multiply(msg);

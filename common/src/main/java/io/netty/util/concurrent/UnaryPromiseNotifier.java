@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +25,7 @@ public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     private final Promise<? super T> promise;
 
     public UnaryPromiseNotifier(Promise<? super T> promise) {
-        this.promise = ObjectUtil.checkNotNull(promise, "promise");
+        this.promise = requireNonNull(promise, "promise");
     }
 
     @Override

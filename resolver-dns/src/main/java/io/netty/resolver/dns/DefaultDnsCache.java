@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,21 +18,19 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link DnsCache}, backed by a {@link ConcurrentMap}.
  * If any additional {@link DnsRecord} is used, no caching takes place.
  */
-@UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
     private final Cache<DefaultDnsCacheEntry> resolveCache = new Cache<DefaultDnsCacheEntry>() {
@@ -115,7 +113,7 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
         return resolveCache.clear(appendDot(hostname));
     }
 
@@ -125,9 +123,9 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
         if (!emptyAdditionals(additionals)) {
-            return Collections.<DnsCacheEntry>emptyList();
+            return Collections.emptyList();
         }
 
         return resolveCache.get(appendDot(hostname));
@@ -136,9 +134,9 @@ public class DefaultDnsCache implements DnsCache {
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals,
                                InetAddress address, long originalTtl, EventLoop loop) {
-        checkNotNull(hostname, "hostname");
-        checkNotNull(address, "address");
-        checkNotNull(loop, "loop");
+        requireNonNull(hostname, "hostname");
+        requireNonNull(address, "address");
+        requireNonNull(loop, "loop");
         DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address);
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
@@ -149,9 +147,9 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
-        checkNotNull(hostname, "hostname");
-        checkNotNull(cause, "cause");
-        checkNotNull(loop, "loop");
+        requireNonNull(hostname, "hostname");
+        requireNonNull(cause, "cause");
+        requireNonNull(loop, "loop");
 
         DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause);
         if (negativeTtl == 0 || !emptyAdditionals(additionals)) {

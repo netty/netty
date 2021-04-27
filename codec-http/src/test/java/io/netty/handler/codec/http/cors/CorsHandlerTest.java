@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -201,12 +201,7 @@ public class CorsHandlerTest {
     @Test
     public void preflightRequestWithValueGenerator() {
         final CorsConfig config = forOrigin("http://localhost:8888")
-                .preflightResponseHeader("GenHeader", new Callable<String>() {
-                    @Override
-                    public String call() throws Exception {
-                        return "generatedValue";
-                    }
-                }).build();
+                .preflightResponseHeader("GenHeader", () -> "generatedValue").build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get(of("GenHeader")), equalTo("generatedValue"));
         assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
@@ -547,7 +542,7 @@ public class CorsHandlerTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, true, true));
         }
     }

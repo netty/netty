@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -22,12 +22,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,7 +40,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
     public HttpResponseHandler() {
         // Use a concurrent map because we add and iterate from the main thread (just for the purposes of the example),
         // but Netty also does a get on the map when messages are received in a EventLoop thread.
-        streamidPromiseMap = PlatformDependent.newConcurrentHashMap();
+        streamidPromiseMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -53,7 +53,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @see HttpResponseHandler#awaitResponses(long, java.util.concurrent.TimeUnit)
      */
     public Entry<ChannelFuture, ChannelPromise> put(int streamId, ChannelFuture writeFuture, ChannelPromise promise) {
-        return streamidPromiseMap.put(streamId, new SimpleEntry<ChannelFuture, ChannelPromise>(writeFuture, promise));
+        return streamidPromiseMap.put(streamId, new SimpleEntry<>(writeFuture, promise));
     }
 
     /**
@@ -87,7 +87,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
         Integer streamId = msg.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
         if (streamId == null) {
             System.err.println("HttpResponseHandler unexpected message received: " + msg);

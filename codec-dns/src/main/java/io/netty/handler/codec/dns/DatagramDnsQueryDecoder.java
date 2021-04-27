@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,9 +23,8 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
@@ -47,15 +46,14 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsQueryDecoder(DnsRecordDecoder recordDecoder) {
-        this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
+        this.recordDecoder = requireNonNull(recordDecoder, "recordDecoder");
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         final ByteBuf buf = packet.content();
 
-        final DnsQuery query = newQuery(packet, buf);
-        boolean success = false;
+        DnsQuery query = newQuery(packet, buf);
         try {
             final int questionCount = buf.readUnsignedShort();
             final int answerCount = buf.readUnsignedShort();
@@ -67,10 +65,11 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
             decodeRecords(query, DnsSection.AUTHORITY, buf, authorityRecordCount);
             decodeRecords(query, DnsSection.ADDITIONAL, buf, additionalRecordCount);
 
-            out.add(query);
-            success = true;
+            DnsQuery q = query;
+            query = null;
+            ctx.fireChannelRead(q);
         } finally {
-            if (!success) {
+            if (query != null) {
                 query.release();
             }
         }

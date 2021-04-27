@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,14 +33,29 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Iterator;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
-public class WebSocketServerHandshaker13Test {
+public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTest {
+
+    @Override
+    protected WebSocketServerHandshaker newHandshaker(String webSocketURL, String subprotocols,
+            WebSocketDecoderConfig decoderConfig) {
+        return new WebSocketServerHandshaker13(webSocketURL, subprotocols, decoderConfig);
+    }
+
+    @Override
+    protected WebSocketVersion webSocketVersion() {
+        return WebSocketVersion.V13;
+    }
 
     @Test
     public void testPerformOpeningHandshake() {
@@ -63,7 +78,7 @@ public class WebSocketServerHandshaker13Test {
             testUpgrade0(ch, new WebSocketServerHandshaker13(
                     "ws://example.com/chat", null, false, Integer.MAX_VALUE, false));
         }
-        Assert.assertFalse(ch.finish());
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -87,14 +102,14 @@ public class WebSocketServerHandshaker13Test {
         ByteBuf buffer = ch.readOutbound();
         try {
             ch.writeInbound(buffer);
-            Assert.fail();
+            fail();
         } catch (CorruptedWebSocketFrameException expected) {
             // expected
         }
         ReferenceCounted closeMessage = ch.readOutbound();
-        Assert.assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
+        assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
         closeMessage.release();
-        Assert.assertFalse(ch.finish());
+        assertFalse(ch.finish());
     }
 
     private static void testUpgrade0(EmbeddedChannel ch, WebSocketServerHandshaker13 handshaker) {
@@ -115,14 +130,14 @@ public class WebSocketServerHandshaker13Test {
         ch2.writeInbound(resBuf);
         HttpResponse res = ch2.readInbound();
 
-        Assert.assertEquals(
+        assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
         Iterator<String> subProtocols = handshaker.subprotocols().iterator();
         if (subProtocols.hasNext()) {
-            Assert.assertEquals(subProtocols.next(),
+            assertEquals(subProtocols.next(),
                     res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         ReferenceCountUtil.release(res);
         req.release();

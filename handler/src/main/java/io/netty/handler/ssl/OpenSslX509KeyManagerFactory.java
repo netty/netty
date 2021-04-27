@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,13 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -109,7 +111,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
         private volatile ProviderFactory providerFactory;
 
         OpenSslKeyManagerFactorySpi(KeyManagerFactory kmf) {
-            this.kmf = ObjectUtil.checkNotNull(kmf, "kmf");
+            this.kmf = requireNonNull(kmf, "kmf");
         }
 
         @Override
@@ -183,7 +185,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 OpenSslPopulatedKeyMaterialProvider(
                         X509KeyManager keyManager, String password, Iterable<String> aliases) {
                     super(keyManager, password);
-                    materialMap = new HashMap<String, Object>();
+                    materialMap = new HashMap<>();
                     boolean initComplete = false;
                     try {
                         for (String alias: aliases) {
@@ -204,9 +206,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                             destroy();
                         }
                     }
-                    if (materialMap.isEmpty()) {
-                        throw new IllegalArgumentException("aliases must be non-empty");
-                    }
+                    checkNonEmpty(materialMap, "materialMap");
                 }
 
                 @Override

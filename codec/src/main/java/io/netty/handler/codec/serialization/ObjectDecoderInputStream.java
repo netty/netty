@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.serialization;
+
+import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -88,9 +90,7 @@ public class ObjectDecoderInputStream extends InputStream implements
      *        a {@link StreamCorruptedException} will be raised.
      */
     public ObjectDecoderInputStream(InputStream in, ClassLoader classLoader, int maxObjectSize) {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+        requireNonNull(in, "in");
         if (maxObjectSize <= 0) {
             throw new IllegalArgumentException("maxObjectSize: " + maxObjectSize);
         }
@@ -127,8 +127,9 @@ public class ObjectDecoderInputStream extends InputStream implements
         in.close();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
-    public void mark(int readlimit) {
+    public void mark(int readlimit) {   // lgtm[java/non-sync-override]
         in.mark(readlimit);
     }
 
@@ -137,8 +138,9 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.markSupported();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
-    public int read() throws IOException {
+    public int read() throws IOException {  // lgtm[java/non-sync-override]
         return in.read();
     }
 

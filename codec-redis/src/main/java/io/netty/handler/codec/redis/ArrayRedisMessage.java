@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,9 +15,10 @@
 
 package io.netty.handler.codec.redis;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -25,7 +26,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Arrays of <a href="http://redis.io/topics/protocol">RESP</a>.
+ * Arrays of <a href="https://redis.io/topics/protocol">RESP</a>.
  */
 @UnstableApi
 public class ArrayRedisMessage extends AbstractReferenceCounted implements RedisMessage {
@@ -43,7 +44,7 @@ public class ArrayRedisMessage extends AbstractReferenceCounted implements Redis
      */
     public ArrayRedisMessage(List<RedisMessage> children) {
         // do not retain here. children are already retained when created.
-        this.children = ObjectUtil.checkNotNull(children, "children");
+        this.children = requireNonNull(children, "children");
     }
 
     /**

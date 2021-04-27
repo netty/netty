@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 package io.netty.util.internal;
 
 import io.netty.util.Recycler;
+
+import java.util.Objects;
 
 /**
  * Light-weight object pool.
@@ -64,9 +66,7 @@ public abstract class ObjectPool<T> {
      * that should be pooled.
      */
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
-        ObjectUtil.checkNotNull(creator, "creator");
-
-        return new RecyclerObjectPool<T>(creator);
+        return new RecyclerObjectPool<T>(Objects.requireNonNull(creator, "creator"));
     }
 
     private static final class RecyclerObjectPool<T> extends ObjectPool<T> {

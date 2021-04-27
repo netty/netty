@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -27,6 +28,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +55,7 @@ public class ChannelInitializerTest {
 
     @Before
     public void setUp() {
-        group = new DefaultEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)
@@ -61,7 +63,7 @@ public class ChannelInitializerTest {
         client = new Bootstrap()
                 .group(group)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelHandler() { });
         testHandler = new InspectableHandler();
     }
 
@@ -82,12 +84,12 @@ public class ChannelInitializerTest {
 
     private void testInitChannelThrows(boolean registerFirst) {
         final Exception exception = new Exception();
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
 
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         if (registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+           pipeline.channel().register().syncUninterruptibly();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -103,7 +105,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+            assertTrue(pipeline.channel().register().awaitUninterruptibly().cause() instanceof ClosedChannelException);
         }
         pipeline.channel().close().syncUninterruptibly();
         pipeline.channel().closeFuture().syncUninterruptibly();
@@ -113,10 +115,10 @@ public class ChannelInitializerTest {
 
     @Test
     public void testChannelInitializerInInitializerCorrectOrdering() {
-        final ChannelInboundHandlerAdapter handler1 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler2 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler3 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler4 = new ChannelInboundHandlerAdapter();
+        final ChannelHandler handler1 = new ChannelHandler() { };
+        final ChannelHandler handler2 = new ChannelHandler() { };
+        final ChannelHandler handler3 = new ChannelHandler() { };
+        final ChannelHandler handler4 = new ChannelHandler() { };
 
         client.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -137,11 +139,8 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
+            channel.eventLoop().submit(() -> {
+                // NOOP
             }).syncUninterruptibly();
             Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
             assertSame(handler1, handlers.next().getValue());
@@ -157,7 +156,7 @@ public class ChannelInitializerTest {
     @Test
     public void testChannelInitializerReentrance() {
         final AtomicInteger registeredCalled = new AtomicInteger(0);
-        final ChannelInboundHandlerAdapter handler1 = new ChannelInboundHandlerAdapter() {
+        final ChannelHandler handler1 = new ChannelHandler() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 registeredCalled.incrementAndGet();
@@ -177,11 +176,8 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
+            channel.eventLoop().submit(() -> {
+                // NOOP
             }).syncUninterruptibly();
             assertEquals(1, initChannelCalled.get());
             assertEquals(2, registeredCalled.get());
@@ -390,7 +386,7 @@ public class ChannelInitializerTest {
         }
     }
 
-    private static final class InspectableHandler extends ChannelDuplexHandler {
+    private static final class InspectableHandler implements ChannelHandler {
         final AtomicInteger channelRegisteredCount = new AtomicInteger(0);
 
         @Override

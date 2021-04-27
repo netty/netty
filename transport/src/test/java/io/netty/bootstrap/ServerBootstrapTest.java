@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,18 +21,22 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.AttributeKey;
 import org.junit.Test;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -41,14 +45,14 @@ public class ServerBootstrapTest {
     @Test(timeout = 5000)
     public void testHandlerRegister() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
+        final AtomicReference<Throwable> error = new AtomicReference<>();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
               .group(group)
-              .childHandler(new ChannelInboundHandlerAdapter())
-              .handler(new ChannelHandlerAdapter() {
+              .childHandler(new ChannelHandler() { })
+              .handler(new ChannelHandler() {
                   @Override
                   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                       try {
@@ -83,28 +87,28 @@ public class ServerBootstrapTest {
         final CountDownLatch readLatch = new CountDownLatch(1);
         final CountDownLatch initLatch = new CountDownLatch(1);
 
-        final ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+        final ChannelHandler handler = new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 initLatch.countDown();
-                super.handlerAdded(ctx);
+                ctx.fireChannelActive();
             }
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 readLatch.countDown();
-                super.channelRead(ctx, msg);
+                ctx.fireChannelRead(msg);
             }
         };
 
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         Channel sch = null;
         Channel cch = null;
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
                     .group(group)
-                    .childHandler(new ChannelInboundHandlerAdapter());
+                    .childHandler(new ChannelHandler() { });
             if (channelInitializer) {
                 sb.handler(new ChannelInitializer<Channel>() {
                     @Override
@@ -119,7 +123,7 @@ public class ServerBootstrapTest {
             Bootstrap cb = new Bootstrap();
             cb.group(group)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter());
+                    .handler(new ChannelHandler() { });
 
             sch = sb.bind(addr).syncUninterruptibly().channel();
 
@@ -136,5 +140,38 @@ public class ServerBootstrapTest {
             }
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws InterruptedException {
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        final AtomicBoolean requestServed = new AtomicBoolean();
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .childAttr(key, "value")
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                        requestServed.set(true);
+                    }
+                });
+        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
+
+        Bootstrap cb = new Bootstrap();
+        cb.group(group)
+                .channel(LocalChannel.class)
+                .handler(new ChannelHandler() { });
+        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
+        serverChannel.close().syncUninterruptibly();
+        clientChannel.close().syncUninterruptibly();
+        group.shutdownGracefully();
+        assertTrue(requestServed.get());
     }
 }

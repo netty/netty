@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,12 +37,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A parser for hosts files.
  */
-@UnstableApi
 public final class HostsFileParser {
 
     private static final String WINDOWS_DEFAULT_SYSTEM_ROOT = "C:\\Windows";
@@ -125,14 +123,19 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
-        checkNotNull(file, "file");
-        checkNotNull(charsets, "charsets");
+        requireNonNull(file, "file");
+        requireNonNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
             for (Charset charset: charsets) {
-                HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
-                        new FileInputStream(file), charset)));
-                if (entries != HostsFileEntries.EMPTY) {
-                    return entries;
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(file), charset));
+                try {
+                    HostsFileEntries entries = parse(reader);
+                    if (entries != HostsFileEntries.EMPTY) {
+                        return entries;
+                    }
+                } finally {
+                    reader.close();
                 }
             }
         }
@@ -147,11 +150,11 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(Reader reader) throws IOException {
-        checkNotNull(reader, "reader");
+        requireNonNull(reader, "reader");
         BufferedReader buff = new BufferedReader(reader);
         try {
-            Map<String, Inet4Address> ipv4Entries = new HashMap<String, Inet4Address>();
-            Map<String, Inet6Address> ipv6Entries = new HashMap<String, Inet6Address>();
+            Map<String, Inet4Address> ipv4Entries = new HashMap<>();
+            Map<String, Inet6Address> ipv6Entries = new HashMap<>();
             String line;
             while ((line = buff.readLine()) != null) {
                 // remove comment
@@ -166,7 +169,7 @@ public final class HostsFileParser {
                 }
 
                 // split
-                List<String> lineParts = new ArrayList<String>();
+                List<String> lineParts = new ArrayList<>();
                 for (String s: WHITESPACES.split(line)) {
                     if (!s.isEmpty()) {
                         lineParts.add(s);

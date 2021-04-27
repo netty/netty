@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,9 +16,10 @@
 
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class ConstantPool<T extends Constant<T>> {
 
-    private final ConcurrentMap<String, T> constants = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, T> constants = new ConcurrentHashMap<>();
 
     private final AtomicInteger nextId = new AtomicInteger(1);
 
@@ -37,14 +38,9 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
      */
     public T valueOf(Class<?> firstNameComponent, String secondNameComponent) {
-        if (firstNameComponent == null) {
-            throw new NullPointerException("firstNameComponent");
-        }
-        if (secondNameComponent == null) {
-            throw new NullPointerException("secondNameComponent");
-        }
-
-        return valueOf(firstNameComponent.getName() + '#' + secondNameComponent);
+        return valueOf(
+                requireNonNull(firstNameComponent, "firstNameComponent").getName() + '#' +
+                        requireNonNull(secondNameComponent, "secondNameComponent"));
     }
 
     /**
@@ -56,8 +52,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * @param name the name of the {@link Constant}
      */
     public T valueOf(String name) {
-        checkNotNullAndNotEmpty(name);
-        return getOrCreate(name);
+        return getOrCreate(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -82,8 +77,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * Returns {@code true} if a {@link AttributeKey} exists for the given {@code name}.
      */
     public boolean exists(String name) {
-        checkNotNullAndNotEmpty(name);
-        return constants.containsKey(name);
+        return constants.containsKey(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -91,8 +85,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
      * {@link IllegalArgumentException} if a {@link Constant} for the given {@code name} exists.
      */
     public T newInstance(String name) {
-        checkNotNullAndNotEmpty(name);
-        return createOrThrow(name);
+        return createOrThrow(checkNonEmpty(name, "name"));
     }
 
     /**
@@ -111,16 +104,6 @@ public abstract class ConstantPool<T extends Constant<T>> {
         }
 
         throw new IllegalArgumentException(String.format("'%s' is already in use", name));
-    }
-
-    private static String checkNotNullAndNotEmpty(String name) {
-        ObjectUtil.checkNotNull(name, "name");
-
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
-        return name;
     }
 
     protected abstract T newConstant(int id, String name);

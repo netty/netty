@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
@@ -33,12 +34,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class SearchDomainTest {
@@ -58,7 +59,7 @@ public class SearchDomainTest {
 
     @Before
     public void before() {
-        group = new NioEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
     }
 
     @After
@@ -75,7 +76,7 @@ public class SearchDomainTest {
 
     @Test
     public void testResolve() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host1");
         domains.add("host3");
@@ -125,7 +126,7 @@ public class SearchDomainTest {
 
     @Test
     public void testResolveAll() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host1");
         domains.add("host3");
@@ -175,7 +176,7 @@ public class SearchDomainTest {
 
     @Test
     public void testMultipleSearchDomain() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host2.bar.com");
         domains.add("host3.bar.com");
@@ -205,7 +206,7 @@ public class SearchDomainTest {
 
     @Test
     public void testSearchDomainWithNdots2() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.sub.foo.com");
         domains.add("host2.sub.foo.com");
         domains.add("host2.sub");
@@ -226,7 +227,7 @@ public class SearchDomainTest {
 
     @Test
     public void testSearchDomainWithNdots0() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1");
         domains.add("host1.foo.com");
         domains.add("host2.foo.com");
@@ -272,7 +273,7 @@ public class SearchDomainTest {
                                                  String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         for (InetAddress addr : fut.getNow()) {
             list.add(addr.getHostAddress());
         }
@@ -281,7 +282,7 @@ public class SearchDomainTest {
 
     @Test
     public void testExceptionMsgContainsSearchDomain() throws Exception {
-        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
@@ -298,7 +299,7 @@ public class SearchDomainTest {
 
     @Test
     public void testExceptionMsgDoesNotContainSearchDomainIfNdotsIsNotReached() throws Exception {
-        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 

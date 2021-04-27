@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.smtp;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
@@ -34,7 +35,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
      * Creates a new instance with the given command and no parameters.
      */
     public DefaultSmtpRequest(SmtpCommand command) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = requireNonNull(command, "command");
         parameters = Collections.emptyList();
     }
 
@@ -42,7 +43,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
      * Creates a new instance with the given command and parameters.
      */
     public DefaultSmtpRequest(SmtpCommand command, CharSequence... parameters) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = requireNonNull(command, "command");
         this.parameters = SmtpUtils.toUnmodifiableList(parameters);
     }
 
@@ -54,9 +55,9 @@ public final class DefaultSmtpRequest implements SmtpRequest {
     }
 
     DefaultSmtpRequest(SmtpCommand command, List<CharSequence> parameters) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = requireNonNull(command, "command");
         this.parameters = parameters != null ?
-                Collections.unmodifiableList(parameters) : Collections.<CharSequence>emptyList();
+                Collections.unmodifiableList(parameters) : Collections.emptyList();
     }
 
     @Override

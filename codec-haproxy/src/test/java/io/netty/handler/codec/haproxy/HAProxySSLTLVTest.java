@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,7 @@ public class HAProxySSLTLVTest {
         // 0b0000_0111
         final byte allClientsEnabled = 0x7;
         final HAProxySSLTLV allClientsEnabledTLV =
-                new HAProxySSLTLV(0, allClientsEnabled, Collections.<HAProxyTLV>emptyList(), Unpooled.buffer());
+                new HAProxySSLTLV(0, allClientsEnabled, Collections.emptyList(), Unpooled.buffer());
 
         assertTrue(allClientsEnabledTLV.isPP2ClientCertConn());
         assertTrue(allClientsEnabledTLV.isPP2ClientSSL());
@@ -43,7 +43,7 @@ public class HAProxySSLTLVTest {
         final byte clientSSLandClientCertSessEnabled = 0x5;
 
         final HAProxySSLTLV clientSSLandClientCertSessTLV =
-                new HAProxySSLTLV(0, clientSSLandClientCertSessEnabled, Collections.<HAProxyTLV>emptyList(),
+                new HAProxySSLTLV(0, clientSSLandClientCertSessEnabled, Collections.emptyList(),
                                   Unpooled.buffer());
 
         assertFalse(clientSSLandClientCertSessTLV.isPP2ClientCertConn());
@@ -55,7 +55,7 @@ public class HAProxySSLTLVTest {
         final byte noClientEnabled = 0x0;
 
         final HAProxySSLTLV noClientTlv =
-                new HAProxySSLTLV(0, noClientEnabled, Collections.<HAProxyTLV>emptyList(),
+                new HAProxySSLTLV(0, noClientEnabled, Collections.emptyList(),
                                   Unpooled.buffer());
 
         assertFalse(noClientTlv.isPP2ClientCertConn());

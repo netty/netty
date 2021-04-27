@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,6 +33,7 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.sctp.SctpChannelOption.SCTP_INIT_MAXSTREAMS;
 import static io.netty.channel.sctp.SctpChannelOption.SCTP_NODELAY;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.
@@ -43,9 +44,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
-        if (javaChannel == null) {
-            throw new NullPointerException("javaChannel");
-        }
+        requireNonNull(javaChannel, "javaChannel");
         this.javaChannel = javaChannel;
 
         // Enable TCP_NODELAY by default if possible.

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
@@ -33,49 +32,34 @@ import java.util.zip.Checksum;
  * byte array ({@link ByteBuf#hasArray()} is {@code true}) or not.
  */
 abstract class ByteBufChecksum implements Checksum {
-    private static final Method ADLER32_UPDATE_METHOD;
-    private static final Method CRC32_UPDATE_METHOD;
 
-    static {
-        // See if we can use fast-path when using ByteBuf that is not heap based as Adler32 and CRC32 added support
-        // for update(ByteBuffer) in JDK8.
-        ADLER32_UPDATE_METHOD = updateByteBuffer(new Adler32());
-        CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
-    }
-
-    private final ByteProcessor updateProcessor = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            update(value);
-            return true;
-        }
+    private final ByteProcessor updateProcessor = value -> {
+        update(value);
+        return true;
     };
 
-    private static Method updateByteBuffer(Checksum checksum) {
-        if (PlatformDependent.javaVersion() >= 8) {
-            try {
-                Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
-                method.invoke(checksum, ByteBuffer.allocate(1));
-                return method;
-            } catch (Throwable ignore) {
-                return null;
-            }
-        }
-        return null;
-    }
-
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
-        ObjectUtil.checkNotNull(checksum, "checksum");
+        requireNonNull(checksum, "checksum");
         if (checksum instanceof ByteBufChecksum) {
             return (ByteBufChecksum) checksum;
         }
-        if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
-            return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
+        if (checksum instanceof Adler32) {
+            return new OptimizedByteBufChecksum<Adler32>((Adler32) checksum) {
+                @Override
+                public void update(ByteBuffer b) {
+                    checksum.update(b);
+                }
+            };
         }
-        if (checksum instanceof CRC32 && CRC32_UPDATE_METHOD != null) {
-            return new ReflectiveByteBufChecksum(checksum, CRC32_UPDATE_METHOD);
+        if (checksum instanceof CRC32) {
+            return new OptimizedByteBufChecksum<CRC32>((CRC32) checksum) {
+                @Override
+                public void update(ByteBuffer b) {
+                    checksum.update(b);
+                }
+            };
         }
-        return new SlowByteBufChecksum(checksum);
+        return new SlowByteBufChecksum<>(checksum);
     }
 
     /**
@@ -89,12 +73,9 @@ abstract class ByteBufChecksum implements Checksum {
         }
     }
 
-    private static final class ReflectiveByteBufChecksum extends SlowByteBufChecksum {
-        private final Method method;
-
-        ReflectiveByteBufChecksum(Checksum checksum, Method method) {
+    private abstract static class OptimizedByteBufChecksum<T extends Checksum> extends SlowByteBufChecksum<T> {
+        OptimizedByteBufChecksum(T checksum) {
             super(checksum);
-            this.method = method;
         }
 
         @Override
@@ -103,19 +84,21 @@ abstract class ByteBufChecksum implements Checksum {
                 update(b.array(), b.arrayOffset() + off, len);
             } else {
                 try {
-                    method.invoke(checksum, CompressionUtil.safeNioBuffer(b, off, len));
+                    update(CompressionUtil.safeNioBuffer(b, off, len));
                 } catch (Throwable cause) {
                     throw new Error();
                 }
             }
         }
+
+        public abstract void update(ByteBuffer b);
     }
 
-    private static class SlowByteBufChecksum extends ByteBufChecksum {
+    private static class SlowByteBufChecksum<T extends Checksum> extends ByteBufChecksum {
 
-        protected final Checksum checksum;
+        protected final T checksum;
 
-        SlowByteBufChecksum(Checksum checksum) {
+        SlowByteBufChecksum(T checksum) {
             this.checksum = checksum;
         }
 

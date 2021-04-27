@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,6 +35,14 @@ public final class HttpHeaderValues {
      * {@code "application/octet-stream"}
      */
     public static final AsciiString APPLICATION_OCTET_STREAM = AsciiString.cached("application/octet-stream");
+    /**
+     * {@code "application/xhtml+xml"}
+     */
+    public static final AsciiString APPLICATION_XHTML = AsciiString.cached("application/xhtml+xml");
+    /**
+     * {@code "application/xml"}
+     */
+    public static final AsciiString APPLICATION_XML = AsciiString.cached("application/xml");
     /**
      * {@code "attachment"}
      * See {@link HttpHeaderNames#CONTENT_DISPOSITION}
@@ -193,6 +201,18 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString S_MAXAGE = AsciiString.cached("s-maxage");
     /**
+     * {@code "text/css"}
+     */
+    public static final AsciiString TEXT_CSS = AsciiString.cached("text/css");
+    /**
+     * {@code "text/html"}
+     */
+    public static final AsciiString TEXT_HTML = AsciiString.cached("text/html");
+    /**
+     * {@code "text/event-stream"}
+     */
+    public static final AsciiString TEXT_EVENT_STREAM = AsciiString.cached("text/event-stream");
+    /**
      * {@code "text/plain"}
      */
     public static final AsciiString TEXT_PLAIN = AsciiString.cached("text/plain");
@@ -208,6 +228,10 @@ public final class HttpHeaderValues {
      * {@code "websocket"}
      */
     public static final AsciiString WEBSOCKET = AsciiString.cached("websocket");
+    /**
+     * {@code "XmlHttpRequest"}
+     */
+    public static final AsciiString XML_HTTP_REQUEST = AsciiString.cached("XmlHttpRequest");
 
     private HttpHeaderValues() { }
 }

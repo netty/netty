@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,8 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Maps a domain name to its associated value object.
@@ -33,7 +33,9 @@ import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
  * DNS wildcard is supported as hostname, so you can use {@code *.netty.io} to match both {@code netty.io}
  * and {@code downloads.netty.io}.
  * </p>
+ * @deprecated Use {@link DomainWildcardMappingBuilder}}
  */
+@Deprecated
 public class DomainNameMapping<V> implements Mapping<String, V> {
 
     final V defaultValue;
@@ -62,11 +64,11 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      */
     @Deprecated
     public DomainNameMapping(int initialCapacity, V defaultValue) {
-        this(new LinkedHashMap<String, V>(initialCapacity), defaultValue);
+        this(new LinkedHashMap<>(initialCapacity), defaultValue);
     }
 
     DomainNameMapping(Map<String, V> map, V defaultValue) {
-        this.defaultValue = checkNotNull(defaultValue, "defaultValue");
+        this.defaultValue = requireNonNull(defaultValue, "defaultValue");
         this.map = map;
         unmodifiableMap = map != null ? Collections.unmodifiableMap(map)
                                       : null;
@@ -75,7 +77,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     /**
      * Adds a mapping that maps the specified (optionally wildcard) host name to the specified output value.
      * <p>
-     * <a href="http://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
+     * <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
      * For example, you can use {@code *.netty.io} to match {@code netty.io} and {@code downloads.netty.io}.
      * </p>
      *
@@ -86,12 +88,12 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      */
     @Deprecated
     public DomainNameMapping<V> add(String hostname, V output) {
-        map.put(normalizeHostname(checkNotNull(hostname, "hostname")), checkNotNull(output, "output"));
+        map.put(normalizeHostname(requireNonNull(hostname, "hostname")), requireNonNull(output, "output"));
         return this;
     }
 
     /**
-     * Simple function to match <a href="http://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a>.
+     * Simple function to match <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a>.
      */
     static boolean matches(String template, String hostName) {
         if (template.startsWith("*.")) {

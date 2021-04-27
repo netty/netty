@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,10 @@
 package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
-import java.util.List;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s by one or more
@@ -166,9 +165,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     public DelimiterBasedFrameDecoder(
             int maxFrameLength, boolean stripDelimiter, boolean failFast, ByteBuf... delimiters) {
         validateMaxFrameLength(maxFrameLength);
-        if (delimiters == null) {
-            throw new NullPointerException("delimiters");
-        }
+        requireNonNull(delimiters, "delimiters");
         if (delimiters.length == 0) {
             throw new IllegalArgumentException("empty delimiters");
         }
@@ -214,10 +211,10 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        Object decoded = decode(ctx, in);
+    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        Object decoded = decode0(ctx, in);
         if (decoded != null) {
-            out.add(decoded);
+            ctx.fireChannelRead(decoded);
         }
     }
 
@@ -229,9 +226,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
      * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (lineBasedDecoder != null) {
-            return lineBasedDecoder.decode(ctx, buffer);
+            return lineBasedDecoder.decode0(ctx, buffer);
         }
         // Try all delimiters and choose the delimiter which yields the shortest frame.
         int minFrameLength = Integer.MAX_VALUE;
@@ -339,9 +336,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private static void validateDelimiter(ByteBuf delimiter) {
-        if (delimiter == null) {
-            throw new NullPointerException("delimiter");
-        }
+        requireNonNull(delimiter, "delimiter");
         if (!delimiter.isReadable()) {
             throw new IllegalArgumentException("empty delimiter");
         }

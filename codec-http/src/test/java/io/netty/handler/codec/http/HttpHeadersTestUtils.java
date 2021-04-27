@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,7 +54,7 @@ public final class HttpHeadersTestUtils {
 
         public List<CharSequence> asList() {
             if (array == null) {
-                List<CharSequence> list = new ArrayList<CharSequence>(nr);
+                List<CharSequence> list = new ArrayList<>(nr);
                 for (int i = 1; i <= nr; i++) {
                     list.add(of(i).toString());
                 }
@@ -68,7 +68,7 @@ public final class HttpHeadersTestUtils {
             --from;
             final int size = nr - from;
             final int end = from + size;
-            List<CharSequence> list = new ArrayList<CharSequence>(size);
+            List<CharSequence> list = new ArrayList<>(size);
             List<CharSequence> fullList = asList();
             for (int i = from; i < end; ++i) {
                 list.add(fullList.get(i));
@@ -117,7 +117,7 @@ public final class HttpHeadersTestUtils {
         private static final Map<Integer, HeaderValue> MAP;
 
         static {
-            final Map<Integer, HeaderValue> map = new HashMap<Integer, HeaderValue>();
+            final Map<Integer, HeaderValue> map = new HashMap<>();
             for (HeaderValue v : values()) {
                 final int nr = v.nr;
                 map.put(Integer.valueOf(nr), v);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,6 @@ import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
@@ -77,32 +76,33 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     /**
      * Create a new instance
      */
-    public NioSocketChannel() {
-        this(DEFAULT_SELECTOR_PROVIDER);
+    public NioSocketChannel(EventLoop eventLoop) {
+        this(eventLoop, DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
-    public NioSocketChannel(SelectorProvider provider) {
-        this(newSocket(provider));
+    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider) {
+        this(eventLoop, newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
-    public NioSocketChannel(SocketChannel socket) {
-        this(null, socket);
+    public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
+        this(null, eventLoop, socket);
     }
 
     /**
      * Create a new instance
      *
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param eventLoop the {@link EventLoop} to use for IO.
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
+    public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
+        super(parent, eventLoop, socket);
         config = new NioSocketChannelConfig(this, socket.socket());
     }
 
@@ -157,11 +157,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownOutput();
-        } else {
-            javaChannel().socket().shutdownOutput();
-        }
+        javaChannel().shutdownOutput();
     }
 
     @Override
@@ -175,12 +171,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-                }
-            });
+            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
         return promise;
     }
@@ -201,12 +192,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
-                }
-            });
+            loop.execute(() -> shutdownInput0(promise));
         }
         return promise;
     }
@@ -222,12 +208,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
         } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
+            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
+                    shutdownOutputDone(shutdownOutputFuture1, promise));
         }
         return promise;
     }
@@ -237,12 +219,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
+            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 
@@ -274,11 +252,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void shutdownInput0() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownInput();
-        } else {
-            javaChannel().socket().shutdownInput();
-        }
+        javaChannel().shutdownInput();
     }
 
     @Override
@@ -297,11 +271,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            SocketUtils.bind(javaChannel(), localAddress);
-        } else {
-            SocketUtils.bind(javaChannel().socket(), localAddress);
-        }
+        SocketUtils.bind(javaChannel(), localAddress);
     }
 
     @Override
@@ -392,7 +362,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
             int nioBufferCnt = in.nioBufferCount();
 
-            // Always us nioBuffers() to workaround data-corruption.
+            // Always use nioBuffers() to workaround data-corruption.
             // See https://github.com/netty/netty/issues/2761
             switch (nioBufferCnt) {
                 case 0:
@@ -485,7 +455,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
             }
             return super.setOption(option, value);
@@ -493,7 +463,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public <T> T getOption(ChannelOption<T> option) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
             }
             return super.getOption(option);
@@ -501,10 +471,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public Map<ChannelOption<?>, Object> getOptions() {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
-            }
-            return super.getOptions();
+            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
         }
 
         void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {

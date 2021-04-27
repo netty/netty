@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -47,11 +47,11 @@ import java.nio.channels.Channels;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
- *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
+ *     public void handlerAdded({@link ChannelHandlerContext} ctx) {
  *         <b>this.ctx = ctx;</b>
  *     }
  *
@@ -82,7 +82,7 @@ import java.nio.channels.Channels;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter} {
+ * public class FactorialHandler implements {@link ChannelHandler} {
  *
  *   private final {@link AttributeKey}&lt;{@link Integer}&gt; counter = {@link AttributeKey}.valueOf("counter");
  *

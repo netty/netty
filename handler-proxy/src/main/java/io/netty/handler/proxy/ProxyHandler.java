@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,17 +16,19 @@
 
 package io.netty.handler.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -35,7 +37,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.TimeUnit;
 
-public abstract class ProxyHandler extends ChannelDuplexHandler {
+public abstract class ProxyHandler implements ChannelHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandler.class);
 
@@ -58,21 +60,16 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private boolean finished;
     private boolean suppressChannelReadComplete;
     private boolean flushedPrematurely;
-    private final LazyChannelPromise connectPromise = new LazyChannelPromise();
+    private final Promise<Channel> connectPromise = new LazyPromise();
     private ScheduledFuture<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                setConnectFailure(future.cause());
-            }
+    private final ChannelFutureListener writeListener = future -> {
+        if (!future.isSuccess()) {
+            setConnectFailure(future.cause());
         }
     };
 
     protected ProxyHandler(SocketAddress proxyAddress) {
-        if (proxyAddress == null) {
-            throw new NullPointerException("proxyAddress");
-        }
+        requireNonNull(proxyAddress, "proxyAddress");
         this.proxyAddress = proxyAddress;
     }
 
@@ -194,12 +191,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private void sendInitialMessage(final ChannelHandlerContext ctx) throws Exception {
         final long connectTimeoutMillis = this.connectTimeoutMillis;
         if (connectTimeoutMillis > 0) {
-            connectTimeoutFuture = ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!connectPromise.isDone()) {
-                        setConnectFailure(new ProxyConnectException(exceptionMessage("timeout")));
-                    }
+            connectTimeoutFuture = ctx.executor().schedule(() -> {
+                if (!connectPromise.isDone()) {
+                    setConnectFailure(new ProxyConnectException(exceptionMessage("timeout")));
                 }
             }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -447,13 +441,19 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         pendingWrites.add(msg, promise);
     }
 
-    private final class LazyChannelPromise extends DefaultPromise<Channel> {
+    private final class LazyPromise extends DefaultPromise<Channel> {
+
+        LazyPromise() {
+            super(ImmediateEventExecutor.INSTANCE);
+        }
+
         @Override
-        protected EventExecutor executor() {
+        protected void checkDeadLock() {
             if (ctx == null) {
-                throw new IllegalStateException();
+                // If ctx is null the handlerAdded(...) callback was not called yet.
+                return;
             }
-            return ctx.executor();
+            checkDeadLock(ctx.executor());
         }
     }
 }

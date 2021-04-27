@@ -3,7 +3,7 @@
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -383,7 +383,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int step;
         // first message will always be validated
         private long currentLastTime = TrafficCounter.milliSecondFromNano();
@@ -406,7 +406,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             long lastTimestamp = 0;
             loggerClient.debug("Step: " + step + " Read: " + in.readableBytes() / 8 + " blocks");
             while (in.isReadable()) {
@@ -456,7 +456,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         private final int[] multipleMessage;
         volatile Channel channel;
         volatile int step;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         ServerHandler(int[] autoRead, int[] multipleMessage) {
             this.autoRead = autoRead;
@@ -469,7 +469,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             int nb = actual.length / messageSize;
             loggerServer.info("Step: " + step + " Read: " + nb + " blocks");
@@ -513,23 +513,17 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                         if (isAutoRead == -3) {
                             wait = stepms * 3;
                         }
-                        executor.schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                loggerServer.info("Step: " + exactStep + " Reset AutoRead");
-                                channel.config().setAutoRead(true);
-                            }
+                        executor.schedule(() -> {
+                            loggerServer.info("Step: " + exactStep + " Reset AutoRead");
+                            channel.config().setAutoRead(true);
                         }, wait, TimeUnit.MILLISECONDS);
                     } else {
                         if (isAutoRead > 1) {
                             loggerServer.debug("Step: " + step + " Will Set AutoRead: True");
                             final int exactStep = step;
-                            executor.schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
-                                    channel.config().setAutoRead(true);
-                                }
+                            executor.schedule(() -> {
+                                loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
+                                channel.config().setAutoRead(true);
                             }, stepms + minimalms, TimeUnit.MILLISECONDS);
                         }
                     }

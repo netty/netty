@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -21,35 +21,38 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.handler.codec.http2.Http2TestUtil.newHttp2HeadersWithRequestPseudoHeaders;
 import static io.netty.util.CharsetUtil.UTF_8;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
+
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
@@ -129,60 +132,61 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        promise = new DefaultChannelPromise(channel);
+        promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
         when(stream.open(anyBoolean())).thenReturn(stream);
+
+        final Map<Object, Object> properties = new IdentityHashMap<Object, Object>();
+        when(stream.getProperty(ArgumentMatchers.<Http2Connection.PropertyKey>any())).thenAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) {
+                return properties.get(invocationOnMock.getArgument(0));
+            }
+        });
+        when(stream.setProperty(ArgumentMatchers.<Http2Connection.PropertyKey>any(), any())).then(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) {
+                return properties.put(invocationOnMock.getArgument(0), invocationOnMock.getArgument(1));
+            }
+        });
+
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
-        doAnswer(new Answer<Boolean>() {
-            @Override
-            public Boolean answer(InvocationOnMock in) throws Throwable {
-                return (headersReceivedState.get() & STATE_RECV_HEADERS) != 0;
-            }
-        }).when(stream).isHeadersReceived();
-        doAnswer(new Answer<Boolean>() {
-            @Override
-            public Boolean answer(InvocationOnMock in) throws Throwable {
-                return (headersReceivedState.get() & STATE_RECV_TRAILERS) != 0;
-            }
-        }).when(stream).isTrailersReceived();
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock in) throws Throwable {
-                boolean isInformational = in.getArgument(0);
-                if (isInformational) {
-                    return stream;
-                }
-                for (;;) {
-                    int current = headersReceivedState.get();
-                    int next = current;
-                    if ((current & STATE_RECV_HEADERS) != 0) {
-                        if ((current & STATE_RECV_TRAILERS) != 0) {
-                            throw new IllegalStateException("already sent headers!");
-                        }
-                        next |= STATE_RECV_TRAILERS;
-                    } else {
-                        next |= STATE_RECV_HEADERS;
-                    }
-                    if (headersReceivedState.compareAndSet(current, next)) {
-                        break;
-                    }
-                }
+        doAnswer((Answer<Boolean>) in ->
+                (headersReceivedState.get() & STATE_RECV_HEADERS) != 0).when(stream).isHeadersReceived();
+        doAnswer((Answer<Boolean>) in ->
+                (headersReceivedState.get() & STATE_RECV_TRAILERS) != 0).when(stream).isTrailersReceived();
+        doAnswer((Answer<Http2Stream>) in -> {
+            boolean isInformational = in.getArgument(0);
+            if (isInformational) {
                 return stream;
             }
-        }).when(stream).headersReceived(anyBoolean());
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock in) throws Throwable {
-                Http2StreamVisitor visitor = in.getArgument(0);
-                if (!visitor.visit(stream)) {
-                    return stream;
+            for (;;) {
+                int current = headersReceivedState.get();
+                int next = current;
+                if ((current & STATE_RECV_HEADERS) != 0) {
+                    if ((current & STATE_RECV_TRAILERS) != 0) {
+                        throw new IllegalStateException("already sent headers!");
+                    }
+                    next |= STATE_RECV_TRAILERS;
+                } else {
+                    next |= STATE_RECV_HEADERS;
                 }
-                return null;
+                if (headersReceivedState.compareAndSet(current, next)) {
+                    break;
+                }
             }
+            return stream;
+        }).when(stream).headersReceived(anyBoolean());
+        doAnswer((Answer<Http2Stream>) in -> {
+            Http2StreamVisitor visitor = in.getArgument(0);
+            if (!visitor.visit(stream)) {
+                return stream;
+            }
+            return null;
         }).when(connection).forEachActiveStream(any(Http2StreamVisitor.class));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
         when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(true);
@@ -199,8 +203,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                Http2PromisedRequestVerifier.ALWAYS_VERIFY, true, true, true);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         decoder.lifecycleManager(lifecycleManager);
         decoder.frameListener(listener);
 
@@ -425,30 +428,19 @@ public class DefaultHttp2ConnectionDecoderTest {
         final ByteBuf data = dummyData();
         final int padding = 10;
         final AtomicInteger unprocessed = new AtomicInteger(data.readableBytes() + padding);
-        doAnswer(new Answer<Integer>() {
-            @Override
-            public Integer answer(InvocationOnMock in) throws Throwable {
-                return unprocessed.get();
+        doAnswer((Answer<Integer>) in -> unprocessed.get()).when(localFlow).unconsumedBytes(eq(stream));
+        doAnswer((Answer<Void>) in -> {
+            int delta = (Integer) in.getArguments()[1];
+            int newValue = unprocessed.addAndGet(-delta);
+            if (newValue < 0) {
+                throw new RuntimeException("Returned too many bytes");
             }
-        }).when(localFlow).unconsumedBytes(eq(stream));
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                int delta = (Integer) in.getArguments()[1];
-                int newValue = unprocessed.addAndGet(-delta);
-                if (newValue < 0) {
-                    throw new RuntimeException("Returned too many bytes");
-                }
-                return null;
-            }
+            return null;
         }).when(localFlow).consumeBytes(eq(stream), anyInt());
         // When the listener callback is called, process a few bytes and then throw.
-        doAnswer(new Answer<Integer>() {
-            @Override
-            public Integer answer(InvocationOnMock in) throws Throwable {
-                localFlow.consumeBytes(stream, 4);
-                throw new RuntimeException("Fake Exception");
-            }
+        doAnswer((Answer<Integer>) in -> {
+            localFlow.consumeBytes(stream, 4);
+            throw new RuntimeException("Fake Exception");
         }).when(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(10), eq(true));
         try {
             decode().onDataRead(ctx, STREAM_ID, data, padding, true);
@@ -456,7 +448,6 @@ public class DefaultHttp2ConnectionDecoderTest {
         } catch (RuntimeException cause) {
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(stream), eq(data), eq(padding), eq(true));
-            verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
             assertEquals(0, localFlow.unconsumedBytes(stream));
         } finally {
@@ -524,64 +515,6 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(stream).open(false);
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void requestPseudoHeadersInResponseThrows() throws Exception {
-        when(connection.isServer()).thenReturn(false);
-        when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
-        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
-        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
-        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
-        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void missingPseudoHeadersInLeadingHeaderThrows() throws Exception {
-        when(connection.isServer()).thenReturn(true);
-        when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
-        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
-        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
-        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
-        headers.remove(PseudoHeaderName.METHOD.value());
-        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
-    }
-
-    @Test
-    public void missingPseudoHeadersInLeadingHeaderShouldNotThrowsIfValidationDisabled() throws Exception {
-        when(connection.isServer()).thenReturn(true);
-        when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
-        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
-        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
-        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
-        headers.remove(PseudoHeaderName.METHOD.value());
-
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                Http2PromisedRequestVerifier.ALWAYS_VERIFY, true, true, false);
-        decoder.lifecycleManager(lifecycleManager);
-        decoder.frameListener(listener);
-
-        // Simulate receiving the initial settings from the remote endpoint.
-        decode().onSettingsRead(ctx, new Http2Settings());
-        // Simulate receiving the SETTINGS ACK for the initial settings.
-        decode().onSettingsAckRead(ctx);
-
-        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
-    }
-
-    @Test
-    public void missingPseudoHeadersInTrailerHeaderDoesNotThrow() throws Exception {
-        when(connection.isServer()).thenReturn(true);
-        when(connection.stream(STREAM_ID)).thenReturn(stream);
-
-        decode().onHeadersRead(ctx, STREAM_ID, newHttp2HeadersWithRequestPseudoHeaders(), 0, false);
-
-        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
-        headers.remove(PseudoHeaderName.METHOD.value());
-        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
     }
 
     @Test(expected = Http2Exception.class)
@@ -835,6 +768,115 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 
+    @Test(expected = Http2Exception.StreamException.class)
+    public void dataContentLengthMissmatch() throws Exception {
+        dataContentLengthInvalid(false);
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void dataContentLengthInvalid() throws Exception {
+        dataContentLengthInvalid(true);
+    }
+
+    private void dataContentLengthInvalid(boolean negative) throws Exception {
+        final ByteBuf data = dummyData();
+        int padding = 10;
+        int processedBytes = data.readableBytes() + padding;
+        mockFlowControl(processedBytes);
+        try {
+            decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+                    .setLong(HttpHeaderNames.CONTENT_LENGTH, negative ? -1L : 1L), padding, false);
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+            verify(localFlow).receiveFlowControlledFrame(eq(stream), eq(data), eq(padding), eq(true));
+            verify(localFlow).consumeBytes(eq(stream), eq(processedBytes));
+
+            verify(listener, times(1)).onHeadersRead(eq(ctx), anyInt(),
+                    any(Http2Headers.class), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false),
+                    eq(padding), eq(false));
+            // Verify that the event was absorbed and not propagated to the observer.
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void headersContentLengthPositiveSign() throws Exception {
+        headersContentLengthSign("+1");
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void headersContentLengthNegativeSign() throws Exception {
+        headersContentLengthSign("-1");
+    }
+
+    private void headersContentLengthSign(String length) throws Exception {
+        int padding = 10;
+        when(connection.isServer()).thenReturn(true);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+                .set(HttpHeaderNames.CONTENT_LENGTH, length), padding, false);
+
+        // Verify that the event was absorbed and not propagated to the observer.
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(),
+                any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void headersContentLengthMissmatch() throws Exception {
+        headersContentLength(false);
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void headersContentLengthInvalid() throws Exception {
+        headersContentLength(true);
+    }
+
+    private void headersContentLength(boolean negative) throws Exception {
+        int padding = 10;
+        when(connection.isServer()).thenReturn(true);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, negative ? -1L : 1L), padding, true);
+
+        // Verify that the event was absorbed and not propagated to the observer.
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(),
+                any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void multipleHeadersContentLengthSame() throws Exception {
+        multipleHeadersContentLength(true);
+    }
+
+    @Test(expected = Http2Exception.StreamException.class)
+    public void multipleHeadersContentLengthDifferent() throws Exception {
+        multipleHeadersContentLength(false);
+    }
+
+    private void multipleHeadersContentLength(boolean same) throws Exception {
+        int padding = 10;
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers();
+        if (same) {
+            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
+            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
+        } else {
+            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
+            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+        }
+
+        decode().onHeadersRead(ctx, STREAM_ID, headers, padding, true);
+
+        if (same) {
+            verify(listener, times(1)).onHeadersRead(eq(ctx), anyInt(),
+                    any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+            assertEquals(1, headers.getAll(HttpHeaderNames.CONTENT_LENGTH).size());
+        } else {
+            // Verify that the event was absorbed and not propagated to the observer.
+            verify(listener, never()).onHeadersRead(eq(ctx), anyInt(),
+                    any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        }
+    }
+
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
@@ -846,17 +888,13 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2FrameListener decode() throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalListener.capture());
-        decoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());
+        decoder.decodeFrame(ctx, EMPTY_BUFFER);
         return internalListener.getValue();
     }
 
     private void mockFlowControl(final int processedBytes) throws Http2Exception {
-        doAnswer(new Answer<Integer>() {
-            @Override
-            public Integer answer(InvocationOnMock invocation) throws Throwable {
-                return processedBytes;
-            }
-        }).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+        doAnswer((Answer<Integer>) invocation ->
+                processedBytes).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
     }
 

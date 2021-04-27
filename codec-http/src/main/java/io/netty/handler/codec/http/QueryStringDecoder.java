@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,23 +16,22 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.*;
-import static io.netty.util.internal.StringUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.StringUtil.EMPTY_STRING;
+import static io.netty.util.internal.StringUtil.SPACE;
+import static io.netty.util.internal.StringUtil.decodeHexByte;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -119,8 +118,8 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath,
                               int maxParams, boolean semicolonIsNormalChar) {
-        this.uri = checkNotNull(uri, "uri");
-        this.charset = checkNotNull(charset, "charset");
+        this.uri = requireNonNull(uri, "uri");
+        this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         this.semicolonIsNormalChar = semicolonIsNormalChar;
 
@@ -164,7 +163,7 @@ public class QueryStringDecoder {
         String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
-        this.charset = checkNotNull(charset, "charset");
+        this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         this.semicolonIsNormalChar = semicolonIsNormalChar;
         pathEndIdx = rawPath.length();
@@ -233,7 +232,7 @@ public class QueryStringDecoder {
         if (s.charAt(from) == '?') {
             from++;
         }
-        Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
+        Map<String, List<String>> params = new LinkedHashMap<>();
         int nameStart = from;
         int valueStart = -1;
         int i;
@@ -283,7 +282,7 @@ public class QueryStringDecoder {
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
         List<String> values = params.get(name);
         if (values == null) {
-            values = new ArrayList<String>(1);  // Often there's only 1 value.
+            values = new ArrayList<>(1);  // Often there's only 1 value.
             params.put(name, values);
         }
         values.add(value);
@@ -351,12 +350,10 @@ public class QueryStringDecoder {
             return s.substring(from, toExcluded);
         }
 
-        CharsetDecoder decoder = CharsetUtil.decoder(charset);
-
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        ByteBuffer byteBuf = ByteBuffer.allocate(decodedCapacity);
-        CharBuffer charBuf = CharBuffer.allocate(decodedCapacity);
+        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
+        int bufIdx;
 
         StringBuilder strBuf = new StringBuilder(len);
         strBuf.append(s, from, firstEscaped);
@@ -368,31 +365,17 @@ public class QueryStringDecoder {
                 continue;
             }
 
-            byteBuf.clear();
+            bufIdx = 0;
             do {
                 if (i + 3 > toExcluded) {
                     throw new IllegalArgumentException("unterminated escape sequence at index " + i + " of: " + s);
                 }
-                byteBuf.put(decodeHexByte(s, i + 1));
+                buf[bufIdx++] = decodeHexByte(s, i + 1);
                 i += 3;
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
 
-            byteBuf.flip();
-            charBuf.clear();
-            CoderResult result = decoder.reset().decode(byteBuf, charBuf, true);
-            try {
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-                result = decoder.flush(charBuf);
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-            } catch (CharacterCodingException ex) {
-                throw new IllegalStateException(ex);
-            }
-            strBuf.append(charBuf.flip());
+            strBuf.append(new String(buf, 0, bufIdx, charset));
         }
         return strBuf.toString();
     }

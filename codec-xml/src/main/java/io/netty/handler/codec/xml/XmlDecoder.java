@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
-import java.util.List;
 
 /**
  * Async XML decoder based on <a href="https://github.com/FasterXML/aalto-xml">Aalto XML parser</a>.
@@ -42,7 +41,7 @@ public class XmlDecoder extends ByteToMessageDecoder {
     private final AsyncByteArrayFeeder streamFeeder = streamReader.getInputFeeder();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         byte[] buffer = new byte[in.readableBytes()];
         in.readBytes(buffer);
         try {
@@ -56,11 +55,11 @@ public class XmlDecoder extends ByteToMessageDecoder {
             int type = streamReader.next();
             switch (type) {
                 case XMLStreamConstants.START_DOCUMENT:
-                    out.add(new XmlDocumentStart(streamReader.getEncoding(), streamReader.getVersion(),
+                    ctx.fireChannelRead(new XmlDocumentStart(streamReader.getEncoding(), streamReader.getVersion(),
                             streamReader.isStandalone(), streamReader.getCharacterEncodingScheme()));
                     break;
                 case XMLStreamConstants.END_DOCUMENT:
-                    out.add(XML_DOCUMENT_END);
+                    ctx.fireChannelRead(XML_DOCUMENT_END);
                     break;
                 case XMLStreamConstants.START_ELEMENT:
                     XmlElementStart elementStart = new XmlElementStart(streamReader.getLocalName(),
@@ -76,7 +75,7 @@ public class XmlDecoder extends ByteToMessageDecoder {
                                 streamReader.getNamespaceURI(x));
                         elementStart.namespaces().add(namespace);
                     }
-                    out.add(elementStart);
+                    ctx.fireChannelRead(elementStart);
                     break;
                 case XMLStreamConstants.END_ELEMENT:
                     XmlElementEnd elementEnd = new XmlElementEnd(streamReader.getLocalName(),
@@ -86,28 +85,29 @@ public class XmlDecoder extends ByteToMessageDecoder {
                                 streamReader.getNamespaceURI(x));
                         elementEnd.namespaces().add(namespace);
                     }
-                    out.add(elementEnd);
+                    ctx.fireChannelRead(elementEnd);
                     break;
                 case XMLStreamConstants.PROCESSING_INSTRUCTION:
-                    out.add(new XmlProcessingInstruction(streamReader.getPIData(), streamReader.getPITarget()));
+                    ctx.fireChannelRead(
+                            new XmlProcessingInstruction(streamReader.getPIData(), streamReader.getPITarget()));
                     break;
                 case XMLStreamConstants.CHARACTERS:
-                    out.add(new XmlCharacters(streamReader.getText()));
+                    ctx.fireChannelRead(new XmlCharacters(streamReader.getText()));
                     break;
                 case XMLStreamConstants.COMMENT:
-                    out.add(new XmlComment(streamReader.getText()));
+                    ctx.fireChannelRead(new XmlComment(streamReader.getText()));
                     break;
                 case XMLStreamConstants.SPACE:
-                    out.add(new XmlSpace(streamReader.getText()));
+                    ctx.fireChannelRead(new XmlSpace(streamReader.getText()));
                     break;
                 case XMLStreamConstants.ENTITY_REFERENCE:
-                    out.add(new XmlEntityReference(streamReader.getLocalName(), streamReader.getText()));
+                    ctx.fireChannelRead(new XmlEntityReference(streamReader.getLocalName(), streamReader.getText()));
                     break;
                 case XMLStreamConstants.DTD:
-                    out.add(new XmlDTD(streamReader.getText()));
+                    ctx.fireChannelRead(new XmlDTD(streamReader.getText()));
                     break;
                 case XMLStreamConstants.CDATA:
-                    out.add(new XmlCdata(streamReader.getText()));
+                    ctx.fireChannelRead(new XmlCdata(streamReader.getText()));
                     break;
             }
         }

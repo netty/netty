@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,9 +17,10 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.Socket;
 import org.junit.Before;
@@ -45,25 +46,35 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testNotActiveNoLocalRemoteAddress() throws IOException {
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel());
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(InternetProtocolFamily.IPv4));
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(InternetProtocolFamily.IPv6));
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        try {
+            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next()));
+            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), InternetProtocolFamily.IPv4));
+            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), InternetProtocolFamily.IPv6));
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
     @Test
     public void testActiveHasLocalAddress() throws IOException {
-        Socket socket = Socket.newSocketDgram();
-        EpollDatagramChannel channel = new EpollDatagramChannel(socket.intValue());
-        InetSocketAddress localAddress = channel.localAddress();
-        assertTrue(channel.active);
-        assertNotNull(localAddress);
-        assertEquals(socket.localAddress(), localAddress);
-        channel.fd().close();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        try {
+            Socket socket = Socket.newSocketDgram();
+            EpollDatagramChannel channel = new EpollDatagramChannel(group.next(), socket.intValue());
+            InetSocketAddress localAddress = channel.localAddress();
+            assertTrue(channel.active);
+            assertNotNull(localAddress);
+            assertEquals(socket.localAddress(), localAddress);
+            channel.fd().close();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
     @Test
     public void testLocalAddressBeforeAndAfterBind() {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             TestHandler handler = new TestHandler();
             InetSocketAddress localAddressBeforeBind = new InetSocketAddress(LOCALHOST, 0);
@@ -96,13 +107,13 @@ public class EpollDatagramChannelTest {
         channel.fd().close();
     }
 
-    private static final class TestHandler extends ChannelInboundHandlerAdapter {
+    private static final class TestHandler implements ChannelHandler {
         private volatile SocketAddress localAddress;
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             this.localAddress = ctx.channel().localAddress();
-            super.channelRegistered(ctx);
+            ctx.fireChannelRegistered();
         }
     }
 }

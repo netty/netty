@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ReadOnlyDirectByteBufferBufTest {
 
@@ -306,7 +307,7 @@ public class ReadOnlyDirectByteBufferBufTest {
 
     @Test
     public void testWrapMemoryMapped() throws Exception {
-        File file = File.createTempFile("netty-test", "tmp");
+        File file = PlatformDependent.createTempFile("netty-test", "tmp", null);
         FileChannel output = null;
         FileChannel input = null;
         ByteBuf b1 = null;
@@ -315,7 +316,7 @@ public class ReadOnlyDirectByteBufferBufTest {
         try {
             output = new RandomAccessFile(file, "rw").getChannel();
             byte[] bytes = new byte[1024];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
             output.write(ByteBuffer.wrap(bytes));
 
             input = new RandomAccessFile(file, "r").getChannel();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,22 +29,13 @@ public class PlatformDependentTest {
     private static final Random r = new Random();
     @Test
     public void testEqualsConsistentTime() {
-        testEquals(new EqualityChecker() {
-            @Override
-            public boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-                return PlatformDependent.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length) != 0;
-            }
-        });
+        testEquals((bytes1, startPos1, bytes2, startPos2, length) ->
+                PlatformDependent.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length) != 0);
     }
 
     @Test
     public void testEquals() {
-        testEquals(new EqualityChecker() {
-            @Override
-            public boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-                return PlatformDependent.equals(bytes1, startPos1, bytes2, startPos2, length);
-            }
-        });
+        testEquals(PlatformDependent::equals);
     }
 
     @Test

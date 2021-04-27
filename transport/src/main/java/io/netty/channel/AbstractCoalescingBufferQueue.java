@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -14,6 +14,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -24,9 +25,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayDeque;
 
 import static io.netty.util.ReferenceCountUtil.safeRelease;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static io.netty.util.internal.PlatformDependent.throwException;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public abstract class AbstractCoalescingBufferQueue {
@@ -43,7 +43,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param initSize the initial size of the underlying queue.
      */
     protected AbstractCoalescingBufferQueue(Channel channel, int initSize) {
-        bufAndListenerPairs = new ArrayDeque<Object>(initSize);
+        bufAndListenerPairs = new ArrayDeque<>(initSize);
         tracker = channel == null ? null : PendingBytesTracker.newTracker(channel);
     }
 
@@ -110,8 +110,8 @@ public abstract class AbstractCoalescingBufferQueue {
         if (entry == null) {
             return null;
         }
-        assert entry instanceof ByteBuf;
-        ByteBuf result = (ByteBuf) entry;
+        assert entry instanceof ByteBufConvertible;
+        ByteBuf result = ((ByteBufConvertible) entry).asByteBuf();
 
         decrementReadableBytes(result.readableBytes());
 
@@ -136,10 +136,11 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final ByteBuf remove(ByteBufAllocator alloc, int bytes, ChannelPromise aggregatePromise) {
         checkPositiveOrZero(bytes, "bytes");
-        checkNotNull(aggregatePromise, "aggregatePromise");
+        requireNonNull(aggregatePromise, "aggregatePromise");
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {
+            assert readableBytes == 0;
             return removeEmptyValue();
         }
         bytes = Math.min(bytes, readableBytes);
@@ -180,7 +181,7 @@ public abstract class AbstractCoalescingBufferQueue {
             safeRelease(entryBuffer);
             safeRelease(toReturn);
             aggregatePromise.setFailure(cause);
-            throwException(cause);
+            throw cause;
         }
         decrementReadableBytes(originalBytes - bytes);
         return toReturn;
@@ -221,7 +222,6 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param ctx The context to write all elements to.
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
-        decrementReadableBytes(readableBytes);
         Throwable pending = null;
         ByteBuf previousBuf = null;
         for (;;) {
@@ -229,20 +229,24 @@ public abstract class AbstractCoalescingBufferQueue {
             try {
                 if (entry == null) {
                     if (previousBuf != null) {
+                        decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
                     break;
                 }
 
-                if (entry instanceof ByteBuf) {
+                if (entry instanceof ByteBufConvertible) {
                     if (previousBuf != null) {
+                        decrementReadableBytes(previousBuf.readableBytes());
                         ctx.write(previousBuf, ctx.voidPromise());
                     }
-                    previousBuf = (ByteBuf) entry;
+                    previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof ChannelPromise) {
+                    decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf, (ChannelPromise) entry);
                     previousBuf = null;
                 } else {
+                    decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf).addListener((ChannelFutureListener) entry);
                     previousBuf = null;
                 }
@@ -257,6 +261,11 @@ public abstract class AbstractCoalescingBufferQueue {
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "bytes: " + readableBytes + " buffers: " + (size() >> 1);
     }
 
     /**
@@ -277,7 +286,7 @@ public abstract class AbstractCoalescingBufferQueue {
         } catch (Throwable cause) {
             composite.release();
             safeRelease(next);
-            throwException(cause);
+            throw cause;
         }
         return composite;
     }
@@ -296,7 +305,7 @@ public abstract class AbstractCoalescingBufferQueue {
         } catch (Throwable cause) {
             newCumulation.release();
             safeRelease(next);
-            throwException(cause);
+            throw cause;
         }
         cumulation.release();
         next.release();
@@ -326,7 +335,6 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void releaseAndCompleteAll(ChannelFuture future) {
-        decrementReadableBytes(readableBytes);
         Throwable pending = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
@@ -334,8 +342,10 @@ public abstract class AbstractCoalescingBufferQueue {
                 break;
             }
             try {
-                if (entry instanceof ByteBuf) {
-                    safeRelease(entry);
+                if (entry instanceof ByteBufConvertible) {
+                    ByteBuf buffer = ((ByteBufConvertible) entry).asByteBuf();
+                    decrementReadableBytes(buffer.readableBytes());
+                    safeRelease(buffer);
                 } else {
                     ((ChannelFutureListener) entry).operationComplete(future);
                 }

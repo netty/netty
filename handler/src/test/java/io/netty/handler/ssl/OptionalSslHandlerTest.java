@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,7 +54,7 @@ public class OptionalSslHandlerTest {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
         final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).remove(handler);
         } finally {
             payload.release();
@@ -77,7 +77,7 @@ public class OptionalSslHandlerTest {
         };
         final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).replace(handler, HANDLER_NAME, nonSslHandler);
         } finally {
             payload.release();
@@ -100,7 +100,7 @@ public class OptionalSslHandlerTest {
         };
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 5 });
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).replace(handler, SSL_HANDLER_NAME, sslHandler);
         } finally {
             payload.release();
@@ -112,7 +112,7 @@ public class OptionalSslHandlerTest {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3 });
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verifyZeroInteractions(pipeline);
         } finally {
             payload.release();

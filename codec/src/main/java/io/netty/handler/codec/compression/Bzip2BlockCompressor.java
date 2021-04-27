@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,12 +33,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  * 7. Huffman encode and write data - {@link #close(ByteBuf)} (through {@link Bzip2HuffmanStageEncoder})
  */
 final class Bzip2BlockCompressor {
-    private final ByteProcessor writeProcessor = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            return write(value);
-        }
-    };
+    private final ByteProcessor writeProcessor = this::write;
 
     /**
      * A writer that provides bit-level writes.

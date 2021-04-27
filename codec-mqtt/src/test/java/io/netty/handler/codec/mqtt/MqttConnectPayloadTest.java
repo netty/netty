@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,8 +32,12 @@ public class MqttConnectPayloadTest {
         byte[] willMessage = null;
         String userName = "userName";
         byte[] password = "password".getBytes(CharsetUtil.UTF_8);
-        MqttConnectPayload mqttConnectPayload =
-            new MqttConnectPayload(clientIdentifier, willTopic, willMessage, userName, password);
+        MqttConnectPayload mqttConnectPayload = new MqttConnectPayload(clientIdentifier,
+                MqttProperties.NO_PROPERTIES,
+                willTopic,
+                willMessage,
+                userName,
+                password);
 
         assertNull(mqttConnectPayload.willMessageInBytes());
         assertNull(mqttConnectPayload.willMessage());
@@ -46,8 +50,12 @@ public class MqttConnectPayloadTest {
         byte[] willMessage = "willMessage".getBytes(CharsetUtil.UTF_8);
         String userName = "userName";
         byte[] password = null;
-        MqttConnectPayload mqttConnectPayload =
-            new MqttConnectPayload(clientIdentifier, willTopic, willMessage, userName, password);
+        MqttConnectPayload mqttConnectPayload = new MqttConnectPayload(clientIdentifier,
+                MqttProperties.NO_PROPERTIES,
+                willTopic,
+                willMessage,
+                userName,
+                password);
 
         assertNull(mqttConnectPayload.passwordInBytes());
         assertNull(mqttConnectPayload.password());

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,14 +39,14 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksM
     private SocksServerHandler() { }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, SocksMessage socksRequest) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, SocksMessage socksRequest) throws Exception {
         switch (socksRequest.version()) {
             case SOCKS4a:
                 Socks4CommandRequest socksV4CmdRequest = (Socks4CommandRequest) socksRequest;
                 if (socksV4CmdRequest.type() == Socks4CommandType.CONNECT) {
                     ctx.pipeline().addLast(new SocksServerConnectHandler());
-                    ctx.pipeline().remove(this);
                     ctx.fireChannelRead(socksRequest);
+                    ctx.pipeline().remove(this);
                 } else {
                     ctx.close();
                 }
@@ -65,8 +65,8 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksM
                     Socks5CommandRequest socks5CmdRequest = (Socks5CommandRequest) socksRequest;
                     if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
                         ctx.pipeline().addLast(new SocksServerConnectHandler());
-                        ctx.pipeline().remove(this);
                         ctx.fireChannelRead(socksRequest);
+                        ctx.pipeline().remove(this);
                     } else {
                         ctx.close();
                     }

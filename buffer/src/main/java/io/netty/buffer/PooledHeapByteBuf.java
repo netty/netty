@@ -3,7 +3,7 @@
  *
  * The Netty Project licenses this file to the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,12 +27,7 @@ import java.nio.ByteBuffer;
 class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     private static final ObjectPool<PooledHeapByteBuf> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<PooledHeapByteBuf>() {
-        @Override
-        public PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
-            return new PooledHeapByteBuf(handle, 0);
-        }
-    });
+            handle -> new PooledHeapByteBuf(handle, 0));
 
     static PooledHeapByteBuf newInstance(int maxCapacity) {
         PooledHeapByteBuf buf = RECYCLER.get();

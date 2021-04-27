@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,8 @@
 
 package io.netty.channel;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 
 import java.lang.reflect.Constructor;
@@ -29,19 +30,19 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     private final Constructor<? extends T> constructor;
 
     public ReflectiveChannelFactory(Class<? extends T> clazz) {
-        ObjectUtil.checkNotNull(clazz, "clazz");
+        requireNonNull(clazz, "clazz");
         try {
-            this.constructor = clazz.getConstructor();
+            this.constructor = clazz.getConstructor(EventLoop.class);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
-                    " does not have a public non-arg constructor", e);
+                    " does not have a public constructor that takes an EventLoop instance", e);
         }
     }
 
     @Override
-    public T newChannel() {
+    public T newChannel(EventLoop eventLoop) throws Exception {
         try {
-            return constructor.newInstance();
+            return constructor.newInstance(eventLoop);
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);
         }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -60,7 +60,7 @@ public class StompSubframeEncoderTest {
         aggregatedBuffer.writeBytes(byteBuf);
         byteBuf.release();
 
-        aggregatedBuffer.resetReaderIndex();
+        aggregatedBuffer.readerIndex(0);
         String content = aggregatedBuffer.toString(CharsetUtil.UTF_8);
         assertEquals(StompTestConstants.CONNECT_FRAME, content);
         aggregatedBuffer.release();
@@ -76,11 +76,23 @@ public class StompSubframeEncoderTest {
 
         channel.writeOutbound(frame);
 
-        ByteBuf headers = channel.readOutbound();
-        ByteBuf content = channel.readOutbound();
-        ByteBuf fullFrame = Unpooled.wrappedBuffer(headers, content);
+        ByteBuf fullFrame = channel.readOutbound();
         assertEquals(SEND_FRAME_UTF8, fullFrame.toString(CharsetUtil.UTF_8));
         assertTrue(fullFrame.release());
     }
 
+    @Test
+    public void testOneBufferForStompFrameWithEmptyContent() {
+        StompFrame connectedFrame = new DefaultStompFrame(StompCommand.CONNECTED);
+        connectedFrame.headers().set(StompHeaders.VERSION, "1.2");
+
+        assertTrue(channel.writeOutbound(connectedFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+        assertEquals("CONNECTED\nversion:1.2\n\n\0", stompBuffer.toString(CharsetUtil.UTF_8));
+        assertTrue(stompBuffer.release());
+    }
 }

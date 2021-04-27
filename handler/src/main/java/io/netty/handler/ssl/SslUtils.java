@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,17 +23,25 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.TrustManager;
 
 import static java.util.Arrays.asList;
 
@@ -41,11 +49,13 @@ import static java.util.Arrays.asList;
  * Constants for SSL packets.
  */
 final class SslUtils {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslUtils.class);
+
     // See https://tools.ietf.org/html/rfc8446#appendix-B.4
-    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<String>(
+    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<>(
             asList("TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
-                          "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
-                          "TLS_AES_128_CCM_SHA256")));
+                    "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
+                    "TLS_AES_128_CCM_SHA256")));
     // Protocols
     static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
     static final String PROTOCOL_SSL_V2 = "SSLv2";
@@ -101,14 +111,19 @@ final class SslUtils {
     static final String[] DEFAULT_TLSV13_CIPHER_SUITES;
     static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
 
+    private static final boolean TLSV1_3_JDK_SUPPORTED;
+    private static final boolean TLSV1_3_JDK_DEFAULT_ENABLED;
+
     static {
-        if (PlatformDependent.javaVersion() >= 11) {
+        TLSV1_3_JDK_SUPPORTED = isTLSv13SupportedByJDK0(null);
+        TLSV1_3_JDK_DEFAULT_ENABLED = isTLSv13EnabledByJDK0(null);
+        if (TLSV1_3_JDK_SUPPORTED) {
             DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
         } else {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
         }
 
-        List<String> defaultCiphers = new ArrayList<String>();
+        List<String> defaultCiphers = new ArrayList<>();
         // GCM (Galois/Counter Mode) requires JDK 8.
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
@@ -125,7 +140,86 @@ final class SslUtils {
 
         Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
-        DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
+        DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(EmptyArrays.EMPTY_STRINGS);
+    }
+
+    /**
+     * Returns {@code true} if the JDK itself supports TLSv1.3, {@code false} otherwise.
+     */
+    static boolean isTLSv13SupportedByJDK(Provider provider) {
+        if (provider == null) {
+            return TLSV1_3_JDK_SUPPORTED;
+        }
+        return isTLSv13SupportedByJDK0(provider);
+    }
+
+    private static boolean isTLSv13SupportedByJDK0(Provider provider) {
+        try {
+            return arrayContains(newInitContext(provider)
+                    .getSupportedSSLParameters().getProtocols(), PROTOCOL_TLS_V1_3);
+        } catch (Throwable cause) {
+            logger.debug("Unable to detect if JDK SSLEngine with provider {} supports TLSv1.3, assuming no",
+                    provider, cause);
+            return false;
+        }
+    }
+
+    /**
+     * Returns {@code true} if the JDK itself supports TLSv1.3 and enabled it by default, {@code false} otherwise.
+     */
+    static boolean isTLSv13EnabledByJDK(Provider provider) {
+        if (provider == null) {
+            return TLSV1_3_JDK_DEFAULT_ENABLED;
+        }
+        return isTLSv13EnabledByJDK0(provider);
+    }
+
+    private static boolean isTLSv13EnabledByJDK0(Provider provider) {
+        try {
+            return arrayContains(newInitContext(provider)
+                    .getDefaultSSLParameters().getProtocols(), PROTOCOL_TLS_V1_3);
+        } catch (Throwable cause) {
+            logger.debug("Unable to detect if JDK SSLEngine with provider {} enables TLSv1.3 by default," +
+                    " assuming no", provider, cause);
+            return false;
+        }
+    }
+
+    private static SSLContext newInitContext(Provider provider)
+            throws NoSuchAlgorithmException, KeyManagementException {
+        final SSLContext context;
+        if (provider == null) {
+            context = SSLContext.getInstance("TLS");
+        } else {
+            context = SSLContext.getInstance("TLS", provider);
+        }
+        context.init(null, new TrustManager[0], null);
+        return context;
+    }
+
+    static SSLContext getSSLContext(String provider)
+            throws NoSuchAlgorithmException, KeyManagementException, NoSuchProviderException {
+        final SSLContext context;
+        if (StringUtil.isNullOrEmpty(provider)) {
+            context = SSLContext.getInstance(getTlsVersion());
+        } else {
+            context = SSLContext.getInstance(getTlsVersion(), provider);
+        }
+        context.init(null, new TrustManager[0], null);
+        return context;
+    }
+
+    private static String getTlsVersion() {
+        return TLSV1_3_JDK_SUPPORTED ? PROTOCOL_TLS_V1_3 : PROTOCOL_TLS_V1_2;
+    }
+
+    static boolean arrayContains(String[] array, String value) {
+        for (String v: array) {
+            if (value.equals(v)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -346,7 +440,6 @@ final class SslUtils {
         if (notify) {
             ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
         }
-        ctx.close();
     }
 
     /**
@@ -395,6 +488,10 @@ final class SslUtils {
     static boolean isTLSv13Cipher(String cipher) {
         // See https://tools.ietf.org/html/rfc8446#appendix-B.4
         return TLSV13_CIPHERS.contains(cipher);
+    }
+
+    static boolean isEmpty(Object[] arr) {
+        return arr == null || arr.length == 0;
     }
 
     private SslUtils() {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel.group;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -63,10 +65,10 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
             if (callSetDone) {
                 if (failureCount > 0) {
                     List<Map.Entry<Channel, Throwable>> failed =
-                            new ArrayList<Map.Entry<Channel, Throwable>>(failureCount);
+                            new ArrayList<>(failureCount);
                     for (ChannelFuture f: futures.values()) {
                         if (!f.isSuccess()) {
-                            failed.add(new DefaultEntry<Channel, Throwable>(f.channel(), f.cause()));
+                            failed.add(new DefaultEntry<>(f.channel(), f.cause()));
                         }
                     }
                     setFailure0(new ChannelGroupException(failed));
@@ -82,16 +84,12 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
      */
     DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
-        if (futures == null) {
-            throw new NullPointerException("futures");
-        }
+        requireNonNull(group, "group");
+        requireNonNull(futures, "futures");
 
         this.group = group;
 
-        Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<Channel, ChannelFuture>();
+        Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<>();
         for (ChannelFuture f: futures) {
             futureMap.put(f.channel(), f);
         }

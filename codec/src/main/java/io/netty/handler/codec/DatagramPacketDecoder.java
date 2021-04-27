@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.util.List;
 
@@ -43,7 +44,7 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
      * @param decoder the specified {@link ByteBuf} decoder
      */
     public DatagramPacketDecoder(MessageToMessageDecoder<ByteBuf> decoder) {
-        this.decoder = checkNotNull(decoder, "decoder");
+        this.decoder = requireNonNull(decoder, "decoder");
     }
 
     @Override
@@ -55,8 +56,8 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket msg, List<Object> out) throws Exception {
-        decoder.decode(ctx, msg.content(), out);
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        decoder.decode(ctx, msg.content());
     }
 
     @Override

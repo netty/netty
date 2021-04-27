@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
 import org.junit.Ignore;
@@ -52,7 +51,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 
         Channel sc = sb.bind().sync().channel();
 
-        List<Socket> sockets = new ArrayList<Socket>();
+        List<Socket> sockets = new ArrayList<>();
 
         try {
             long startTime = System.nanoTime();
@@ -94,7 +93,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class AcceptedChannelCounter extends ChannelInboundHandlerAdapter {
+    private static final class AcceptedChannelCounter implements ChannelHandler {
 
         final CountDownLatch latch;
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,9 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.TimeoutException;
 
 /**
  * The result of an asynchronous operation.
@@ -83,12 +84,20 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     *
      */
     Future<V> sync() throws InterruptedException;
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
      */
     Future<V> syncUninterruptibly();
 
@@ -166,4 +175,46 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      */
     @Override
     boolean cancel(boolean mayInterruptIfRunning);
+
+    /**
+     * Returns the {@link EventExecutor} that is tied to this {@link Future}.
+     */
+    EventExecutor executor();
+
+    @Override
+    default V get() throws InterruptedException, ExecutionException {
+        await();
+
+        Throwable cause = cause();
+        if (cause == null) {
+            return getNow();
+        }
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new ExecutionException(cause);
+    }
+
+    @Override
+    default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        if (await(timeout, unit)) {
+            Throwable cause = cause();
+            if (cause == null) {
+                return getNow();
+            }
+            if (cause instanceof CancellationException) {
+                throw (CancellationException) cause;
+            }
+            throw new ExecutionException(cause);
+        }
+        throw new TimeoutException();
+    }
+
+    /**
+     * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive
+     * all updates as well.
+     */
+    default FutureCompletionStage<V> asStage() {
+        return new DefaultFutureCompletionStage<>(this);
+    }
 }

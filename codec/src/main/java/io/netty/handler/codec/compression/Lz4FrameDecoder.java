@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,16 +22,16 @@ import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
-import java.util.List;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
- * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
+ * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
  * Since the original LZ4 block format does not contains size of compressed block and size of original data
@@ -136,15 +136,13 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
+        requireNonNull(factory, "factory");
         decompressor = factory.fastDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (currentState) {
             case INIT_BLOCK:
@@ -239,7 +237,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                     if (checksum != null) {
                         CompressionUtil.checkChecksum(checksum, uncompressed, currentChecksum);
                     }
-                    out.add(uncompressed);
+                    ctx.fireChannelRead(uncompressed);
                     uncompressed = null;
                     currentState = State.INIT_BLOCK;
                 } catch (LZ4Exception e) {

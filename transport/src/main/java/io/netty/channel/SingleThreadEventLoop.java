@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,148 +15,229 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
- *
+ * {@link EventLoop} that execute all its submitted tasks in a single thread and uses an {@link IoHandler} for
+ * IO processing.
  */
-public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
+public class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
 
-    private final Queue<Runnable> tailTasks;
+    // TODO: Is this a sensible default ?
+    protected static final int DEFAULT_MAX_TASKS_PER_RUN = Math.max(1,
+            SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskPerRun", 1024 * 4));
 
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        this(parent, threadFactory, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
-    }
-
-    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
-        this(parent, executor, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
-    }
-
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory,
-                                    boolean addTaskWakesUp, int maxPendingTasks,
-                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, threadFactory, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        tailTasks = newTaskQueue(maxPendingTasks);
-    }
-
-    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
-                                    boolean addTaskWakesUp, int maxPendingTasks,
-                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        tailTasks = newTaskQueue(maxPendingTasks);
-    }
-
-    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
-                                    boolean addTaskWakesUp, Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
-                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, addTaskWakesUp, taskQueue, rejectedExecutionHandler);
-        tailTasks = ObjectUtil.checkNotNull(tailTaskQueue, "tailTaskQueue");
-    }
-
-    @Override
-    public EventLoopGroup parent() {
-        return (EventLoopGroup) super.parent();
-    }
-
-    @Override
-    public EventLoop next() {
-        return (EventLoop) super.next();
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
-    }
-
-    @Override
-    public ChannelFuture register(final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
+    private final IoExecutionContext context = new IoExecutionContext() {
+        @Override
+        public boolean canBlock() {
+            assert inEventLoop();
+            return !SingleThreadEventLoop.this.hasTasks() && !SingleThreadEventLoop.this.hasScheduledTasks();
         }
 
-        channel.unsafe().register(this, promise);
-        return promise;
+        @Override
+        public long delayNanos(long currentTimeNanos) {
+            assert inEventLoop();
+            return SingleThreadEventLoop.this.delayNanos(currentTimeNanos);
+        }
+
+        @Override
+        public long deadlineNanos() {
+            assert inEventLoop();
+            return SingleThreadEventLoop.this.deadlineNanos();
+        }
+    };
+
+    private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public void register(Channel channel) throws Exception {
+            SingleThreadEventLoop.this.register(channel);
+        }
+
+        @Override
+        public void deregister(Channel channel) throws Exception {
+            SingleThreadEventLoop.this.deregister(channel);
+        }
+    };
+
+    private final IoHandler ioHandler;
+    private final int maxTasksPerRun;
+
+    /**
+     * Create a new instance
+     *
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param ioHandler         the {@link IoHandler} to use.
+     */
+    public SingleThreadEventLoop(ThreadFactory threadFactory, IoHandler ioHandler) {
+        this(threadFactory, ioHandler, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
     }
 
     /**
-     * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
+     * Create a new instance
      *
-     * @param task to be added.
+     * @param executor          the {@link Executor} which will be used to run this {@link EventLoop}.
+     * @param ioHandler         the {@link IoHandler} to use.
      */
-    @UnstableApi
-    public final void executeAfterEventLoopIteration(Runnable task) {
-        ObjectUtil.checkNotNull(task, "task");
-        if (isShutdown()) {
-            reject();
-        }
-
-        if (!tailTasks.offer(task)) {
-            reject(task);
-        }
-
-        if (!(task instanceof LazyRunnable) && wakesUpForTask(task)) {
-            wakeup(inEventLoop());
-        }
+    public SingleThreadEventLoop(Executor executor, IoHandler ioHandler) {
+        this(executor, ioHandler, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
     }
 
     /**
-     * Removes a task that was added previously via {@link #executeAfterEventLoopIteration(Runnable)}.
+     * Create a new instance
      *
-     * @param task to be removed.
-     *
-     * @return {@code true} if the task was removed as a result of this call.
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param ioHandler         the {@link IoHandler} to use.
+     * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    @UnstableApi
-    final boolean removeAfterEventLoopIterationTask(Runnable task) {
-        return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
-    }
-
-    @Override
-    protected void afterRunningAllTasks() {
-        runAllTasksFrom(tailTasks);
-    }
-
-    @Override
-    protected boolean hasTasks() {
-        return super.hasTasks() || !tailTasks.isEmpty();
-    }
-
-    @Override
-    public int pendingTasks() {
-        return super.pendingTasks() + tailTasks.size();
+    public SingleThreadEventLoop(ThreadFactory threadFactory,
+                                 IoHandler ioHandler, int maxPendingTasks,
+                                 RejectedExecutionHandler rejectedHandler) {
+        this(threadFactory, ioHandler, maxPendingTasks, rejectedHandler, DEFAULT_MAX_TASKS_PER_RUN);
     }
 
     /**
-     * Returns the number of {@link Channel}s registered with this {@link EventLoop} or {@code -1}
-     * if operation is not supported. The returned value is not guaranteed to be exact accurate and
-     * should be viewed as a best effort.
+     * Create a new instance
+     *
+     * @param executor          the {@link Executor} which will be used to run this {@link EventLoop}.
+     * @param ioHandler         the {@link IoHandler} to use.
+     * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    @UnstableApi
-    public int registeredChannels() {
-        return -1;
+    public SingleThreadEventLoop(Executor executor,
+                                 IoHandler ioHandler, int maxPendingTasks,
+                                 RejectedExecutionHandler rejectedHandler) {
+        this(executor, ioHandler, maxPendingTasks, rejectedHandler, DEFAULT_MAX_TASKS_PER_RUN);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param ioHandler         the {@link IoHandler} to use.
+     * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
+     * @param maxTasksPerRun    the maximum number of tasks per {@link EventLoop} run that will be processed
+     *                          before trying to handle IO again.
+     */
+    public SingleThreadEventLoop(ThreadFactory threadFactory,
+                                 IoHandler ioHandler, int maxPendingTasks,
+                                 RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
+        super(threadFactory, maxPendingTasks, rejectedHandler);
+        this.ioHandler = requireNonNull(ioHandler, "ioHandler");
+        this.maxTasksPerRun = checkPositive(maxTasksPerRun, "maxTasksPerRun");
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param executor          the {@link Executor} which will be used to run this {@link EventLoop}.
+     * @param ioHandler         the {@link IoHandler} to use.
+     * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
+     * @param maxTasksPerRun    the maximum number of tasks per {@link EventLoop} run that will be processed
+     *                          before trying to handle IO again.
+     */
+    public SingleThreadEventLoop(Executor executor,
+                                 IoHandler ioHandler, int maxPendingTasks,
+                                 RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
+        super(executor, maxPendingTasks, rejectedHandler);
+        this.ioHandler = requireNonNull(ioHandler, "ioHandler");
+        this.maxTasksPerRun = checkPositive(maxTasksPerRun, "maxTasksPerRun");
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        // This event loop never calls takeTask()
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.newMpscQueue()
+                : PlatformDependent.newMpscQueue(maxPendingTasks);
+    }
+
+    @Override
+    public final EventLoop next() {
+        return this;
+    }
+
+    @Override
+    protected final boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
+    }
+
+    /**
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
+
+    @Override
+    public final Unsafe unsafe() {
+        return unsafe;
+    }
+
+    // Methods that a user can override to easily add instrumentation and other things.
+
+    @Override
+    protected void run() {
+        assert inEventLoop();
+        do {
+            runIo();
+            if (isShuttingDown()) {
+                ioHandler.prepareToDestroy();
+            }
+            runAllTasks(maxTasksPerRun);
+        } while (!confirmShutdown());
+    }
+
+    /**
+     * Called when IO will be processed for all the {@link Channel}s on this {@link SingleThreadEventLoop}.
+     * This method returns the number of {@link Channel}s for which IO was processed.
+     *
+     * This method must be called from the {@link EventLoop} thread.
+     */
+    protected int runIo() {
+        assert inEventLoop();
+        return ioHandler.run(context);
+    }
+
+    /**
+     * Called once a {@link Channel} should be registered on this {@link SingleThreadEventLoop}.
+     *
+     * This method must be called from the {@link EventLoop} thread.
+     */
+    protected void register(Channel channel) throws Exception {
+        assert inEventLoop();
+        ioHandler.register(channel);
+    }
+
+    /**
+     * Called once a {@link Channel} should be deregistered from this {@link SingleThreadEventLoop}.
+     */
+    protected void deregister(Channel channel) throws Exception {
+        assert inEventLoop();
+        ioHandler.deregister(channel);
+    }
+
+    @Override
+    protected final void wakeup(boolean inEventLoop) {
+        ioHandler.wakeup(inEventLoop);
+    }
+
+    @Override
+    protected final void cleanup() {
+        assert inEventLoop();
+        ioHandler.destroy();
     }
 }

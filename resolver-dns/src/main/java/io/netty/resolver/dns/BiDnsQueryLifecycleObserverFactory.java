@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,14 +16,12 @@
 package io.netty.resolver.dns;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Combines two {@link DnsQueryLifecycleObserverFactory} into a single {@link DnsQueryLifecycleObserverFactory}.
  */
-@UnstableApi
 public final class BiDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
     private final DnsQueryLifecycleObserverFactory a;
     private final DnsQueryLifecycleObserverFactory b;
@@ -34,8 +32,8 @@ public final class BiDnsQueryLifecycleObserverFactory implements DnsQueryLifecyc
      * @param b The {@link DnsQueryLifecycleObserverFactory} that will receive events second.
      */
     public BiDnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory a, DnsQueryLifecycleObserverFactory b) {
-        this.a = checkNotNull(a, "a");
-        this.b = checkNotNull(b, "b");
+        this.a = requireNonNull(a, "a");
+        this.b = requireNonNull(b, "b");
     }
 
     @Override

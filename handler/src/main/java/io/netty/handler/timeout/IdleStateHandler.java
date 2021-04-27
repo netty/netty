@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,18 @@
  */
 package io.netty.handler.timeout;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.Channel.Unsafe;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +74,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler implements {@link ChannelHandler} {
  *     {@code @Override}
  *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
  *         if (evt instanceof {@link IdleStateEvent}) {
@@ -96,7 +97,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelDuplexHandler {
+public class IdleStateHandler implements ChannelHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
@@ -191,7 +192,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     public IdleStateHandler(boolean observeOutput,
             long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
-        ObjectUtil.checkNotNull(unit, "unit");
+        requireNonNull(unit, "unit");
 
         this.observeOutput = observeOutput;
 
@@ -259,7 +260,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         if (ctx.channel().isActive()) {
             initialize(ctx);
         }
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     @Override
@@ -268,13 +269,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
         initialize(ctx);
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     @Override

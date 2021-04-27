@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -41,7 +41,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // execute
         extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);
@@ -50,19 +50,19 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().isEmpty());
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(CLIENT_MAX_WINDOW, null);
         parameters.put(CLIENT_NO_CONTEXT, null);
 
         // execute
         extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);
@@ -71,14 +71,14 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().isEmpty());
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(SERVER_MAX_WINDOW, "12");
         parameters.put(SERVER_NO_CONTEXT, null);
 
@@ -100,7 +100,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         PerMessageDeflateServerExtensionHandshaker handshaker =
                 new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true);
 
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(CLIENT_MAX_WINDOW, null);
         parameters.put(SERVER_MAX_WINDOW, "12");
         parameters.put(CLIENT_NO_CONTEXT, null);
@@ -117,7 +117,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
@@ -129,7 +129,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(SERVER_MAX_WINDOW, "12");
         parameters.put(SERVER_NO_CONTEXT, null);
 
@@ -144,7 +144,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
@@ -154,7 +154,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(data.parameters().containsKey(SERVER_NO_CONTEXT));
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
 
         // execute
         extension = handshaker.handshakeExtension(
@@ -163,7 +163,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertNotNull(extension);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());

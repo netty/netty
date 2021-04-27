@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -101,7 +101,7 @@ public class NameServerComparatorTest {
     @Test
     public void testSortAlreadySortedPreferred() {
         List<InetSocketAddress> expected = Arrays.asList(IPV4ADDRESS1, IPV4ADDRESS2, IPV4ADDRESS3);
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(expected);
+        List<InetSocketAddress> addresses = new ArrayList<>(expected);
         NameServerComparator comparator = new NameServerComparator(Inet4Address.class);
 
         Collections.sort(addresses, comparator);
@@ -112,7 +112,7 @@ public class NameServerComparatorTest {
     @Test
     public void testSortAlreadySortedNotPreferred() {
         List<InetSocketAddress> expected = Arrays.asList(IPV4ADDRESS1, IPV4ADDRESS2, IPV4ADDRESS3);
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(expected);
+        List<InetSocketAddress> addresses = new ArrayList<>(expected);
         NameServerComparator comparator = new NameServerComparator(Inet6Address.class);
 
         Collections.sort(addresses, comparator);
@@ -123,7 +123,7 @@ public class NameServerComparatorTest {
     @Test
     public void testSortAlreadySortedUnresolved() {
         List<InetSocketAddress> expected = Arrays.asList(UNRESOLVED1, UNRESOLVED2, UNRESOLVED3);
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(expected);
+        List<InetSocketAddress> addresses = new ArrayList<>(expected);
         NameServerComparator comparator = new NameServerComparator(Inet6Address.class);
 
         Collections.sort(addresses, comparator);
@@ -136,7 +136,7 @@ public class NameServerComparatorTest {
         List<InetSocketAddress> expected = Arrays.asList(
                 IPV4ADDRESS1, IPV4ADDRESS2, IPV6ADDRESS1, IPV6ADDRESS2, UNRESOLVED1, UNRESOLVED2);
 
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(expected);
+        List<InetSocketAddress> addresses = new ArrayList<>(expected);
         NameServerComparator comparator = new NameServerComparator(Inet4Address.class);
 
         Collections.sort(addresses, comparator);
@@ -148,7 +148,7 @@ public class NameServerComparatorTest {
     public void testSort1() {
         List<InetSocketAddress> expected = Arrays.asList(
                 IPV4ADDRESS1, IPV4ADDRESS2, IPV6ADDRESS1, IPV6ADDRESS2, UNRESOLVED1, UNRESOLVED2);
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(
+        List<InetSocketAddress> addresses = new ArrayList<>(
                 Arrays.asList(IPV6ADDRESS1, IPV4ADDRESS1, IPV6ADDRESS2, UNRESOLVED1, UNRESOLVED2, IPV4ADDRESS2));
         NameServerComparator comparator = new NameServerComparator(Inet4Address.class);
 
@@ -161,7 +161,7 @@ public class NameServerComparatorTest {
     public void testSort2() {
         List<InetSocketAddress> expected = Arrays.asList(
                 IPV4ADDRESS1, IPV4ADDRESS2, IPV6ADDRESS1, IPV6ADDRESS2, UNRESOLVED1, UNRESOLVED2);
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(
+        List<InetSocketAddress> addresses = new ArrayList<>(
                 Arrays.asList(IPV4ADDRESS1, IPV6ADDRESS1, IPV6ADDRESS2, UNRESOLVED1, IPV4ADDRESS2, UNRESOLVED2));
         NameServerComparator comparator = new NameServerComparator(Inet4Address.class);
 

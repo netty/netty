@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -88,7 +88,7 @@ public class Http2FrameRoundtripTest {
 
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
-    private final List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
+    private final List<ByteBuf> needReleasing = new LinkedList<>();
 
     @Before
     public void setup() throws Exception {
@@ -97,24 +97,10 @@ public class Http2FrameRoundtripTest {
         when(ctx.alloc()).thenReturn(alloc);
         when(ctx.executor()).thenReturn(executor);
         when(ctx.channel()).thenReturn(channel);
-        doAnswer(new Answer<ByteBuf>() {
-            @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
-                return Unpooled.buffer();
-            }
-        }).when(alloc).buffer();
-        doAnswer(new Answer<ByteBuf>() {
-            @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
-                return Unpooled.buffer((Integer) in.getArguments()[0]);
-            }
-        }).when(alloc).buffer(anyInt());
-        doAnswer(new Answer<ChannelPromise>() {
-            @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
-            }
-        }).when(ctx).newPromise();
+        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
+        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
+        doAnswer((Answer<ChannelPromise>) invocation ->
+                new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));

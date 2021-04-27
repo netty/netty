@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,8 +23,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
@@ -50,11 +50,11 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
+            final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
@@ -66,7 +66,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
@@ -159,12 +159,12 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             final ByteBuf expectedContent = alloc.buffer(soSndBuf * 2);
             expectedContent.writeBytes(newRandomBytes(expectedContent.writableBytes(), r));
             final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
+            final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childOption(ChannelOption.SO_SNDBUF, soSndBuf)
               .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ctx.channel().config(),
@@ -208,7 +208,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {

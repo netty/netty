@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,11 +33,7 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
     protected ByteBuf newBuffer(int length, int maxCapacity) {
         ByteBuf buffer = alloc(length, maxCapacity);
 
-        // Testing if the writerIndex and readerIndex are correct when allocate and also after we reset the mark.
-        assertEquals(0, buffer.writerIndex());
-        assertEquals(0, buffer.readerIndex());
-        buffer.resetReaderIndex();
-        buffer.resetWriterIndex();
+        // Testing if the writerIndex and readerIndex are correct when allocate.
         assertEquals(0, buffer.writerIndex());
         assertEquals(0, buffer.readerIndex());
         return buffer;
@@ -124,5 +120,19 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         ByteBuf buf = newBuffer(4);
         assertTrue(buf.isContiguous());
         buf.release();
+    }
+
+    @Test
+    public void distinctBuffersMustNotOverlap() {
+        ByteBuf a = newBuffer(16384);
+        ByteBuf b = newBuffer(65536);
+        a.setByte(a.capacity() - 1, 1);
+        b.setByte(0, 2);
+        try {
+            assertEquals(1, a.getByte(a.capacity() - 1));
+        } finally {
+            a.release();
+            b.release();
+        }
     }
 }

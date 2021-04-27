@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -14,7 +14,8 @@
  */
 package io.netty.example.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -73,7 +74,7 @@ public final class Http2ExampleUtil {
      * @return the first occurrence of that key in the string parameters
      */
     public static String firstValue(QueryStringDecoder query, String key) {
-        checkNotNull(query, "Query can't be null!");
+        requireNonNull(query, "Query can't be null!");
         List<String> values = query.parameters().get(key);
         if (values == null || values.isEmpty()) {
             return null;

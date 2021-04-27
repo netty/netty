@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -22,6 +24,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -30,26 +33,30 @@ import java.net.SocketAddress;
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
-    protected AbstractEpollServerChannel(int fd) {
-        this(new LinuxSocket(fd), false);
+    private final EventLoopGroup childEventLoopGroup;
+
+    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                               LinuxSocket fd, boolean active) {
+        super(null, eventLoop, fd, active);
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
     }
 
     @Override
@@ -95,7 +102,6 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 return;
             }
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -129,6 +135,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
                 }
+                readIfIsAutoRead();
             } finally {
                 epollInFinally(config);
             }

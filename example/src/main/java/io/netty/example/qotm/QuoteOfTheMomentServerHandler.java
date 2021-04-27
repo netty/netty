@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,7 +44,7 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<D
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         System.err.println(packet);
         if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
             ctx.write(new DatagramPacket(

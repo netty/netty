@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,20 +15,21 @@
  */
 /*
  * Written by Robert Harder and released to the public domain, as explained at
- * http://creativecommons.org/licenses/publicdomain
+ * https://creativecommons.org/licenses/publicdomain
  */
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
- * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a> notation.
+ * <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> notation.
  * <p>
  * The encoding and decoding algorithm in this class has been derived from
  * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
@@ -50,23 +51,17 @@ public final class Base64 {
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
     private static byte[] alphabet(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(dialect, "dialect");
         return dialect.alphabet;
     }
 
     private static byte[] decodabet(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(dialect, "dialect");
         return dialect.decodabet;
     }
 
     private static boolean breakLines(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(dialect, "dialect");
         return dialect.breakLinesByDefault;
     }
 
@@ -83,10 +78,7 @@ public final class Base64 {
     }
 
     public static ByteBuf encode(ByteBuf src, boolean breakLines, Base64Dialect dialect) {
-
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        requireNonNull(src, "src");
 
         ByteBuf dest = encode(src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
         src.readerIndex(src.writerIndex());
@@ -113,12 +105,8 @@ public final class Base64 {
 
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(src, "src");
+        requireNonNull(dialect, "dialect");
 
         ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
         byte[] alphabet = alphabet(dialect);
@@ -291,9 +279,7 @@ public final class Base64 {
     }
 
     public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        requireNonNull(src, "src");
 
         ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
         src.readerIndex(src.writerIndex());
@@ -312,12 +298,8 @@ public final class Base64 {
 
     public static ByteBuf decode(
             ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufAllocator allocator) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(src, "src");
+        requireNonNull(dialect, "dialect");
 
         // Using a ByteProcessor to reduce bound and reference count checking.
         return new Decoder().decode(src, off, len, allocator, dialect);
@@ -344,13 +326,12 @@ public final class Base64 {
                 return dest.slice(0, outBuffPosn);
             } catch (Throwable cause) {
                 dest.release();
-                PlatformDependent.throwException(cause);
-                return null;
+                throw cause;
             }
         }
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             if (value > 0) {
                 byte sbiDecode = decodabet[value];
                 if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better

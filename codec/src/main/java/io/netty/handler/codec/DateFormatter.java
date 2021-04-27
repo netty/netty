@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -38,10 +38,12 @@ import java.util.TimeZone;
  * If you're looking for a date format that validates day of week, or supports other timezones, consider using
  * java.util.DateTimeFormatter.RFC_1123_DATE_TIME.
  *
- * On the formatting side, it uses RFC1123 format.
+ * On the formatting side, it uses a subset of RFC1123 (2 digit day-of-month and 4 digit year) as per RFC2616.
+ * This subset supports RFC6265.
  *
  * @see <a href="https://tools.ietf.org/html/rfc6265#section-5.1.1">RFC6265</a> for the parsing side
- * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> for the encoding side.
+ * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> and
+ * <a href="https://tools.ietf.org/html/rfc2616#section-3.3.1">RFC2616</a> for the encoding side.
  */
 public final class DateFormatter {
 
@@ -99,10 +101,10 @@ public final class DateFormatter {
         } else if (length < 0) {
             throw new IllegalArgumentException("Can't have end < start");
         } else if (length > 64) {
-            throw new IllegalArgumentException("Can't parse more than 64 chars," +
+            throw new IllegalArgumentException("Can't parse more than 64 chars, " +
                     "looks like a user error or a malformed header");
         }
-        return formatter().parse0(checkNotNull(txt, "txt"), start, end);
+        return formatter().parse0(requireNonNull(txt, "txt"), start, end);
     }
 
     /**
@@ -111,7 +113,7 @@ public final class DateFormatter {
      * @return a RFC1123 string
      */
     public static String format(Date date) {
-        return formatter().format0(checkNotNull(date, "date"));
+        return formatter().format0(requireNonNull(date, "date"));
     }
 
     /**
@@ -121,7 +123,7 @@ public final class DateFormatter {
      * @return the same StringBuilder
      */
     public static StringBuilder append(Date date, StringBuilder sb) {
-        return formatter().append0(checkNotNull(date, "date"), checkNotNull(sb, "sb"));
+        return formatter().append0(requireNonNull(date, "date"), requireNonNull(sb, "sb"));
     }
 
     private static DateFormatter formatter() {
@@ -429,7 +431,7 @@ public final class DateFormatter {
         cal.setTime(date);
 
         sb.append(DAY_OF_WEEK_TO_SHORT_NAME[cal.get(Calendar.DAY_OF_WEEK) - 1]).append(", ");
-        sb.append(cal.get(Calendar.DAY_OF_MONTH)).append(' ');
+        appendZeroLeftPadded(cal.get(Calendar.DAY_OF_MONTH), sb).append(' ');
         sb.append(CALENDAR_MONTH_TO_SHORT_NAME[cal.get(Calendar.MONTH)]).append(' ');
         sb.append(cal.get(Calendar.YEAR)).append(' ');
         appendZeroLeftPadded(cal.get(Calendar.HOUR_OF_DAY), sb).append(':');

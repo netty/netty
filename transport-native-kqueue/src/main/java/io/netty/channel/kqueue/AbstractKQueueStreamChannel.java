@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -55,31 +56,31 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     private WritableByteChannel byteChannel;
-    private final Runnable flushTask = new Runnable() {
-        @Override
-        public void run() {
-            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-            // meantime.
-            ((AbstractKQueueUnsafe) unsafe()).flush0();
-        }
+    private final Runnable flushTask = () -> {
+        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+        // meantime.
+        ((AbstractKQueueUnsafe) unsafe()).flush0();
     };
 
-    AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent, fd, active);
+    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+        super(parent, eventLoop, fd, active);
     }
 
-    AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(parent, fd, remote);
+    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, fd, remote);
     }
 
-    AbstractKQueueStreamChannel(BsdSocket fd) {
-        this(null, fd, isSoErrorZero(fd));
+    AbstractKQueueStreamChannel(EventLoop eventLoop, BsdSocket fd) {
+        this(null, eventLoop, fd, isSoErrorZero(fd));
     }
 
     @Override
     protected AbstractKQueueUnsafe newUnsafe() {
         return new KQueueStreamUnsafe();
     }
+
+    @Override
+    public abstract KQueueDuplexChannelConfig config();
 
     @Override
     public ChannelMetadata metadata() {
@@ -270,7 +271,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof ByteBuf) {
+            if (msgCount > 1 && in.current() instanceof ByteBufConvertible) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
@@ -319,8 +320,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
-        if (msg instanceof ByteBuf) {
-            return writeBytes(in, (ByteBuf) msg);
+        if (msg instanceof ByteBufConvertible) {
+            return writeBytes(in, ((ByteBufConvertible) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
@@ -347,7 +348,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+        IovArray array = registration().cleanArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 
@@ -362,8 +363,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
@@ -407,12 +408,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-                }
-            });
+            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
         return promise;
     }
@@ -428,12 +424,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
-                }
-            });
+            loop.execute(() -> shutdownInput0(promise));
         }
         return promise;
     }
@@ -459,12 +450,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
         } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
+            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
+                    shutdownOutputDone(shutdownOutputFuture1, promise));
         }
         return promise;
     }
@@ -474,12 +461,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
+            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 
@@ -565,6 +548,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
                 if (close) {
                     shutdownInput(false);
+                } else {
+                    readIfIsAutoRead();
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
@@ -587,8 +572,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(cause);
-                if (close || cause instanceof IOException) {
+
+                // If oom will close the read event, release connection.
+                // See https://github.com/netty/netty/issues/10434
+                if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
                     shutdownInput(false);
+                } else {
+                    readIfIsAutoRead();
                 }
             }
         }

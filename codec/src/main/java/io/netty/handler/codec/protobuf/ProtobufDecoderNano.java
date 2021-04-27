@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.protobuf;
+
+import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.nano.MessageNano;
 
@@ -27,7 +29,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * Decodes a received {@link ByteBuf} into a
@@ -66,12 +67,11 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance.
      */
     public ProtobufDecoderNano(Class<? extends MessageNano> clazz) {
-        this.clazz = ObjectUtil.checkNotNull(clazz, "You must provide a Class");
+        this.clazz = requireNonNull(clazz, "You must provide a Class");
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out)
-            throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         final byte[] array;
         final int offset;
         final int length = msg.readableBytes();
@@ -83,6 +83,6 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
             offset = 0;
         }
         MessageNano prototype = clazz.getConstructor().newInstance();
-        out.add(MessageNano.mergeFrom(prototype, array, offset, length));
+        ctx.fireChannelRead(MessageNano.mergeFrom(prototype, array, offset, length));
     }
 }

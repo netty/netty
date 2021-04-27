@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.TypeParameterMatcher;
-
-import java.util.List;
 
 /**
  * A Codec for on-the-fly encoding/decoding of bytes to messages and vise-versa.
@@ -31,20 +29,20 @@ import java.util.List;
  * Be aware that sub-classes of {@link ByteToMessageCodec} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
+public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder;
 
     private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            ByteToMessageCodec.this.decode(ctx, in, out);
+        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            ByteToMessageCodec.this.decode(ctx, in);
         }
 
         @Override
-        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            ByteToMessageCodec.this.decodeLast(ctx, in, out);
+        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            ByteToMessageCodec.this.decodeLast(ctx, in);
         }
     };
 
@@ -142,18 +140,18 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
 
     /**
-     * @see ByteToMessageDecoder#decode(ChannelHandlerContext, ByteBuf, List)
+     * @see ByteToMessageDecoder#decode(ChannelHandlerContext, ByteBuf)
      */
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 
     /**
-     * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf, List)
+     * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf)
      */
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.isReadable()) {
             // Only call decode() if there is something left in the buffer to decode.
             // See https://github.com/netty/netty/issues/4386
-            decode(ctx, in, out);
+            decode(ctx, in);
         }
     }
 

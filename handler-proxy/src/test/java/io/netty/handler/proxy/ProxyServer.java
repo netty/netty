@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -52,7 +51,7 @@ abstract class ProxyServer {
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     private final ServerSocketChannel ch;
-    private final Queue<Throwable> recordedExceptions = new LinkedBlockingQueue<Throwable>();
+    private final Queue<Throwable> recordedExceptions = new LinkedBlockingQueue<>();
     protected final TestMode testMode;
     protected final String username;
     protected final String password;
@@ -152,13 +151,13 @@ abstract class ProxyServer {
 
     protected abstract class IntermediaryHandler extends SimpleChannelInboundHandler<Object> {
 
-        private final Queue<Object> received = new ArrayDeque<Object>();
+        private final Queue<Object> received = new ArrayDeque<>();
 
         private boolean finished;
         private Channel backend;
 
         @Override
-        protected final void channelRead0(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 received.add(ReferenceCountUtil.retain(msg));
                 flush();
@@ -169,16 +168,13 @@ abstract class ProxyServer {
             if (finished) {
                 this.finished = true;
                 ChannelFuture f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
-                f.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            recordException(future.cause());
-                            ctx.close();
-                        } else {
-                            backend = future.channel();
-                            flush();
-                        }
+                f.addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        recordException(future.cause());
+                        ctx.close();
+                    } else {
+                        backend = future.channel();
+                        flush();
                     }
                 });
             }
@@ -232,7 +228,7 @@ abstract class ProxyServer {
             ctx.close();
         }
 
-        private final class BackendHandler extends ChannelInboundHandlerAdapter {
+        private final class BackendHandler implements ChannelHandler {
 
             private final ChannelHandlerContext frontend;
 
@@ -268,7 +264,7 @@ abstract class ProxyServer {
         private boolean finished;
 
         @Override
-        protected final void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 String str = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
                 if ("A\n".equals(str)) {

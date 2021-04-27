@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,12 +14,6 @@
  * under the License.
  */
 package io.netty.handler.codec.http.cookie;
-
-import static io.netty.handler.codec.http.cookie.CookieUtil.add;
-import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
@@ -34,8 +28,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.handler.codec.http.cookie.CookieUtil.add;
+import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
+import static java.util.Objects.requireNonNull;
+
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
  * so some fields are sent (Version is typically ignored).
  *
  * As Netty's Cookie merges Expires and MaxAge into one single field, only Max-Age field is sent.
@@ -88,7 +88,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return a single Set-Cookie header value
      */
     public String encode(Cookie cookie) {
-        final String name = checkNotNull(cookie, "cookie").name();
+        final String name = requireNonNull(cookie, "cookie").name();
         final String value = cookie.value() != null ? cookie.value() : "";
 
         validateCookie(name, value);
@@ -124,6 +124,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
         if (cookie.isHttpOnly()) {
             add(buf, CookieHeaderNames.HTTPONLY);
         }
+        if (cookie instanceof DefaultCookie) {
+            DefaultCookie c = (DefaultCookie) cookie;
+            if (c.sameSite() != null) {
+                add(buf, CookieHeaderNames.SAMESITE, c.sameSite().name());
+            }
+        }
 
         return stripTrailingSeparator(buf);
     }
@@ -139,7 +145,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
         for (int idx : nameToLastIndex.values()) {
             isLastInstance[idx] = true;
         }
-        List<String> dedupd = new ArrayList<String>(nameToLastIndex.size());
+        List<String> dedupd = new ArrayList<>(nameToLastIndex.size());
         for (int i = 0, n = encoded.size(); i < n; i++) {
             if (isLastInstance[i]) {
                 dedupd.add(encoded.get(i));
@@ -155,12 +161,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Cookie... cookies) {
-        if (checkNotNull(cookies, "cookies").length == 0) {
+        if (requireNonNull(cookies, "cookies").length == 0) {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>(cookies.length);
-        Map<String, Integer> nameToIndex = strict && cookies.length > 1 ? new HashMap<String, Integer>() : null;
+        List<String> encoded = new ArrayList<>(cookies.length);
+        Map<String, Integer> nameToIndex = strict && cookies.length > 1 ? new HashMap<>() : null;
         boolean hasDupdName = false;
         for (int i = 0; i < cookies.length; i++) {
             Cookie c = cookies[i];
@@ -179,12 +185,12 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Collection<? extends Cookie> cookies) {
-        if (checkNotNull(cookies, "cookies").isEmpty()) {
+        if (requireNonNull(cookies, "cookies").isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>(cookies.size());
-        Map<String, Integer> nameToIndex = strict && cookies.size() > 1 ? new HashMap<String, Integer>() : null;
+        List<String> encoded = new ArrayList<>(cookies.size());
+        Map<String, Integer> nameToIndex = strict && cookies.size() > 1 ? new HashMap<>() : null;
         int i = 0;
         boolean hasDupdName = false;
         for (Cookie c : cookies) {
@@ -203,14 +209,14 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Iterable<? extends Cookie> cookies) {
-        Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
+        Iterator<? extends Cookie> cookiesIt = requireNonNull(cookies, "cookies").iterator();
         if (!cookiesIt.hasNext()) {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>();
+        List<String> encoded = new ArrayList<>();
         Cookie firstCookie = cookiesIt.next();
-        Map<String, Integer> nameToIndex = strict && cookiesIt.hasNext() ? new HashMap<String, Integer>() : null;
+        Map<String, Integer> nameToIndex = strict && cookiesIt.hasNext() ? new HashMap<>() : null;
         int i = 0;
         encoded.add(encode(firstCookie));
         boolean hasDupdName = nameToIndex != null && nameToIndex.put(firstCookie.name(), i++) != null;

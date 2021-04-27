@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,33 +15,39 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import io.netty.util.concurrent.AbstractEventExecutor.LazyRunnable;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.time.Duration.ofSeconds;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class SingleThreadEventExecutorTest {
+    public static final Runnable DUMMY_TASK = () -> {
+    };
 
     @Test
     public void testWrappedExecutorIsShutdown() {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(executorService) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -56,34 +62,20 @@ public class SingleThreadEventExecutorTest {
         executorService.shutdownNow();
         executeShouldFail(executor);
         executeShouldFail(executor);
-        try {
-            executor.shutdownGracefully().syncUninterruptibly();
-            Assert.fail();
-        } catch (RejectedExecutionException expected) {
-            // expected
-        }
-        Assert.assertTrue(executor.isShutdown());
+        var exception = assertThrows(
+                CompletionException.class, () -> executor.shutdownGracefully().syncUninterruptibly());
+        assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
+        assertTrue(executor.isShutdown());
     }
 
     private static void executeShouldFail(Executor executor) {
-        try {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Noop.
-                }
-            });
-            Assert.fail();
-        } catch (RejectedExecutionException expected) {
-            // expected
-        }
+        assertThrows(RejectedExecutionException.class, () -> executor.execute(DUMMY_TASK));
     }
 
     @Test
     public void testThreadProperties() {
         final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
-                null, new DefaultThreadFactory("test"), false) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(new DefaultThreadFactory("test")) {
             @Override
             protected void run() {
                 threadRef.set(Thread.currentThread());
@@ -98,38 +90,49 @@ public class SingleThreadEventExecutorTest {
         ThreadProperties threadProperties = executor.threadProperties();
 
         Thread thread = threadRef.get();
-        Assert.assertEquals(thread.getId(), threadProperties.id());
-        Assert.assertEquals(thread.getName(), threadProperties.name());
-        Assert.assertEquals(thread.getPriority(), threadProperties.priority());
-        Assert.assertEquals(thread.isAlive(), threadProperties.isAlive());
-        Assert.assertEquals(thread.isDaemon(), threadProperties.isDaemon());
-        Assert.assertTrue(threadProperties.stackTrace().length > 0);
+        assertEquals(thread.getId(), threadProperties.id());
+        assertEquals(thread.getName(), threadProperties.name());
+        assertEquals(thread.getPriority(), threadProperties.priority());
+        assertEquals(thread.isAlive(), threadProperties.isAlive());
+        assertEquals(thread.isDaemon(), threadProperties.isDaemon());
+        assertTrue(threadProperties.stackTrace().length > 0);
         executor.shutdownGracefully();
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoop() {
-        testInvokeInEventLoop(true, false);
+    @Test
+    public void testInvokeAnyInEventLoop() throws Throwable {
+        assertTimeoutPreemptively(ofSeconds(3), () -> {
+            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(true, false));
+            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
+        });
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoopWithTimeout() {
-        testInvokeInEventLoop(true, true);
+    @Test
+    public void testInvokeAnyInEventLoopWithTimeout() throws Throwable {
+        assertTimeoutPreemptively(ofSeconds(3), () -> {
+            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(true, true));
+            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
+        });
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoop() {
-        testInvokeInEventLoop(false, false);
+    @Test
+    public void testInvokeAllInEventLoop() throws Throwable {
+        assertTimeoutPreemptively(ofSeconds(3), () -> {
+            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(false, false));
+            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
+        });
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoopWithTimeout() {
-        testInvokeInEventLoop(false, true);
+    @Test
+    public void testInvokeAllInEventLoopWithTimeout() throws Throwable {
+        assertTimeoutPreemptively(ofSeconds(3), () -> {
+            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(false, true));
+            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
+        });
     }
 
     private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
-                Executors.defaultThreadFactory(), true) {
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -142,34 +145,28 @@ public class SingleThreadEventExecutorTest {
         };
         try {
             final Promise<Void> promise = executor.newPromise();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(new Callable<Boolean>() {
-                            @Override
-                            public Boolean call() throws Exception {
-                                promise.setFailure(new AssertionError("Should never execute the Callable"));
-                                return Boolean.TRUE;
-                            }
-                        });
-                        if (any) {
-                            if (timeout) {
-                                executor.invokeAny(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAny(set);
-                            }
+            executor.execute(() -> {
+                try {
+                    Set<Callable<Boolean>> set = Collections.singleton(() -> {
+                        promise.setFailure(new AssertionError("Should never execute the Callable"));
+                        return Boolean.TRUE;
+                    });
+                    if (any) {
+                        if (timeout) {
+                            executor.invokeAny(set, 10, TimeUnit.SECONDS);
                         } else {
-                            if (timeout) {
-                                executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAll(set);
-                            }
+                            executor.invokeAny(set);
                         }
-                        promise.setFailure(new AssertionError("Should never reach here"));
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
+                    } else {
+                        if (timeout) {
+                            executor.invokeAll(set, 10, TimeUnit.SECONDS);
+                        } else {
+                            executor.invokeAll(set);
+                        }
                     }
+                    promise.setFailure(new AssertionError("Should never reach here"));
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
             });
             promise.syncUninterruptibly();
@@ -178,75 +175,159 @@ public class SingleThreadEventExecutorTest {
         }
     }
 
-    static class LatchTask extends CountDownLatch implements Runnable {
-        LatchTask() {
-            super(1);
-        }
-
-        @Override
-        public void run() {
-            countDown();
-        }
-    }
-
-    static class LazyLatchTask extends LatchTask implements LazyRunnable { }
-
     @Test
-    public void testLazyExecution() throws Exception {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
-                Executors.defaultThreadFactory(), false) {
+    public void testTaskAddedAfterShutdownNotAbandoned() throws Exception {
+
+        // A queue that doesn't support remove, so tasks once added cannot be rejected anymore
+        LinkedBlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>() {
+            @Override
+            public boolean remove(Object o) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        final LinkedBlockingQueue<Future<?>> submittedTasks = new LinkedBlockingQueue<Future<?>>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final AtomicInteger rejects = new AtomicInteger();
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(executorService, Integer.MAX_VALUE,
+                RejectedExecutionHandlers.reject()) {
+
+            @Override
+            protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+                return taskQueue;
+            }
+
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
-                    try {
-                        synchronized (this) {
-                            if (!hasTasks()) {
-                                wait();
-                            }
-                        }
-                        runAllTasks();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Assert.fail(e.toString());
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
                     }
                 }
             }
 
             @Override
-            protected void wakeup(boolean inEventLoop) {
-                if (!inEventLoop) {
-                    synchronized (this) {
-                        notifyAll();
+            protected boolean confirmShutdown0() {
+                boolean result = super.confirmShutdown0();
+                // After shutdown is confirmed, scheduled one more task and record it
+                if (result) {
+                    attempts.incrementAndGet();
+                    try {
+                        submittedTasks.add(submit(DUMMY_TASK));
+                    } catch (RejectedExecutionException e) {
+                        // ignore, tasks are either accepted or rejected
+                        rejects.incrementAndGet();
+                    }
+                }
+                return result;
+            }
+        };
+
+        // Start the loop
+        executor.submit(DUMMY_TASK).sync();
+
+        // Shutdown without any quiet period
+        executor.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).sync();
+
+        // Ensure there are no user-tasks left.
+        assertEquals(0, executor.drainTasks());
+
+        // Verify that queue is empty and all attempts either succeeded or were rejected
+        assertTrue(taskQueue.isEmpty());
+        assertTrue(attempts.get() > 0);
+        assertEquals(attempts.get(), submittedTasks.size() + rejects.get());
+        for (Future<?> f : submittedTasks) {
+            assertTrue(f.isSuccess());
+        }
+    }
+
+    @Test
+    public void testTakeTask() throws Exception {
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
                     }
                 }
             }
         };
 
-        // Ensure event loop is started
-        LatchTask latch0 = new LatchTask();
-        executor.execute(latch0);
-        assertTrue(latch0.await(100, TimeUnit.MILLISECONDS));
-        // Pause to ensure it enters waiting state
-        Thread.sleep(100L);
+        assertTimeoutPreemptively(ofSeconds(5), () -> {
+            //add task
+            TestRunnable beforeTask = new TestRunnable();
+            executor.execute(beforeTask);
 
-        // Submit task via lazyExecute
-        LatchTask latch1 = new LatchTask();
-        executor.lazyExecute(latch1);
-        // Sumbit lazy task via regular execute
-        LatchTask latch2 = new LazyLatchTask();
-        executor.execute(latch2);
+            //add scheduled task
+            TestRunnable scheduledTask = new TestRunnable();
+            ScheduledFuture<?> f = executor.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
 
-        // Neither should run yet
-        assertFalse(latch1.await(100, TimeUnit.MILLISECONDS));
-        assertFalse(latch2.await(100, TimeUnit.MILLISECONDS));
+            //add task
+            TestRunnable afterTask = new TestRunnable();
+            executor.execute(afterTask);
 
-        // Submit regular task via regular execute
-        LatchTask latch3 = new LatchTask();
-        executor.execute(latch3);
+            f.sync();
 
-        // Should flush latch1 and latch2 and then run latch3 immediately
-        assertTrue(latch3.await(100, TimeUnit.MILLISECONDS));
-        assertEquals(0, latch1.getCount());
-        assertEquals(0, latch2.getCount());
+            assertThat(beforeTask.ran.get()).isTrue();
+            assertThat(scheduledTask.ran.get()).isTrue();
+            assertThat(afterTask.ran.get()).isTrue();
+        });
+    }
+
+    @Test
+    public void testTakeTaskAlwaysHasTask() throws Exception {
+        //for https://github.com/netty/netty/issues/1614
+
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                }
+            }
+        };
+
+        assertTimeoutPreemptively(ofSeconds(5), () -> {
+            //add scheduled task
+            TestRunnable t = new TestRunnable();
+            final ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
+
+            //ensure always has at least one task in taskQueue
+            //check if scheduled tasks are triggered
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (!f.isDone()) {
+                        executor.execute(this);
+                    }
+                }
+            });
+
+            f.sync();
+
+            assertThat(t.ran.get()).isTrue();
+        });
+    }
+
+    private static final class TestRunnable implements Runnable {
+        final AtomicBoolean ran = new AtomicBoolean();
+
+        TestRunnable() {
+        }
+
+        @Override
+        public void run() {
+            ran.set(true);
+        }
     }
 }

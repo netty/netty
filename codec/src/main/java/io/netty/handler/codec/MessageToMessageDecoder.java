@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,16 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.TypeParameterMatcher;
 
-import java.util.List;
-
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message.
+ * {@link ChannelHandler} which decodes from one message to an other message.
  *
  *
  * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
@@ -49,7 +47,7 @@ import java.util.List;
  * {@link ReferenceCounted#release()} on decoded messages.
  *
  */
-public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAdapter {
+public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
@@ -71,7 +69,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return matcher.match(msg);
@@ -79,29 +77,22 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        CodecOutputList out = CodecOutputList.newInstance();
         try {
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
                 try {
-                    decode(ctx, cast, out);
+                    decode(ctx, cast);
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
             } else {
-                out.add(msg);
+                ctx.fireChannelRead(msg);
             }
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
             throw new DecoderException(e);
-        } finally {
-            int size = out.size();
-            for (int i = 0; i < size; i ++) {
-                ctx.fireChannelRead(out.getUnsafe(i));
-            }
-            out.recycle();
         }
     }
 
@@ -111,8 +102,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
-     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    protected abstract void decode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, I msg) throws Exception;
 }

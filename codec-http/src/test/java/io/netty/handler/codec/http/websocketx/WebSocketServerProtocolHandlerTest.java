@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,21 +18,20 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
+
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Before;
@@ -47,7 +46,7 @@ import static org.junit.Assert.*;
 
 public class WebSocketServerProtocolHandlerTest {
 
-    private final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
+    private final Queue<FullHttpResponse> responses = new ArrayDeque<>();
 
     @Before
     public void setUp() {
@@ -68,15 +67,15 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() {
+    public void testWebSocketServerProtocolHandshakeHandlerRemovedAfterHandshake() {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
-        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        ch.pipeline().addLast(new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     // We should have removed the handler already.
-                    assertNull(ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));
+                    ctx.executor().execute(() -> ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));
                 }
             }
         });
@@ -86,23 +85,6 @@ public class WebSocketServerProtocolHandlerTest {
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
-        assertFalse(ch.finish());
-    }
-
-    @Test
-    public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() {
-        EmbeddedChannel ch = createChannel();
-
-        writeUpgradeRequest(ch);
-
-        FullHttpResponse response = responses.remove();
-        assertEquals(SWITCHING_PROTOCOLS, response.status());
-        response.release();
-
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        response = responses.remove();
-        assertEquals(FORBIDDEN, response.status());
-        response.release();
         assertFalse(ch.finish());
     }
 
@@ -212,20 +194,107 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testCheckWebSocketPathStartWithSlash() {
+        WebSocketRequestBuilder builder = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/")
+                .checkStartsWith(true)
+                .build();
+
+        FullHttpResponse response;
+
+        createChannel(config, null).writeInbound(builder.uri("/test").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/?q=v").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
+    public void testCheckValidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/test")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
+    public void testCheckInvalidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/testabc")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        assertNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
+    }
+
+    @Test
     public void testExplicitCloseFrameSentWhenServerChannelClosed() throws Exception {
         WebSocketCloseStatus closeStatus = WebSocketCloseStatus.ENDPOINT_UNAVAILABLE;
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
 
         // When server channel closed with explicit close-frame
         assertTrue(server.writeOutbound(new CloseWebSocketFrame(closeStatus)));
         server.close();
 
         // Then client receives provided close-frame
-        assertTrue(client.writeInbound(server.readOutbound()));
+        assertTrue(client.writeInbound((ByteBuf) server.readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
@@ -243,14 +312,14 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
 
         // When server channel closed without explicit close-frame
         server.close();
 
         // Then client receives NORMAL_CLOSURE close-frame
-        assertTrue(client.writeInbound(server.readOutbound()));
+        assertTrue(client.writeInbound((ByteBuf) server.readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
@@ -269,15 +338,15 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
 
         // When client channel closed with explicit close-frame
         assertTrue(client.writeOutbound(new CloseWebSocketFrame(closeStatus)));
         client.close();
 
         // Then client receives provided close-frame
-        assertFalse(server.writeInbound(client.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
@@ -294,14 +363,14 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
 
         // When client channel closed without explicit close-frame
         client.close();
 
         // Then server receives NORMAL_CLOSURE close-frame
-        assertFalse(server.writeInbound(client.readOutbound()));
+        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
@@ -363,6 +432,10 @@ public class WebSocketServerProtocolHandlerTest {
             .websocketPath("/test")
             .sendCloseFrame(null)
             .build();
+        return createChannel(serverConfig, handler);
+    }
+
+    private EmbeddedChannel createChannel(WebSocketServerProtocolConfig serverConfig, ChannelHandler handler) {
         return new EmbeddedChannel(
                 new WebSocketServerProtocolHandler(serverConfig),
                 new HttpRequestDecoder(),
@@ -379,7 +452,7 @@ public class WebSocketServerProtocolHandlerTest {
         return response.content().toString(CharsetUtil.UTF_8);
     }
 
-    private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
+    private class MockOutboundHandler implements ChannelHandler {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -392,7 +465,7 @@ public class WebSocketServerProtocolHandlerTest {
         }
     }
 
-    private static class CustomTextFrameHandler extends ChannelInboundHandlerAdapter {
+    private static class CustomTextFrameHandler implements ChannelHandler {
         private String content;
 
         @Override

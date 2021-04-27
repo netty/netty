@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.ssl;
+
+import static java.util.Objects.requireNonNull;
 
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
@@ -31,19 +33,15 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
     @Override
     public String[] filterCipherSuites(Iterable<String> ciphers, List<String> defaultCiphers,
             Set<String> supportedCiphers) {
-        if (defaultCiphers == null) {
-            throw new NullPointerException("defaultCiphers");
-        }
-        if (supportedCiphers == null) {
-            throw new NullPointerException("supportedCiphers");
-        }
+        requireNonNull(defaultCiphers, "defaultCiphers");
+        requireNonNull(supportedCiphers, "supportedCiphers");
 
         final List<String> newCiphers;
         if (ciphers == null) {
-            newCiphers = new ArrayList<String>(defaultCiphers.size());
+            newCiphers = new ArrayList<>(defaultCiphers.size());
             ciphers = defaultCiphers;
         } else {
-            newCiphers = new ArrayList<String>(supportedCiphers.size());
+            newCiphers = new ArrayList<>(supportedCiphers.size());
         }
         for (String c : ciphers) {
             if (c == null) {

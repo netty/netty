@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,11 +18,12 @@ package io.netty.handler.ssl;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -51,9 +52,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
-import java.security.cert.Extension;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -67,8 +68,8 @@ public class SslErrorTest {
     @Parameterized.Parameters(
             name = "{index}: serverProvider = {0}, clientProvider = {1}, exception = {2}, serverProduceError = {3}")
     public static Collection<Object[]> data() {
-        List<SslProvider> serverProviders = new ArrayList<SslProvider>(2);
-        List<SslProvider> clientProviders = new ArrayList<SslProvider>(3);
+        List<SslProvider> serverProviders = new ArrayList<>(2);
+        List<SslProvider> clientProviders = new ArrayList<>(3);
 
         if (OpenSsl.isAvailable()) {
             serverProviders.add(SslProvider.OPENSSL);
@@ -80,19 +81,19 @@ public class SslErrorTest {
         // alert all the time, sigh.....
         clientProviders.add(SslProvider.JDK);
 
-        List<CertificateException> exceptions = new ArrayList<CertificateException>(6);
+        List<CertificateException> exceptions = new ArrayList<>(6);
         exceptions.add(new CertificateExpiredException());
         exceptions.add(new CertificateNotYetValidException());
         exceptions.add(new CertificateRevokedException(
                 new Date(), CRLReason.AA_COMPROMISE, new X500Principal(""),
-                Collections.<String, Extension>emptyMap()));
+                Collections.emptyMap()));
 
         // Also use wrapped exceptions as this is what the JDK implementation of X509TrustManagerFactory is doing.
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.EXPIRED));
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.NOT_YET_VALID));
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.REVOKED));
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslProvider serverProvider: serverProviders) {
             for (SslProvider clientProvider: clientProviders) {
                 for (CertificateException exception: exceptions) {
@@ -151,7 +152,7 @@ public class SslErrorTest {
 
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         final Promise<Void> promise = group.next().newPromise();
         try {
             serverChannel = new ServerBootstrap().group(group)
@@ -164,7 +165,7 @@ public class SslErrorTest {
                             if (!serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -180,10 +181,11 @@ public class SslErrorTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+
                             if (serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -238,7 +240,7 @@ public class SslErrorTest {
         }
     }
 
-    private final class AlertValidationHandler extends ChannelInboundHandlerAdapter {
+    private final class AlertValidationHandler implements ChannelHandler {
         private final Promise<Void> promise;
 
         AlertValidationHandler(Promise<Void> promise) {
@@ -254,28 +256,20 @@ public class SslErrorTest {
                     CertPathValidatorException.Reason reason =
                             ((CertPathValidatorException) exception.getCause()).getReason();
                     if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
-                        verifyException(unwrappedCause, "expired", promise);
+                        verifyException(unwrappedCause, promise, "expired");
                     } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
-                        // BoringSSL uses "expired" in this case while others use "bad"
-                        if (OpenSsl.isBoringSSL()) {
-                            verifyException(unwrappedCause, "expired", promise);
-                        } else {
-                            verifyException(unwrappedCause, "bad", promise);
-                        }
+                        // BoringSSL may use "expired" in this case while others use "bad"
+                        verifyException(unwrappedCause, promise, "expired", "bad");
                     } else if (reason == CertPathValidatorException.BasicReason.REVOKED) {
-                        verifyException(unwrappedCause, "revoked", promise);
+                        verifyException(unwrappedCause, promise, "revoked");
                     }
                 } else if (exception instanceof CertificateExpiredException) {
-                    verifyException(unwrappedCause, "expired", promise);
+                    verifyException(unwrappedCause, promise,  "expired");
                 } else if (exception instanceof CertificateNotYetValidException) {
-                    // BoringSSL uses "expired" in this case while others use "bad"
-                    if (OpenSsl.isBoringSSL()) {
-                        verifyException(unwrappedCause, "expired", promise);
-                    } else {
-                        verifyException(unwrappedCause, "bad", promise);
-                    }
+                    // BoringSSL may use "expired" in this case while others use "bad"
+                    verifyException(unwrappedCause, promise, "expired", "bad");
                 } else if (exception instanceof CertificateRevokedException) {
-                    verifyException(unwrappedCause, "revoked", promise);
+                    verifyException(unwrappedCause, promise, "revoked");
                 }
             }
         }
@@ -283,19 +277,26 @@ public class SslErrorTest {
 
     // Its a bit hacky to verify against the message that is part of the exception but there is no other way
     // at the moment as there are no different exceptions for the different alerts.
-    private void verifyException(Throwable cause, String messagePart, Promise<Void> promise) {
+    private void verifyException(Throwable cause, Promise<Void> promise, String... messageParts) {
         String message = cause.getMessage();
-        if (message.toLowerCase(Locale.UK).contains(messagePart.toLowerCase(Locale.UK)) ||
-                // When the error is produced on the client side and the client side uses JDK as provider it will always
-                // use "certificate unknown".
-                !serverProduceError && clientProvider == SslProvider.JDK &&
-                        message.toLowerCase(Locale.UK).contains("unknown")) {
+        // When the error is produced on the client side and the client side uses JDK as provider it will always
+        // use "certificate unknown".
+        if (!serverProduceError && clientProvider == SslProvider.JDK &&
+                message.toLowerCase(Locale.UK).contains("unknown")) {
             promise.setSuccess(null);
-        } else {
-            Throwable error = new AssertionError("message not contains '" + messagePart + "': " + message);
-            error.initCause(cause);
-            promise.setFailure(error);
+            return;
         }
+
+        for (String m: messageParts) {
+            if (message.toLowerCase(Locale.UK).contains(m.toLowerCase(Locale.UK))) {
+                promise.setSuccess(null);
+                return;
+            }
+        }
+        Throwable error = new AssertionError("message not contains any of '"
+                + Arrays.toString(messageParts) + "': " + message);
+        error.initCause(cause);
+        promise.setFailure(error);
     }
 
     private static final class TestCertificateException extends CertificateException {

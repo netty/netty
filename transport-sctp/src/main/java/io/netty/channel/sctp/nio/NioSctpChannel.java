@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -34,7 +35,6 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -79,15 +79,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     /**
      * Create a new instance
      */
-    public NioSctpChannel() {
-        this(newSctpChannel());
+    public NioSctpChannel(EventLoop eventLoop) {
+        this(eventLoop, newSctpChannel());
     }
 
     /**
      * Create a new instance using {@link SctpChannel}
      */
-    public NioSctpChannel(SctpChannel sctpChannel) {
-        this(null, sctpChannel);
+    public NioSctpChannel(EventLoop eventLoop, SctpChannel sctpChannel) {
+        this(null, eventLoop, sctpChannel);
     }
 
     /**
@@ -97,8 +97,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      *                      or {@code null}.
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
-    public NioSctpChannel(Channel parent, SctpChannel sctpChannel) {
-        super(parent, sctpChannel, SelectionKey.OP_READ);
+    public NioSctpChannel(Channel parent, EventLoop eventLoop, SctpChannel sctpChannel) {
+        super(parent, eventLoop, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
             config = new NioSctpChannelConfig(this, sctpChannel);
@@ -150,7 +150,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     public Set<InetSocketAddress> allLocalAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getAllLocalAddresses();
-            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
                 addresses.add((InetSocketAddress) socketAddress);
             }
@@ -169,7 +169,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     public Set<InetSocketAddress> allRemoteAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getRemoteAddresses();
-            final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new HashSet<>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
                 addresses.add((InetSocketAddress) socketAddress);
             }
@@ -280,10 +280,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                     buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
             free = false;
             return 1;
-        } catch (Throwable cause) {
-            PlatformDependent.throwException(cause);
-            return -1;
-        }  finally {
+        } finally {
             if (free) {
                 buffer.release();
             }
@@ -353,12 +350,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    bindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> bindAddress(localAddress, promise));
         }
         return promise;
     }
@@ -378,12 +370,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    unbindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> unbindAddress(localAddress, promise));
         }
         return promise;
     }

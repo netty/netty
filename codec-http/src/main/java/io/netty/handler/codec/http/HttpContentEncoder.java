@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -64,7 +66,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
     private static final int CONTINUE_CODE = HttpResponseStatus.CONTINUE.code();
 
-    private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
+    private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<>();
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
@@ -74,7 +76,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {
@@ -98,7 +100,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
 
         acceptEncodingQueue.add(acceptEncoding);
-        out.add(ReferenceCountUtil.retain(msg));
+        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
     }
 
     @Override
@@ -192,7 +194,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
                     res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-                    out.add(res);
+                    out.add(ReferenceCountUtil.retain(res));
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
                         // only break out the switch statement if we have not content to process
@@ -287,8 +289,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     /**
      * Prepare to encode the HTTP message content.
      *
-     * @param headers
-     *        the headers
+     * @param httpResponse
+     *        the http response
      * @param acceptEncoding
      *        the value of the {@code "Accept-Encoding"} header
      *
@@ -298,7 +300,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception;
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
@@ -362,12 +364,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         private final EmbeddedChannel contentEncoder;
 
         public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
-            if (targetContentEncoding == null) {
-                throw new NullPointerException("targetContentEncoding");
-            }
-            if (contentEncoder == null) {
-                throw new NullPointerException("contentEncoder");
-            }
+            requireNonNull(targetContentEncoding, "targetContentEncoding");
+            requireNonNull(contentEncoder, "contentEncoder");
 
             this.targetContentEncoding = targetContentEncoding;
             this.contentEncoder = contentEncoder;

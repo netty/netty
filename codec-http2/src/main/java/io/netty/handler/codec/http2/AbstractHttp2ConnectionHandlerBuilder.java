@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,8 +24,8 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract base class which defines commonly used features required to build {@link Http2ConnectionHandler} instances.
@@ -121,7 +121,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
      */
     protected B initialSettings(Http2Settings settings) {
-        initialSettings = checkNotNull(settings, "settings");
+        initialSettings = requireNonNull(settings, "settings");
         return self();
     }
 
@@ -139,7 +139,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * This listener will only be set if the decoder's listener is {@code null}.
      */
     protected B frameListener(Http2FrameListener frameListener) {
-        this.frameListener = checkNotNull(frameListener, "frameListener");
+        this.frameListener = requireNonNull(frameListener, "frameListener");
         return self();
     }
 
@@ -225,7 +225,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("connection", "codec", decoder);
         enforceConstraint("connection", "codec", encoder);
 
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = requireNonNull(connection, "connection");
 
         return self();
     }
@@ -260,8 +260,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("codec", "headerSensitivityDetector", headerSensitivityDetector);
         enforceConstraint("codec", "encoderEnforceMaxConcurrentStreams", encoderEnforceMaxConcurrentStreams);
 
-        checkNotNull(decoder, "decoder");
-        checkNotNull(encoder, "encoder");
+        requireNonNull(decoder, "decoder");
+        requireNonNull(encoder, "encoder");
 
         if (decoder.connection() != encoder.connection()) {
             throw new IllegalArgumentException("The specified encoder and decoder have different connections.");
@@ -305,7 +305,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B frameLogger(Http2FrameLogger frameLogger) {
         enforceNonCodecConstraints("frameLogger");
-        this.frameLogger = checkNotNull(frameLogger, "frameLogger");
+        this.frameLogger = requireNonNull(frameLogger, "frameLogger");
         return self();
     }
 
@@ -363,7 +363,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B headerSensitivityDetector(SensitivityDetector headerSensitivityDetector) {
         enforceNonCodecConstraints("headerSensitivityDetector");
-        this.headerSensitivityDetector = checkNotNull(headerSensitivityDetector, "headerSensitivityDetector");
+        this.headerSensitivityDetector = requireNonNull(headerSensitivityDetector, "headerSensitivityDetector");
         return self();
     }
 
@@ -396,7 +396,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
         enforceNonCodecConstraints("promisedRequestVerifier");
-        this.promisedRequestVerifier = checkNotNull(promisedRequestVerifier, "promisedRequestVerifier");
+        this.promisedRequestVerifier = requireNonNull(promisedRequestVerifier, "promisedRequestVerifier");
         return self();
     }
 
@@ -535,8 +535,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             encoder = new StreamBufferingEncoder(encoder);
         }
 
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders());
+        DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
         return buildFromCodec(decoder, encoder);
     }
 

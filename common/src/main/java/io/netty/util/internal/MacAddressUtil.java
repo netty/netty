@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,7 @@ import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 
@@ -50,7 +51,7 @@ public final class MacAddressUtil {
         InetAddress bestInetAddr = NetUtil.LOCALHOST4;
 
         // Retrieve the list of available network interfaces.
-        Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
+        Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<>();
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (interfaces != null) {
@@ -138,7 +139,7 @@ public final class MacAddressUtil {
         byte[] bestMacAddr = bestAvailableMac();
         if (bestMacAddr == null) {
             bestMacAddr = new byte[EUI64_MAC_ADDRESS_LENGTH];
-            PlatformDependent.threadLocalRandom().nextBytes(bestMacAddr);
+            ThreadLocalRandom.current().nextBytes(bestMacAddr);
             logger.warn(
                     "Failed to find a usable hardware address from the network interfaces; using random bytes: {}",
                     formatAddress(bestMacAddr));

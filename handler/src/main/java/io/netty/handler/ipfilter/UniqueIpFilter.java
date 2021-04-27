@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,11 +20,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.ConcurrentSet;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class allows one to ensure that at all times for every IP address there is at most one
@@ -33,20 +33,15 @@ import java.util.Set;
 @ChannelHandler.Sharable
 public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
-    private final Set<InetAddress> connected = new ConcurrentSet<InetAddress>();
+    private final Set<InetAddress> connected = ConcurrentHashMap.newKeySet();
 
     @Override
-    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
         final InetAddress remoteIp = remoteAddress.getAddress();
         if (!connected.add(remoteIp)) {
             return false;
         } else {
-            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    connected.remove(remoteIp);
-                }
-            });
+            ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> connected.remove(remoteIp));
             return true;
         }
     }

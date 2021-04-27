@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -57,24 +57,14 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         private CsvValueEscaper<Object> objectEscaper() {
             if (objectEscaper == null) {
-                objectEscaper = new CsvValueEscaper<Object>() {
-                    @Override
-                    public CharSequence escape(Object value) {
-                        return StringUtil.escapeCsv(valueConverter().convertObject(value), true);
-                    }
-                };
+                objectEscaper = value -> StringUtil.escapeCsv(valueConverter().convertObject(value), true);
             }
             return objectEscaper;
         }
 
         private CsvValueEscaper<CharSequence> charSequenceEscaper() {
             if (charSequenceEscaper == null) {
-                charSequenceEscaper = new CsvValueEscaper<CharSequence>() {
-                    @Override
-                    public CharSequence escape(CharSequence value) {
-                        return StringUtil.escapeCsv(value, true);
-                    }
-                };
+                charSequenceEscaper = value -> StringUtil.escapeCsv(value, true);
             }
             return charSequenceEscaper;
         }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.ssl;
+
+import static java.util.Objects.requireNonNull;
 
 import java.security.PrivateKey;
 
@@ -25,7 +27,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * This is a special purpose implementation of a {@link PrivateKey} which allows the
@@ -122,7 +123,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     private final ByteBuf content;
 
     private PemPrivateKey(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
     }
 
     @Override

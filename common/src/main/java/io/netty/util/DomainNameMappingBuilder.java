@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,13 +21,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for immutable {@link DomainNameMapping} instances.
  *
  * @param <V> concrete type of value objects
+ * @deprecated Use {@link DomainWildcardMappingBuilder}
  */
+@Deprecated
 public final class DomainNameMappingBuilder<V> {
 
     private final V defaultValue;
@@ -51,15 +53,15 @@ public final class DomainNameMappingBuilder<V> {
      *                        when nothing matches the input
      */
     public DomainNameMappingBuilder(int initialCapacity, V defaultValue) {
-        this.defaultValue = checkNotNull(defaultValue, "defaultValue");
-        map = new LinkedHashMap<String, V>(initialCapacity);
+        this.defaultValue = requireNonNull(defaultValue, "defaultValue");
+        map = new LinkedHashMap<>(initialCapacity);
     }
 
     /**
      * Adds a mapping that maps the specified (optionally wildcard) host name to the specified output value.
      * Null values are forbidden for both hostnames and values.
      * <p>
-     * <a href="http://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
+     * <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
      * For example, you can use {@code *.netty.io} to match {@code netty.io} and {@code downloads.netty.io}.
      * </p>
      *
@@ -68,7 +70,7 @@ public final class DomainNameMappingBuilder<V> {
      *                 when the specified host name matches the specified input host name
      */
     public DomainNameMappingBuilder<V> add(String hostname, V output) {
-        map.put(checkNotNull(hostname, "hostname"), checkNotNull(output, "output"));
+        map.put(requireNonNull(hostname, "hostname"), requireNonNull(output, "output"));
         return this;
     }
 
@@ -79,7 +81,7 @@ public final class DomainNameMappingBuilder<V> {
      * @return new {@link DomainNameMapping} instance
      */
     public DomainNameMapping<V> build() {
-        return new ImmutableDomainNameMapping<V>(defaultValue, map);
+        return new ImmutableDomainNameMapping<>(defaultValue, map);
     }
 
     /**
@@ -108,7 +110,7 @@ public final class DomainNameMappingBuilder<V> {
             domainNamePatterns = new String[numberOfMappings];
             values = (V[]) new Object[numberOfMappings];
 
-            final Map<String, V> mapCopy = new LinkedHashMap<String, V>(map.size());
+            final Map<String, V> mapCopy = new LinkedHashMap<>(map.size());
             int index = 0;
             for (Map.Entry<String, V> mapping : mappings) {
                 final String hostname = normalizeHostname(mapping.getKey());

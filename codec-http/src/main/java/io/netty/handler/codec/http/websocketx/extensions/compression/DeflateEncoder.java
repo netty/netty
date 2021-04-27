@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,9 +30,9 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncod
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder.*;
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Deflate implementation of a payload compressor for
@@ -59,7 +59,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         this.compressionLevel = compressionLevel;
         this.windowSize = windowSize;
         this.noContext = noContext;
-        this.extensionEncoderFilter = checkNotNull(extensionEncoderFilter, "extensionEncoderFilter");
+        this.extensionEncoderFilter = Objects.requireNonNull(extensionEncoderFilter, "extensionEncoderFilter");
     }
 
     /**
@@ -158,16 +158,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     private void cleanup() {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            if (encoder.finish()) {
-                for (;;) {
-                    ByteBuf buf = encoder.readOutbound();
-                    if (buf == null) {
-                        break;
-                    }
-                    // Release the buffer
-                    buf.release();
-                }
-            }
+            encoder.finishAndReleaseAll();
             encoder = null;
         }
     }

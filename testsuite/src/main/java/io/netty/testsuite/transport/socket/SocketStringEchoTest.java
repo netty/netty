@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -131,7 +131,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         private final Promise<Void> donePromise;
         private int dataIndex;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StringEchoHandler(boolean autoRead, Promise<Void> donePromise) {
             this.autoRead = autoRead;
@@ -147,7 +147,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             if (!data[dataIndex].equals(msg)) {
                 donePromise.tryFailure(new IllegalStateException("index: " + dataIndex + " didn't match!"));
                 ctx.close();

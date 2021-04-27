@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,7 @@
  * under the License.
  */
 package io.netty.handler.codec.stomp;
+
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -25,12 +26,12 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
-import java.util.List;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.*;
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Decodes {@link ByteBuf}s into {@link StompHeadersSubframe}s and {@link StompContentSubframe}s.
@@ -85,15 +86,15 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
         super(State.SKIP_CONTROL_CHARACTERS);
-        checkPositive(maxLineLength, "maxLineLength");
-        checkPositive(maxChunkSize, "maxChunkSize");
+        ObjectUtil.checkPositive(maxLineLength, "maxLineLength");
+        ObjectUtil.checkPositive(maxChunkSize, "maxChunkSize");
         this.maxChunkSize = maxChunkSize;
         commandParser = new Utf8LineParser(new AppendableCharSequence(16), maxLineLength);
         headerParser = new HeaderParser(new AppendableCharSequence(128), maxLineLength, validateHeaders);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         switch (state()) {
             case SKIP_CONTROL_CHARACTERS:
                 skipControlCharacters(in);
@@ -106,13 +107,13 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     command = readCommand(in);
                     frame = new DefaultStompHeadersSubframe(command);
                     checkpoint(readHeaders(in, frame.headers()));
-                    out.add(frame);
+                    ctx.fireChannelRead(frame);
                 } catch (Exception e) {
                     if (frame == null) {
                         frame = new DefaultStompHeadersSubframe(command);
                     }
                     frame.setDecoderResult(DecoderResult.failure(e));
-                    out.add(frame);
+                    ctx.fireChannelRead(frame);
                     checkpoint(State.BAD_FRAME);
                     return;
                 }
@@ -141,7 +142,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                             lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
                             checkpoint(State.FINALIZE_FRAME_READ);
                         } else {
-                            out.add(new DefaultStompContentSubframe(chunkBuffer));
+                            ctx.fireChannelRead(new DefaultStompContentSubframe(chunkBuffer));
                             return;
                         }
                     } else {
@@ -160,7 +161,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                                 lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
                                 checkpoint(State.FINALIZE_FRAME_READ);
                             } else {
-                                out.add(new DefaultStompContentSubframe(chunkBuffer));
+                                ctx.fireChannelRead(new DefaultStompContentSubframe(chunkBuffer));
                                 return;
                             }
                         }
@@ -171,13 +172,13 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     if (lastContent == null) {
                         lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
                     }
-                    out.add(lastContent);
+                    ctx.fireChannelRead(lastContent);
                     resetDecoder();
             }
         } catch (Exception e) {
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
-            out.add(errorContent);
+            ctx.fireChannelRead(errorContent);
             checkpoint(State.BAD_FRAME);
         }
     }
@@ -253,7 +254,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         private boolean nextRead;
 
         Utf8LineParser(AppendableCharSequence charSeq, int maxLineLength) {
-            this.charSeq = checkNotNull(charSeq, "charSeq");
+            this.charSeq = Objects.requireNonNull(charSeq, "charSeq");
             this.maxLineLength = maxLineLength;
         }
 
@@ -273,7 +274,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
 
         @Override
-        public boolean process(byte nextByte) throws Exception {
+        public boolean process(byte nextByte) {
             if (nextByte == StompConstants.CR) {
                 ++lineLength;
                 return true;
@@ -352,7 +353,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
 
         @Override
-        public boolean process(byte nextByte) throws Exception {
+        public boolean process(byte nextByte) {
             if (nextByte == StompConstants.COLON) {
                 if (name == null) {
                     AppendableCharSequence charSeq = charSequence();

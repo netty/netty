@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.stream;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -31,7 +33,7 @@ import java.nio.channels.FileChannel;
  * NIO {@link FileChannel}.
  * <p>
  * If your operating system supports
- * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
+ * <a href="https://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
 public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
@@ -84,11 +86,8 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
-    public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize)
-            throws IOException {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+    public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize) throws IOException {
+        requireNonNull(in, "in");
         if (offset < 0) {
             throw new IllegalArgumentException(
                     "offset: " + offset + " (expected: 0 or greater)");

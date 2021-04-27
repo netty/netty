@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,11 +20,15 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.DuplexChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
+
+import java.net.StandardSocketOptions;
 
 /**
  * Special {@link ChannelConfig} for {@link DomainSocketChannel}s.
  */
-public interface DomainSocketChannelConfig extends ChannelConfig {
+public interface DomainSocketChannelConfig extends DuplexChannelConfig {
 
     @Override
     @Deprecated
@@ -61,6 +65,26 @@ public interface DomainSocketChannelConfig extends ChannelConfig {
 
     @Override
     DomainSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
+
+    /**
+     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     */
+    int getSendBufferSize();
+
+    /**
+     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     */
+    DomainSocketChannelConfig setSendBufferSize(int sendBufferSize);
+
+    /**
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     */
+    int getReceiveBufferSize();
+
+    /**
+     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     */
+    DomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Change the {@link DomainSocketReadMode} for the channel. The default is

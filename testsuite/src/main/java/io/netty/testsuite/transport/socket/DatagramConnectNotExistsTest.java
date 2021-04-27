@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,9 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -47,7 +46,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
 
     public void testConnectNotExists(Bootstrap cb) throws Throwable {
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        cb.handler(new ChannelInboundHandlerAdapter() {
+        cb.handler(new ChannelHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 promise.trySuccess(cause);
@@ -59,9 +58,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             Assert.assertTrue(datagramChannel.isActive());
             datagramChannel.writeAndFlush(
                     Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            if (!(datagramChannel instanceof OioDatagramChannel)) {
-                Assert.assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
-            }
+            Assert.assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
         } finally {
             future.channel().close();
         }

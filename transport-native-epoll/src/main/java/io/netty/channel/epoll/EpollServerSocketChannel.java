@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
+import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
 import static io.netty.channel.unix.NativeInetAddress.address;
 
 /**
@@ -39,37 +41,33 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     private final EpollServerSocketChannelConfig config;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
-    public EpollServerSocketChannel() {
-        super(newSocketStream(), false);
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, newSocketStream(), false);
         config = new EpollServerSocketChannelConfig(this);
     }
 
-    public EpollServerSocketChannel(int fd) {
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(new LinuxSocket(fd));
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd));
     }
 
-    EpollServerSocketChannel(LinuxSocket fd) {
-        super(fd);
+    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        super(eventLoop, childEventLoopGroup, fd);
         config = new EpollServerSocketChannelConfig(this);
     }
 
-    EpollServerSocketChannel(LinuxSocket fd, boolean active) {
-        super(fd, active);
+    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd, boolean active) {
+        super(eventLoop, childEventLoopGroup, fd, active);
         config = new EpollServerSocketChannelConfig(this);
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
     }
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
-        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {
-            socket.setTcpFastOpen(config.getTcpFastopen());
+        final int tcpFastopen;
+        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = config.getTcpFastopen()) > 0) {
+            socket.setTcpFastOpen(tcpFastopen);
         }
         socket.listen(config.getBacklog());
         active = true;
@@ -92,7 +90,8 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     @Override
     protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
-        return new EpollSocketChannel(this, new LinuxSocket(fd), address(address, offset, len));
+        return new EpollSocketChannel(this, childEventLoopGroup().next(), new LinuxSocket(fd),
+                                      address(address, offset, len));
     }
 
     Collection<InetAddress> tcpMd5SigAddresses() {

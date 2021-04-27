@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,9 @@
  * under the License.
  */
 package io.netty.handler.ssl;
+
+import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.math.BigInteger;
 import java.security.Principal;
@@ -29,7 +32,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * This is a special purpose implementation of a {@link X509Certificate} which allows
@@ -55,9 +57,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     static PemEncoded toPEM(ByteBufAllocator allocator, boolean useDirect,
             X509Certificate... chain) throws CertificateEncodingException {
 
-        if (chain == null || chain.length == 0) {
-            throw new IllegalArgumentException("X.509 certificate chain can't be null or empty");
-        }
+        checkNonEmpty(chain, "chain");
 
         // We can take a shortcut if there is only one certificate and
         // it already happens to be a PemEncoded instance. This is the
@@ -175,7 +175,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     private final ByteBuf content;
 
     private PemX509Certificate(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
@@ -28,6 +28,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Random;
 
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,7 +44,7 @@ public class EpollSocketChannelConfigTest {
     @BeforeClass
     public static void beforeClass() {
         rand = new Random();
-        group = new EpollEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
     }
 
     @AfterClass
@@ -56,7 +57,7 @@ public class EpollSocketChannelConfigTest {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
@@ -152,7 +153,12 @@ public class EpollSocketChannelConfigTest {
             ch.config().getSoLinger();
             fail();
         } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
+            if (!(e.getCause() instanceof ClosedChannelException)) {
+                AssertionError error = new AssertionError(
+                        "Expected the suppressed exception to be an instance of ClosedChannelException.");
+                error.addSuppressed(e);
+                throw error;
+            }
         }
     }
 

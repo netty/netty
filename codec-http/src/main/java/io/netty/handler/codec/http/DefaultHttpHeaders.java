@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,7 +24,6 @@ import io.netty.handler.codec.HeadersUtils;
 import io.netty.handler.codec.ValueConverter;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -44,30 +43,20 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
  */
 public class DefaultHttpHeaders extends HttpHeaders {
     private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
-    private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            validateHeaderNameElement(value);
-            return true;
-        }
+    private static final ByteProcessor HEADER_NAME_VALIDATOR = value -> {
+        validateHeaderNameElement(value);
+        return true;
     };
-    static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            if (name == null || name.length() == 0) {
-                throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
-            }
-            if (name instanceof AsciiString) {
-                try {
-                    ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
-                } catch (Exception e) {
-                    PlatformDependent.throwException(e);
-                }
-            } else {
-                // Go through each character in the name
-                for (int index = 0; index < name.length(); ++index) {
-                    validateHeaderNameElement(name.charAt(index));
-                }
+    static final NameValidator<CharSequence> HttpNameValidator = name -> {
+        if (name == null || name.length() == 0) {
+            throw new IllegalArgumentException("empty headers are not allowed [" + name + ']');
+        }
+        if (name instanceof AsciiString) {
+            ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
+        } else {
+            // Go through each character in the name
+            for (int index = 0; index < name.length(); ++index) {
+                validateHeaderNameElement(name.charAt(index));
             }
         }
     };
@@ -79,7 +68,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     /**
-     * <b>Warning!</b> Setting <code>validate</code> to <code>false</code> will mean that Netty won't
+     * <b>Warning!</b> Setting {@code validate} to {@code false} will mean that Netty won't
      * validate & protect against user-supplied header values that are malicious.
      * This can leave your server implementation vulnerable to
      * <a href="https://cwe.mitre.org/data/definitions/113.html">
@@ -95,9 +84,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     protected DefaultHttpHeaders(boolean validate, NameValidator<CharSequence> nameValidator) {
-        this(new DefaultHeadersImpl<CharSequence, CharSequence>(CASE_INSENSITIVE_HASHER,
-                                                                valueConverter(validate),
-                                                                nameValidator));
+        this(new DefaultHeadersImpl<>(CASE_INSENSITIVE_HASHER,
+                valueConverter(validate),
+                nameValidator));
     }
 
     protected DefaultHttpHeaders(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
@@ -269,7 +258,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptyList();
         }
-        List<Entry<String, String>> entriesConverted = new ArrayList<Entry<String, String>>(
+        List<Entry<String, String>> entriesConverted = new ArrayList<>(
                 headers.size());
         for (Entry<String, String> entry : this) {
             entriesConverted.add(entry);
@@ -489,12 +478,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     }
                     break;
                 case 1:
-                    switch (character) {
-                        case '\n':
-                            return 2;
-                        default:
-                            throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
+                    if (character == '\n') {
+                        return 2;
                     }
+                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
                 case 2:
                     switch (character) {
                         case '\t':

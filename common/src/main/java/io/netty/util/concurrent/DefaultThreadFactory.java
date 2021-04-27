@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package io.netty.util.concurrent;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.StringUtil;
 
@@ -64,9 +66,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public static String toPoolName(Class<?> poolType) {
-        if (poolType == null) {
-            throw new NullPointerException("poolType");
-        }
+        requireNonNull(poolType, "poolType");
 
         String poolName = StringUtil.simpleClassName(poolType);
         switch (poolName.length()) {
@@ -84,9 +84,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
-        if (poolName == null) {
-            throw new NullPointerException("poolName");
-        }
+        requireNonNull(poolName, "poolName");
         if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
             throw new IllegalArgumentException(
                     "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
@@ -99,8 +97,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
-        this(poolName, daemon, priority, System.getSecurityManager() == null ?
-                Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
+        this(poolName, daemon, priority, null);
     }
 
     @Override

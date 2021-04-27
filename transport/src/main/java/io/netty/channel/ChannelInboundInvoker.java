@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,8 +20,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} was registered to its {@link EventLoop}.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelRegistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelRegistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelRegistered();
@@ -29,8 +29,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} was unregistered from its {@link EventLoop}.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelUnregistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelUnregistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelUnregistered();
@@ -38,8 +38,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} is active now, which means it is connected.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelActive();
@@ -47,8 +47,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} is inactive now, which means it is closed.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelInactive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelInactive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelInactive();
@@ -56,8 +56,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
-     * This will result in having the  {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
-     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireExceptionCaught(Throwable cause);
@@ -65,8 +65,8 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received an user defined event.
      *
-     * This will result in having the  {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
-     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireUserEventTriggered(Object event);
@@ -74,21 +74,21 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received a message.
      *
-     * This will result in having the {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}
-     * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}
+     * method  called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelRead(Object msg);
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)}
-     * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * Triggers an {@link ChannelHandler#channelReadComplete(ChannelHandlerContext)}
+     * event to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     ChannelInboundInvoker fireChannelReadComplete();
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
-     * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * Triggers an {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * event to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     ChannelInboundInvoker fireChannelWritabilityChanged();
 }

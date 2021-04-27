@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,9 +17,9 @@ package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteOrder;
-import java.util.List;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -301,9 +301,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     public LengthFieldBasedFrameDecoder(
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
-        if (byteOrder == null) {
-            throw new NullPointerException("byteOrder");
-        }
+        requireNonNull(byteOrder, "byteOrder");
 
         checkPositive(maxFrameLength, "maxFrameLength");
 
@@ -330,10 +328,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        Object decoded = decode(ctx, in);
+    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        Object decoded = decode0(ctx, in);
         if (decoded != null) {
-            out.add(decoded);
+            ctx.fireChannelRead(decoded);
         }
     }
 
@@ -395,7 +393,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decode0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (discardingTooLongFrame) {
             discardingTooLongFrame(in);
         }

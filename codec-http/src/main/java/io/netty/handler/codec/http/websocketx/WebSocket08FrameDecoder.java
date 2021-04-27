@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// (BSD License: http://www.opensource.org/licenses/bsd-license)
+// (BSD License: https://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
 // All rights reserved.
@@ -59,12 +59,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteOrder;
-import java.util.List;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.readBytes;
 
@@ -154,11 +153,11 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
      *            Frames decoder configuration.
      */
     public WebSocket08FrameDecoder(WebSocketDecoderConfig decoderConfig) {
-        this.config = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.config = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());
@@ -246,7 +245,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
 
                 // check opcode vs message fragmentation state 2/2
-                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT) {
                     protocolViolation(ctx, in,
                                       "received non-continuation data frame while inside fragmented message");
                     return;
@@ -325,20 +324,23 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 // Processing ping/pong/close frames because they cannot be
                 // fragmented
                 if (frameOpcode == OPCODE_PING) {
-                    out.add(new PingWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
+                    WebSocketFrame frame = new PingWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 }
                 if (frameOpcode == OPCODE_PONG) {
-                    out.add(new PongWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
+                    WebSocketFrame frame = new PongWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 }
                 if (frameOpcode == OPCODE_CLOSE) {
                     receivedClosingHandshake = true;
                     checkCloseFrameBody(ctx, payloadBuffer);
-                    out.add(new CloseWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
+                    WebSocketFrame frame = new CloseWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 }
 
@@ -347,9 +349,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 if (frameFinalFlag) {
                     // Final frame of the sequence. Apparently ping frames are
                     // allowed in the middle of a fragmented message
-                    if (frameOpcode != OPCODE_PING) {
-                        fragmentedFramesCount = 0;
-                    }
+                    fragmentedFramesCount = 0;
                 } else {
                     // Increment counter
                     fragmentedFramesCount++;
@@ -357,17 +357,19 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
                 // Return the frame
                 if (frameOpcode == OPCODE_TEXT) {
-                    out.add(new TextWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
+                    WebSocketFrame frame = new TextWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 } else if (frameOpcode == OPCODE_BINARY) {
-                    out.add(new BinaryWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
+                    WebSocketFrame frame = new BinaryWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 } else if (frameOpcode == OPCODE_CONT) {
-                    out.add(new ContinuationWebSocketFrame(frameFinalFlag, frameRsv,
-                                                           payloadBuffer));
+                    WebSocketFrame frame = new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer);
                     payloadBuffer = null;
+                    ctx.fireChannelRead(frame);
                     return;
                 } else {
                     throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: "

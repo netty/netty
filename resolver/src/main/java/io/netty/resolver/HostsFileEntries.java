@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,8 +14,6 @@
  * under the License.
  */
 package io.netty.resolver;
-
-import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -26,23 +24,19 @@ import java.util.Map;
 /**
  * A container of hosts file entries
  */
-@UnstableApi
 public final class HostsFileEntries {
 
     /**
      * Empty entries
      */
-    static final HostsFileEntries EMPTY =
-            new HostsFileEntries(
-                    Collections.<String, Inet4Address>emptyMap(),
-                    Collections.<String, Inet6Address>emptyMap());
+    static final HostsFileEntries EMPTY = new HostsFileEntries(Collections.emptyMap(), Collections.emptyMap());
 
     private final Map<String, Inet4Address> inet4Entries;
     private final Map<String, Inet6Address> inet6Entries;
 
     public HostsFileEntries(Map<String, Inet4Address> inet4Entries, Map<String, Inet6Address> inet6Entries) {
-        this.inet4Entries = Collections.unmodifiableMap(new HashMap<String, Inet4Address>(inet4Entries));
-        this.inet6Entries = Collections.unmodifiableMap(new HashMap<String, Inet6Address>(inet6Entries));
+        this.inet4Entries = Collections.unmodifiableMap(new HashMap<>(inet4Entries));
+        this.inet6Entries = Collections.unmodifiableMap(new HashMap<>(inet6Entries));
     }
 
     /**

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -41,7 +41,7 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Discard received data
     }
 
@@ -68,12 +68,9 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
-        ctx.channel().eventLoop().schedule(new Runnable() {
-            @Override
-            public void run() {
-                println("Reconnecting to: " + UptimeClient.HOST + ':' + UptimeClient.PORT);
-                UptimeClient.connect();
-            }
+        ctx.channel().eventLoop().schedule(() -> {
+            println("Reconnecting to: " + UptimeClient.HOST + ':' + UptimeClient.PORT);
+            UptimeClient.connect();
         }, UptimeClient.RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 

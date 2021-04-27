@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.channel.unix.Socket;
@@ -35,25 +37,26 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
     private final EpollServerChannelConfig config = new EpollServerChannelConfig(this);
     private volatile DomainSocketAddress local;
 
-    public EpollServerDomainSocketChannel() {
-        super(newSocketDomain(), false);
+    public EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, newSocketDomain(), false);
     }
 
-    public EpollServerDomainSocketChannel(int fd) {
-        super(fd);
+    public EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+        super(eventLoop, childEventLoopGroup, fd);
     }
 
-    EpollServerDomainSocketChannel(LinuxSocket fd) {
-        super(fd);
+    EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        super(eventLoop, childEventLoopGroup, fd);
     }
 
-    EpollServerDomainSocketChannel(LinuxSocket fd, boolean active) {
-        super(fd, active);
+    EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                   LinuxSocket fd, boolean active) {
+        super(eventLoop, childEventLoopGroup, fd, active);
     }
 
     @Override
     protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) throws Exception {
-        return new EpollDomainSocketChannel(this, new Socket(fd));
+        return new EpollDomainSocketChannel(this, childEventLoopGroup().next(), new Socket(fd));
     }
 
     @Override

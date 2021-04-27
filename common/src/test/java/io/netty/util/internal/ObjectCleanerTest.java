@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,23 +35,15 @@ public class ObjectCleanerTest {
     public void testCleanup() throws Exception {
         final AtomicBoolean freeCalled = new AtomicBoolean();
         final CountDownLatch latch = new CountDownLatch(1);
-        temporaryThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    latch.await();
-                } catch (InterruptedException ignore) {
-                    // just ignore
-                }
+        temporaryThread = new Thread(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException ignore) {
+                // just ignore
             }
         });
         temporaryThread.start();
-        ObjectCleaner.register(temporaryThread, new Runnable() {
-            @Override
-            public void run() {
-                freeCalled.set(true);
-            }
-        });
+        ObjectCleaner.register(temporaryThread, () -> freeCalled.set(true));
 
         latch.countDown();
         temporaryThread.join();
@@ -71,31 +63,22 @@ public class ObjectCleanerTest {
     public void testCleanupContinuesDespiteThrowing() throws InterruptedException {
         final AtomicInteger freeCalledCount = new AtomicInteger();
         final CountDownLatch latch = new CountDownLatch(1);
-        temporaryThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    latch.await();
-                } catch (InterruptedException ignore) {
-                    // just ignore
-                }
+        temporaryThread = new Thread(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException ignore) {
+                // just ignore
             }
         });
         temporaryThread.start();
         temporaryObject = new Object();
-        ObjectCleaner.register(temporaryThread, new Runnable() {
-            @Override
-            public void run() {
-                freeCalledCount.incrementAndGet();
-                throw new RuntimeException("expected");
-            }
+        ObjectCleaner.register(temporaryThread, () -> {
+            freeCalledCount.incrementAndGet();
+            throw new RuntimeException("expected");
         });
-        ObjectCleaner.register(temporaryObject, new Runnable() {
-            @Override
-            public void run() {
-                freeCalledCount.incrementAndGet();
-                throw new RuntimeException("expected");
-            }
+        ObjectCleaner.register(temporaryObject, () -> {
+            freeCalledCount.incrementAndGet();
+            throw new RuntimeException("expected");
         });
 
         latch.countDown();
@@ -116,11 +99,8 @@ public class ObjectCleanerTest {
     @Test(timeout = 5000)
     public void testCleanerThreadIsDaemon() throws Exception {
         temporaryObject = new Object();
-        ObjectCleaner.register(temporaryObject, new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
+        ObjectCleaner.register(temporaryObject, () -> {
+            // NOOP
         });
 
         Thread cleanerThread = null;

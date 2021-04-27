@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.security.Provider;
@@ -27,14 +26,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
@@ -79,10 +76,10 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 return null;
             }
         },
-        ALPN_JAVA9 {
+        ALPN_JAVA {
             @Override
             boolean isAvailable() {
-                return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+                return JdkAlpnSslUtils.supportsAlpn();
             }
 
             @Override
@@ -144,13 +141,13 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}, delegate = {3}")
     public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (ProviderType providerType : ProviderType.values()) {
             for (BufferType bufferType : BufferType.values()) {
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
 
-                if (PlatformDependent.javaVersion() >= 11) {
+                if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
                     params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
                 }
@@ -219,26 +216,21 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
                 JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
-                    new ProtocolSelectorFactory() {
-                        @Override
-                        public ProtocolSelector newSelector(SSLEngine engine, Set<String> supportedProtocols) {
-                            return new ProtocolSelector() {
-                                @Override
-                                public void unsupported() {
-                                }
+                        (engine, supportedProtocols) -> new ProtocolSelector() {
+                            @Override
+                            public void unsupported() {
+                            }
 
-                                @Override
-                                public String select(List<String> protocols) {
-                                    return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
-                                }
-                            };
-                        }
-                    }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
+                            @Override
+                            public String select(List<String> protocols) {
+                                return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
+                            }
+                        }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
 
                 SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
                     ssc.certificate(), ssc.privateKey(), null, null,
-                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0, null);
+                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
                 SslContext clientSslCtx = new JdkSslClientContext(providerType.provider(), null,
                     InsecureTrustManagerFactory.INSTANCE, null,
                     IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);

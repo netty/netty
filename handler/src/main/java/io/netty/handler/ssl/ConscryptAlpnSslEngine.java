@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,8 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -107,7 +107,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 }
             });
 
-            protocolListener = checkNotNull(applicationNegotiator
+            protocolListener = requireNonNull(applicationNegotiator
                             .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
                     "protocolListener");
         }
@@ -137,9 +137,9 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 }
             });
 
-            protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
+            protocolSelector = requireNonNull(applicationNegotiator.protocolSelectorFactory()
                             .newSelector(this,
-                                    new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                                    new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
         }
 
@@ -147,7 +147,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
             try {
                 String protocol = Conscrypt.getApplicationProtocol(getWrappedEngine());
                 protocolSelector.select(protocol != null ? Collections.singletonList(protocol)
-                        : Collections.<String>emptyList());
+                        : Collections.emptyList());
             } catch (Throwable e) {
                 throw toSSLHandshakeException(e);
             }

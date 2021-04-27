@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,17 +32,17 @@ public final class ExampleHeaders {
     }
 
     public static final Map<HeaderExample, Map<String, String>> EXAMPLES =
-            new EnumMap<HeaderExample, Map<String, String>>(HeaderExample.class);
+            new EnumMap<>(HeaderExample.class);
 
     static {
-        Map<String, String> header = new HashMap<String, String>();
+        Map<String, String> header = new HashMap<>();
         header.put(":method", "GET");
         header.put(":scheme", "https");
         header.put(":path", "/index.html");
         EXAMPLES.put(HeaderExample.THREE, header);
 
         // Headers used by Norman's HTTP benchmarks with wrk
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put("Method", "GET");
         header.put("Path", "/plaintext");
         header.put("Host", "localhost");
@@ -50,7 +50,7 @@ public final class ExampleHeaders {
         header.put("Connection", "keep-alive");
         EXAMPLES.put(HeaderExample.FIVE, header);
 
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put(":authority", "127.0.0.1:33333");
         header.put(":method", "POST");
         header.put(":path", "/grpc.testing.TestService/UnaryCall");
@@ -59,7 +59,7 @@ public final class ExampleHeaders {
         header.put("te", "trailers");
         EXAMPLES.put(HeaderExample.SIX, header);
 
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put(":method", "POST");
         header.put(":scheme", "http");
         header.put(":path", "/google.pubsub.v2.PublisherService/CreateTopic");
@@ -70,7 +70,7 @@ public final class ExampleHeaders {
         header.put("authorization", "Bearer y235.wef315yfh138vh31hv93hv8h3v");
         EXAMPLES.put(HeaderExample.EIGHT, header);
 
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put(":host", "twitter.com");
         header.put(":method", "GET");
         header.put(":path", "/");
@@ -84,7 +84,7 @@ public final class ExampleHeaders {
         header.put("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)");
         EXAMPLES.put(HeaderExample.ELEVEN, header);
 
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put("cache-control", "no-cache, no-store, must-revalidate, pre-check=0, post-check=0");
         header.put("content-encoding", "gzip");
         header.put("content-security-policy", "default-src https:; connect-src https:;");
@@ -109,7 +109,7 @@ public final class ExampleHeaders {
         header.put("x-xss-protection", "1; mode=block");
         EXAMPLES.put(HeaderExample.TWENTYTWO, header);
 
-        header = new HashMap<String, String>();
+        header = new HashMap<>();
         header.put("Cache-Control", "no-cache");
         header.put("Content-Encoding", "gzip");
         header.put("Content-Security-Policy", "default-src *; script-src assets-cdn.github.com ...");

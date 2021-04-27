@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link HttpRequest} implementation.
@@ -46,8 +46,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders, false);
-        this.method = checkNotNull(method, "method");
-        this.uri = checkNotNull(uri, "uri");
+        this.method = requireNonNull(method, "method");
+        this.uri = requireNonNull(uri, "uri");
     }
 
     /**
@@ -60,8 +60,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeaders headers) {
         super(httpVersion, headers);
-        this.method = checkNotNull(method, "method");
-        this.uri = checkNotNull(uri, "uri");
+        this.method = requireNonNull(method, "method");
+        this.uri = requireNonNull(uri, "uri");
     }
 
     @Override
@@ -88,18 +88,14 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
-        if (method == null) {
-            throw new NullPointerException("method");
-        }
+        requireNonNull(method, "method");
         this.method = method;
         return this;
     }
 
     @Override
     public HttpRequest setUri(String uri) {
-        if (uri == null) {
-            throw new NullPointerException("uri");
-        }
+        requireNonNull(uri, "uri");
         this.uri = uri;
         return this;
     }

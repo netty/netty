@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link Http2HeadersFrame} implementation.
@@ -57,7 +57,7 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
      *                256 (inclusive).
      */
     public DefaultHttp2HeadersFrame(Http2Headers headers, boolean endStream, int padding) {
-        this.headers = checkNotNull(headers, "headers");
+        this.headers = requireNonNull(headers, "headers");
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;

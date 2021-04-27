@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,12 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.local.LocalHandler;
+import io.netty.channel.nio.NioHandler;
 import io.netty.util.NetUtil;
 import org.junit.Test;
 
@@ -40,7 +41,7 @@ public class DefaultDnsCacheTest {
     public void testExpire() throws Throwable {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -48,15 +49,12 @@ public class DefaultDnsCacheTest {
             cache.cache("netty.io", null, addr1, 1, loop);
             cache.cache("netty.io", null, addr2, 10000, loop);
 
-            Throwable error = loop.schedule(new Callable<Throwable>() {
-                @Override
-                public Throwable call() {
-                    try {
-                        assertNull(cache.get("netty.io", null));
-                        return null;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
+            Throwable error = loop.schedule(() -> {
+                try {
+                    assertNull(cache.get("netty.io", null));
+                    return null;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             }, 1, TimeUnit.SECONDS).get();
             if (error != null) {
@@ -75,7 +73,7 @@ public class DefaultDnsCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -88,7 +86,7 @@ public class DefaultDnsCacheTest {
 
     @Test
     public void testExpireWithToBigMinTTL() {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -103,7 +101,7 @@ public class DefaultDnsCacheTest {
     public void testAddMultipleAddressesForSameHostname() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -123,7 +121,7 @@ public class DefaultDnsCacheTest {
     @Test
     public void testAddSameAddressForSameHostname() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -148,7 +146,7 @@ public class DefaultDnsCacheTest {
     public void testCacheFailed() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -177,7 +175,7 @@ public class DefaultDnsCacheTest {
     public void testDotHandling() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

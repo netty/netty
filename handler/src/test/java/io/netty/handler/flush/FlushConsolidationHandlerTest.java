@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,8 @@
  */
 package io.netty.handler.flush;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
@@ -33,13 +32,13 @@ public class FlushConsolidationHandlerTest {
     public void testFlushViaScheduledTask() {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount,  true);
-        // Flushes should not go through immediately, as they're scheduled as an async task
-        channel.flush();
-        assertEquals(0, flushCount.get());
-        channel.flush();
-        assertEquals(0, flushCount.get());
-        // Trigger the execution of the async task
-        channel.runPendingTasks();
+        channel.eventLoop().execute(() -> {
+            // Flushes should not go through immediately, as they're scheduled as an async task
+            channel.flush();
+            assertEquals(0, flushCount.get());
+            channel.flush();
+            assertEquals(0, flushCount.get());
+        });
         assertEquals(1, flushCount.get());
         assertFalse(channel.finish());
     }
@@ -48,11 +47,14 @@ public class FlushConsolidationHandlerTest {
     public void testFlushViaThresholdOutsideOfReadLoop() {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, true);
-        // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
-        for (int i = 0; i < EXPLICIT_FLUSH_AFTER_FLUSHES; i++) {
-            channel.flush();
-        }
-        assertEquals(1, flushCount.get());
+        channel.eventLoop().execute(() -> {
+            // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
+            for (int i = 0; i < EXPLICIT_FLUSH_AFTER_FLUSHES; i++) {
+                channel.flush();
+            }
+            assertEquals(1, flushCount.get());
+        });
+
         assertFalse(channel.finish());
     }
 
@@ -86,8 +88,8 @@ public class FlushConsolidationHandlerTest {
         channel.flush();
         channel.runPendingTasks();
         assertEquals(3, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(2L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
+        assertEquals(2L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -102,7 +104,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.close();
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -117,7 +119,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.disconnect();
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -132,7 +134,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.pipeline().fireExceptionCaught(new IllegalStateException());
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
         channel.finish();
     }
@@ -147,14 +149,29 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.pipeline().remove(FlushConsolidationHandler.class);
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * See https://github.com/netty/netty/issues/9923
+     */
+    @Test
+    public void testResend() throws Exception {
+        final AtomicInteger flushCount = new AtomicInteger();
+        final EmbeddedChannel channel = newChannel(flushCount, true);
+        channel.writeAndFlush(1L).addListener(future -> channel.writeAndFlush(1L));
+        channel.flushOutbound();
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
 
     private static EmbeddedChannel newChannel(final AtomicInteger flushCount, boolean consolidateWhenNoReadInProgress) {
         return new EmbeddedChannel(
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelHandler() {
                     @Override
                     public void flush(ChannelHandlerContext ctx) throws Exception {
                         flushCount.incrementAndGet();
@@ -162,7 +179,7 @@ public class FlushConsolidationHandlerTest {
                     }
                 },
                 new FlushConsolidationHandler(EXPLICIT_FLUSH_AFTER_FLUSHES, consolidateWhenNoReadInProgress),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         ctx.writeAndFlush(msg);

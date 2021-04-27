@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,15 +17,15 @@ package io.netty.channel.local;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 final class LocalChannelRegistry {
 
-    private static final ConcurrentMap<LocalAddress, Channel> boundChannels = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<LocalAddress, Channel> boundChannels = new ConcurrentHashMap<>();
 
     static LocalAddress register(
             Channel channel, LocalAddress oldLocalAddress, SocketAddress localAddress) {

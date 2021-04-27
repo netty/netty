@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,6 +55,32 @@ final class HAProxyConstants {
     static final byte TPAF_UDP6_BYTE = 0x22;
     static final byte TPAF_UNIX_STREAM_BYTE = 0x31;
     static final byte TPAF_UNIX_DGRAM_BYTE = 0x32;
+
+    /**
+     * V2 protocol binary header prefix
+     */
+    static final byte[] BINARY_PREFIX = {
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x00,
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x51,
+            (byte) 0x55,
+            (byte) 0x49,
+            (byte) 0x54,
+            (byte) 0x0A
+    };
+
+    static final byte[] TEXT_PREFIX = {
+            (byte) 'P',
+            (byte) 'R',
+            (byte) 'O',
+            (byte) 'X',
+            (byte) 'Y',
+    };
 
     private HAProxyConstants() { }
 }

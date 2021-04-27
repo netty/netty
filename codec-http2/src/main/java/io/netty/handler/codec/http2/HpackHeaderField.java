@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,7 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 class HpackHeaderField {
 
@@ -50,8 +50,8 @@ class HpackHeaderField {
 
     // This constructor can only be used if name and value are ISO-8859-1 encoded.
     HpackHeaderField(CharSequence name, CharSequence value) {
-        this.name = checkNotNull(name, "name");
-        this.value = checkNotNull(value, "value");
+        this.name = requireNonNull(name, "name");
+        this.value = requireNonNull(value, "value");
     }
 
     final int size() {

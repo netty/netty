@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import org.junit.Test;
@@ -46,8 +46,8 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     public void testSoLingerZeroCausesOnlyRstOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
-        final AtomicReference<Throwable> throwableRef = new AtomicReference<Throwable>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+        final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
         // SO_LINGER=0 means that we must send ONLY a RST when closing (not a FIN + RST).
@@ -62,7 +62,7 @@ public class SocketRstTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);
@@ -101,8 +101,8 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     public void testNoRstIfSoLingerOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
-        final AtomicReference<Throwable> throwableRef = new AtomicReference<Throwable>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+        final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
         sb.childHandler(new ChannelInitializer<Channel>() {
@@ -115,7 +115,7 @@ public class SocketRstTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);

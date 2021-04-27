@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package io.netty.handler.proxy;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.StringUtil;
 
@@ -33,18 +35,10 @@ public final class ProxyConnectionEvent {
      */
     public ProxyConnectionEvent(
             String protocol, String authScheme, SocketAddress proxyAddress, SocketAddress destinationAddress) {
-        if (protocol == null) {
-            throw new NullPointerException("protocol");
-        }
-        if (authScheme == null) {
-            throw new NullPointerException("authScheme");
-        }
-        if (proxyAddress == null) {
-            throw new NullPointerException("proxyAddress");
-        }
-        if (destinationAddress == null) {
-            throw new NullPointerException("destinationAddress");
-        }
+        requireNonNull(protocol, "protocol");
+        requireNonNull(authScheme, "authScheme");
+        requireNonNull(proxyAddress, "proxyAddress");
+        requireNonNull(destinationAddress, "destinationAddress");
 
         this.protocol = protocol;
         this.authScheme = authScheme;

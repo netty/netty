@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -190,13 +190,9 @@ public class PerMessageDeflateEncoderTest {
 
     @Test
     public void testSelectivityCompressionSkip() {
-        WebSocketExtensionFilter selectivityCompressionFilter = new WebSocketExtensionFilter() {
-            @Override
-            public boolean mustSkip(WebSocketFrame frame) {
-                return  (frame instanceof TextWebSocketFrame || frame instanceof BinaryWebSocketFrame)
-                    && frame.content().readableBytes() < 100;
-            }
-        };
+        WebSocketExtensionFilter selectivityCompressionFilter =
+                frame -> (frame instanceof TextWebSocketFrame || frame instanceof BinaryWebSocketFrame)
+            && frame.content().readableBytes() < 100;
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
@@ -238,12 +234,7 @@ public class PerMessageDeflateEncoderTest {
 
     @Test(expected = EncoderException.class)
     public void testIllegalStateWhenCompressionInProgress() {
-        WebSocketExtensionFilter selectivityCompressionFilter = new WebSocketExtensionFilter() {
-            @Override
-            public boolean mustSkip(WebSocketFrame frame) {
-                return frame.content().readableBytes() < 100;
-            }
-        };
+        WebSocketExtensionFilter selectivityCompressionFilter = frame -> frame.content().readableBytes() < 100;
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
 

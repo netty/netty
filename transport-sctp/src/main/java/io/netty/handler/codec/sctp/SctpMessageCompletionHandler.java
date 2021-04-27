@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,24 +19,22 @@ package io.netty.handler.codec.sctp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
  * only <strong>complete</strong> {@link SctpMessage}s will be forwarded to the next
- * {@link ChannelInboundHandler}.
+ * {@link ChannelHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
+    private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();
@@ -50,23 +48,22 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
 
         if (isComplete && !frag.isReadable()) {
             //data chunk is not fragmented
-            out.add(msg);
+            ctx.fireChannelRead(msg.retain());
         } else if (!isComplete && frag.isReadable()) {
             //more message to complete
-            fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf));
+            fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf.retain()));
         } else if (isComplete && frag.isReadable()) {
             //last message to complete
             SctpMessage assembledMsg = new SctpMessage(
                     protocolIdentifier,
                     streamIdentifier,
                     isUnordered,
-                    Unpooled.wrappedBuffer(frag, byteBuf));
-            out.add(assembledMsg);
+                    Unpooled.wrappedBuffer(frag, byteBuf.retain()));
+            ctx.fireChannelRead(assembledMsg);
         } else {
             //first incomplete message
-            fragments.put(streamIdentifier, byteBuf);
+            fragments.put(streamIdentifier, byteBuf.retain());
         }
-        byteBuf.retain();
     }
 
     @Override

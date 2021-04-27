@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,37 +36,37 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param status
-     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status) {
-        this(status.code(), status.reasonText());
+        this(requireValidStatusCode(status.code()), status.reasonText());
     }
 
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param status
-     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status, String reasonText) {
-        this(status.code(), reasonText);
+        this(requireValidStatusCode(status.code()), reasonText);
     }
 
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
      * @param statusCode
-     *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(int statusCode, String reasonText) {
-        this(true, 0, statusCode, reasonText);
+        this(true, 0, requireValidStatusCode(statusCode), reasonText);
     }
 
     /**
@@ -89,13 +89,13 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * @param rsv
      *            reserved bits used for protocol extensions
      * @param statusCode
-     *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        super(finalFragment, rsv, newBinaryData(statusCode, reasonText));
+        super(finalFragment, rsv, newBinaryData(requireValidStatusCode(statusCode), reasonText));
     }
 
     private static ByteBuf newBinaryData(int statusCode, String reasonText) {
@@ -128,7 +128,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the closing status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
+     * Returns the closing status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
      * a status code is set, -1 is returned.
      */
     public int statusCode() {
@@ -142,7 +142,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Returns the reason text as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a> If a reason
+     * Returns the reason text as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a> If a reason
      * text is not supplied, an empty string is returned.
      */
     public String reasonText() {
@@ -200,5 +200,14 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     public CloseWebSocketFrame touch(Object hint) {
         super.touch(hint);
         return this;
+    }
+
+    static int requireValidStatusCode(int statusCode) {
+        if (WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+            return statusCode;
+        } else {
+            throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " +
+                    statusCode);
+        }
     }
 }

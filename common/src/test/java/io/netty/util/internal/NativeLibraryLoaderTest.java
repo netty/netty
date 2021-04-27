@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -40,9 +41,7 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, UnsatisfiedLinkError.class);
-            }
+            verifySuppressedException(error, UnsatisfiedLinkError.class);
         }
     }
 
@@ -53,9 +52,7 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, ClassNotFoundException.class);
-            }
+            verifySuppressedException(error, ClassNotFoundException.class);
         }
     }
 
@@ -96,7 +93,7 @@ public class NativeLibraryLoaderTest {
 
     private static void testPatchingId0(boolean match, boolean withOsArch) throws IOException {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         byte[] idBytes = ("/workspace/netty-tcnative/boringssl-static/target/" +
                 "native-build/target/lib/libnetty_tcnative-2.0.20.Final.jnilib").getBytes(CharsetUtil.UTF_8);
 

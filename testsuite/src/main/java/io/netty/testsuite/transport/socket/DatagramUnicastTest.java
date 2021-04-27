@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -48,6 +49,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     private static final byte[] BYTES = {0, 1, 2, 3};
     private enum WrapType {
         NONE, DUP, SLICE, READ_ONLY
+    }
+
+    @Test
+    public void testBindWithPortOnly() throws Throwable {
+        run();
+    }
+
+    public void testBindWithPortOnly(Bootstrap sb, Bootstrap cb) throws Throwable {
+        Channel channel = null;
+        try {
+            cb.handler(new ChannelHandlerAdapter() { });
+            channel = cb.bind(0).sync().channel();
+        } finally {
+            closeChannel(channel);
+        }
     }
 
     @Test
@@ -159,7 +175,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         try {
             cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
-                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
                     // Nothing will be sent.
                 }
             });
@@ -236,7 +252,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<Throwable>();
         cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 try {
                     ByteBuf buf = msg.content();
                     assertEquals(bytes.length, buf.readableBytes());
@@ -345,7 +361,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
-                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                         try {
                             if (sender == null) {
                                 assertNotNull(msg.sender());

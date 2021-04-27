@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -86,7 +86,7 @@ public class CompositeByteBufRandomAccessBenchmark extends AbstractMicrobenchmar
 
     private static ByteBuf newBufferSmallChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>(((length + 1) / 45) * 19);
+        List<ByteBuf> buffers = new ArrayList<>(((length + 1) / 45) * 19);
         for (int i = 0; i < length + 45; i += 45) {
             for (int j = 1; j <= 9; j++) {
                 buffers.add(EMPTY_BUFFER);
@@ -103,7 +103,7 @@ public class CompositeByteBufRandomAccessBenchmark extends AbstractMicrobenchmar
 
     private static ByteBuf newBufferLargeChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>((length + 1) / 512);
+        List<ByteBuf> buffers = new ArrayList<>((length + 1) / 512);
         for (int i = 0; i < length + 1536; i += 1536) {
             buffers.add(wrappedBuffer(new byte[512]));
             buffers.add(EMPTY_BUFFER);

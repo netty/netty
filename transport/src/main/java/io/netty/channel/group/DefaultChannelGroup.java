@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,9 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.ByteBuf;
+import static java.util.Objects.requireNonNull;
+
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -24,7 +26,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ServerChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.AbstractSet;
@@ -33,6 +34,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,15 +45,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     private static final AtomicInteger nextId = new AtomicInteger();
     private final String name;
-    private final EventExecutor executor;
-    private final ConcurrentMap<ChannelId, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
-    private final ConcurrentMap<ChannelId, Channel> nonServerChannels = PlatformDependent.newConcurrentHashMap();
-    private final ChannelFutureListener remover = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            remove(future.channel());
-        }
-    };
+    final EventExecutor executor;
+    private final ConcurrentMap<ChannelId, Channel> serverChannels = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ChannelId, Channel> nonServerChannels = new ConcurrentHashMap<>();
+    private final ChannelFutureListener remover = future -> remove(future.channel());
     private final VoidChannelGroupFuture voidFuture = new VoidChannelGroupFuture(this);
     private final boolean stayClosed;
     private volatile boolean closed;
@@ -91,9 +88,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
      * the same name, which means no duplicate check is done against group names.
      */
     public DefaultChannelGroup(String name, EventExecutor executor, boolean stayClosed) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
         this.name = name;
         this.executor = executor;
         this.stayClosed = stayClosed;
@@ -196,14 +191,14 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public Iterator<Channel> iterator() {
-        return new CombinedIterator<Channel>(
+        return new CombinedIterator<>(
                 serverChannels.values().iterator(),
                 nonServerChannels.values().iterator());
     }
 
     @Override
     public Object[] toArray() {
-        Collection<Channel> channels = new ArrayList<Channel>(size());
+        Collection<Channel> channels = new ArrayList<>(size());
         channels.addAll(serverChannels.values());
         channels.addAll(nonServerChannels.values());
         return channels.toArray();
@@ -211,7 +206,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public <T> T[] toArray(T[] a) {
-        Collection<Channel> channels = new ArrayList<Channel>(size());
+        Collection<Channel> channels = new ArrayList<>(size());
         channels.addAll(serverChannels.values());
         channels.addAll(nonServerChannels.values());
         return channels.toArray(a);
@@ -240,8 +235,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
-        if (message instanceof ByteBuf) {
-            return ((ByteBuf) message).retainedDuplicate();
+        if (message instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) message).asByteBuf().retainedDuplicate();
         } else if (message instanceof ByteBufHolder) {
             return ((ByteBufHolder) message).retainedDuplicate();
         } else {
@@ -256,12 +251,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture write(Object message, ChannelMatcher matcher, boolean voidPromise) {
-        if (message == null) {
-            throw new NullPointerException("message");
-        }
-        if (matcher == null) {
-            throw new NullPointerException("matcher");
-        }
+        requireNonNull(message, "message");
+        requireNonNull(matcher, "matcher");
 
         final ChannelGroupFuture future;
         if (voidPromise) {
@@ -272,7 +263,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.write(safeDuplicate(message)));
@@ -301,12 +292,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture disconnect(ChannelMatcher matcher) {
-        if (matcher == null) {
-            throw new NullPointerException("matcher");
-        }
+        requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
-                new LinkedHashMap<Channel, ChannelFuture>(size());
+                new LinkedHashMap<>(size());
 
         for (Channel c: serverChannels.values()) {
             if (matcher.matches(c)) {
@@ -324,12 +313,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture close(ChannelMatcher matcher) {
-        if (matcher == null) {
-            throw new NullPointerException("matcher");
-        }
+        requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
-                new LinkedHashMap<Channel, ChannelFuture>(size());
+                new LinkedHashMap<>(size());
 
         if (stayClosed) {
             // It is important to set the closed to true, before closing channels.
@@ -357,12 +344,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture deregister(ChannelMatcher matcher) {
-        if (matcher == null) {
-            throw new NullPointerException("matcher");
-        }
+        requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
-                new LinkedHashMap<Channel, ChannelFuture>(size());
+                new LinkedHashMap<>(size());
 
         for (Channel c: serverChannels.values()) {
             if (matcher.matches(c)) {
@@ -400,9 +385,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher, boolean voidPromise) {
-        if (message == null) {
-            throw new NullPointerException("message");
-        }
+        requireNonNull(message, "message");
 
         final ChannelGroupFuture future;
         if (voidPromise) {
@@ -413,7 +396,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.writeAndFlush(safeDuplicate(message)));
@@ -433,7 +416,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public ChannelGroupFuture newCloseFuture(ChannelMatcher matcher) {
         Map<Channel, ChannelFuture> futures =
-                new LinkedHashMap<Channel, ChannelFuture>(size());
+                new LinkedHashMap<>(size());
 
         for (Channel c: serverChannels.values()) {
             if (matcher.matches(c)) {

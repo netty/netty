@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -20,14 +20,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -37,6 +38,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.AsciiString;
@@ -62,8 +64,11 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -142,6 +147,29 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
+    public void testHttpScheme() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
+                "http://my-user_name@www.example.org:5555/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                        .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                        .scheme(new AsciiString("http"))
+                        .add(new AsciiString("foo"), new AsciiString("goo"))
+                        .add(new AsciiString("foo"), new AsciiString("goo2"))
+                        .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         ChannelPromise writePromise = newPromise();
         verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
@@ -333,15 +361,36 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     @Test
+    public void testInvalidStreamId() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/foo",
+                Unpooled.copiedBuffer("foobar", UTF_8));
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        httpHeaders.set(HttpHeaderNames.HOST, "localhost");
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isDone());
+        assertFalse(writePromise.isSuccess());
+        Throwable cause = writePromise.cause();
+        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+
+        assertTrue(writeFuture.isDone());
+        assertFalse(writeFuture.isSuccess());
+        cause = writeFuture.cause();
+        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+    }
+
+    @Test
     public void testRequestWithBody() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
@@ -378,13 +427,10 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
@@ -430,13 +476,10 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testChunkedRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooo";
         final String text2 = "goooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
@@ -508,7 +551,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new DefaultEventLoopGroup());
+        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -520,12 +563,13 @@ public class HttpToHttp2ConnectionHandlerTest {
                 p.addLast(new HttpToHttp2ConnectionHandlerBuilder()
                            .server(true)
                            .frameListener(serverFrameCountDown)
+                           .httpScheme(HttpScheme.HTTP)
                            .build());
                 serverChannelLatch.countDown();
             }
         });
 
-        cb.group(new DefaultEventLoopGroup());
+        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -537,7 +581,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .gracefulShutdownTimeoutMillis(0)
                         .build();
                 p.addLast(handler);
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {

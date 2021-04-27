@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel.group;
+
+import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -27,12 +29,8 @@ final class CombinedIterator<E> implements Iterator<E> {
     private Iterator<E> currentIterator;
 
     CombinedIterator(Iterator<E> i1, Iterator<E> i2) {
-        if (i1 == null) {
-            throw new NullPointerException("i1");
-        }
-        if (i2 == null) {
-            throw new NullPointerException("i2");
-        }
+        requireNonNull(i1, "i1");
+        requireNonNull(i2, "i2");
         this.i1 = i1;
         this.i2 = i2;
         currentIterator = i1;

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.Limits.IOV_MAX;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
@@ -62,23 +62,28 @@ public class FileDescriptor {
         return fd;
     }
 
+    protected boolean markClosed() {
+        for (;;) {
+            int state = this.state;
+            if (isClosed(state)) {
+                return false;
+            }
+            // Once a close operation happens, the channel is considered shutdown.
+            if (casState(state, state | STATE_ALL_MASK)) {
+                return true;
+            }
+        }
+    }
+
     /**
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        for (;;) {
-            int state = this.state;
-            if (isClosed(state)) {
-                return;
+        if (markClosed()) {
+            int res = close(fd);
+            if (res < 0) {
+                throw newIOException("close", res);
             }
-            // Once a close operation happens, the channel is considered shutdown.
-            if (casState(state, state | STATE_ALL_MASK)) {
-                break;
-            }
-        }
-        int res = close(fd);
-        if (res < 0) {
-            throw newIOException("close", res);
         }
     }
 
@@ -171,7 +176,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given path.
      */
     public static FileDescriptor from(String path) throws IOException {
-        checkNotNull(path, "path");
+        requireNonNull(path, "path");
         int res = open(path);
         if (res < 0) {
             throw newIOException("open", res);
@@ -183,7 +188,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given {@link File}.
      */
     public static FileDescriptor from(File file) throws IOException {
-        return from(checkNotNull(file, "file").getPath());
+        return from(requireNonNull(file, "file").getPath());
     }
 
     /**

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,15 @@
  */
 package io.netty.bootstrap;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -29,12 +32,12 @@ import java.util.Map;
 /**
  * Exposes the configuration of an {@link AbstractBootstrap}.
  */
-public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>, C extends Channel> {
+public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C, F>, C extends Channel, F> {
 
     protected final B bootstrap;
 
-    protected AbstractBootstrapConfig(B bootstrap) {
-        this.bootstrap = ObjectUtil.checkNotNull(bootstrap, "bootstrap");
+    AbstractBootstrapConfig(B bootstrap) {
+        this.bootstrap = requireNonNull(bootstrap, "bootstrap");
     }
 
     /**
@@ -45,12 +48,11 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
     }
 
     /**
-     * Returns the configured {@link ChannelFactory} or {@code null} if non is configured yet.
+     * Returns the configured {@link ChannelFactory} / {@link ServerChannelFactory} or {@code null}
+     * if non is configured yet.
      */
     @SuppressWarnings("deprecation")
-    public final ChannelFactory<? extends C> channelFactory() {
-        return bootstrap.channelFactory();
-    }
+    public abstract F channelFactory();
 
     /**
      * Returns the configured {@link ChannelHandler} or {@code null} if non is configured yet.
@@ -93,7 +95,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
                     .append(", ");
         }
         @SuppressWarnings("deprecation")
-        ChannelFactory<? extends C> factory = channelFactory();
+        F factory = channelFactory();
         if (factory != null) {
             buf.append("channelFactory: ")
                     .append(factory)

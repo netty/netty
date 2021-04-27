@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -71,8 +70,8 @@ public class IdleStateHandlerTest {
 
         assertTrue("The number of expected events must be >= 1", expected.length >= 1);
 
-        final List<Object> events = new ArrayList<Object>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        final List<Object> events = new ArrayList<>();
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
@@ -105,12 +104,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 1L, 0L, 0L, TimeUnit.SECONDS);
 
-        Action action = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeInbound("Hello, World!");
-            }
-        };
+        Action action = channel -> channel.writeInbound("Hello, World!");
 
         anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
     }
@@ -120,12 +114,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 1L, 0L, TimeUnit.SECONDS);
 
-        Action action = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeAndFlush("Hello, World!");
-            }
-        };
+        Action action = channel -> channel.writeAndFlush("Hello, World!");
 
         anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT);
     }
@@ -136,12 +125,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 0L, 1L, TimeUnit.SECONDS);
 
-        Action reader = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeInbound("Hello, World!");
-            }
-        };
+        Action reader = channel -> channel.writeInbound("Hello, World!");
 
         anyNotIdle(idleStateHandler, reader, IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
 
@@ -149,12 +133,7 @@ public class IdleStateHandlerTest {
         idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 0L, 1L, TimeUnit.SECONDS);
 
-        Action writer = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeAndFlush("Hello, World!");
-            }
-        };
+        Action writer = channel -> channel.writeAndFlush("Hello, World!");
 
         anyNotIdle(idleStateHandler, writer, IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
     }
@@ -162,8 +141,8 @@ public class IdleStateHandlerTest {
     private static void anyNotIdle(TestableIdleStateHandler idleStateHandler,
                                    Action action, Object expected) throws Exception {
 
-        final List<Object> events = new ArrayList<Object>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        final List<Object> events = new ArrayList<>();
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
@@ -222,8 +201,8 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 true, 0L, writerIdleTime, allIdleTime, TimeUnit.SECONDS);
 
-        final List<Object> events = new ArrayList<Object>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        final List<Object> events = new ArrayList<>();
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);

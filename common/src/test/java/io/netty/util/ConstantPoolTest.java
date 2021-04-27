@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ConstantPoolTest {
 
@@ -68,7 +68,7 @@ public class ConstantPoolTest {
         TestConstant d = pool.valueOf("d_delta");
         TestConstant e = pool.valueOf("e_epsilon");
 
-        Set<TestConstant> set = new TreeSet<TestConstant>();
+        Set<TestConstant> set = new TreeSet<>();
         set.add(b);
         set.add(c);
         set.add(e);
@@ -79,12 +79,7 @@ public class ConstantPoolTest {
         assertThat(array.length, is(5));
 
         // Sort by name
-        Arrays.sort(array, new Comparator<TestConstant>() {
-            @Override
-            public int compare(TestConstant o1, TestConstant o2) {
-                return o1.name().compareTo(o2.name());
-            }
-        });
+        Arrays.sort(array, (o1, o2) -> o1.name().compareTo(o2.name()));
 
         assertThat(array[0], is(sameInstance(a)));
         assertThat(array[1], is(sameInstance(b)));

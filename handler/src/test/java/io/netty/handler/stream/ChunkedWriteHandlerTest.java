@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,12 +20,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ public class ChunkedWriteHandlerTest {
 
         FileOutputStream out = null;
         try {
-            TMP = File.createTempFile("netty-chunk-", ".tmp");
+            TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
             out = new FileOutputStream(TMP);
             out.write(BYTES);
@@ -149,7 +150,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     // Test case which shows that there is not a bug like stated here:
-    // http://stackoverflow.com/a/10426305
+    // https://stackoverflow.com/a/10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() {
         ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
@@ -195,13 +196,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         final AtomicBoolean listenerNotified = new AtomicBoolean(false);
-        final ChannelFutureListener listener = new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                listenerNotified.set(true);
-            }
-        };
+        final ChannelFutureListener listener = future -> listenerNotified.set(true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
         ch.writeAndFlush(input).addListener(listener).syncUninterruptibly();
@@ -264,7 +259,7 @@ public class ChunkedWriteHandlerTest {
         ch.writeAndFlush(input).syncUninterruptibly();
         assertTrue(ch.finish());
 
-        assertEquals(0, ch.readOutbound());
+        assertEquals(0, (int) ch.readOutbound());
         assertNull(ch.readOutbound());
     }
 
@@ -318,7 +313,7 @@ public class ChunkedWriteHandlerTest {
     // See https://github.com/netty/netty/issues/8700.
     @Test
     public void testFailureWhenLastChunkFailed() throws IOException {
-        ChannelOutboundHandlerAdapter failLast = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler failLast = new ChannelHandler() {
             private int passedWrites;
 
             @Override
@@ -454,7 +449,7 @@ public class ChunkedWriteHandlerTest {
             }
         };
 
-        ChannelOutboundHandlerAdapter noOpWrites = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 ReferenceCountUtil.release(msg);
@@ -519,12 +514,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.flush();
 
@@ -543,12 +535,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.flush();
 
@@ -568,12 +557,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.close(); // close channel to make handler discard the input on subsequent flush
         ch.flush();
@@ -582,6 +568,55 @@ public class ChunkedWriteHandlerTest {
         assertTrue(writeFuture.isSuccess());
         assertTrue(inputClosedWhenListenerInvoked.get());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEndOfInputWhenChannelIsClosedwhenWrite() {
+        ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
+
+            @Override
+            public boolean isEndOfInput() {
+                return true;
+            }
+
+            @Override
+            public void close() {
+            }
+
+            @Deprecated
+            @Override
+            public ByteBuf readChunk(ChannelHandlerContext ctx) {
+                return null;
+            }
+
+            @Override
+            public ByteBuf readChunk(ByteBufAllocator allocator) {
+                return null;
+            }
+
+            @Override
+            public long length() {
+                return -1;
+            }
+
+            @Override
+            public long progress() {
+                return 1;
+            }
+        };
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                ReferenceCountUtil.release(msg);
+                // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
+                ctx.close();
+                promise.setSuccess();
+            }
+        }, new ChunkedWriteHandler());
+
+        ch.writeAndFlush(input).syncUninterruptibly();
+        assertFalse(ch.finishAndReleaseAll());
     }
 
     @Test
@@ -594,12 +629,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.close(); // close channel to make handler discard the input on subsequent flush
         ch.flush();
@@ -640,7 +672,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     private static void checkFirstFailed(Object input) {
-        ChannelOutboundHandlerAdapter noOpWrites = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 ReferenceCountUtil.release(msg);
@@ -657,7 +689,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     private static void checkSkipFailed(Object input1, Object input2) {
-        ChannelOutboundHandlerAdapter failFirst = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler failFirst = new ChannelHandler() {
             private boolean alreadyFailed;
 
             @Override

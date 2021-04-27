@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -89,7 +89,7 @@ public class SocksCmdRequestTest {
         ByteBuf buffer = Unpooled.buffer(16);
         rq.encodeAsByteBuf(buffer);
 
-        buffer.resetReaderIndex();
+        buffer.readerIndex(0);
         assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
         assertEquals(SocksCmdType.BIND.byteValue(), buffer.readByte());
         assertEquals((byte) 0x00, buffer.readByte());
@@ -111,7 +111,7 @@ public class SocksCmdRequestTest {
         ByteBuf buffer = Unpooled.buffer(24);
         rq.encodeAsByteBuf(buffer);
 
-        buffer.resetReaderIndex();
+        buffer.readerIndex(0);
         assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
         assertEquals(SocksCmdType.BIND.byteValue(), buffer.readByte());
         assertEquals((byte) 0x00, buffer.readByte());

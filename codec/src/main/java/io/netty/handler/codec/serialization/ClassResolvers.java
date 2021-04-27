@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,8 +17,8 @@ package io.netty.handler.codec.serialization;
 
 import io.netty.util.internal.PlatformDependent;
 
-import java.lang.ref.Reference;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClassResolvers {
 
@@ -41,7 +41,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+                new WeakReferenceMap<>(new HashMap<>()));
     }
 
     /**
@@ -54,7 +54,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+                new SoftReferenceMap<>(new HashMap<>()));
     }
 
     /**
@@ -67,8 +67,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<String, Class<?>>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                new WeakReferenceMap<>(new ConcurrentHashMap<>()));
     }
 
     /**
@@ -81,8 +80,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<String, Class<?>>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                new SoftReferenceMap<>(new ConcurrentHashMap<>()));
     }
 
     static ClassLoader defaultClassLoader(ClassLoader classLoader) {

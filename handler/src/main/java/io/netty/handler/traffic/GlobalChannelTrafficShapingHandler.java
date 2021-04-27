@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,11 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelConfig;
@@ -23,7 +27,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -31,6 +34,7 @@ import java.util.AbstractCollection;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -90,7 +94,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     /**
      * All queues per channel
      */
-    final ConcurrentMap<Integer, PerChannel> channelQueues = PlatformDependent.newConcurrentHashMap();
+    final ConcurrentMap<Integer, PerChannel> channelQueues = new ConcurrentHashMap<>();
 
     /**
      * Global queues size
@@ -147,9 +151,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
         // Default
         setMaxDeviation(DEFAULT_DEVIATION, DEFAULT_SLOWDOWN, DEFAULT_ACCELERATION);
-        if (executor == null) {
-            throw new IllegalArgumentException("Executor must not be null");
-        }
+        checkNotNullWithIAE(executor, "executor");
         TrafficCounter tc = new GlobalChannelTrafficCounter(this, executor, "GlobalChannelTC", checkInterval);
         setTrafficCounter(tc);
         tc.start();
@@ -299,9 +301,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         if (maxDeviation > MAX_DEVIATION) {
             throw new IllegalArgumentException("maxDeviation must be <= " + MAX_DEVIATION);
         }
-        if (slowDownFactor < 0) {
-            throw new IllegalArgumentException("slowDownFactor must be >= 0");
-        }
+        checkPositiveOrZero(slowDownFactor, "slowDownFactor");
         if (accelerationFactor > 0) {
             throw new IllegalArgumentException("accelerationFactor must be <= 0");
         }
@@ -385,10 +385,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      *            globally for all channels before write suspended is set.
      */
     public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
-        if (maxGlobalWriteSize <= 0) {
-            throw new IllegalArgumentException("maxGlobalWriteSize must be positive");
-        }
-        this.maxGlobalWriteSize = maxGlobalWriteSize;
+        this.maxGlobalWriteSize = checkPositive(maxGlobalWriteSize, "maxGlobalWriteSize");
     }
 
     /**
@@ -461,7 +458,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             perChannel = new PerChannel();
-            perChannel.messagesQueue = new ArrayDeque<ToSend>();
+            perChannel.messagesQueue = new ArrayDeque<>();
             // Don't start it since managed through the Global one
             perChannel.channelTrafficCounter = new TrafficCounter(this, null, "ChannelTC" +
                     ctx.channel().hashCode(), checkInterval);
@@ -501,8 +498,8 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        if (toSend.toSend instanceof ByteBuf) {
-                            ((ByteBuf) toSend.toSend).release();
+                        if (toSend.toSend instanceof ByteBufConvertible) {
+                            ((ByteBufConvertible) toSend.toSend).asByteBuf().release();
                         }
                     }
                 }
@@ -734,12 +731,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         }
         final long futureNow = newToSend.relativeTimeAction;
         final PerChannel forSchedule = perChannel;
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                sendAllValid(ctx, forSchedule, futureNow);
-            }
-        }, delay, TimeUnit.MILLISECONDS);
+        ctx.executor().schedule(() -> sendAllValid(ctx, forSchedule, futureNow), delay, TimeUnit.MILLISECONDS);
     }
 
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.buffer;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
@@ -38,7 +40,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It is recommended to use
@@ -61,9 +62,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, int initSize) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+        requireNonNull(alloc, "alloc");
         if (maxNumComponents < 1) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 1)");
@@ -232,7 +231,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
-        checkNotNull(buffers, "buffers");
+        requireNonNull(buffers, "buffers");
         addComponents0(increaseWriterIndex, componentCount, buffers, 0);
         consolidateIfNeeded();
         return this;
@@ -261,10 +260,17 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffer");
+        requireNonNull(buffer, "buffer");
         addComponent0(increaseWriterIndex, cIndex, buffer);
         consolidateIfNeeded();
         return this;
+    }
+
+    private static void checkForOverflow(int capacity, int readableBytes) {
+        if (capacity + readableBytes < 0) {
+            throw new IllegalArgumentException("Can't increase by " + readableBytes + " as capacity(" + capacity + ")" +
+                    " would overflow " + Integer.MAX_VALUE);
+        }
     }
 
     /**
@@ -279,6 +285,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             // No need to consolidate - just add a component to the list.
             Component c = newComponent(ensureAccessible(buffer), 0);
             int readableBytes = c.length();
+
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            checkForOverflow(capacity(), readableBytes);
 
             addComp(cIndex, c);
             wasAdded = true;
@@ -351,7 +361,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
-        checkNotNull(buffers, "buffers");
+        requireNonNull(buffers, "buffers");
         addComponents0(false, cIndex, buffers, 0);
         consolidateIfNeeded();
         return this;
@@ -360,6 +370,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private CompositeByteBuf addComponents0(boolean increaseWriterIndex,
             final int cIndex, ByteBuf[] buffers, int arrOffset) {
         final int len = buffers.length, count = len - arrOffset;
+
+        int readableBytes = 0;
+        int capacity = capacity();
+        for (int i = 0; i < buffers.length; i++) {
+            readableBytes += buffers[i].readableBytes();
+
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            checkForOverflow(capacity, readableBytes);
+        }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
         try {
@@ -443,7 +463,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffer");
+        requireNonNull(buffer, "buffer");
         final int ridx = buffer.readerIndex();
         final int widx = buffer.writerIndex();
         if (ridx == widx) {
@@ -455,7 +475,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             consolidateIfNeeded();
             return this;
         }
-        final CompositeByteBuf from = (CompositeByteBuf) buffer;
+        final CompositeByteBuf from;
+        if (buffer instanceof WrappedCompositeByteBuf) {
+            from = (CompositeByteBuf) buffer.unwrap();
+        } else {
+            from = (CompositeByteBuf) buffer;
+        }
         from.checkIndex(ridx, widx - ridx);
         final Component[] fromComponents = from.components;
         final int compCountBefore = componentCount;
@@ -506,7 +531,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             // If buffers also implements ByteBuf (e.g. CompositeByteBuf), it has to go to addComponent(ByteBuf).
             return addComponent(increaseIndex, cIndex, (ByteBuf) buffers);
         }
-        checkNotNull(buffers, "buffers");
+        requireNonNull(buffers, "buffers");
         Iterator<ByteBuf> it = buffers.iterator();
         try {
             checkComponentIndex(cIndex);
@@ -635,7 +660,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
-    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) {
         if (end <= start) {
             return -1;
         }
@@ -661,7 +686,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
-    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) throws Exception {
+    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) {
         if (rEnd > rStart) { // rStart *and* rEnd are inclusive
             return -1;
         }
@@ -707,7 +732,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return Collections.singletonList(slice);
         }
 
-        List<ByteBuf> sliceList = new ArrayList<ByteBuf>(componentCount - componentId);
+        List<ByteBuf> sliceList = new ArrayList<>(componentCount - componentId);
         sliceList.add(slice);
 
         // Add all the slices until there is nothing more left and then return the List.
@@ -1575,6 +1600,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int low = 0, high = componentCount; low <= high;) {
             int mid = low + high >>> 1;
             Component c = components[mid];
+            if (c == null) {
+                throw new IllegalStateException("No component found for offset. " +
+                        "Composite buffer layout might be outdated, e.g. from a discardReadBytes call.");
+            }
             if (offset >= c.endOffset) {
                 low = mid + 1;
             } else if (offset < c.offset) {
@@ -1630,6 +1659,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             if (buf.nioBufferCount() == 1) {
                 return buf.nioBuffer(c.idx(index), length);
             }
+            break;
+        default:
+            break;
         }
 
         ByteBuffer[] buffers = nioBuffers(index, length);
@@ -1743,7 +1775,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             lastAccessed = null;
             clearComps();
             setIndex(0, 0);
-            adjustMarkers(readerIndex);
             return this;
         }
 
@@ -1770,7 +1801,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int offset = c.offset;
         updateComponentOffsets(0);
         setIndex(readerIndex - offset, writerIndex - offset);
-        adjustMarkers(offset);
         return this;
     }
 
@@ -1791,7 +1821,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             lastAccessed = null;
             clearComps();
             setIndex(0, 0);
-            adjustMarkers(readerIndex);
             return this;
         }
 
@@ -1827,7 +1856,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Update indexes and markers.
         updateComponentOffsets(0);
         setIndex(0, writerIndex - readerIndex);
-        adjustMarkers(readerIndex);
         return this;
     }
 
@@ -1937,30 +1965,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public CompositeByteBuf clear() {
         super.clear();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf markReaderIndex() {
-        super.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf resetReaderIndex() {
-        super.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf markWriterIndex() {
-        super.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf resetWriterIndex() {
-        super.resetWriterIndex();
         return this;
     }
 

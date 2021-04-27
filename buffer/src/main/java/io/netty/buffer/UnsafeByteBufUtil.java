@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,8 +25,8 @@ import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
+import static java.util.Objects.requireNonNull;
 
 /**
  * All operations get and set as {@link ByteOrder#BIG_ENDIAN}.
@@ -463,7 +463,7 @@ final class UnsafeByteBufUtil {
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuf dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(dst, "dst");
+        requireNonNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.capacity())) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
@@ -479,7 +479,7 @@ final class UnsafeByteBufUtil {
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, byte[] dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(dst, "dst");
+        requireNonNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.length)) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
@@ -514,7 +514,7 @@ final class UnsafeByteBufUtil {
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuf src, int srcIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(src, "src");
+        requireNonNull(src, "src");
         if (isOutOfBounds(srcIndex, length, src.capacity())) {
             throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
         }
@@ -532,6 +532,13 @@ final class UnsafeByteBufUtil {
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, byte[] src, int srcIndex, int length) {
         buf.checkIndex(index, length);
+        // we need to check not null for src as it may cause the JVM crash
+        // See https://github.com/netty/netty/issues/10791
+        requireNonNull(src, "src");
+        if (isOutOfBounds(srcIndex, length, src.length)) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
         if (length != 0) {
             PlatformDependent.copyMemory(src, srcIndex, addr, length);
         }

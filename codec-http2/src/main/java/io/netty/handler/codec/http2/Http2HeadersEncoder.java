@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -91,20 +91,10 @@ public interface Http2HeadersEncoder {
     /**
      * Always return {@code false} for {@link SensitivityDetector#isSensitive(CharSequence, CharSequence)}.
      */
-    SensitivityDetector NEVER_SENSITIVE = new SensitivityDetector() {
-        @Override
-        public boolean isSensitive(CharSequence name, CharSequence value) {
-            return false;
-        }
-    };
+    SensitivityDetector NEVER_SENSITIVE = (name, value) -> false;
 
     /**
      * Always return {@code true} for {@link SensitivityDetector#isSensitive(CharSequence, CharSequence)}.
      */
-    SensitivityDetector ALWAYS_SENSITIVE = new SensitivityDetector() {
-        @Override
-        public boolean isSensitive(CharSequence name, CharSequence value) {
-            return true;
-        }
-    };
+    SensitivityDetector ALWAYS_SENSITIVE = (name, value) -> true;
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,12 +25,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
@@ -79,19 +79,27 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}, delegate = {2}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
-        clientContexts.add(new JdkSslClientContext(CERT_FILE));
+        List<SslContext> serverContexts = new ArrayList<>();
+        List<SslContext> clientContexts = new ArrayList<>();
+        clientContexts.add(
+          SslContextBuilder.forClient()
+            .trustManager(CERT_FILE)
+            .sslProvider(SslProvider.JDK)
+            .build()
+        );
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            OpenSslServerContext context = new OpenSslServerContext(CERT_FILE, KEY_FILE);
-            serverContexts.add(context);
+            serverContexts.add(
+              SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                .sslProvider(SslProvider.OPENSSL)
+                .build()
+            );
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 for (int i = 0; i < 32; i++) {
@@ -108,8 +116,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private final SslContext clientCtx;
     private final boolean delegate;
 
-    private final AtomicReference<Throwable> clientException = new AtomicReference<Throwable>();
-    private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
+    private final AtomicReference<Throwable> clientException = new AtomicReference<>();
+    private final AtomicReference<Throwable> serverException = new AtomicReference<>();
 
     private volatile Channel clientChannel;
     private volatile Channel serverChannel;
@@ -259,6 +267,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
     }
 }

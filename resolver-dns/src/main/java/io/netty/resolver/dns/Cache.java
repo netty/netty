@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
@@ -86,7 +86,7 @@ abstract class Cache<E> {
     // See also: https://github.com/netty/netty/commit/b47fb817991b42ec8808c7d26538f3f2464e1fa6
     static final int MAX_SUPPORTED_TTL_SECS = (int) TimeUnit.DAYS.toSeconds(365 * 2);
 
-    private final ConcurrentMap<String, Entries> resolveCache = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, Entries> resolveCache = new ConcurrentHashMap<>();
 
     /**
      * Remove everything from the cache.
@@ -166,7 +166,7 @@ abstract class Cache<E> {
         volatile ScheduledFuture<?> expirationFuture;
 
         Entries(String hostname) {
-            super(Collections.<E>emptyList());
+            super(Collections.emptyList());
             this.hostname = hostname;
         }
 
@@ -189,7 +189,7 @@ abstract class Cache<E> {
                         }
 
                         // Create a new List for COW semantics
-                        List<E> newEntries = new ArrayList<E>(entries.size() + 1);
+                        List<E> newEntries = new ArrayList<>(entries.size() + 1);
                         int i = 0;
                         E replacedEntry = null;
                         do {
@@ -260,7 +260,7 @@ abstract class Cache<E> {
         }
 
         boolean clearAndCancel() {
-            List<E> entries = getAndSet(Collections.<E>emptyList());
+            List<E> entries = getAndSet(Collections.emptyList());
             if (entries.isEmpty()) {
                 return false;
             }

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -14,7 +14,8 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.UnstableApi;
@@ -27,7 +28,7 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
     protected final Http2FrameListener listener;
 
     public Http2FrameListenerDecorator(Http2FrameListener listener) {
-        this.listener = checkNotNull(listener, "listener");
+        this.listener = requireNonNull(listener, "listener");
     }
 
     @Override

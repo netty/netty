@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -49,10 +49,10 @@ public class WebSocketClientExtensionHandlerTest {
     public void testMainSuccess() {
         // initialize
         when(mainHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainHandshakerMock.handshakeExtension(any(WebSocketExtensionData.class))).thenReturn(mainExtensionMock);
         when(fallbackHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
         when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
         when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
@@ -98,10 +98,10 @@ public class WebSocketClientExtensionHandlerTest {
     public void testFallbackSuccess() {
         // initialize
         when(mainHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainHandshakerMock.handshakeExtension(any(WebSocketExtensionData.class))).thenReturn(null);
         when(fallbackHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(fallbackHandshakerMock.handshakeExtension(
                 any(WebSocketExtensionData.class))).thenReturn(fallbackExtensionMock);
         when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
@@ -150,13 +150,13 @@ public class WebSocketClientExtensionHandlerTest {
     public void testAllSuccess() {
         // initialize
         when(mainHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("main"))).thenReturn(mainExtensionMock);
         when(mainHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("fallback"))).thenReturn(null);
         when(fallbackHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(fallbackHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("main"))).thenReturn(null);
         when(fallbackHandshakerMock.handshakeExtension(
@@ -222,13 +222,13 @@ public class WebSocketClientExtensionHandlerTest {
     public void testIfMainAndFallbackUseRSV1WillFail() {
         // initialize
         when(mainHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("main"))).thenReturn(mainExtensionMock);
         when(mainHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("fallback"))).thenReturn(null);
         when(fallbackHandshakerMock.newRequestData()).
-                thenReturn(new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+                thenReturn(new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(fallbackHandshakerMock.handshakeExtension(
                 webSocketExtensionDataMatcher("main"))).thenReturn(null);
         when(fallbackHandshakerMock.handshakeExtension(

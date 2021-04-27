@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal builder implementation of {@link InboundHttp2ToHttpAdapter} and its subtypes.
@@ -38,7 +38,7 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
      *                   for the current connection
      */
     protected AbstractInboundHttp2ToHttpAdapterBuilder(Http2Connection connection) {
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = requireNonNull(connection, "connection");
     }
 
     @SuppressWarnings("unchecked")

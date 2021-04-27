@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,6 @@
 package io.netty.channel.embedded;
 
 import io.netty.channel.ChannelId;
-import io.netty.util.internal.MathUtil;
 
 public class CustomChannelId implements ChannelId {
 
@@ -31,7 +30,7 @@ public class CustomChannelId implements ChannelId {
     @Override
     public int compareTo(final ChannelId o) {
         if (o instanceof CustomChannelId) {
-            return MathUtil.compare(id, ((CustomChannelId) o).id);
+            return Integer.compare(id, ((CustomChannelId) o).id);
         }
 
         return asLongText().compareTo(o.asLongText());

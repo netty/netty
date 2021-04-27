@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,12 +23,7 @@ import io.netty.channel.ServerChannel;
  */
 public final class ChannelMatchers {
 
-    private static final ChannelMatcher ALL_MATCHER = new ChannelMatcher() {
-        @Override
-        public boolean matches(Channel channel) {
-            return true;
-        }
-    };
+    private static final ChannelMatcher ALL_MATCHER = channel -> true;
 
     private static final ChannelMatcher SERVER_CHANNEL_MATCHER = isInstanceOf(ServerChannel.class);
     private static final ChannelMatcher NON_SERVER_CHANNEL_MATCHER = isNotInstanceOf(ServerChannel.class);

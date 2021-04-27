@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * <p>A promise combiner monitors the outcome of a number of discrete futures, then notifies a final, aggregate promise
@@ -43,12 +44,7 @@ public final class PromiseCombiner {
             if (executor.inEventLoop()) {
                 operationComplete0(future);
             } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        operationComplete0(future);
-                    }
-                });
+                executor.execute(() -> operationComplete0(future));
             }
         }
 
@@ -81,7 +77,7 @@ public final class PromiseCombiner {
      * @param executor the {@link EventExecutor} to use for notifications.
      */
     public PromiseCombiner(EventExecutor executor) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
     }
 
     /**
@@ -149,7 +145,7 @@ public final class PromiseCombiner {
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
     public void finish(Promise<Void> aggregatePromise) {
-        ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
+        requireNonNull(aggregatePromise, "aggregatePromise");
         checkInEventLoop();
         if (this.aggregatePromise != null) {
             throw new IllegalStateException("Already finished");

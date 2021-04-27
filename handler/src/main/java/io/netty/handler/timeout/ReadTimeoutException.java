@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,6 @@
  */
 package io.netty.handler.timeout;
 
-import io.netty.util.internal.PlatformDependent;
-
 /**
  * A {@link TimeoutException} raised by {@link ReadTimeoutHandler} when no data
  * was read within a certain period of time.
@@ -25,12 +23,9 @@ public final class ReadTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 169287984113283421L;
 
-    public static final ReadTimeoutException INSTANCE = PlatformDependent.javaVersion() >= 7 ?
-            new ReadTimeoutException(true) : new ReadTimeoutException();
+    public static final ReadTimeoutException INSTANCE = new ReadTimeoutException();
 
-    ReadTimeoutException() { }
-
-    private ReadTimeoutException(boolean shared) {
-        super(shared);
+    private ReadTimeoutException() {
+        super(true);
     }
 }

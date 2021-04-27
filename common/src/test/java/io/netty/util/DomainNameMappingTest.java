@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-*   http://www.apache.org/licenses/LICENSE-2.0
+*   https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,17 +34,17 @@ public class DomainNameMappingTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullDomainNamePatternsAreForbiddenInDeprecatedApi() {
-        new DomainNameMapping<String>("NotFound").add(null, "Some value");
+        new DomainNameMapping<>("NotFound").add(null, "Some value");
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullValuesAreForbiddenInDeprecatedApi() {
-        new DomainNameMapping<String>("NotFound").add("Some key", null);
+        new DomainNameMapping<>("NotFound").add("Some key", null);
     }
 
     @Test
     public void testDefaultValueInDeprecatedApi() {
-        DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound");
+        DomainNameMapping<String> mapping = new DomainNameMapping<>("NotFound");
 
         assertEquals("NotFound", mapping.map("not-existing"));
 
@@ -55,7 +55,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testStrictEqualityInDeprecatedApi() {
-        DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMapping<>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads");
 
@@ -67,7 +67,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testWildcardMatchesAnyPrefixInDeprecatedApi() {
-        DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMapping<>("NotFound")
             .add("*.netty.io", "Netty");
 
         assertEquals("Netty", mapping.map("netty.io"));
@@ -80,13 +80,13 @@ public class DomainNameMappingTest {
     @Test
     public void testFirstMatchWinsInDeprecatedApi() {
         assertEquals("Netty",
-            new DomainNameMapping<String>("NotFound")
+                new DomainNameMapping<>("NotFound")
                 .add("*.netty.io", "Netty")
                 .add("downloads.netty.io", "Netty-Downloads")
                 .map("downloads.netty.io"));
 
         assertEquals("Netty-Downloads",
-            new DomainNameMapping<String>("NotFound")
+                new DomainNameMapping<>("NotFound")
                 .add("downloads.netty.io", "Netty-Downloads")
                 .add("*.netty.io", "Netty")
                 .map("downloads.netty.io"));
@@ -94,7 +94,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testToStringInDeprecatedApi() {
-        DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMapping<>("NotFound")
             .add("*.netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads");
 
@@ -112,17 +112,17 @@ public class DomainNameMappingTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullDomainNamePatternsAreForbidden() {
-        new DomainNameMappingBuilder<String>("NotFound").add(null, "Some value");
+        new DomainNameMappingBuilder<>("NotFound").add(null, "Some value");
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullValuesAreForbidden() {
-        new DomainNameMappingBuilder<String>("NotFound").add("Some key", null);
+        new DomainNameMappingBuilder<>("NotFound").add("Some key", null);
     }
 
     @Test
     public void testDefaultValue() {
-        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<>("NotFound")
             .add("*.netty.io", "Netty")
             .build();
 
@@ -131,7 +131,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testStrictEquality() {
-        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads")
             .build();
@@ -144,7 +144,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testWildcardMatchesAnyPrefix() {
-        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<>("NotFound")
             .add("*.netty.io", "Netty")
             .build();
 
@@ -158,14 +158,14 @@ public class DomainNameMappingTest {
     @Test
     public void testFirstMatchWins() {
         assertEquals("Netty",
-            new DomainNameMappingBuilder<String>("NotFound")
+                new DomainNameMappingBuilder<>("NotFound")
                 .add("*.netty.io", "Netty")
                 .add("downloads.netty.io", "Netty-Downloads")
                 .build()
                 .map("downloads.netty.io"));
 
         assertEquals("Netty-Downloads",
-            new DomainNameMappingBuilder<String>("NotFound")
+                new DomainNameMappingBuilder<>("NotFound")
                 .add("downloads.netty.io", "Netty-Downloads")
                 .add("*.netty.io", "Netty")
                 .build()
@@ -174,7 +174,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testToString() {
-        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<>("NotFound")
             .add("*.netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Download")
             .build();
@@ -186,7 +186,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testAsMap() {
-        DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMapping<>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads");
 
@@ -199,7 +199,7 @@ public class DomainNameMappingTest {
 
     @Test
     public void testAsMapWithImmutableDomainNameMapping() {
-        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<String>("NotFound")
+        DomainNameMapping<String> mapping = new DomainNameMappingBuilder<>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads")
             .build();

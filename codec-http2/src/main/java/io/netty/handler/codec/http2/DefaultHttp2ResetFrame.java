@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link Http2ResetFrame} implementation.
@@ -34,7 +34,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
      * @param error the non-{@code null} reason for reset
      */
     public DefaultHttp2ResetFrame(Http2Error error) {
-        errorCode = checkNotNull(error, "error").code();
+        errorCode = requireNonNull(error, "error").code();
     }
 
     /**

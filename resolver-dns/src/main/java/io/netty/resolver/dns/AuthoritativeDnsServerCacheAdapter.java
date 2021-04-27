@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,27 +17,25 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link AuthoritativeDnsServerCache} implementation which delegates all operations to a wrapped {@link DnsCache}.
  * This implementation is only present to preserve a upgrade story.
  */
-@UnstableApi
 final class AuthoritativeDnsServerCacheAdapter implements AuthoritativeDnsServerCache {
 
     private static final DnsRecord[] EMPTY = new DnsRecord[0];
     private final DnsCache cache;
 
     AuthoritativeDnsServerCacheAdapter(DnsCache cache) {
-        this.cache = checkNotNull(cache, "cache");
+        this.cache = requireNonNull(cache, "cache");
     }
 
     @Override
@@ -50,7 +48,7 @@ final class AuthoritativeDnsServerCacheAdapter implements AuthoritativeDnsServer
             return null;
         }
 
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(entries.size());
+        List<InetSocketAddress> addresses = new ArrayList<>(entries.size());
 
         int i = 0;
         do {

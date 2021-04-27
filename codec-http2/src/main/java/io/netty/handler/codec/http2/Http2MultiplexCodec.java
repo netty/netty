@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -124,6 +124,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             throw new IllegalStateException("EventExecutor must be EventLoop of Channel");
         }
         this.ctx = ctx;
+        super.handlerAdded0(ctx);
     }
 
     @Override
@@ -176,7 +177,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 } else {
                     streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
                 }
-                ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
+
+                ChannelFuture future = streamChannel.register();
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {
@@ -214,17 +216,14 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
         try {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    final int streamId = stream.id();
-                    AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel)
-                            ((DefaultHttp2FrameStream) stream).attachment;
-                    if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
-                        channel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
-                    }
-                    return true;
+            forEachActiveStream(stream -> {
+                final int streamId = stream.id();
+                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
+                if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
+                    channel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
                 }
+                return true;
             });
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);

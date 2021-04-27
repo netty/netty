@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,8 +22,6 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
-
-import java.util.List;
 
 /**
  * Per-message implementation of deflate decompressor.
@@ -82,11 +80,11 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                          List<Object> out) throws Exception {
-        super.decode(ctx, msg, out);
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+        boolean isFinal = msg.isFinalFragment();
+        super.decode(ctx, msg);
 
-        if (msg.isFinalFragment()) {
+        if (isFinal) {
             compressing = false;
         } else if (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame) {
             compressing = true;

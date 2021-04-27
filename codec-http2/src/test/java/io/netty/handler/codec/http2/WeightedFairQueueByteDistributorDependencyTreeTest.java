@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -79,13 +79,10 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         final Http2Stream streamB = connection.local().createStream(5, false);
         final Http2Stream streamC = connection.local().createStream(7, false);
         setPriority(streamB.id(), streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        connection.forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
-                streamA.close();
-                setPriority(streamB.id(), streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-                return true;
-            }
+        connection.forEachActiveStream(stream -> {
+            streamA.close();
+            setPriority(streamB.id(), streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+            return true;
         });
     }
 
@@ -175,7 +172,7 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
 
     @Test
     public void fireFoxQoSStreamsRemainAfterDataStreamsAreClosed() throws Http2Exception {
-        // http://bitsup.blogspot.com/2015/01/http2-dependency-priorities-in-firefox.html
+        // https://bitsup.blogspot.com/2015/01/http2-dependency-priorities-in-firefox.html
         setup(5);
 
         setPriority(leadersId, connection.connectionStream().id(), leadersWeight, false);

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,8 +15,8 @@
 package io.netty.example.http2.helloworld.client;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -98,7 +98,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private void configureSsl(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        // Specify Host in SSLContext New Handler to add TLS SNI Extension
+        pipeline.addLast(sslCtx.newHandler(ch.alloc(), Http2Client.HOST, Http2Client.PORT));
         // We must wait for the handshake to finish and the protocol to be negotiated before configuring
         // the HTTP/2 components of the pipeline.
         pipeline.addLast(new ApplicationProtocolNegotiationHandler("") {
@@ -133,7 +134,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
-    private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
+    private final class UpgradeRequestHandler implements ChannelHandler {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -162,7 +163,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Class that logs any User Events triggered on this channel.
      */
-    private static class UserEventLogger extends ChannelInboundHandlerAdapter {
+    private static class UserEventLogger implements ChannelHandler {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             System.out.println("User Event Triggered: " + evt);

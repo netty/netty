@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -170,11 +170,8 @@ public class OcspServerExample {
         }
 
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII));
-            try {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
                 return parseCertificates(reader);
-            } finally {
-                reader.close();
             }
         } finally {
             in.close();
@@ -186,7 +183,7 @@ public class OcspServerExample {
         JcaX509CertificateConverter converter = new JcaX509CertificateConverter()
                 .setProvider(new BouncyCastleProvider());
 
-        List<X509Certificate> dst = new ArrayList<X509Certificate>();
+        List<X509Certificate> dst = new ArrayList<>();
 
         PEMParser parser = new PEMParser(reader);
         try {

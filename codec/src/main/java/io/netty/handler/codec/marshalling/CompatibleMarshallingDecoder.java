@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,7 +24,6 @@ import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
 
 import java.io.ObjectStreamConstants;
-import java.util.List;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
@@ -55,35 +54,32 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
             return;
         }
 
-        Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
-        ByteInput input = new ChannelBufferByteInput(buffer);
-        if (maxObjectSize != Integer.MAX_VALUE) {
-            input = new LimitingByteInput(input, maxObjectSize);
-        }
-        try {
+        // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
+        // readable. This helps to be sure that we do not leak resource
+        try (Unmarshaller unmarshaller = provider.getUnmarshaller(ctx)) {
+            ByteInput input = new ChannelBufferByteInput(buffer);
+            if (maxObjectSize != Integer.MAX_VALUE) {
+                input = new LimitingByteInput(input, maxObjectSize);
+            }
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
-            out.add(obj);
+            ctx.fireChannelRead(obj);
         } catch (LimitingByteInput.TooBigObjectException ignored) {
             discardingTooLongFrame = true;
             throw new TooLongFrameException();
-        } finally {
-            // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
-            // readable. This helps to be sure that we do not leak resource
-            unmarshaller.close();
         }
     }
 
     @Override
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return;
@@ -95,7 +91,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
             }
         }
 
-        decode(ctx, buffer, out);
+        decode(ctx, buffer);
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,7 +37,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class XmlFrameDecoderTest {
 
@@ -164,7 +164,7 @@ public class XmlFrameDecoderTest {
         } catch (Exception e) {
             cause = e;
         }
-        List<Object> actual = new ArrayList<Object>();
+        List<Object> actual = new ArrayList<>();
         for (;;) {
             ByteBuf buf = ch.readInbound();
             if (buf == null) {
@@ -179,7 +179,7 @@ public class XmlFrameDecoderTest {
         }
 
         try {
-            List<Object> expectedList = new ArrayList<Object>();
+            List<Object> expectedList = new ArrayList<>();
             Collections.addAll(expectedList, expected);
             assertThat(actual, is(expectedList));
         } finally {

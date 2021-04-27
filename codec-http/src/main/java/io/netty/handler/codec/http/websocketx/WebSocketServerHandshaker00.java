@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -35,7 +37,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 /**
  * <p>
  * Performs server side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
+ * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
  * 00</a>
  * </p>
  * <p>
@@ -83,9 +85,9 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00">HyBi version 0</a> and lower. This standard
-     * is really a rehash of <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76" >hixie-76</a> and
-     * <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75" >hixie-75</a>.
+     * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00">HyBi version 0</a> and lower. This standard
+     * is really a rehash of <a href="https://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76" >hixie-76</a> and
+     * <a href="https://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75" >hixie-75</a>.
      * </p>
      *
      * <p>
@@ -126,7 +128,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Serve the WebSocket handshake request.
         if (!req.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)
                 || !HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
-            throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
+            throw new WebSocketServerHandshakeException("not a WebSocket handshake request: missing upgrade", req);
         }
 
         // Hixie 75 does not contain these headers while Hixie 76 does
@@ -136,7 +138,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         String origin = req.headers().get(HttpHeaderNames.ORIGIN);
         //throw before allocating FullHttpResponse
         if (origin == null && !isHixie76) {
-            throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
+            throw new WebSocketServerHandshakeException("Missing origin header, got only " + req.headers().names(),
+                                                        req);
         }
 
         // Create the WebSocket handshake response.
@@ -147,8 +150,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
 
         // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
@@ -164,7 +167,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                         logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                     }
                 } else {
-                    res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                    res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 }
             }
 
@@ -188,7 +191,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
             String protocol = req.headers().get(HttpHeaderNames.WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.headers().add(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+                res.headers().set(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
         return res;
@@ -198,13 +201,31 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Echo back the closing frame
      *
      * @param channel
-     *            Channel
+     *            the {@link Channel} to use.
      * @param frame
-     *            Web Socket frame that was received
+     *            Web Socket frame that was received.
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
      */
     @Override
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         return channel.writeAndFlush(frame, promise);
+    }
+
+    /**
+     * Echo back the closing frame
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param frame
+     *            Closing Frame that was received.
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     */
+    @Override
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame,
+                               ChannelPromise promise) {
+        return ctx.writeAndFlush(frame, promise);
     }
 
     @Override

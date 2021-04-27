@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,6 +36,7 @@ import java.net.SocketException;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
@@ -52,9 +53,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
      */
     public DefaultDatagramChannelConfig(DatagramChannel channel, DatagramSocket javaSocket) {
         super(channel, new FixedRecvByteBufAllocator(2048));
-        if (javaSocket == null) {
-            throw new NullPointerException("javaSocket");
-        }
+        requireNonNull(javaSocket, "javaSocket");
         this.javaSocket = javaSocket;
     }
 
@@ -426,6 +425,12 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     @Override
     public DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    @Override
+    public DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
         return this;
     }
 }

@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-*   http://www.apache.org/licenses/LICENSE-2.0
+*   https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.util;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,8 +27,15 @@ import static org.junit.Assert.*;
 
 public class RecyclerTest {
 
-    private static Recycler<HandledObject> newRecycler(int max) {
-        return new Recycler<HandledObject>(max) {
+    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
+        return newRecycler(maxCapacityPerThread, 2, 8, 2, 8);
+    }
+
+    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
+                                                       int ratio, int maxDelayedQueuesPerThread,
+                                                       int delayedQueueRatio) {
+        return new Recycler<HandledObject>(maxCapacityPerThread, maxSharedCapacityFactor, ratio,
+                maxDelayedQueuesPerThread, delayedQueueRatio) {
             @Override
             protected HandledObject newObject(
                     Recycler.Handle<HandledObject> handle) {
@@ -40,14 +48,11 @@ public class RecyclerTest {
     public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced() throws Exception {
         final Recycler<HandledObject> recycler = newRecycler(1024);
         final AtomicBoolean collected = new AtomicBoolean();
-        final AtomicReference<HandledObject> reference = new AtomicReference<HandledObject>();
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                HandledObject object = recycler.get();
-                // Store a reference to the HandledObject to ensure it is not collected when the run method finish.
-                reference.set(object);
-            }
+        final AtomicReference<HandledObject> reference = new AtomicReference<>();
+        Thread thread = new Thread(() -> {
+            HandledObject object = recycler.get();
+            // Store a reference to the HandledObject to ensure it is not collected when the run method finish.
+            reference.set(object);
         }) {
             @Override
             protected void finalize() throws Throwable {
@@ -85,15 +90,52 @@ public class RecyclerTest {
     public void testMultipleRecycleAtDifferentThread() throws InterruptedException {
         Recycler<HandledObject> recycler = newRecycler(1024);
         final HandledObject object = recycler.get();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<>();
+        final Thread thread1 = new Thread(object::recycle);
+        thread1.start();
+        thread1.join();
+
+        final Thread thread2 = new Thread(() -> {
+            try {
+                object.recycle();
+            } catch (IllegalStateException e) {
+                exceptionStore.set(e);
+            }
+        });
+        thread2.start();
+        thread2.join();
+        HandledObject a = recycler.get();
+        HandledObject b = recycler.get();
+        assertNotSame(a, b);
+        IllegalStateException exception = exceptionStore.get();
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    @Test
+    public void testMultipleRecycleAtDifferentThreadRacing() throws InterruptedException {
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
+
+        final CountDownLatch countDownLatch = new CountDownLatch(2);
         final Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {
-                object.recycle();
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
+                }
             }
         });
         thread1.start();
-        thread1.join();
 
         final Thread thread2 = new Thread(new Runnable() {
             @Override
@@ -101,15 +143,77 @@ public class RecyclerTest {
                 try {
                     object.recycle();
                 } catch (IllegalStateException e) {
-                    exceptionStore.set(e);
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
                 }
             }
         });
         thread2.start();
-        thread2.join();
-        IllegalStateException exception = exceptionStore.get();
-        if (exception != null) {
-            throw exception;
+
+        try {
+            countDownLatch.await();
+            HandledObject a = recycler.get();
+            HandledObject b = recycler.get();
+            assertNotSame(a, b);
+            IllegalStateException exception = exceptionStore.get();
+            if (exception != null) {
+                assertEquals("recycled already", exception.getMessage());
+                assertEquals(0, exception.getSuppressed().length);
+            }
+        } finally {
+            thread1.join(1000);
+            thread2.join(1000);
+        }
+    }
+
+    @Test
+    public void testMultipleRecycleRacing() throws InterruptedException {
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        final HandledObject object = recycler.get();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
+
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
+        final Thread thread1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                    Exception x = exceptionStore.getAndSet(e);
+                    if (x != null) {
+                        e.addSuppressed(x);
+                    }
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }
+        });
+        thread1.start();
+
+        try {
+            object.recycle();
+        } catch (IllegalStateException e) {
+            Exception x = exceptionStore.getAndSet(e);
+            if (x != null) {
+                e.addSuppressed(x);
+            }
+        }
+
+        try {
+            countDownLatch.await();
+            HandledObject a = recycler.get();
+            HandledObject b = recycler.get();
+            assertNotSame(a, b);
+            IllegalStateException exception = exceptionStore.get();
+            if (exception != null) {
+                throw exception;
+            }
+        } finally {
+            thread1.join(1000);
         }
     }
 
@@ -131,6 +235,40 @@ public class RecyclerTest {
         HandledObject object2 = recycler.get();
         assertNotSame(object, object2);
         object2.recycle();
+    }
+
+    @Test
+    public void testRecycleDisableDrop() {
+        Recycler<HandledObject> recycler = newRecycler(1024, 2, 0, 2, 0);
+        HandledObject object = recycler.get();
+        object.recycle();
+        HandledObject object2 = recycler.get();
+        assertSame(object, object2);
+        object2.recycle();
+        HandledObject object3 = recycler.get();
+        assertSame(object, object3);
+        object3.recycle();
+    }
+
+    @Test
+    public void testRecycleDisableDelayedQueueDrop() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(1024, 2, 1, 2, 0);
+        final HandledObject o = recycler.get();
+        final HandledObject o2 = recycler.get();
+        final HandledObject o3 = recycler.get();
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                o.recycle();
+                o2.recycle();
+                o3.recycle();
+            }
+        };
+        thread.start();
+        thread.join();
+        // In reverse order
+        assertSame(o3, recycler.get());
+        assertSame(o, recycler.get());
     }
 
     /**
@@ -165,13 +303,7 @@ public class RecyclerTest {
 
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2, 10) {
-            @Override
-            protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
-                return new HandledObject(handle);
-            }
-        };
-
+        final Recycler<HandledObject> recycler = newRecycler(256, 10, 2, 10, 2);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
 

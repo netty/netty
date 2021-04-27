@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,9 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.ObjectUtil;
 
-import java.util.List;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.readBytes;
 
@@ -61,11 +60,11 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
      *            Frames decoder configuration.
      */
     public WebSocket00FrameDecoder(WebSocketDecoderConfig decoderConfig) {
-        this.maxFrameSize = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig").maxFramePayloadLength();
+        this.maxFrameSize = Objects.requireNonNull(decoderConfig, "decoderConfig").maxFramePayloadLength();
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());
@@ -84,7 +83,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
         }
 
         if (frame != null) {
-            out.add(frame);
+            ctx.fireChannelRead(frame);
         }
     }
 

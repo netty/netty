@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
@@ -255,7 +255,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByte(ByteProcessor visitor) throws Exception {
+    public int forEachByte(ByteProcessor visitor) {
         return forEachByte0(0, length(), visitor);
     }
 
@@ -266,7 +266,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByte(int index, int length, ByteProcessor visitor) throws Exception {
+    public int forEachByte(int index, int length, ByteProcessor visitor) {
         if (isOutOfBounds(index, length, length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
                     + ") <= " + "length(" + length() + ')');
@@ -274,7 +274,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return forEachByte0(index, length, visitor);
     }
 
-    private int forEachByte0(int index, int length, ByteProcessor visitor) throws Exception {
+    private int forEachByte0(int index, int length, ByteProcessor visitor) {
         final int len = offset + index + length;
         for (int i = offset + index; i < len; ++i) {
             if (!visitor.process(value[i])) {
@@ -290,7 +290,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the beginning of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByteDesc(ByteProcessor visitor) throws Exception {
+    public int forEachByteDesc(ByteProcessor visitor) {
         return forEachByteDesc0(0, length(), visitor);
     }
 
@@ -301,7 +301,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code -1} if the processor iterated to or beyond the beginning of the specified area.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public int forEachByteDesc(int index, int length, ByteProcessor visitor) throws Exception {
+    public int forEachByteDesc(int index, int length, ByteProcessor visitor) {
         if (isOutOfBounds(index, length, length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
                     + ") <= " + "length(" + length() + ')');
@@ -309,7 +309,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return forEachByteDesc0(index, length, visitor);
     }
 
-    private int forEachByteDesc0(int index, int length, ByteProcessor visitor) throws Exception {
+    private int forEachByteDesc0(int index, int length, ByteProcessor visitor) {
         final int end = offset + index;
         for (int i = offset + index + length - 1; i >= end; --i) {
             if (!visitor.process(value[i])) {
@@ -413,7 +413,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                             + length + ") <= srcLen(" + length() + ')');
         }
 
-        System.arraycopy(value, srcIdx + offset, checkNotNull(dst, "dst"), dstIdx, length);
+        System.arraycopy(value, srcIdx + offset, requireNonNull(dst, "dst"), dstIdx, length);
     }
 
     @Override
@@ -589,9 +589,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @param length the number of characters to copy.
      */
     public void copy(int srcIdx, char[] dst, int dstIdx, int length) {
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
+        requireNonNull(dst, "dst");
 
         if (isOutOfBounds(srcIdx, length, length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
@@ -800,9 +798,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @throws NullPointerException if {@code string} is {@code null}.
      */
     public boolean regionMatches(int thisStart, CharSequence string, int start, int length) {
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
+        requireNonNull(string, "string");
 
         if (start < 0 || string.length() - start < length) {
             return false;
@@ -843,9 +839,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return regionMatches(thisStart, string, start, length);
         }
 
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
+        requireNonNull(string, "string");
 
         final int thisLen = length();
         if (thisStart < 0 || length > thisLen - thisStart) {

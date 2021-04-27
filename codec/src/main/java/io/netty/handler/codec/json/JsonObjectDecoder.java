@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.json;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,8 +26,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.channel.ChannelPipeline;
-
-import java.util.List;
 
 /**
  * Splits a byte stream of JSON objects and arrays into individual objects/arrays and passes them up the
@@ -81,15 +81,12 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
      *
      */
     public JsonObjectDecoder(int maxObjectLength, boolean streamArrayElements) {
-        if (maxObjectLength < 1) {
-            throw new IllegalArgumentException("maxObjectLength must be a positive int");
-        }
-        this.maxObjectLength = maxObjectLength;
+        this.maxObjectLength = checkPositive(maxObjectLength, "maxObjectLength");
         this.streamArrayElements = streamArrayElements;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (state == ST_CORRUPTED) {
             in.skipBytes(in.readableBytes());
             return;
@@ -121,7 +118,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
                 if (openBraces == 0) {
                     ByteBuf json = extractObject(ctx, in, in.readerIndex(), idx + 1 - in.readerIndex());
                     if (json != null) {
-                        out.add(json);
+                        ctx.fireChannelRead(json);
                     }
 
                     // The JSON object/array was extracted => discard the bytes from
@@ -149,7 +146,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
 
                     ByteBuf json = extractObject(ctx, in, in.readerIndex(), idxNoSpaces + 1 - in.readerIndex());
                     if (json != null) {
-                        out.add(json);
+                        ctx.fireChannelRead(json);
                     }
 
                     in.readerIndex(idx + 1);

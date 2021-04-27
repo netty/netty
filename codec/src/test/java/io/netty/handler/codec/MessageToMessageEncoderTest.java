@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
@@ -55,7 +54,7 @@ public class MessageToMessageEncoderTest {
 
         final Exception firstWriteException = new Exception();
 
-        ChannelHandler writeThrower = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler writeThrower = new ChannelHandler() {
             private boolean firstWritten;
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

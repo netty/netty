@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,7 +26,7 @@ import io.netty.util.internal.StringUtil;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 // FIXME(trustin): Find a better name and move it to the 'resolver' module.
 final class InflightNameResolver<T> implements NameResolver<T> {
@@ -40,20 +40,20 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                          ConcurrentMap<String, Promise<T>> resolvesInProgress,
                          ConcurrentMap<String, Promise<List<T>>> resolveAllsInProgress) {
 
-        this.executor = checkNotNull(executor, "executor");
-        this.delegate = checkNotNull(delegate, "delegate");
-        this.resolvesInProgress = checkNotNull(resolvesInProgress, "resolvesInProgress");
-        this.resolveAllsInProgress = checkNotNull(resolveAllsInProgress, "resolveAllsInProgress");
+        this.executor = requireNonNull(executor, "executor");
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.resolvesInProgress = requireNonNull(resolvesInProgress, "resolvesInProgress");
+        this.resolveAllsInProgress = requireNonNull(resolveAllsInProgress, "resolveAllsInProgress");
     }
 
     @Override
     public Future<T> resolve(String inetHost) {
-        return resolve(inetHost, executor.<T>newPromise());
+        return resolve(inetHost, executor.newPromise());
     }
 
     @Override
     public Future<List<T>> resolveAll(String inetHost) {
-        return resolveAll(inetHost, executor.<List<T>>newPromise());
+        return resolveAll(inetHost, executor.newPromise());
     }
 
     @Override
@@ -81,12 +81,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
             if (earlyPromise.isDone()) {
                 transferResult(earlyPromise, promise);
             } else {
-                earlyPromise.addListener(new FutureListener<U>() {
-                    @Override
-                    public void operationComplete(Future<U> f) throws Exception {
-                        transferResult(f, promise);
-                    }
-                });
+                earlyPromise.addListener((FutureListener<U>) f -> transferResult(f, promise));
             }
         } else {
             try {
@@ -103,12 +98,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 if (promise.isDone()) {
                     resolveMap.remove(inetHost);
                 } else {
-                    promise.addListener(new FutureListener<U>() {
-                        @Override
-                        public void operationComplete(Future<U> f) throws Exception {
-                            resolveMap.remove(inetHost);
-                        }
-                    });
+                    promise.addListener((FutureListener<U>) f -> resolveMap.remove(inetHost));
                 }
             }
         }

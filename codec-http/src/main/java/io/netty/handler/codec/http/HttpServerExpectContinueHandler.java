@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,8 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -44,7 +44,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerExpectContinueHandler extends ChannelInboundHandlerAdapter {
+public class HttpServerExpectContinueHandler implements ChannelHandler {
 
     private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
             HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
@@ -92,6 +92,6 @@ public class HttpServerExpectContinueHandler extends ChannelInboundHandlerAdapte
                 req.headers().remove(HttpHeaderNames.EXPECT);
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 }

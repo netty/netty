@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link HttpResponse} implementation.
@@ -60,7 +60,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                boolean singleFieldHeaders) {
         super(version, validateHeaders, singleFieldHeaders);
-        this.status = checkNotNull(status, "status");
+        this.status = requireNonNull(status, "status");
     }
 
     /**
@@ -72,7 +72,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, HttpHeaders headers) {
         super(version, headers);
-        this.status = checkNotNull(status, "status");
+        this.status = requireNonNull(status, "status");
     }
 
     @Override
@@ -88,9 +88,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
-        if (status == null) {
-            throw new NullPointerException("status");
-        }
+        requireNonNull(status, "status");
         this.status = status;
         return this;
     }

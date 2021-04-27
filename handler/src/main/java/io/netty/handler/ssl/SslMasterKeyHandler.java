@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,8 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -35,7 +35,7 @@ import java.lang.reflect.Field;
  * This can be very useful, for instance the {@link WiresharkSslMasterKeyHandler} implementation will
  * log the secret & identifier in a format that is consumable by Wireshark -- allowing easy decryption of pcap/tcpdumps.
  */
-public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
+public abstract class SslMasterKeyHandler implements ChannelHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslMasterKeyHandler.class);
 
@@ -62,7 +62,7 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
-        Throwable cause = null;
+        Throwable cause;
         Class<?> clazz = null;
         Field field = null;
         try {
@@ -71,7 +71,11 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
             cause = ReflectionUtil.trySetAccessible(field, true);
         } catch (Throwable e) {
             cause = e;
-            logger.debug("sun.security.ssl.SSLSessionImpl is unavailable.", e);
+            if (logger.isTraceEnabled()) {
+                logger.debug("sun.security.ssl.SSLSessionImpl is unavailable.", e);
+            } else {
+                logger.debug("sun.security.ssl.SSLSessionImpl is unavailable: {}", e.getMessage());
+            }
         }
         UNAVAILABILITY_CAUSE = cause;
         SSL_SESSIONIMPL_CLASS = clazz;
@@ -120,32 +124,39 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         //only try to log the session info if the ssl handshake has successfully completed.
-        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-            boolean shouldHandle = SystemPropertyUtil.getBoolean(SYSTEM_PROP_KEY, false);
+        if (evt == SslHandshakeCompletionEvent.SUCCESS && masterKeyHandlerEnabled()) {
+            final SslHandler handler = ctx.pipeline().get(SslHandler.class);
+            final SSLEngine engine = handler.engine();
+            final SSLSession sslSession = engine.getSession();
 
-            if (shouldHandle) {
-                final SslHandler handler = ctx.pipeline().get(SslHandler.class);
-                final SSLEngine engine = handler.engine();
-                final SSLSession sslSession = engine.getSession();
-
-                //the OpenJDK does not expose a way to get the master secret, so try to use reflection to get it.
-                if (isSunSslEngineAvailable() && sslSession.getClass().equals(SSL_SESSIONIMPL_CLASS)) {
-                    final SecretKey secretKey;
-                    try {
-                        secretKey = (SecretKey) SSL_SESSIONIMPL_MASTER_SECRET_FIELD.get(sslSession);
-                    } catch (IllegalAccessException e) {
-                        throw new IllegalArgumentException("Failed to access the field 'masterSecret' " +
-                                "via reflection.", e);
-                    }
-                    accept(secretKey, sslSession);
-                } else if (OpenSsl.isAvailable() && engine instanceof ReferenceCountedOpenSslEngine) {
-                    SecretKeySpec secretKey = ((ReferenceCountedOpenSslEngine) engine).masterKey();
-                    accept(secretKey, sslSession);
+            //the OpenJDK does not expose a way to get the master secret, so try to use reflection to get it.
+            if (isSunSslEngineAvailable() && sslSession.getClass().equals(SSL_SESSIONIMPL_CLASS)) {
+                final SecretKey secretKey;
+                try {
+                    secretKey = (SecretKey) SSL_SESSIONIMPL_MASTER_SECRET_FIELD.get(sslSession);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalArgumentException("Failed to access the field 'masterSecret' " +
+                            "via reflection.", e);
                 }
+                accept(secretKey, sslSession);
+            } else if (OpenSsl.isAvailable() && engine instanceof ReferenceCountedOpenSslEngine) {
+                SecretKeySpec secretKey = ((ReferenceCountedOpenSslEngine) engine).masterKey();
+                accept(secretKey, sslSession);
             }
         }
 
         ctx.fireUserEventTriggered(evt);
+    }
+
+    /**
+     * Checks if the handler is set up to actually handle/accept the event.
+     * By default the {@link #SYSTEM_PROP_KEY} property is checked, but any implementations of this class are
+     * free to override if they have different mechanisms of checking.
+     *
+     * @return true if it should handle, false otherwise.
+     */
+    protected boolean masterKeyHandlerEnabled() {
+        return SystemPropertyUtil.getBoolean(SYSTEM_PROP_KEY, false);
     }
 
     /**
@@ -170,8 +181,6 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
 
         private static final InternalLogger wireshark_logger =
                 InternalLoggerFactory.getInstance("io.netty.wireshark");
-
-        private static final char[] hexCode = "0123456789ABCDEF".toCharArray();
 
         @Override
         protected void accept(SecretKey masterKey, SSLSession session) {

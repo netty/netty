@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,11 +32,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class HttpResponseDecoderTest {
@@ -49,8 +49,8 @@ public class HttpResponseDecoderTest {
     public void testMaxHeaderSize1() {
         final int maxHeaderSize = 8192;
 
-        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize, 8192));
-        final char[] bytes = new char[maxHeaderSize / 2 - 2];
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize));
+        final char[] bytes = new char[maxHeaderSize / 2 - 4];
         Arrays.fill(bytes, 'a');
 
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n", CharsetUtil.US_ASCII));
@@ -81,7 +81,7 @@ public class HttpResponseDecoderTest {
     public void testMaxHeaderSize2() {
         final int maxHeaderSize = 8192;
 
-        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize, 8192));
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize));
         final char[] bytes = new char[maxHeaderSize / 2 - 2];
         Arrays.fill(bytes, 'a');
 
@@ -128,55 +128,6 @@ public class HttpResponseDecoderTest {
 
             byte[] decodedData = new byte[data.length];
             content.content().readBytes(decodedData);
-            assertArrayEquals(data, decodedData);
-            content.release();
-
-            assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-        }
-
-        // Write the last chunk.
-        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
-
-        // Ensure the last chunk was decoded.
-        LastHttpContent content = ch.readInbound();
-        assertFalse(content.content().isReadable());
-        content.release();
-
-        ch.finish();
-        assertNull(ch.readInbound());
-    }
-
-    @Test
-    public void testResponseChunkedExceedMaxChunkSize() {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, 8192, 32));
-        ch.writeInbound(
-                Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII));
-
-        HttpResponse res = ch.readInbound();
-        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.OK));
-
-        byte[] data = new byte[64];
-        for (int i = 0; i < data.length; i++) {
-            data[i] = (byte) i;
-        }
-
-        for (int i = 0; i < 10; i++) {
-            assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(data.length) + "\r\n",
-                    CharsetUtil.US_ASCII)));
-            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
-
-            byte[] decodedData = new byte[data.length];
-            HttpContent content = ch.readInbound();
-            assertEquals(32, content.content().readableBytes());
-            content.content().readBytes(decodedData, 0, 32);
-            content.release();
-
-            content = ch.readInbound();
-            assertEquals(32, content.content().readableBytes());
-
-            content.content().readBytes(decodedData, 32, 32);
-
             assertArrayEquals(data, decodedData);
             content.release();
 
@@ -725,6 +676,26 @@ public class HttpResponseDecoderTest {
         assertFalse(response.decoderResult().isFailure());
         assertEquals(HttpHeaderValues.CHUNKED.toString(), response.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
         assertEquals("netty.io", response.headers().get(HttpHeaderNames.HOST));
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testHttpMessageDecoderResult() {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 11\r\n" +
+                "Connection: close\r\n\r\n" +
+                "Lorem ipsum";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertThat(response.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) response.decoderResult();
+        assertThat(decoderResult.initialLineLength(), is(15));
+        assertThat(decoderResult.headerSize(), is(35));
+        assertThat(decoderResult.totalSize(), is(50));
+        HttpContent c = channel.readInbound();
+        c.release();
         assertFalse(channel.finish());
     }
 }

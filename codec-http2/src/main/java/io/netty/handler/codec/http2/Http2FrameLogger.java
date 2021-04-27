@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.internal.UnstableApi;
@@ -25,13 +24,13 @@ import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Logs HTTP2 frames for debugging purposes.
  */
 @UnstableApi
-public class Http2FrameLogger extends ChannelHandlerAdapter {
+public class Http2FrameLogger {
 
     public enum Direction {
         INBOUND,
@@ -43,20 +42,24 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     private final InternalLogLevel level;
 
     public Http2FrameLogger(LogLevel level) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
     }
 
     public Http2FrameLogger(LogLevel level, String name) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(name));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(requireNonNull(name, "name")));
     }
 
     public Http2FrameLogger(LogLevel level, Class<?> clazz) {
-        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(clazz));
+        this(checkAndConvertLevel(level), InternalLoggerFactory.getInstance(requireNonNull(clazz, "clazz")));
     }
 
     private Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        this.level = checkNotNull(level, "level");
-        this.logger = checkNotNull(logger, "logger");
+        this.level = level;
+        this.logger = logger;
+    }
+
+    private static InternalLogLevel checkAndConvertLevel(LogLevel level) {
+        return requireNonNull(level, "level").toInternalLevel();
     }
 
     public boolean isEnabled() {

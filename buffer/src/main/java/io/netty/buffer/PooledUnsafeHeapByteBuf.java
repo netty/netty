@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,18 +17,12 @@ package io.netty.buffer;
 
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
 
     private static final ObjectPool<PooledUnsafeHeapByteBuf> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<PooledUnsafeHeapByteBuf>() {
-        @Override
-        public PooledUnsafeHeapByteBuf newObject(Handle<PooledUnsafeHeapByteBuf> handle) {
-            return new PooledUnsafeHeapByteBuf(handle, 0);
-        }
-    });
+            handle -> new PooledUnsafeHeapByteBuf(handle, 0));
 
     static PooledUnsafeHeapByteBuf newUnsafeInstance(int maxCapacity) {
         PooledUnsafeHeapByteBuf buf = RECYCLER.get();
@@ -132,26 +126,18 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
 
     @Override
     public ByteBuf setZero(int index, int length) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            checkIndex(index, length);
-            // Only do on java7+ as the needed Unsafe call was only added there.
-            UnsafeByteBufUtil.setZero(memory, idx(index), length);
-            return this;
-        }
-        return super.setZero(index, length);
+        checkIndex(index, length);
+        UnsafeByteBufUtil.setZero(memory, idx(index), length);
+        return this;
     }
 
     @Override
     public ByteBuf writeZero(int length) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            // Only do on java7+ as the needed Unsafe call was only added there.
-            ensureWritable(length);
-            int wIndex = writerIndex;
-            UnsafeByteBufUtil.setZero(memory, idx(wIndex), length);
-            writerIndex = wIndex + length;
-            return this;
-        }
-        return super.writeZero(length);
+        ensureWritable(length);
+        int wIndex = writerIndex;
+        UnsafeByteBufUtil.setZero(memory, idx(wIndex), length);
+        writerIndex = wIndex + length;
+        return this;
     }
 
     @Override

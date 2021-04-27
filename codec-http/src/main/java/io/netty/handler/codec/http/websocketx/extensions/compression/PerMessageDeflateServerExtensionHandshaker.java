@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,11 +26,10 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-
-import static io.netty.util.internal.ObjectUtil.*;
+import java.util.Objects;
 
 /**
- * <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
+ * <a href="https://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
  * handshake implementation.
  */
 public final class PerMessageDeflateServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
@@ -118,7 +117,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         this.preferredClientWindowSize = preferredClientWindowSize;
         this.allowServerNoContext = allowServerNoContext;
         this.preferredClientNoContext = preferredClientNoContext;
-        this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.extensionFilterProvider = Objects.requireNonNull(extensionFilterProvider, "extensionFilterProvider");
     }
 
     @Override
@@ -212,8 +211,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         }
 
         @Override
-        public WebSocketExtensionData newReponseData() {
-            HashMap<String, String> parameters = new HashMap<String, String>(4);
+        public WebSocketExtensionData newResponseData() {
+            HashMap<String, String> parameters = new HashMap<>(4);
             if (serverNoContext) {
                 parameters.put(SERVER_NO_CONTEXT, null);
             }

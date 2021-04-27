@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,8 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -24,7 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Exception thrown when an HTTP/2 error was encountered.
@@ -40,8 +39,8 @@ public class Http2Exception extends Exception {
     }
 
     public Http2Exception(Http2Error error, ShutdownHint shutdownHint) {
-        this.error = checkNotNull(error, "error");
-        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
+        this.error = requireNonNull(error, "error");
+        this.shutdownHint = requireNonNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Exception(Http2Error error, String message) {
@@ -50,8 +49,8 @@ public class Http2Exception extends Exception {
 
     public Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
         super(message);
-        this.error = checkNotNull(error, "error");
-        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
+        this.error = requireNonNull(error, "error");
+        this.shutdownHint = requireNonNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Exception(Http2Error error, String message, Throwable cause) {
@@ -60,24 +59,21 @@ public class Http2Exception extends Exception {
 
     public Http2Exception(Http2Error error, String message, Throwable cause, ShutdownHint shutdownHint) {
         super(message, cause);
-        this.error = checkNotNull(error, "error");
-        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
+        this.error = requireNonNull(error, "error");
+        this.shutdownHint = requireNonNull(shutdownHint, "shutdownHint");
     }
 
-    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            return new Http2Exception(error, message, shutdownHint, true);
-        }
-        return new Http2Exception(error, message, shutdownHint);
+    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint,
+                                    Class<?> clazz, String method) {
+        return ThrowableUtil.unknownStackTrace(
+                new StacklessHttp2Exception(error, message, shutdownHint), clazz, method);
     }
 
-    @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
-            " but is guarded by version checks")
     private Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
         super(message, null, false, true);
         assert shared;
-        this.error = checkNotNull(error, "error");
-        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
+        this.error = requireNonNull(error, "error");
+        this.shutdownHint = requireNonNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Error error() {
@@ -293,7 +289,7 @@ public class Http2Exception extends Exception {
 
         public CompositeStreamException(Http2Error error, int initialCapacity) {
             super(error, ShutdownHint.NO_SHUTDOWN);
-            exceptions = new ArrayList<StreamException>(initialCapacity);
+            exceptions = new ArrayList<>(initialCapacity);
         }
 
         public void add(StreamException e) {
@@ -303,6 +299,22 @@ public class Http2Exception extends Exception {
         @Override
         public Iterator<StreamException> iterator() {
             return exceptions.iterator();
+        }
+    }
+
+    private static final class StacklessHttp2Exception extends Http2Exception {
+
+        private static final long serialVersionUID = 1077888485687219443L;
+
+        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
+            super(error, message, shutdownHint, true);
+        }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 }

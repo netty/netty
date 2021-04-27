@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,13 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +32,7 @@ import static java.util.Collections.singletonMap;
 /**
  * Converts a Java cipher suite string to an OpenSSL cipher suite string and vice versa.
  *
- * @see <a href="http://en.wikipedia.org/wiki/Cipher_suite">Wikipedia page about cipher suite</a>
+ * @see <a href="https://en.wikipedia.org/wiki/Cipher_suite">Wikipedia page about cipher suite</a>
  */
 final class CipherSuiteConverter {
 
@@ -89,26 +89,26 @@ final class CipherSuiteConverter {
      * Java-to-OpenSSL cipher suite conversion map
      * Note that the Java cipher suite has the protocol prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, String> j2o = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, String> j2o = new ConcurrentHashMap<>();
 
     /**
      * OpenSSL-to-Java cipher suite conversion map.
      * Note that one OpenSSL cipher suite can be converted to more than one Java cipher suites because
      * a Java cipher suite has the protocol name prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, Map<String, String>> o2j = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, Map<String, String>> o2j = new ConcurrentHashMap<>();
 
     private static final Map<String, String> j2oTls13;
     private static final Map<String, Map<String, String>> o2jTls13;
 
     static {
-        Map<String, String> j2oTls13Map = new HashMap<String, String>();
+        Map<String, String> j2oTls13Map = new HashMap<>();
         j2oTls13Map.put("TLS_AES_128_GCM_SHA256", "AEAD-AES128-GCM-SHA256");
         j2oTls13Map.put("TLS_AES_256_GCM_SHA384", "AEAD-AES256-GCM-SHA384");
         j2oTls13Map.put("TLS_CHACHA20_POLY1305_SHA256", "AEAD-CHACHA20-POLY1305-SHA256");
         j2oTls13 = Collections.unmodifiableMap(j2oTls13Map);
 
-        Map<String, Map<String, String>> o2jTls13Map = new HashMap<String, Map<String, String>>();
+        Map<String, Map<String, String>> o2jTls13Map = new HashMap<>();
         o2jTls13Map.put("TLS_AES_128_GCM_SHA256", singletonMap("TLS", "TLS_AES_128_GCM_SHA256"));
         o2jTls13Map.put("TLS_AES_256_GCM_SHA384", singletonMap("TLS", "TLS_AES_256_GCM_SHA384"));
         o2jTls13Map.put("TLS_CHACHA20_POLY1305_SHA256", singletonMap("TLS", "TLS_CHACHA20_POLY1305_SHA256"));
@@ -174,7 +174,7 @@ final class CipherSuiteConverter {
 
         // Cache the reverse mapping after stripping the protocol prefix (TLS_ or SSL_)
         final String javaCipherSuiteSuffix = javaCipherSuite.substring(4);
-        Map<String, String> p2j = new HashMap<String, String>(4);
+        Map<String, String> p2j = new HashMap<>(4);
         p2j.put("", javaCipherSuiteSuffix);
         p2j.put("SSL", "SSL_" + javaCipherSuiteSuffix);
         p2j.put("TLS", "TLS_" + javaCipherSuiteSuffix);
@@ -317,7 +317,7 @@ final class CipherSuiteConverter {
         final String javaCipherSuiteTls = "TLS_" + javaCipherSuiteSuffix;
 
         // Cache the mapping.
-        final Map<String, String> p2j = new HashMap<String, String>(4);
+        final Map<String, String> p2j = new HashMap<>(4);
         p2j.put("", javaCipherSuiteSuffix);
         p2j.put("SSL", javaCipherSuiteSsl);
         p2j.put("TLS", javaCipherSuiteTls);

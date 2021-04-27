@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
 /**
  * Compresses a {@link ByteBuf} using the Bzip2 algorithm.
  *
- * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
+ * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
 public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     /**
@@ -184,12 +184,9 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         if (executor.inEventLoop()) {
             return finishEncode(ctx, promise);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
-                    f.addListener(new ChannelPromiseNotifier(promise));
-                }
+            executor.execute(() -> {
+                ChannelFuture f = finishEncode(ctx(), promise);
+                f.addListener(new ChannelPromiseNotifier(promise));
             });
             return promise;
         }
@@ -198,20 +195,12 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
+        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
+            ctx.executor().schedule(() -> {
+                ctx.close(promise);
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }
     }

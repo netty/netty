@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -53,9 +53,9 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Simple implementation of {@link Http2Connection}.
@@ -78,7 +78,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
      * We could be more aggressive but the ArrayList resize will double the size if we are too small.
      */
-    final List<Listener> listeners = new ArrayList<Listener>(4);
+    final List<Listener> listeners = new ArrayList<>(4);
     final ActiveStreams activeStreams;
     Promise<Void> closePromise;
 
@@ -102,8 +102,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         // in response to any locally enforced limits being exceeded [2].
         // [1] https://tools.ietf.org/html/rfc7540#section-5.1.2
         // [2] https://tools.ietf.org/html/rfc7540#section-8.2.2
-        localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server, server ? MAX_VALUE : maxReservedStreams);
-        remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server, maxReservedStreams);
+        localEndpoint = new DefaultEndpoint<>(server, server ? MAX_VALUE : maxReservedStreams);
+        remoteEndpoint = new DefaultEndpoint<>(!server, maxReservedStreams);
 
         // Add the connection stream to the map.
         streamMap.put(connectionStream.id(), connectionStream);
@@ -118,7 +118,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public Future<Void> close(final Promise<Void> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         // Since we allow this method to be called multiple times, we must make sure that all the promises are notified
         // when all streams are removed and the close operation completes.
         if (closePromise != null) {
@@ -127,7 +127,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             } else if ((promise instanceof ChannelPromise) && ((ChannelPromise) closePromise).isVoid()) {
                 closePromise = promise;
             } else {
-                closePromise.addListener(new UnaryPromiseNotifier<Void>(promise));
+                closePromise.addListener(new UnaryPromiseNotifier<>(promise));
             }
         } else {
             closePromise = promise;
@@ -277,14 +277,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     private void closeStreamsGreaterThanLastKnownStreamId(final int lastKnownStream,
                                                           final DefaultEndpoint<?> endpoint) throws Http2Exception {
-        forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
-                    stream.close();
-                }
-                return true;
+        forEachActiveStream(stream -> {
+            if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
+                stream.close();
             }
+            return true;
         });
     }
 
@@ -373,7 +370,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
     final DefaultPropertyKey verifyKey(PropertyKey key) {
-        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+        return requireNonNull((DefaultPropertyKey) key, "key").verifyConnection(this);
     }
 
     /**
@@ -856,7 +853,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void flowController(F flowController) {
-            this.flowController = checkNotNull(flowController, "flowController");
+            this.flowController = requireNonNull(flowController, "flowController");
         }
 
         @Override
@@ -889,7 +886,10 @@ public class DefaultHttp2Connection implements Http2Connection {
                         streamId, nextStreamIdToCreate);
             }
             if (nextStreamIdToCreate <= 0) {
-                throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
+                // We exhausted the stream id space that we  can use. Let's signal this back but also signal that
+                // we still may want to process active streams.
+                throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
+                        Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
             }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
             if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {
@@ -926,8 +926,8 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class ActiveStreams {
         private final List<Listener> listeners;
-        private final Queue<Event> pendingEvents = new ArrayDeque<Event>(4);
-        private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
+        private final Queue<Event> pendingEvents = new ArrayDeque<>(4);
+        private final Set<Http2Stream> streams = new LinkedHashSet<>();
         private int pendingIterations;
 
         ActiveStreams(List<Listener> listeners) {
@@ -942,12 +942,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications()) {
                 addToActiveStreams(stream);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        addToActiveStreams(stream);
-                    }
-                });
+                pendingEvents.add(() -> addToActiveStreams(stream));
             }
         }
 
@@ -955,12 +950,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications() || itr != null) {
                 removeFromActiveStreams(stream, itr);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        removeFromActiveStreams(stream, itr);
-                    }
-                });
+                pendingEvents.add(() -> removeFromActiveStreams(stream, itr));
             }
         }
 
@@ -1055,7 +1045,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
          * We could be more aggressive but the ArrayList resize will double the size if we are too small.
          */
-        final List<DefaultPropertyKey> keys = new ArrayList<DefaultPropertyKey>(4);
+        final List<DefaultPropertyKey> keys = new ArrayList<>(4);
 
         /**
          * Registers a new property key.

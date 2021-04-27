@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -99,7 +99,7 @@ public class FastThreadLocal<V> {
         Object v = threadLocalMap.indexedVariable(variablesToRemoveIndex);
         Set<FastThreadLocal<?>> variablesToRemove;
         if (v == InternalThreadLocalMap.UNSET || v == null) {
-            variablesToRemove = Collections.newSetFromMap(new IdentityHashMap<FastThreadLocal<?>, Boolean>());
+            variablesToRemove = Collections.newSetFromMap(new IdentityHashMap<>());
             threadLocalMap.setIndexedVariable(variablesToRemoveIndex, variablesToRemove);
         } else {
             variablesToRemove = (Set<FastThreadLocal<?>>) v;
@@ -208,7 +208,7 @@ public class FastThreadLocal<V> {
     }
 
     /**
-     * @return see {@link InternalThreadLocalMap#setIndexedVariable(int, Object)}.
+     * @see InternalThreadLocalMap#setIndexedVariable(int, Object).
      */
     private void setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
         if (threadLocalMap.setIndexedVariable(index, value)) {
@@ -231,15 +231,16 @@ public class FastThreadLocal<V> {
         return threadLocalMap != null && threadLocalMap.isIndexedVariableSet(index);
     }
     /**
-     * Sets the value to uninitialized; a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      */
     public final void remove() {
         remove(InternalThreadLocalMap.getIfSet());
     }
 
     /**
-     * Sets the value to uninitialized for the specified thread local map;
-     * a proceeding call to get() will trigger a call to initialValue().
+     * Sets the value to uninitialized for the specified thread local map.
+     * After this, any subsequent call to get() will trigger a new call to initialValue().
      * The specified thread local map must be for the current thread.
      */
     @SuppressWarnings("unchecked")

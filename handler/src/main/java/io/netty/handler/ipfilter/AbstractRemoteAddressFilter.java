@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.net.SocketAddress;
 
@@ -35,48 +35,56 @@ import java.net.SocketAddress;
  * flexibility to respond to rejected (denied) connections. If you do not want to send a response, just have it return
  * null.  Take a look at {@link RuleBasedIpFilter} for details.
  */
-public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> extends ChannelInboundHandlerAdapter {
+public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> implements ChannelHandler {
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        handleNewChannel(ctx);
-        ctx.fireChannelRegistered();
+        handleNewChannel(ctx, true);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (!handleNewChannel(ctx)) {
+        if (!handleNewChannel(ctx, false)) {
             throw new IllegalStateException("cannot determine to accept or reject a channel: " + ctx.channel());
-        } else {
-            ctx.fireChannelActive();
         }
     }
 
-    private boolean handleNewChannel(ChannelHandlerContext ctx) throws Exception {
+    private boolean handleNewChannel(ChannelHandlerContext ctx, boolean register) throws Exception {
         @SuppressWarnings("unchecked")
         T remoteAddress = (T) ctx.channel().remoteAddress();
+        boolean remove = false;
+        try {
+            // If the remote address is not available yet, defer the decision.
+            if (remoteAddress == null) {
+                return false;
+            }
 
-        // If the remote address is not available yet, defer the decision.
-        if (remoteAddress == null) {
-            return false;
-        }
-
-        // No need to keep this handler in the pipeline anymore because the decision is going to be made now.
-        // Also, this will prevent the subsequent events from being handled by this handler.
-        ctx.pipeline().remove(this);
-
-        if (accept(ctx, remoteAddress)) {
-            channelAccepted(ctx, remoteAddress);
-        } else {
-            ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
-            if (rejectedFuture != null) {
-                rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+            if (accept(ctx, remoteAddress)) {
+                channelAccepted(ctx, remoteAddress);
+                remove = true;
             } else {
-                ctx.close();
+                ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
+                if (rejectedFuture != null && !rejectedFuture.isDone()) {
+                    rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+                } else {
+                    ctx.close();
+                }
+            }
+            return true;
+        } finally {
+            if (!ctx.isRemoved()) {
+                if (register) {
+                    ctx.fireChannelRegistered();
+                } else {
+                    ctx.fireChannelActive();
+                }
+                if (remove) {
+                    // No need to keep this handler in the pipeline anymore because the decision is going to be made
+                    // now. Also, this will prevent the subsequent events from being handled by this handler.
+                    ctx.pipeline().remove(this);
+                }
             }
         }
-
-        return true;
     }
 
     /**

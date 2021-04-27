@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -63,7 +63,7 @@ public class DatagramPacketEncoderTest {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = senderIsNull ? null : SocketUtils.socketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
-                new DefaultAddressedEnvelope<String, InetSocketAddress>("netty", recipient, sender)));
+                new DefaultAddressedEnvelope<>("netty", recipient, sender)));
         DatagramPacket packet = channel.readOutbound();
         try {
             assertEquals("netty", packet.content().toString(CharsetUtil.UTF_8));
@@ -79,7 +79,7 @@ public class DatagramPacketEncoderTest {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         DefaultAddressedEnvelope<Long, InetSocketAddress> envelope =
-                new DefaultAddressedEnvelope<Long, InetSocketAddress>(1L, recipient, sender);
+                new DefaultAddressedEnvelope<>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));
         DefaultAddressedEnvelope<Long, InetSocketAddress> output = channel.readOutbound();
         try {
@@ -111,7 +111,7 @@ public class DatagramPacketEncoderTest {
                 new TestMessageToMessageEncoder(sharable);
 
         DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> encoder =
-                new DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>>(wrapped);
+                new DatagramPacketEncoder<>(wrapped);
         assertEquals(wrapped.isSharable(), encoder.isSharable());
     }
 

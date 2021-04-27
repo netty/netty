@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,6 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
@@ -23,16 +30,10 @@ import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
@@ -75,7 +76,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     public DefaultHttp2LocalFlowController(Http2Connection connection,
                                            float windowUpdateRatio,
                                            boolean autoRefillConnectionWindow) {
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = requireNonNull(connection, "connection");
         windowUpdateRatio(windowUpdateRatio);
 
         // Add a flow state for the connection.
@@ -109,8 +110,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                     FlowState state = state(stream);
                     int unconsumedBytes = state.unconsumedBytes();
                     if (ctx != null && unconsumedBytes > 0) {
-                        connectionState().consumeBytes(unconsumedBytes);
-                        state.consumeBytes(unconsumedBytes);
+                        if (consumeAllBytes(state, unconsumedBytes)) {
+                            // As the user has no real control on when this callback is used we should better
+                            // call flush() if we produced any window update to ensure we not stale.
+                            ctx.flush();
+                        }
                     }
                 } catch (Http2Exception e) {
                     PlatformDependent.throwException(e);
@@ -126,13 +130,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public DefaultHttp2LocalFlowController frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.frameWriter = requireNonNull(frameWriter, "frameWriter");
         return this;
     }
 
     @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) {
-        this.ctx = checkNotNull(ctx, "ctx");
+        this.ctx = requireNonNull(ctx, "ctx");
     }
 
     @Override
@@ -186,11 +190,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
 
-            boolean windowUpdateSent = connectionState().consumeBytes(numBytes);
-            windowUpdateSent |= state(stream).consumeBytes(numBytes);
-            return windowUpdateSent;
+            return consumeAllBytes(state(stream), numBytes);
         }
         return false;
+    }
+
+    private boolean consumeAllBytes(FlowState state, int numBytes) throws Http2Exception {
+        return connectionState().consumeBytes(numBytes) | state.consumeBytes(numBytes);
     }
 
     @Override
@@ -448,7 +454,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
-            if (endOfStream || initialStreamWindowSize <= 0) {
+            if (endOfStream || initialStreamWindowSize <= 0 ||
+                    // If the stream is already closed there is no need to try to write a window update for it.
+                    isClosed(stream)) {
                 return false;
             }
 

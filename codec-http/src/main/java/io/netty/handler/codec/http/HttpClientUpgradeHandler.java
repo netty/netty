@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,18 +15,17 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
 
 import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.util.ReferenceCountUtil.release;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Client-side handler for handling an HTTP upgrade handshake to another protocol. When the first
@@ -35,7 +34,7 @@ import static io.netty.util.ReferenceCountUtil.release;
  * simply removes itself from the pipeline. If the upgrade is successful, upgrades the pipeline to
  * the new protocol.
  */
-public class HttpClientUpgradeHandler extends HttpObjectAggregator implements ChannelOutboundHandler {
+public class HttpClientUpgradeHandler extends HttpObjectAggregator {
 
     /**
      * User events that are fired to notify about upgrade status.
@@ -115,12 +114,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     public HttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec,
                                     int maxContentLength) {
         super(maxContentLength);
-        if (sourceCodec == null) {
-            throw new NullPointerException("sourceCodec");
-        }
-        if (upgradeCodec == null) {
-            throw new NullPointerException("upgradeCodec");
-        }
+        requireNonNull(sourceCodec, "sourceCodec");
+        requireNonNull(upgradeCodec, "upgradeCodec");
         this.sourceCodec = sourceCodec;
         this.upgradeCodec = upgradeCodec;
     }
@@ -144,6 +139,11 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.close(promise);
+    }
+
+    @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.register(promise);
     }
 
     @Override
@@ -187,7 +187,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out)
+    protected void decode(final ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
         FullHttpResponse response = null;
         try {
@@ -203,29 +203,38 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
                     // NOTE: not releasing the response since we're letting it propagate to the
                     // next handler.
                     ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_REJECTED);
-                    removeThisHandler(ctx);
                     ctx.fireChannelRead(msg);
+                    removeThisHandler(ctx);
                     return;
                 }
             }
 
             if (msg instanceof FullHttpResponse) {
                 response = (FullHttpResponse) msg;
+
                 // Need to retain since the base class will release after returning from this method.
-                response.retain();
-                out.add(response);
+                tryUpgrade(ctx, response.retain());
             } else {
                 // Call the base class to handle the aggregation of the full request.
-                super.decode(ctx, msg, out);
-                if (out.isEmpty()) {
-                    // The full request hasn't been created yet, still awaiting more data.
-                    return;
-                }
-
-                assert out.size() == 1;
-                response = (FullHttpResponse) out.get(0);
+                super.decode(new DelegatingChannelHandlerContext(ctx) {
+                    @Override
+                    public ChannelHandlerContext fireChannelRead(Object msg) {
+                        FullHttpResponse response = (FullHttpResponse) msg;
+                        tryUpgrade(ctx, response);
+                        return this;
+                    }
+                }, msg);
             }
 
+        } catch (Throwable t) {
+            release(response);
+            ctx.fireExceptionCaught(t);
+            removeThisHandler(ctx);
+        }
+    }
+
+    private void tryUpgrade(ChannelHandlerContext ctx, FullHttpResponse response) {
+        try {
             CharSequence upgradeHeader = response.headers().get(HttpHeaderNames.UPGRADE);
             if (upgradeHeader != null && !AsciiString.contentEqualsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
                 throw new IllegalStateException(
@@ -246,7 +255,6 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             // We switched protocols, so we're done with the upgrade response.
             // Release it and clear it from the output.
             response.release();
-            out.clear();
             removeThisHandler(ctx);
         } catch (Throwable t) {
             release(response);
@@ -267,7 +275,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         request.headers().set(HttpHeaderNames.UPGRADE, upgradeCodec.protocol());
 
         // Add all protocol-specific headers to the request.
-        Set<CharSequence> connectionParts = new LinkedHashSet<CharSequence>(2);
+        Set<CharSequence> connectionParts = new LinkedHashSet<>(2);
         connectionParts.addAll(upgradeCodec.setUpgradeHeaders(ctx, request));
 
         // Set the CONNECTION header from the set of all protocol-specific headers that were added.

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -691,12 +691,9 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void flowControlledWriteThrowsAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocationOnMock) {
-                stream.closeLocalSide();
-                return null;
-            }
+        doAnswer((Answer<Void>) invocationOnMock -> {
+            stream.closeLocalSide();
+            return null;
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         int windowBefore = window(STREAM_A);
@@ -724,11 +721,8 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
         final RuntimeException fakeException = new RuntimeException("error failed");
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocationOnMock) {
-                throw fakeException;
-            }
+        doAnswer((Answer<Void>) invocationOnMock -> {
+            throw fakeException;
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         int windowBefore = window(STREAM_A);
@@ -757,26 +751,15 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
                 mock(Http2RemoteFlowController.FlowControlled.class);
         Http2Stream streamA = stream(STREAM_A);
         final AtomicInteger size = new AtomicInteger(150);
-        doAnswer(new Answer<Integer>() {
-            @Override
-            public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
-                return size.get();
-            }
-        }).when(flowControlled).size();
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
-                size.addAndGet(-50);
-                return null;
-            }
+        doAnswer((Answer<Integer>) invocationOnMock -> size.get()).when(flowControlled).size();
+        doAnswer((Answer<Void>) invocationOnMock -> {
+            size.addAndGet(-50);
+            return null;
         }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
 
         final Http2Stream stream = stream(STREAM_A);
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocationOnMock) {
-                throw new RuntimeException("writeComplete failed");
-            }
+        doAnswer((Answer<Void>) invocationOnMock -> {
+            throw new RuntimeException("writeComplete failed");
         }).when(flowControlled).writeComplete();
 
         int windowBefore = window(STREAM_A);
@@ -807,12 +790,9 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         when(flowControlled.size()).thenReturn(100);
         doThrow(new RuntimeException("write failed"))
             .when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocationOnMock) {
-                stream.close();
-                return null;
-            }
+        doAnswer((Answer<Void>) invocationOnMock -> {
+            stream.close();
+            return null;
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         controller.addFlowControlled(stream, flowControlled);
@@ -960,13 +940,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                // Write most of the bytes and then fail
-                when(flowControlled.size()).thenReturn(10);
-                throw new RuntimeException("Write failed");
-            }
+        doAnswer((Answer<Void>) in -> {
+            // Write most of the bytes and then fail
+            when(flowControlled.size()).thenReturn(10);
+            throw new RuntimeException("Write failed");
         }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         return flowControlled;
     }

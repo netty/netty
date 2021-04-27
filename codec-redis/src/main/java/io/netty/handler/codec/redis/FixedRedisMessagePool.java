@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -83,8 +83,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
      * Creates a {@link FixedRedisMessagePool} instance.
      */
     private FixedRedisMessagePool() {
-        byteBufToSimpleStrings = new HashMap<ByteBuf, SimpleStringRedisMessage>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
-        stringToSimpleStrings = new HashMap<String, SimpleStringRedisMessage>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
+        byteBufToSimpleStrings = new HashMap<>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
+        stringToSimpleStrings = new HashMap<>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
         for (String message : DEFAULT_SIMPLE_STRINGS) {
             ByteBuf key = Unpooled.unmodifiableBuffer(
                     Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(message.getBytes(CharsetUtil.UTF_8))));
@@ -93,8 +93,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
             stringToSimpleStrings.put(message, cached);
         }
 
-        byteBufToErrors = new HashMap<ByteBuf, ErrorRedisMessage>(DEFAULT_ERRORS.length, 1.0f);
-        stringToErrors = new HashMap<String, ErrorRedisMessage>(DEFAULT_ERRORS.length, 1.0f);
+        byteBufToErrors = new HashMap<>(DEFAULT_ERRORS.length, 1.0f);
+        stringToErrors = new HashMap<>(DEFAULT_ERRORS.length, 1.0f);
         for (String message : DEFAULT_ERRORS) {
             ByteBuf key = Unpooled.unmodifiableBuffer(
                     Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(message.getBytes(CharsetUtil.UTF_8))));
@@ -103,7 +103,7 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
             stringToErrors.put(message, cached);
         }
 
-        byteBufToIntegers = new HashMap<ByteBuf, IntegerRedisMessage>(SIZE_CACHED_INTEGER_NUMBER, 1.0f);
+        byteBufToIntegers = new HashMap<>(SIZE_CACHED_INTEGER_NUMBER, 1.0f);
         longToIntegers = new LongObjectHashMap<IntegerRedisMessage>(SIZE_CACHED_INTEGER_NUMBER, 1.0f);
         longToByteBufs = new LongObjectHashMap<byte[]>(SIZE_CACHED_INTEGER_NUMBER, 1.0f);
         for (long value = MIN_CACHED_INTEGER_NUMBER; value < MAX_CACHED_INTEGER_NUMBER; value++) {

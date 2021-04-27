@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.buffer;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.CharsetUtil;
 
@@ -39,15 +41,14 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     private final ByteBuf buffer;
     private final int startIndex;
-    private final DataOutputStream utf8out = new DataOutputStream(this);
+    private DataOutputStream utf8out; // lazily-instantiated
+    private boolean closed;
 
     /**
      * Creates a new stream which writes data to the specified {@code buffer}.
      */
     public ByteBufOutputStream(ByteBuf buffer) {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        requireNonNull(buffer, "buffer");
         this.buffer = buffer;
         startIndex = buffer.writerIndex();
     }
@@ -133,7 +134,15 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeUTF(String s) throws IOException {
-        utf8out.writeUTF(s);
+        DataOutputStream out = utf8out;
+        if (out == null) {
+            if (closed) {
+                throw new IOException("The stream is closed");
+            }
+            // Suppress a warning since the stream is closed in the close() method
+            utf8out = out = new DataOutputStream(this); // lgtm[java/output-resource-leak]
+        }
+        out.writeUTF(s);
     }
 
     /**
@@ -141,5 +150,21 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
      */
     public ByteBuf buffer() {
         return buffer;
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (closed) {
+            return;
+        }
+        closed = true;
+
+        try {
+            super.close();
+        } finally {
+            if (utf8out != null) {
+                utf8out.close();
+            }
+        }
     }
 }

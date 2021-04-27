@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,10 @@
 package io.netty.resolver.dns;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Used to generate new instances of {@link DnsQueryLifecycleObserver}.
  */
-@UnstableApi
 public interface DnsQueryLifecycleObserverFactory {
     /**
      * Create a new instance of a {@link DnsQueryLifecycleObserver}. This will be called at the start of a new query.

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,8 @@ import io.netty.util.concurrent.DefaultProgressivePromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+
+import java.util.Objects;
 
 /**
  * The default {@link ChannelProgressivePromise} implementation.  It is recommended to use
@@ -39,7 +41,7 @@ public class DefaultChannelProgressivePromise
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelProgressivePromise(Channel channel) {
-        this.channel = channel;
+        this(channel, channel.eventLoop());
     }
 
     /**
@@ -50,17 +52,7 @@ public class DefaultChannelProgressivePromise
      */
     public DefaultChannelProgressivePromise(Channel channel, EventExecutor executor) {
         super(executor);
-        this.channel = channel;
-    }
-
-    @Override
-    protected EventExecutor executor() {
-        EventExecutor e = super.executor();
-        if (e == null) {
-            return channel().eventLoop();
-        } else {
-            return e;
-        }
+        this.channel = Objects.requireNonNull(channel, "channel");
     }
 
     @Override

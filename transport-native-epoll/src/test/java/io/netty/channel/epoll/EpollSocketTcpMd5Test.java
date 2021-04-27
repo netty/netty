@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,15 +16,17 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.CharsetUtil;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.concurrent.CompletionException;
 
 import io.netty.util.NetUtil;
 import org.junit.After;
@@ -41,7 +43,7 @@ public class EpollSocketTcpMd5Test {
 
     @BeforeClass
     public static void beforeClass() {
-        GROUP = new EpollEventLoopGroup(1);
+        GROUP = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
     }
 
     @AfterClass
@@ -51,10 +53,10 @@ public class EpollSocketTcpMd5Test {
 
     @Before
     public void setup() {
-        Bootstrap bootstrap = new Bootstrap();
+        ServerBootstrap bootstrap = new ServerBootstrap();
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .childHandler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
     }
 
@@ -66,50 +68,55 @@ public class EpollSocketTcpMd5Test {
     @Test
     public void testServerSocketChannelOption() throws Exception {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
+                Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
     }
 
     @Test
     public void testServerOption() throws Exception {
-        Bootstrap bootstrap = new Bootstrap();
+        ServerBootstrap bootstrap = new ServerBootstrap();
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .childHandler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
+                Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
 
         ch.close().syncUninterruptibly();
     }
 
     @Test(expected = ConnectTimeoutException.class)
-    public void testKeyMismatch() throws Exception {
+    public void testKeyMismatch() throws Throwable {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+                Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
-        EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
-                .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
-                .option(EpollChannelOption.TCP_MD5SIG,
-                        Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                .connect(server.localAddress()).syncUninterruptibly().channel();
-        client.close().syncUninterruptibly();
+        try {
+            EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
+                    .channel(EpollSocketChannel.class)
+                    .handler(new ChannelHandler() {
+                    })
+                    .option(EpollChannelOption.TCP_MD5SIG,
+                            Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
+                    .connect(server.localAddress()).syncUninterruptibly().channel();
+            client.close().syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test
     public void testKeyMatch() throws Exception {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+                Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
-                        Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
+                        Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
                 .connect(server.localAddress()).syncUninterruptibly().channel();
         client.close().syncUninterruptibly();
     }

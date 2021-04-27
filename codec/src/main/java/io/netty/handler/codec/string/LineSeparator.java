@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.string;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -46,7 +47,7 @@ public final class LineSeparator {
      * Create {@link LineSeparator} with the specified {@code lineSeparator} string.
      */
     public LineSeparator(String lineSeparator) {
-        this.value = ObjectUtil.checkNotNull(lineSeparator, "lineSeparator");
+        this.value = requireNonNull(lineSeparator, "lineSeparator");
     }
 
     /**
@@ -74,7 +75,7 @@ public final class LineSeparator {
     }
 
     /**
-     * Return a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> of the line separator in UTF-8 encoding.
+     * Return a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a> of the line separator in UTF-8 encoding.
      */
     @Override
     public String toString() {

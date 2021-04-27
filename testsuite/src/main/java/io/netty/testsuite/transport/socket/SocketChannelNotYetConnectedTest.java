@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
@@ -32,21 +32,21 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
-        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
+        SocketChannel ch = (SocketChannel) cb.handler(new ChannelHandler() { })
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
             try {
                 ch.shutdownInput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
 
             try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
         } finally {
             ch.close().syncUninterruptibly();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,18 +18,18 @@ package io.netty.handler.ssl;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.junit.Test;
 
@@ -40,30 +40,36 @@ public abstract class RenegotiateTest {
 
     @Test(timeout = 30000)
     public void testRenegotiateServer() throws Throwable {
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        EventLoopGroup group = new LocalEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(serverSslProvider()).build();
+                    .sslProvider(serverSslProvider())
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
+
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
-                    .childHandler(new ChannelInitializer<Channel>() {
+                    .childHandler(new ChannelInitializer<>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(context.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        protected void initChannel(Channel ch) {
+                            SslHandler handler = context.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new ChannelHandler() {
+
                                 private boolean renegotiate;
 
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     ReferenceCountUtil.release(msg);
                                 }
 
                                 @Override
                                 public void userEventTriggered(
-                                        final ChannelHandlerContext ctx, Object evt) throws Exception {
+                                        final ChannelHandlerContext ctx, Object evt) {
                                     if (!renegotiate && evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
 
@@ -71,15 +77,12 @@ public abstract class RenegotiateTest {
                                             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
 
                                             renegotiate = true;
-                                            handler.renegotiate().addListener(new FutureListener<Channel>() {
-                                                @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
-                                                    if (!future.isSuccess()) {
-                                                        error.compareAndSet(null, future.cause());
-                                                        latch.countDown();
-                                                        ctx.close();
-                                                    }
+                                            handler.renegotiate().addListener((FutureListener<Channel>) future -> {
+                                                if (!future.isSuccess()) {
+                                                    error.compareAndSet(null, future.cause());
+                                                    ctx.close();
                                                 }
+                                                latch.countDown();
                                             });
                                         } else {
                                             error.compareAndSet(null, event.cause());
@@ -95,18 +98,23 @@ public abstract class RenegotiateTest {
             Channel channel = sb.bind(new LocalAddress("test")).syncUninterruptibly().channel();
 
             final SslContext clientContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE).sslProvider(SslProvider.JDK).build();
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .sslProvider(SslProvider.JDK)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .build();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
-                    .handler(new ChannelInitializer<Channel>() {
+                    .handler(new ChannelInitializer<>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        protected void initChannel(Channel ch) {
+                            SslHandler handler = clientContext.newHandler(ch.alloc());
+                            handler.setHandshakeTimeoutMillis(0);
+                            ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
                                 public void userEventTriggered(
-                                        ChannelHandlerContext ctx, Object evt) throws Exception {
+                                        ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                         if (!event.isSuccess()) {

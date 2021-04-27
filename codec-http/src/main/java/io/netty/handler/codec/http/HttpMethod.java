@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,12 +18,12 @@ package io.netty.handler.codec.http;
 import io.netty.util.AsciiString;
 
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * The request method of HTTP or its derived protocols, such as
- * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
- * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  */
 public class HttpMethod implements Comparable<HttpMethod> {
     /**
@@ -88,16 +88,16 @@ public class HttpMethod implements Comparable<HttpMethod> {
     private static final EnumNameMap<HttpMethod> methodMap;
 
     static {
-        methodMap = new EnumNameMap<HttpMethod>(
-                new EnumNameMap.Node<HttpMethod>(OPTIONS.toString(), OPTIONS),
-                new EnumNameMap.Node<HttpMethod>(GET.toString(), GET),
-                new EnumNameMap.Node<HttpMethod>(HEAD.toString(), HEAD),
-                new EnumNameMap.Node<HttpMethod>(POST.toString(), POST),
-                new EnumNameMap.Node<HttpMethod>(PUT.toString(), PUT),
-                new EnumNameMap.Node<HttpMethod>(PATCH.toString(), PATCH),
-                new EnumNameMap.Node<HttpMethod>(DELETE.toString(), DELETE),
-                new EnumNameMap.Node<HttpMethod>(TRACE.toString(), TRACE),
-                new EnumNameMap.Node<HttpMethod>(CONNECT.toString(), CONNECT));
+        methodMap = new EnumNameMap<>(
+                new EnumNameMap.Node<>(OPTIONS.toString(), OPTIONS),
+                new EnumNameMap.Node<>(GET.toString(), GET),
+                new EnumNameMap.Node<>(HEAD.toString(), HEAD),
+                new EnumNameMap.Node<>(POST.toString(), POST),
+                new EnumNameMap.Node<>(PUT.toString(), PUT),
+                new EnumNameMap.Node<>(PATCH.toString(), PATCH),
+                new EnumNameMap.Node<>(DELETE.toString(), DELETE),
+                new EnumNameMap.Node<>(TRACE.toString(), TRACE),
+                new EnumNameMap.Node<>(CONNECT.toString(), CONNECT));
     }
 
     /**
@@ -116,14 +116,11 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * Creates a new HTTP method with the specified name.  You will not need to
      * create a new method unless you are implementing a protocol derived from
      * HTTP, such as
-     * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
-     * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
+     * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+     * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
     public HttpMethod(String name) {
-        name = checkNotNull(name, "name").trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
+        name = checkNonEmptyAfterTrim(name, "name");
 
         for (int i = 0; i < name.length(); i ++) {
             char c = name.charAt(i);

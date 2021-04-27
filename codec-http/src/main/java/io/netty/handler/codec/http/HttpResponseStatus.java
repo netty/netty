@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,11 +24,12 @@ import static io.netty.handler.codec.http.HttpConstants.SP;
 import static io.netty.util.ByteProcessor.FIND_ASCII_SPACE;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The response code and its description of HTTP or its derived protocols, such as
- * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
- * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  */
 public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
@@ -541,9 +542,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     private HttpResponseStatus(int code, String reasonPhrase, boolean bytes) {
         checkPositiveOrZero(code, "code");
 
-        if (reasonPhrase == null) {
-            throw new NullPointerException("reasonPhrase");
-        }
+        requireNonNull(reasonPhrase, "reasonPhrase");
 
         for (int i = 0; i < reasonPhrase.length(); i ++) {
             char c = reasonPhrase.charAt(i);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -929,30 +929,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     @Override
     public final CompositeByteBuf clear() {
         wrapped.clear();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf markReaderIndex() {
-        wrapped.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf resetReaderIndex() {
-        wrapped.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf markWriterIndex() {
-        wrapped.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf resetWriterIndex() {
-        wrapped.resetWriterIndex();
         return this;
     }
 

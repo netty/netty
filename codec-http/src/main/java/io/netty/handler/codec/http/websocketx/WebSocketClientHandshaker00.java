@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,15 +26,15 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.AsciiString;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
  * Performs client side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
+ * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
  * 00</a>
  * </p>
  * <p>
@@ -42,8 +42,6 @@ import java.nio.ByteBuffer;
  * </p>
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
-
-    private static final AsciiString WEBSOCKET = AsciiString.cached("WebSocket");
 
     private ByteBuf expectedChallengeResponseBytes;
 
@@ -139,14 +137,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     @Override
     protected FullHttpRequest newHandshakeRequest() {
         // Make keys
-        int spaces1 = WebSocketUtil.randomNumber(1, 12);
-        int spaces2 = WebSocketUtil.randomNumber(1, 12);
+        int spaces1 = ThreadLocalRandom.current().nextInt(1, 13);
+        int spaces2 = ThreadLocalRandom.current().nextInt(1, 13);
 
         int max1 = Integer.MAX_VALUE / spaces1;
         int max2 = Integer.MAX_VALUE / spaces2;
 
-        int number1 = WebSocketUtil.randomNumber(0, max1);
-        int number2 = WebSocketUtil.randomNumber(0, max2);
+        int number1 = ThreadLocalRandom.current().nextInt(0, max1);
+        int number2 = ThreadLocalRandom.current().nextInt(0, max2);
 
         int product1 = number1 * spaces1;
         int product2 = number2 * spaces2;
@@ -186,7 +184,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             headers.add(customHeaders);
         }
 
-        headers.set(HttpHeaderNames.UPGRADE, WEBSOCKET)
+        headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
@@ -202,7 +200,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         // Set Content-Length to workaround some known defect.
-        // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
+        // See also: https://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         headers.set(HttpHeaderNames.CONTENT_LENGTH, key3.length);
         return request;
     }
@@ -229,44 +227,43 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        if (!response.status().equals(HttpResponseStatus.SWITCHING_PROTOCOLS)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+        HttpResponseStatus status = response.status();
+        if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response getStatus: " + status, response);
         }
 
         HttpHeaders headers = response.headers();
-
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
-        if (!WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
-            throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
-                    + upgrade);
+        if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
         }
 
         if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-            throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + headers.get(HttpHeaderNames.CONNECTION));
+            throw new WebSocketClientHandshakeException("Invalid handshake response connection: "
+                    + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
         ByteBuf challenge = response.content();
         if (!challenge.equals(expectedChallengeResponseBytes)) {
-            throw new WebSocketHandshakeException("Invalid challenge");
+            throw new WebSocketClientHandshakeException("Invalid challenge", response);
         }
     }
 
     private static String insertRandomCharacters(String key) {
-        int count = WebSocketUtil.randomNumber(1, 12);
+        int count = ThreadLocalRandom.current().nextInt(1, 13);
 
         char[] randomChars = new char[count];
         int randCount = 0;
         while (randCount < count) {
-            int rand = (int) (Math.random() * 0x7e + 0x21);
-            if (0x21 < rand && rand < 0x2f || 0x3a < rand && rand < 0x7e) {
+            int rand = ThreadLocalRandom.current().nextInt(0x22, 0x7e);
+            if (rand < 0x2f || 0x3a < rand) {
                 randomChars[randCount] = (char) rand;
                 randCount += 1;
             }
         }
 
         for (int i = 0; i < count; i++) {
-            int split = WebSocketUtil.randomNumber(0, key.length());
+            int split = ThreadLocalRandom.current().nextInt(0, key.length() + 1);
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
             key = part1 + randomChars[i] + part2;
@@ -277,7 +274,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
     private static String insertSpaces(String key, int spaces) {
         for (int i = 0; i < spaces; i++) {
-            int split = WebSocketUtil.randomNumber(1, key.length() - 1);
+            int split = ThreadLocalRandom.current().nextInt(1, key.length());
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
             key = part1 + ' ' + part2;

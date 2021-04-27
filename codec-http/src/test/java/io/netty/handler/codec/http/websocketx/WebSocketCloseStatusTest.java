@@ -4,7 +4,7 @@
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the "License");
  * you may not use this file except in compliance with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is
  * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,15 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.assertj.core.api.ThrowableAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 
 import static io.netty.handler.codec.http.websocketx.WebSocketCloseStatus.*;
 
@@ -43,33 +49,36 @@ public class WebSocketCloseStatusTest {
 
     @Test
     public void testToString() {
-        Assert.assertEquals("1000 Bye", NORMAL_CLOSURE.toString());
+        assertEquals("1000 Bye", NORMAL_CLOSURE.toString());
     }
 
     @Test
     public void testKnownStatuses() {
-        Assert.assertSame(NORMAL_CLOSURE, valueOf(1000));
-        Assert.assertSame(ENDPOINT_UNAVAILABLE, valueOf(1001));
-        Assert.assertSame(PROTOCOL_ERROR, valueOf(1002));
-        Assert.assertSame(INVALID_MESSAGE_TYPE, valueOf(1003));
-        Assert.assertSame(INVALID_PAYLOAD_DATA, valueOf(1007));
-        Assert.assertSame(POLICY_VIOLATION, valueOf(1008));
-        Assert.assertSame(MESSAGE_TOO_BIG, valueOf(1009));
-        Assert.assertSame(MANDATORY_EXTENSION, valueOf(1010));
-        Assert.assertSame(INTERNAL_SERVER_ERROR, valueOf(1011));
-        Assert.assertSame(SERVICE_RESTART, valueOf(1012));
-        Assert.assertSame(TRY_AGAIN_LATER, valueOf(1013));
-        Assert.assertSame(BAD_GATEWAY, valueOf(1014));
+        assertSame(NORMAL_CLOSURE, valueOf(1000));
+        assertSame(ENDPOINT_UNAVAILABLE, valueOf(1001));
+        assertSame(PROTOCOL_ERROR, valueOf(1002));
+        assertSame(INVALID_MESSAGE_TYPE, valueOf(1003));
+        assertSame(EMPTY, valueOf(1005));
+        assertSame(ABNORMAL_CLOSURE, valueOf(1006));
+        assertSame(INVALID_PAYLOAD_DATA, valueOf(1007));
+        assertSame(POLICY_VIOLATION, valueOf(1008));
+        assertSame(MESSAGE_TOO_BIG, valueOf(1009));
+        assertSame(MANDATORY_EXTENSION, valueOf(1010));
+        assertSame(INTERNAL_SERVER_ERROR, valueOf(1011));
+        assertSame(SERVICE_RESTART, valueOf(1012));
+        assertSame(TRY_AGAIN_LATER, valueOf(1013));
+        assertSame(BAD_GATEWAY, valueOf(1014));
+        assertSame(TLS_HANDSHAKE_FAILED, valueOf(1015));
     }
 
     @Test
     public void testNaturalOrder() {
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(NORMAL_CLOSURE));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.greaterThan(valueOf(1001)));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(PROTOCOL_ERROR));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(valueOf(1002)));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(INVALID_MESSAGE_TYPE));
-        Assert.assertThat(PROTOCOL_ERROR, Matchers.lessThan(valueOf(1007)));
+        assertThat(PROTOCOL_ERROR, Matchers.greaterThan(NORMAL_CLOSURE));
+        assertThat(PROTOCOL_ERROR, Matchers.greaterThan(valueOf(1001)));
+        assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(PROTOCOL_ERROR));
+        assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(valueOf(1002)));
+        assertThat(PROTOCOL_ERROR, Matchers.lessThan(INVALID_MESSAGE_TYPE));
+        assertThat(PROTOCOL_ERROR, Matchers.lessThan(valueOf(1007)));
     }
 
     @Test
@@ -79,13 +88,13 @@ public class WebSocketCloseStatusTest {
         WebSocketCloseStatus untradablePrice = new WebSocketCloseStatus(6034, "Untradable price");
 
         // Then
-        Assert.assertNotSame(feedTimeot, valueOf(6033));
-        Assert.assertEquals(feedTimeot.code(), 6033);
-        Assert.assertEquals(feedTimeot.reasonText(), "Feed timed out");
+        assertNotSame(feedTimeot, valueOf(6033));
+        assertEquals(feedTimeot.code(), 6033);
+        assertEquals(feedTimeot.reasonText(), "Feed timed out");
 
-        Assert.assertNotSame(untradablePrice, valueOf(6034));
-        Assert.assertEquals(untradablePrice.code(), 6034);
-        Assert.assertEquals(untradablePrice.reasonText(), "Untradable price");
+        assertNotSame(untradablePrice, valueOf(6034));
+        assertEquals(untradablePrice.code(), 6034);
+        assertEquals(untradablePrice.reasonText(), "Untradable price");
     }
 
     @Test
@@ -116,12 +125,30 @@ public class WebSocketCloseStatusTest {
         }
 
         // Then
-        Assert.assertEquals(0, invalidCodes.first().intValue());
-        Assert.assertEquals(2999, invalidCodes.last().intValue());
-        Assert.assertEquals(3000 - validCodes.size(), invalidCodes.size());
+        assertEquals(0, invalidCodes.first().intValue());
+        assertEquals(2999, invalidCodes.last().intValue());
+        assertEquals(3000 - validCodes.size(), invalidCodes.size());
 
         invalidCodes.retainAll(knownCodes);
-        Assert.assertEquals(invalidCodes, Collections.emptySet());
+        assertEquals(invalidCodes, Collections.emptySet());
     }
 
+    @Test
+    public void testValidationEnabled() {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(new ThrowableAssert.ThrowingCallable() {
+
+                    @Override
+                    public void call() throws RuntimeException {
+                        new WebSocketCloseStatus(1006, "validation disabled");
+                    }
+                });
+    }
+
+    @Test
+    public void testValidationDisabled() {
+        WebSocketCloseStatus status = new WebSocketCloseStatus(1006, "validation disabled", false);
+        assertEquals(1006, status.code());
+        assertEquals("validation disabled", status.reasonText());
+    }
 }

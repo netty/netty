@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,14 +30,14 @@ public class PromiseNotifierTest {
     @Test
     public void testNullPromisesArray() {
         expectedException.expect(NullPointerException.class);
-        new PromiseNotifier<Void, Future<Void>>((Promise<Void>[]) null);
+        new PromiseNotifier<>((Promise<Void>[]) null);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testNullPromiseInArray() {
         expectedException.expect(IllegalArgumentException.class);
-        new PromiseNotifier<Void, Future<Void>>((Promise<Void>) null);
+        new PromiseNotifier<>((Promise<Void>) null);
     }
 
     @Test
@@ -49,7 +49,7 @@ public class PromiseNotifierTest {
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);
@@ -72,7 +72,7 @@ public class PromiseNotifierTest {
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);

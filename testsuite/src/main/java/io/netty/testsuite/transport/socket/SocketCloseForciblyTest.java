@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
@@ -31,16 +31,19 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     }
 
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        sb.handler(new ChannelInboundHandlerAdapter() {
+        sb.handler(new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                SocketChannel childChannel = (SocketChannel) msg;
-                childChannel.config().setSoLinger(0);
-                childChannel.unsafe().closeForcibly();
+                final SocketChannel childChannel = (SocketChannel) msg;
+                // Dispatch on the EventLoop as all operation on Unsafe should be done while on the EventLoop.
+                childChannel.eventLoop().execute(() -> {
+                    childChannel.config().setSoLinger(0);
+                    childChannel.unsafe().closeForcibly();
+                });
             }
-        }).childHandler(new ChannelInboundHandlerAdapter());
+        }).childHandler(new ChannelHandler() { });
 
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelHandler() { });
 
         Channel sc = sb.bind().sync().channel();
 

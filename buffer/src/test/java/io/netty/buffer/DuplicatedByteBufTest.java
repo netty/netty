@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -56,27 +56,5 @@ public class DuplicatedByteBufTest extends AbstractByteBufTest {
         wrapped.capacity(wrapped.capacity() * 2);
 
         assertEquals((byte) 0, buffer.readByte());
-    }
-
-    @Test
-    public void testMarksInitialized() {
-        ByteBuf wrapped = Unpooled.buffer(8);
-        try {
-            wrapped.writerIndex(6);
-            wrapped.readerIndex(1);
-            ByteBuf duplicate = new DuplicatedByteBuf(wrapped);
-
-            // Test writer mark
-            duplicate.writerIndex(duplicate.writerIndex() + 1);
-            duplicate.resetWriterIndex();
-            assertEquals(wrapped.writerIndex(), duplicate.writerIndex());
-
-            // Test reader mark
-            duplicate.readerIndex(duplicate.readerIndex() + 1);
-            duplicate.resetReaderIndex();
-            assertEquals(wrapped.readerIndex(), duplicate.readerIndex());
-        } finally {
-            wrapped.release();
-        }
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,11 @@
  */
 package io.netty.util.concurrent;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor} instances
- * to handle the tasks.
+ * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link SingleThreadEventExecutor}
+ * instances to handle the tasks.
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     /**
@@ -52,10 +51,5 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks,
                                      RejectedExecutionHandler rejectedHandler) {
         super(nThreads, threadFactory, maxPendingTasks, rejectedHandler);
-    }
-
-    @Override
-    protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
-        return new DefaultEventExecutor(this, executor, (Integer) args[0], (RejectedExecutionHandler) args[1]);
     }
 }

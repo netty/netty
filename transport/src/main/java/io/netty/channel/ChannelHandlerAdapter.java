@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,9 +16,9 @@
 
 package io.netty.channel;
 
-import io.netty.channel.ChannelHandlerMask.Skip;
 import io.netty.util.internal.InternalThreadLocalMap;
 
+import java.lang.reflect.AnnotatedType;
 import java.util.Map;
 
 /**
@@ -56,39 +56,12 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
         Boolean sharable = cache.get(clazz);
         if (sharable == null) {
             sharable = clazz.isAnnotationPresent(Sharable.class);
+            if (!sharable) {
+                AnnotatedType annotatedType = clazz.getAnnotatedSuperclass();
+                sharable = annotatedType.isAnnotationPresent(Sharable.class);
+            }
             cache.put(clazz, sharable);
         }
         return sharable;
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     *
-     * @deprecated is part of {@link ChannelInboundHandler}
-     */
-    @Skip
-    @Override
-    @Deprecated
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
     }
 }

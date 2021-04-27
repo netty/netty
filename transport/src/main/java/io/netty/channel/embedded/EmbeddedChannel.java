@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel.embedded;
+
+import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -38,7 +40,6 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -60,13 +61,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
-    private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            recordException(future);
-        }
-    };
+    private final ChannelFutureListener recordExceptionListener = this::recordException;
 
     private final ChannelMetadata metadata;
     private final ChannelConfig config;
@@ -179,7 +174,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, channelId);
+        super(parent, new EmbeddedEventLoop(), channelId);
         metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
         setup(register, handlers);
@@ -197,9 +192,9 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
-        super(null, channelId);
+        super(null, new EmbeddedEventLoop(), channelId);
         metadata = metadata(hasDisconnect);
-        this.config = ObjectUtil.checkNotNull(config, "config");
+        this.config = requireNonNull(config, "config");
         setup(true, handlers);
     }
 
@@ -208,7 +203,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
+        requireNonNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
@@ -223,21 +218,25 @@ public class EmbeddedChannel extends AbstractChannel {
             }
         });
         if (register) {
-            ChannelFuture future = loop.register(this);
+            ChannelFuture future = register();
             assert future.isDone();
         }
     }
 
-    /**
-     * Register this {@code Channel} on its {@link EventLoop}.
-     */
-    public void register() throws Exception {
-        ChannelFuture future = loop.register(this);
+    @Override
+    public ChannelFuture register() {
+        return register(newPromise());
+    }
+
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        ChannelFuture future = super.register(promise);
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
+        return future;
     }
 
     @Override
@@ -270,7 +269,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> inboundMessages() {
         if (inboundMessages == null) {
-            inboundMessages = new ArrayDeque<Object>();
+            inboundMessages = new ArrayDeque<>();
         }
         return inboundMessages;
     }
@@ -288,7 +287,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> outboundMessages() {
         if (outboundMessages == null) {
-            outboundMessages = new ArrayDeque<Object>();
+            outboundMessages = new ArrayDeque<>();
         }
         return outboundMessages;
     }
@@ -383,6 +382,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
+          readIfIsAutoRead();
           runPendingTasks();
       }
 
@@ -546,7 +546,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            loop.cancelScheduledTasks();
+            ((EmbeddedEventLoop) eventLoop()).cancelScheduled();
         }
     }
 
@@ -592,17 +592,14 @@ public class EmbeddedChannel extends AbstractChannel {
      * for this {@link Channel}
      */
     public void runPendingTasks() {
+        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
         try {
-            loop.runTasks();
+            embeddedEventLoop.runTasks();
         } catch (Exception e) {
             recordException(e);
         }
 
-        try {
-            loop.runScheduledTasks();
-        } catch (Exception e) {
-            recordException(e);
-        }
+        runScheduledPendingTasks();
     }
 
     /**
@@ -611,11 +608,16 @@ public class EmbeddedChannel extends AbstractChannel {
      * {@code -1}.
      */
     public long runScheduledPendingTasks() {
+        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
+
         try {
-            return loop.runScheduledTasks();
+            return embeddedEventLoop.runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
-            return loop.nextScheduledTask();
+            return embeddedEventLoop.nextScheduledTask();
+        } finally {
+            // A scheduled task may put something on the taskQueue so lets run it.
+            embeddedEventLoop.runTasks();
         }
     }
 
@@ -685,11 +687,6 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EmbeddedEventLoop;
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return isActive()? LOCAL_ADDRESS : null;
     }
@@ -699,8 +696,7 @@ public class EmbeddedChannel extends AbstractChannel {
         return isActive()? REMOTE_ADDRESS : null;
     }
 
-    @Override
-    protected void doRegister() throws Exception {
+    void setActive() {
         state = State.ACTIVE;
     }
 
@@ -786,64 +782,70 @@ public class EmbeddedChannel extends AbstractChannel {
                 return EmbeddedUnsafe.this.remoteAddress();
             }
 
+            private void mayRunPendingTasks() {
+                if (!((EmbeddedEventLoop) eventLoop()).running) {
+                    runPendingTasks();
+                }
+            }
+
             @Override
-            public void register(EventLoop eventLoop, ChannelPromise promise) {
-                EmbeddedUnsafe.this.register(eventLoop, promise);
-                runPendingTasks();
+            public void register(ChannelPromise promise) {
+                EmbeddedUnsafe.this.register(promise);
+                mayRunPendingTasks();
             }
 
             @Override
             public void bind(SocketAddress localAddress, ChannelPromise promise) {
                 EmbeddedUnsafe.this.bind(localAddress, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
                 EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void disconnect(ChannelPromise promise) {
                 EmbeddedUnsafe.this.disconnect(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void close(ChannelPromise promise) {
                 EmbeddedUnsafe.this.close(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void closeForcibly() {
                 EmbeddedUnsafe.this.closeForcibly();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void deregister(ChannelPromise promise) {
                 EmbeddedUnsafe.this.deregister(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void beginRead() {
                 EmbeddedUnsafe.this.beginRead();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void write(Object msg, ChannelPromise promise) {
                 EmbeddedUnsafe.this.write(msg, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void flush() {
                 EmbeddedUnsafe.this.flush();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override

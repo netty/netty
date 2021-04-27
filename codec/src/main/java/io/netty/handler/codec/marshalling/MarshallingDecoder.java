@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -59,24 +59,20 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        ByteBuf frame = (ByteBuf) super.decode(ctx, in);
+    protected Object decode0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        ByteBuf frame = (ByteBuf) super.decode0(ctx, in);
         if (frame == null) {
             return null;
         }
 
-        Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
-        ByteInput input = new ChannelBufferByteInput(frame);
-
-        try {
+        // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
+        // readable. This helps to be sure that we do not leak resource
+        try (Unmarshaller unmarshaller = provider.getUnmarshaller(ctx)) {
+            ByteInput input = new ChannelBufferByteInput(frame);
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
             return obj;
-        } finally {
-            // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
-            // readable. This helps to be sure that we do not leak resource
-            unmarshaller.close();
         }
     }
 

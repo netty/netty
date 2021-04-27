@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,32 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 final class MqttCodecUtil {
 
     private static final char[] TOPIC_WILDCARDS = {'#', '+'};
     private static final int MIN_CLIENT_ID_LENGTH = 1;
     private static final int MAX_CLIENT_ID_LENGTH = 23;
+
+    static final AttributeKey<MqttVersion> MQTT_VERSION_KEY = AttributeKey.valueOf("NETTY_CODEC_MQTT_VERSION");
+
+    static MqttVersion getMqttVersion(ChannelHandlerContext ctx) {
+        Attribute<MqttVersion> attr = ctx.channel().attr(MQTT_VERSION_KEY);
+        MqttVersion version = attr.get();
+        if (version == null) {
+            return MqttVersion.MQTT_3_1_1;
+        }
+        return version;
+    }
+
+    static void setMqttVersion(ChannelHandlerContext ctx, MqttVersion version) {
+        Attribute<MqttVersion> attr = ctx.channel().attr(MQTT_VERSION_KEY);
+        attr.set(version);
+    }
 
     static boolean isValidPublishTopicName(String topicName) {
         // publish topic name must not contain any wildcard
@@ -43,15 +62,15 @@ final class MqttCodecUtil {
             return clientId != null && clientId.length() >= MIN_CLIENT_ID_LENGTH &&
                 clientId.length() <= MAX_CLIENT_ID_LENGTH;
         }
-        if (mqttVersion == MqttVersion.MQTT_3_1_1) {
-            // In 3.1.3.1 Client Identifier of MQTT 3.1.1 specification, The Server MAY allow ClientId’s
+        if (mqttVersion == MqttVersion.MQTT_3_1_1 || mqttVersion == MqttVersion.MQTT_5) {
+            // In 3.1.3.1 Client Identifier of MQTT 3.1.1 and 5.0 specifications, The Server MAY allow ClientId’s
             // that contain more than 23 encoded bytes. And, The Server MAY allow zero-length ClientId.
             return clientId != null;
         }
         throw new IllegalArgumentException(mqttVersion + " is unknown mqtt version");
     }
 
-    static MqttFixedHeader validateFixedHeader(MqttFixedHeader mqttFixedHeader) {
+    static MqttFixedHeader validateFixedHeader(ChannelHandlerContext ctx, MqttFixedHeader mqttFixedHeader) {
         switch (mqttFixedHeader.messageType()) {
             case PUBREL:
             case SUBSCRIBE:
@@ -59,6 +78,12 @@ final class MqttCodecUtil {
                 if (mqttFixedHeader.qosLevel() != MqttQoS.AT_LEAST_ONCE) {
                     throw new DecoderException(mqttFixedHeader.messageType().name() + " message must have QoS 1");
                 }
+                return mqttFixedHeader;
+            case AUTH:
+                if (MqttCodecUtil.getMqttVersion(ctx) != MqttVersion.MQTT_5) {
+                    throw new DecoderException("AUTH message requires at least MQTT 5");
+                }
+                return mqttFixedHeader;
             default:
                 return mqttFixedHeader;
         }

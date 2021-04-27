@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
@@ -33,6 +32,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
@@ -78,7 +78,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     private static void testConnectRefused0(Bootstrap cb, boolean halfClosure) throws Throwable {
         final Promise<Error> errorPromise = GlobalEventExecutor.INSTANCE.newPromise();
-        ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 errorPromise.setFailure(new AssertionError("should have never been called"));
@@ -142,7 +142,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler implements ChannelHandler {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             InternalLoggerFactory.getInstance(

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,12 +35,9 @@ public class HashedWheelTimerTest {
     public void testScheduleTimeoutShouldNotRunBeforeDelay() throws InterruptedException {
         final Timer timer = new HashedWheelTimer();
         final CountDownLatch barrier = new CountDownLatch(1);
-        final Timeout timeout = timer.newTimeout(new TimerTask() {
-            @Override
-            public void run(Timeout timeout) throws Exception {
-                fail("This should not have run");
-                barrier.countDown();
-            }
+        final Timeout timeout = timer.newTimeout(timeout1 -> {
+            fail("This should not have run");
+            barrier.countDown();
         }, 10, TimeUnit.SECONDS);
         assertFalse(barrier.await(3, TimeUnit.SECONDS));
         assertFalse("timer should not expire", timeout.isExpired());
@@ -51,12 +48,7 @@ public class HashedWheelTimerTest {
     public void testScheduleTimeoutShouldRunAfterDelay() throws InterruptedException {
         final Timer timer = new HashedWheelTimer();
         final CountDownLatch barrier = new CountDownLatch(1);
-        final Timeout timeout = timer.newTimeout(new TimerTask() {
-            @Override
-            public void run(Timeout timeout) throws Exception {
-                barrier.countDown();
-            }
-        }, 2, TimeUnit.SECONDS);
+        final Timeout timeout = timer.newTimeout(timeout1 -> barrier.countDown(), 2, TimeUnit.SECONDS);
         assertTrue(barrier.await(3, TimeUnit.SECONDS));
         assertTrue("timer should expire", timeout.isExpired());
         timer.stop();
@@ -67,12 +59,7 @@ public class HashedWheelTimerTest {
         final CountDownLatch latch = new CountDownLatch(3);
         final Timer timerProcessed = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
-            timerProcessed.newTimeout(new TimerTask() {
-                @Override
-                public void run(final Timeout timeout) throws Exception {
-                    latch.countDown();
-                }
-            }, 1, TimeUnit.MILLISECONDS);
+            timerProcessed.newTimeout(timeout -> latch.countDown(), 1, TimeUnit.MILLISECONDS);
         }
 
         latch.await();
@@ -80,10 +67,7 @@ public class HashedWheelTimerTest {
 
         final Timer timerUnprocessed = new HashedWheelTimer();
         for (int i = 0; i < 5; i ++) {
-            timerUnprocessed.newTimeout(new TimerTask() {
-                @Override
-                public void run(Timeout timeout) throws Exception {
-                }
+            timerUnprocessed.newTimeout(timeout -> {
             }, 5, TimeUnit.SECONDS);
         }
         Thread.sleep(1000L); // sleep for a second
@@ -95,12 +79,7 @@ public class HashedWheelTimerTest {
         final CountDownLatch latch = new CountDownLatch(3);
         final Timer timer = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
-            timer.newTimeout(new TimerTask() {
-                @Override
-                public void run(Timeout timeout) throws Exception {
-                    latch.countDown();
-                }
-            }, 1, TimeUnit.MILLISECONDS);
+            timer.newTimeout(timeout -> latch.countDown(), 1, TimeUnit.MILLISECONDS);
         }
 
         latch.await();
@@ -138,17 +117,13 @@ public class HashedWheelTimerTest {
         int timeout = 125;
         int maxTimeout = 2 * (tickDuration + timeout);
         final HashedWheelTimer timer = new HashedWheelTimer(tickDuration, TimeUnit.MILLISECONDS);
-        final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
+        final BlockingQueue<Long> queue = new LinkedBlockingQueue<>();
 
         int scheduledTasks = 100000;
         for (int i = 0; i < scheduledTasks; i++) {
             final long start = System.nanoTime();
-            timer.newTimeout(new TimerTask() {
-                @Override
-                public void run(final Timeout timeout) throws Exception {
-                    queue.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
-                }
-            }, timeout, TimeUnit.MILLISECONDS);
+            timer.newTimeout(timeout1 -> queue.add(
+                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)), timeout, TimeUnit.MILLISECONDS);
         }
 
         for (int i = 0; i < scheduledTasks; i++) {
@@ -234,31 +209,18 @@ public class HashedWheelTimerTest {
     public void testOverflow() throws InterruptedException  {
         final HashedWheelTimer timer = new HashedWheelTimer();
         final CountDownLatch latch = new CountDownLatch(1);
-        Timeout timeout = timer.newTimeout(new TimerTask() {
-            @Override
-            public void run(Timeout timeout) {
-                latch.countDown();
-            }
-        }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        Timeout timeout = timer.newTimeout(timeout1 -> latch.countDown(), Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         assertFalse(latch.await(1, TimeUnit.SECONDS));
         timeout.cancel();
         timer.stop();
     }
 
     private static TimerTask createNoOpTimerTask() {
-        return new TimerTask() {
-            @Override
-            public void run(final Timeout timeout) throws Exception {
-            }
+        return timeout -> {
         };
     }
 
     private static TimerTask createCountDownLatchTimerTask(final CountDownLatch latch) {
-        return new TimerTask() {
-            @Override
-            public void run(final Timeout timeout) throws Exception {
-                latch.countDown();
-            }
-        };
+        return timeout -> latch.countDown();
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
-
-import java.util.List;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
@@ -46,9 +44,9 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     //      (just like LengthFieldBasedFrameDecoder)
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
-        in.markReaderIndex();
+        int readerIndex = in.readerIndex();
         int preIndex = in.readerIndex();
         int length = readRawVarint32(in);
         if (preIndex == in.readerIndex()) {
@@ -59,9 +57,9 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         }
 
         if (in.readableBytes() < length) {
-            in.resetReaderIndex();
+            in.readerIndex(readerIndex);
         } else {
-            out.add(in.readRetainedSlice(length));
+            ctx.fireChannelRead(in.readRetainedSlice(length));
         }
     }
 
@@ -74,14 +72,14 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         if (!buffer.isReadable()) {
             return 0;
         }
-        buffer.markReaderIndex();
+        int readerIndex = buffer.readerIndex();
         byte tmp = buffer.readByte();
         if (tmp >= 0) {
             return tmp;
         } else {
             int result = tmp & 127;
             if (!buffer.isReadable()) {
-                buffer.resetReaderIndex();
+                buffer.readerIndex(readerIndex);
                 return 0;
             }
             if ((tmp = buffer.readByte()) >= 0) {
@@ -89,7 +87,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
             } else {
                 result |= (tmp & 127) << 7;
                 if (!buffer.isReadable()) {
-                    buffer.resetReaderIndex();
+                    buffer.readerIndex(readerIndex);
                     return 0;
                 }
                 if ((tmp = buffer.readByte()) >= 0) {
@@ -97,7 +95,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
                 } else {
                     result |= (tmp & 127) << 14;
                     if (!buffer.isReadable()) {
-                        buffer.resetReaderIndex();
+                        buffer.readerIndex(readerIndex);
                         return 0;
                     }
                     if ((tmp = buffer.readByte()) >= 0) {
@@ -105,7 +103,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
                     } else {
                         result |= (tmp & 127) << 21;
                         if (!buffer.isReadable()) {
-                            buffer.resetReaderIndex();
+                            buffer.readerIndex(readerIndex);
                             return 0;
                         }
                         result |= (tmp = buffer.readByte()) << 28;

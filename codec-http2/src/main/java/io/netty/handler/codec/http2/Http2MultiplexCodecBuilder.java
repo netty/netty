@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A builder for {@link Http2MultiplexCodec}.
@@ -37,7 +37,7 @@ public class Http2MultiplexCodecBuilder
 
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
-        this.childHandler = checkSharable(checkNotNull(childHandler, "childHandler"));
+        this.childHandler = checkSharable(requireNonNull(childHandler, "childHandler"));
         // For backwards compatibility we should disable to timeout by default at this layer.
         gracefulShutdownTimeoutMillis(0);
     }
@@ -52,7 +52,7 @@ public class Http2MultiplexCodecBuilder
 
     // For testing only.
     Http2MultiplexCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.frameWriter = requireNonNull(frameWriter, "frameWriter");
         return this;
     }
 

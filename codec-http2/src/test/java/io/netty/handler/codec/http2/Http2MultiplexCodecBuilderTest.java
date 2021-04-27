@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,12 +25,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -62,7 +62,7 @@ public class Http2MultiplexCodecBuilderTest {
 
     @BeforeClass
     public static void init() {
-        group = new DefaultEventLoop();
+        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     }
 
     @Before
@@ -81,25 +81,25 @@ public class Http2MultiplexCodecBuilderTest {
 
                             @Override
                             protected void initChannel(Channel ch) throws Exception {
-                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                ch.pipeline().addLast(new ChannelHandler() {
                                     private boolean writable;
 
                                     @Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelActive(ctx);
+                                        ctx.fireChannelActive();
                                     }
 
                                     @Override
                                     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelWritabilityChanged(ctx);
+                                        ctx.fireChannelWritabilityChanged();
                                     }
 
                                     @Override
                                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                         assertTrue(writable);
-                                        super.channelInactive(ctx);
+                                        ctx.fireChannelInactive();
                                     }
                                 });
                                 ch.pipeline().addLast(serverLastInboundHandler);
@@ -201,7 +201,7 @@ public class Http2MultiplexCodecBuilderTest {
         Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(dataFrame);
         assertEquals(3, dataFrame.stream().id());
-        assertEquals(data.resetReaderIndex(), dataFrame.content());
+        assertEquals(data.readerIndex(0), dataFrame.content());
         assertTrue(dataFrame.isEndStream());
         dataFrame.release();
 

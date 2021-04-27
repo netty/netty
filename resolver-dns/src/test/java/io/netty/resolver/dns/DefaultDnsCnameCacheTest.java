@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,11 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalHandler;
+import io.netty.channel.nio.NioHandler;
 import org.junit.Test;
 
 import java.util.concurrent.Callable;
@@ -29,22 +31,19 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testExpire() throws Throwable {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
             final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping.netty.io", 1, loop);
 
-            Throwable error = loop.schedule(new Callable<Throwable>() {
-                @Override
-                public Throwable call() {
-                    try {
-                        assertNull(cache.get("netty.io"));
-                        return null;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
+            Throwable error = loop.schedule(() -> {
+                try {
+                    assertNull(cache.get("netty.io"));
+                    return null;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             }, 1, TimeUnit.SECONDS).get();
             if (error != null) {
@@ -63,7 +62,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -77,7 +76,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testMultipleCnamesForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -93,7 +92,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testAddSameCnameForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -109,7 +108,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testClear() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

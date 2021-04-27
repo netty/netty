@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,10 +26,10 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.ssl.JdkSslClientContext;
-import io.netty.handler.ssl.JdkSslServerContext;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -77,8 +77,8 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
         return Collections.singletonList(new Object[] {
-            new JdkSslServerContext(CERT_FILE, KEY_FILE),
-            new JdkSslClientContext(CERT_FILE)
+          SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build(),
+          SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK).build()
         });
     }
 
@@ -162,7 +162,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     private static Set<String> sessionIdSet(Enumeration<byte[]> sessionIds) {
-        Set<String> idSet = new HashSet<String>();
+        Set<String> idSet = new HashSet<>();
         byte[] id;
         while (sessionIds.hasMoreElements()) {
             id = sessionIds.nextElement();
@@ -173,7 +173,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     @Sharable
     private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<ByteBuf> {
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         private final boolean server;
         private final boolean autoRead;
 
@@ -183,7 +183,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
             ctx.close();

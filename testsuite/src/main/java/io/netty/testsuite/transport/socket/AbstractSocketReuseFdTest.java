@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,10 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -87,12 +86,9 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             }
         });
 
-        ChannelFutureListener listener = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (!future.isSuccess()) {
-                    clientDonePromise.tryFailure(future.cause());
-                }
+        ChannelFutureListener listener = future -> {
+            if (!future.isSuccess()) {
+                clientDonePromise.tryFailure(future.cause());
             }
         };
 
@@ -110,7 +106,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         }
     }
 
-    static class ReuseFdHandler extends ChannelInboundHandlerAdapter {
+    static class ReuseFdHandler implements ChannelHandler {
         private static final String EXPECTED_PAYLOAD = "payload";
 
         private final Promise<Void> donePromise;

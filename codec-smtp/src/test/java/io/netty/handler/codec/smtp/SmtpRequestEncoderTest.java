@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,6 +36,21 @@ public class SmtpRequestEncoderTest {
     @Test
     public void testEncodeHelo() {
         testEncode(SmtpRequests.helo("localhost"), "HELO localhost\r\n");
+    }
+
+    @Test
+    public void testEncodeAuth() {
+        testEncode(SmtpRequests.auth("LOGIN"), "AUTH LOGIN\r\n");
+    }
+
+    @Test
+    public void testEncodeAuthWithParameter() {
+        testEncode(SmtpRequests.auth("PLAIN", "dGVzdAB0ZXN0ADEyMzQ="), "AUTH PLAIN dGVzdAB0ZXN0ADEyMzQ=\r\n");
+    }
+
+    @Test
+    public void testEncodeEmpty() {
+        testEncode(SmtpRequests.empty("dGVzdAB0ZXN0ADEyMzQ="),  "dGVzdAB0ZXN0ADEyMzQ=\r\n");
     }
 
     @Test

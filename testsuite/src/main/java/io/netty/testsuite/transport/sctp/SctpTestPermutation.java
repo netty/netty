@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,12 +18,10 @@ package io.netty.testsuite.transport.sctp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.oio.OioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
-import io.netty.channel.sctp.oio.OioSctpChannel;
-import io.netty.channel.sctp.oio.OioSctpServerChannel;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
@@ -38,39 +36,21 @@ public final class SctpTestPermutation {
     private static final int BOSSES = 2;
     private static final int WORKERS = 3;
     private static final EventLoopGroup nioBossGroup =
-            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-sctp-nio-boss", true));
+            new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-sctp-nio-boss", true),
+                    NioHandler.newFactory());
     private static final EventLoopGroup nioWorkerGroup =
-            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-sctp-nio-worker", true));
-    private static final EventLoopGroup oioBossGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-boss", true));
-    private static final EventLoopGroup oioWorkerGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-worker", true));
+            new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-sctp-nio-worker", true),
+                    NioHandler.newFactory());
 
     static List<BootstrapFactory<ServerBootstrap>> sctpServerChannel() {
         if (!TestUtils.isSctpSupported()) {
             return Collections.emptyList();
         }
 
-        List<BootstrapFactory<ServerBootstrap>> list = new ArrayList<BootstrapFactory<ServerBootstrap>>();
         // Make the list of ServerBootstrap factories.
-        list.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                        group(nioBossGroup, nioWorkerGroup).
-                        channel(NioSctpServerChannel.class);
-            }
-        });
-        list.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                        group(oioBossGroup, oioWorkerGroup).
-                        channel(OioSctpServerChannel.class);
-            }
-        });
-
-        return list;
+        return Collections.singletonList(() -> new ServerBootstrap().
+                group(nioBossGroup, nioWorkerGroup).
+                channel(NioSctpServerChannel.class));
     }
 
     static List<BootstrapFactory<Bootstrap>> sctpClientChannel() {
@@ -78,25 +58,13 @@ public final class SctpTestPermutation {
             return Collections.emptyList();
         }
 
-        List<BootstrapFactory<Bootstrap>> list = new ArrayList<BootstrapFactory<Bootstrap>>();
-        list.add(new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class);
-            }
-        });
-        list.add(new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(oioWorkerGroup).channel(OioSctpChannel.class);
-            }
-        });
-        return list;
+        return Collections.singletonList(() ->
+                new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class));
     }
 
     static List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> sctpChannel() {
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                new ArrayList<>();
 
         // Make the list of SCTP ServerBootstrap factories.
         List<BootstrapFactory<ServerBootstrap>> sbfs = sctpServerChannel();

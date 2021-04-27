@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -25,7 +25,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
-import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -92,40 +91,24 @@ public class Http2ControlFrameLimitEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
 
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
-                    @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                        return handlePromise(invocationOnMock, 3);
-                    }
-                });
+                .thenAnswer((Answer<ChannelFuture>) invocationOnMock -> handlePromise(invocationOnMock, 3));
         when(writer.writeSettingsAck(any(ChannelHandlerContext.class), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
-                    @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                        return handlePromise(invocationOnMock, 1);
-                    }
-        });
+                .thenAnswer((Answer<ChannelFuture>) invocationOnMock -> handlePromise(invocationOnMock, 1));
         when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong(), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
-                    @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                        ChannelPromise promise = handlePromise(invocationOnMock, 3);
-                        if (invocationOnMock.getArgument(1) == Boolean.FALSE) {
-                            promise.trySuccess();
-                        }
-                        return promise;
+                .thenAnswer((Answer<ChannelFuture>) invocationOnMock -> {
+                    ChannelPromise promise = handlePromise(invocationOnMock, 3);
+                    if (invocationOnMock.getArgument(1) == Boolean.FALSE) {
+                        promise.trySuccess();
                     }
+                    return promise;
                 });
         when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                ReferenceCountUtil.release(invocationOnMock.getArgument(3));
-                ChannelPromise promise = invocationOnMock.getArgument(4);
-                goAwayPromises.offer(promise);
-                return promise;
-            }
-        });
+                any(ChannelPromise.class))).thenAnswer((Answer<ChannelFuture>) invocationOnMock -> {
+                    ReferenceCountUtil.release(invocationOnMock.getArgument(3));
+                    ChannelPromise promise = invocationOnMock.getArgument(4);
+                    goAwayPromises.offer(promise);
+                    return promise;
+                });
         Http2Connection connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
@@ -144,12 +127,7 @@ public class Http2ControlFrameLimitEncoderTest {
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(executor.inEventLoop()).thenReturn(true);
-        doAnswer(new Answer<ChannelPromise>() {
-            @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return newPromise();
-            }
-        }).when(ctx).newPromise();
+        doAnswer((Answer<ChannelPromise>) invocation -> newPromise()).when(ctx).newPromise();
         when(ctx.executor()).thenReturn(executor);
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
@@ -266,7 +244,7 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, atLeast(invocations)).flush();
         verify(ctx, times(invocations)).close();
         if (failed) {
-            verify(writer, times(1)).writeGoAway(eq(ctx), eq(0), eq(ENHANCE_YOUR_CALM.code()),
+            verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
                     any(ByteBuf.class), any(ChannelPromise.class));
         }
     }

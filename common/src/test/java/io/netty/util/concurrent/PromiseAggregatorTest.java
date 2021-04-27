@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,7 @@
 package io.netty.util.concurrent;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
 import org.junit.Rule;
@@ -40,7 +40,7 @@ public class PromiseAggregatorTest {
         @SuppressWarnings("unchecked")
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         expectedException.expect(NullPointerException.class);
         a.add((Promise<Void>[]) null);
     }
@@ -50,7 +50,7 @@ public class PromiseAggregatorTest {
     public void testSuccessfulNoPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
 
         Future<Void> future = mock(Future.class);
         when(p.setSuccess(null)).thenReturn(p);
@@ -66,7 +66,7 @@ public class PromiseAggregatorTest {
     public void testSuccessfulPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
 
@@ -92,7 +92,7 @@ public class PromiseAggregatorTest {
     public void testFailedFutureFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);
@@ -119,7 +119,7 @@ public class PromiseAggregatorTest {
     public void testFailedFutureNoFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p, false);
+                new PromiseAggregator<>(p, false);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);

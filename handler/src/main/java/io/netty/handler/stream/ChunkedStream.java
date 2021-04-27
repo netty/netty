@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.stream;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -55,9 +57,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedStream(InputStream in, int chunkSize) {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+        requireNonNull(in, "in");
         if (chunkSize <= 0) {
             throw new IllegalArgumentException(
                     "chunkSize: " + chunkSize +
@@ -83,6 +83,9 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
     public boolean isEndOfInput() throws Exception {
         if (closed) {
             return true;
+        }
+        if (in.available() > 0) {
+            return false;
         }
 
         int b = in.read();

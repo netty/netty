@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.channel.group;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -24,13 +25,19 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelGroupFuture implements ChannelGroupFuture {
+// Suppress a warning about returning the same iterator since it always returns an empty iterator
+final class VoidChannelGroupFuture implements ChannelGroupFuture {  // lgtm[java/iterable-wraps-iterator]
 
     private static final Iterator<ChannelFuture> EMPTY = Collections.<ChannelFuture>emptyList().iterator();
-    private final ChannelGroup group;
+    private final DefaultChannelGroup group;
 
-    VoidChannelGroupFuture(ChannelGroup group) {
+    VoidChannelGroupFuture(DefaultChannelGroup group) {
         this.group = group;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return group.executor;
     }
 
     @Override

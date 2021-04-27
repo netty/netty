@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.apache.directory.server.dns.DnsServer;
 import org.apache.directory.server.dns.io.decoder.DnsMessageDecoder;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
@@ -55,9 +54,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 class TestDnsServer extends DnsServer {
-    private static final Map<String, byte[]> BYTES = new HashMap<String, byte[]>();
+    private static final Map<String, byte[]> BYTES = new HashMap<>();
     private static final String[] IPV6_ADDRESSES;
 
     static {
@@ -227,9 +227,9 @@ class TestDnsServer extends DnsServer {
         private final Map<String, List<String>> domainMap;
 
         MapRecordStoreA(Set<String> domains, int length) {
-            domainMap = new HashMap<String, List<String>>(domains.size());
+            domainMap = new HashMap<>(domains.size());
             for (String domain : domains) {
-                List<String> addresses = new ArrayList<String>(length);
+                List<String> addresses = new ArrayList<>(length);
                 for (int i = 0; i < length; i++) {
                     addresses.add(TestRecordStore.nextIp());
                 }
@@ -254,9 +254,9 @@ class TestDnsServer extends DnsServer {
             String name = questionRecord.getDomainName();
             List<String> addresses = domainMap.get(name);
             if (addresses != null && questionRecord.getRecordType() == RecordType.A) {
-                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                Set<ResourceRecord> records = new LinkedHashSet<>();
                 for (String address : addresses) {
-                    Map<String, Object> attributes = new HashMap<String, Object>();
+                    Map<String, Object> attributes = new HashMap<>();
                     attributes.put(DnsAttribute.IP_ADDRESS.toLowerCase(), address);
                     records.add(new TestResourceRecord(name, questionRecord.getRecordType(), attributes));
                 }
@@ -281,7 +281,7 @@ class TestDnsServer extends DnsServer {
         }
 
         private static int index(int arrayLength) {
-            return Math.abs(PlatformDependent.threadLocalRandom().nextInt()) % arrayLength;
+            return Math.abs(ThreadLocalRandom.current().nextInt()) % arrayLength;
         }
 
         private static String nextDomain() {
@@ -310,29 +310,29 @@ class TestDnsServer extends DnsServer {
         public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
             String name = questionRecord.getDomainName();
             if (domains.contains(name)) {
-                Map<String, Object> attr = new HashMap<String, Object>();
+                Map<String, Object> attr = new HashMap<>();
                 switch (questionRecord.getRecordType()) {
                     case A:
                         do {
                             attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp());
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     case AAAA:
                         do {
                             attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp6());
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     case MX:
                         int priority = 0;
                         do {
                             attr.put(DnsAttribute.DOMAIN_NAME.toLowerCase(Locale.US), nextDomain());
                             attr.put(DnsAttribute.MX_PREFERENCE.toLowerCase(Locale.US), String.valueOf(++priority));
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     default:
                         return null;
                 }
-                return Collections.<ResourceRecord>singleton(
+                return Collections.singleton(
                         new TestResourceRecord(name, questionRecord.getRecordType(), attr));
             }
             return null;

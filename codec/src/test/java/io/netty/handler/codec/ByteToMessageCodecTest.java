@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,8 +21,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
-
-import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -47,9 +45,9 @@ public class ByteToMessageCodecTest {
             }
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 if (in.readableBytes() >= 4) {
-                    out.add(in.readInt());
+                    ctx.fireChannelRead(in.readInt());
                 }
             }
         };
@@ -62,7 +60,7 @@ public class ByteToMessageCodecTest {
         assertTrue(ch.writeInbound(buffer));
         ch.pipeline().remove(codec);
         assertTrue(ch.finish());
-        assertEquals(1, ch.readInbound());
+        assertEquals(1, (int) ch.readInbound());
 
         ByteBuf buf = ch.readInbound();
         assertEquals(Unpooled.wrappedBuffer(new byte[]{'0'}), buf);
@@ -81,7 +79,7 @@ public class ByteToMessageCodecTest {
         protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
     }
 
     @ChannelHandler.Sharable
@@ -94,6 +92,6 @@ public class ByteToMessageCodecTest {
         protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
     }
 }

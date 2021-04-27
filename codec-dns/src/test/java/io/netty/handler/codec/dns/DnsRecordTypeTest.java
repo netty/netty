@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 public class DnsRecordTypeTest {
 
     private static List<DnsRecordType> allTypes() throws Exception {
-        List<DnsRecordType> result = new ArrayList<DnsRecordType>();
+        List<DnsRecordType> result = new ArrayList<>();
         for (Field field : DnsRecordType.class.getFields()) {
             if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsRecordType.class) {
                 result.add((DnsRecordType) field.get(null));
@@ -41,7 +41,7 @@ public class DnsRecordTypeTest {
     @Test
     public void testSanity() throws Exception {
         assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet<DnsRecordType>(allTypes()).size());
+                allTypes().size(), new HashSet<>(allTypes()).size());
     }
 
     /**

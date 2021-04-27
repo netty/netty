@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,12 +14,12 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.44.Final-SNAPSHOT</version>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-unix-common</artifactId>
 
@@ -37,6 +37,7 @@
     <exe.archiver>ar</exe.archiver>
     <nativeLibName>libnetty-unix-common</nativeLibName>
     <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
+    <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
     <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
@@ -46,6 +47,30 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <!-- unpack netty-jni-util files -->
+          <execution>
+            <id>unpack</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>io.netty</includeGroupIds>
+              <includeArtifactIds>netty-jni-util</includeArtifactIds>
+              <classifier>sources</classifier>
+              <outputDirectory>${jniUtilIncludeDir}</outputDirectory>
+              <includes>**.h,**.c</includes>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Also include c files in source jar -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -102,6 +127,10 @@
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
@@ -175,6 +204,80 @@
                       <zipfileset dir="${nativeIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>linux-aarch64</id>
+      <properties>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+        <jni.platform>linux</jni.platform>
+        <exe.compiler>aarch64-none-linux-gnu-gcc</exe.compiler>
+        <exe.archiver>aarch64-none-linux-gnu-ar</exe.archiver>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
                     <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
@@ -240,6 +343,10 @@
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeLibOnlyDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
                     <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
                       <zipfileset dir="${nativeIncludeDir}" />
@@ -315,6 +422,10 @@
                       <zipfileset dir="${nativeIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
                     <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
@@ -350,6 +461,12 @@
   </profiles>
 
   <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-jni-util</artifactId>
+      <classifier>sources</classifier>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>

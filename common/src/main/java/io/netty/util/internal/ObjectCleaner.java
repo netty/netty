@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,10 +22,12 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.internal.SystemPropertyUtil.getInt;
 import static java.lang.Math.max;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Allows a way to register some {@link Runnable} that will executed once there are no references to an {@link Object}
@@ -38,49 +40,46 @@ public final class ObjectCleaner {
     // Package-private for testing
     static final String CLEANER_THREAD_NAME = ObjectCleaner.class.getSimpleName() + "Thread";
     // This will hold a reference to the AutomaticCleanerReference which will be removed once we called cleanup()
-    private static final Set<AutomaticCleanerReference> LIVE_SET = new ConcurrentSet<AutomaticCleanerReference>();
-    private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<Object>();
+    private static final Set<AutomaticCleanerReference> LIVE_SET = ConcurrentHashMap.newKeySet();
+    private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<>();
     private static final AtomicBoolean CLEANER_RUNNING = new AtomicBoolean(false);
-    private static final Runnable CLEANER_TASK = new Runnable() {
-        @Override
-        public void run() {
-            boolean interrupted = false;
-            for (;;) {
-                // Keep on processing as long as the LIVE_SET is not empty and once it becomes empty
-                // See if we can let this thread complete.
-                while (!LIVE_SET.isEmpty()) {
-                    final AutomaticCleanerReference reference;
+    private static final Runnable CLEANER_TASK = () -> {
+        boolean interrupted = false;
+        for (;;) {
+            // Keep on processing as long as the LIVE_SET is not empty and once it becomes empty
+            // See if we can let this thread complete.
+            while (!LIVE_SET.isEmpty()) {
+                final AutomaticCleanerReference reference;
+                try {
+                    reference = (AutomaticCleanerReference) REFERENCE_QUEUE.remove(REFERENCE_QUEUE_POLL_TIMEOUT_MS);
+                } catch (InterruptedException ex) {
+                    // Just consume and move on
+                    interrupted = true;
+                    continue;
+                }
+                if (reference != null) {
                     try {
-                        reference = (AutomaticCleanerReference) REFERENCE_QUEUE.remove(REFERENCE_QUEUE_POLL_TIMEOUT_MS);
-                    } catch (InterruptedException ex) {
-                        // Just consume and move on
-                        interrupted = true;
-                        continue;
+                        reference.cleanup();
+                    } catch (Throwable ignored) {
+                        // ignore exceptions, and don't log in case the logger throws an exception, blocks, or has
+                        // other unexpected side effects.
                     }
-                    if (reference != null) {
-                        try {
-                            reference.cleanup();
-                        } catch (Throwable ignored) {
-                            // ignore exceptions, and don't log in case the logger throws an exception, blocks, or has
-                            // other unexpected side effects.
-                        }
-                        LIVE_SET.remove(reference);
-                    }
+                    LIVE_SET.remove(reference);
                 }
-                CLEANER_RUNNING.set(false);
+            }
+            CLEANER_RUNNING.set(false);
 
-                // Its important to first access the LIVE_SET and then CLEANER_RUNNING to ensure correct
-                // behavior in multi-threaded environments.
-                if (LIVE_SET.isEmpty() || !CLEANER_RUNNING.compareAndSet(false, true)) {
-                    // There was nothing added after we set STARTED to false or some other cleanup Thread
-                    // was started already so its safe to let this Thread complete now.
-                    break;
-                }
+            // Its important to first access the LIVE_SET and then CLEANER_RUNNING to ensure correct
+            // behavior in multi-threaded environments.
+            if (LIVE_SET.isEmpty() || !CLEANER_RUNNING.compareAndSet(false, true)) {
+                // There was nothing added after we set STARTED to false or some other cleanup Thread
+                // was started already so its safe to let this Thread complete now.
+                break;
             }
-            if (interrupted) {
-                // As we caught the InterruptedException above we should mark the Thread as interrupted.
-                Thread.currentThread().interrupt();
-            }
+        }
+        if (interrupted) {
+            // As we caught the InterruptedException above we should mark the Thread as interrupted.
+            Thread.currentThread().interrupt();
         }
     };
 
@@ -93,7 +92,7 @@ public final class ObjectCleaner {
      */
     public static void register(Object object, Runnable cleanupTask) {
         AutomaticCleanerReference reference = new AutomaticCleanerReference(object,
-                ObjectUtil.checkNotNull(cleanupTask, "cleanupTask"));
+                requireNonNull(cleanupTask, "cleanupTask"));
         // Its important to add the reference to the LIVE_SET before we access CLEANER_RUNNING to ensure correct
         // behavior in multi-threaded environments.
         LIVE_SET.add(reference);
@@ -107,12 +106,9 @@ public final class ObjectCleaner {
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    cleanupThread.setContextClassLoader(null);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                cleanupThread.setContextClassLoader(null);
+                return null;
             });
             cleanupThread.setName(CLEANER_THREAD_NAME);
 

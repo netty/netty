@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -57,7 +57,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
                 new DeflateFrameClientExtensionHandshaker(false);
 
         WebSocketClientExtension extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.emptyMap()));
 
         assertNotNull(extension);
         assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
@@ -71,7 +71,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
         DeflateFrameClientExtensionHandshaker handshaker =
                 new DeflateFrameClientExtensionHandshaker(false);
 
-        Map<String, String> parameters = new HashMap<String, String>();
+        Map<String, String> parameters = new HashMap<>();
         parameters.put("invalid", "12");
 
         // execute

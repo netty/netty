@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -78,7 +78,8 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             CharSequence roName = nameValuePairs[i];
             if (AsciiString.hashCode(roName) == nameHash && contentEqualsIgnoreCase(roName, name)) {
-                return nameValuePairs[i + 1];
+                // Suppress a warning out of bounds access since the constructor allows only pairs
+                return nameValuePairs[i + 1]; // lgtm[java/index-out-of-bounds]
             }
         }
         return null;
@@ -132,11 +133,11 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             return Collections.emptyList();
         }
         final int nameHash = AsciiString.hashCode(name);
-        List<String> values = new ArrayList<String>(4);
+        List<String> values = new ArrayList<>(4);
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             CharSequence roName = nameValuePairs[i];
             if (AsciiString.hashCode(roName) == nameHash && contentEqualsIgnoreCase(roName, name)) {
-                values.add(nameValuePairs[i + 1].toString());
+                values.add(nameValuePairs[i + 1].toString()); // lgtm[java/index-out-of-bounds]
             }
         }
         return values;
@@ -147,10 +148,10 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptyList();
         }
-        List<Map.Entry<String, String>> entries = new ArrayList<Map.Entry<String, String>>(size());
+        List<Map.Entry<String, String>> entries = new ArrayList<>(size());
         for (int i = 0; i < nameValuePairs.length; i += 2) {
-            entries.add(new SimpleImmutableEntry<String, String>(nameValuePairs[i].toString(),
-                    nameValuePairs[i + 1].toString()));
+            entries.add(new SimpleImmutableEntry<>(nameValuePairs[i].toString(),
+                    nameValuePairs[i + 1].toString())); // lgtm[java/index-out-of-bounds]
         }
         return entries;
     }
@@ -170,14 +171,14 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (ignoreCase) {
             for (int i = 0; i < nameValuePairs.length; i += 2) {
                 if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
-                        contentEqualsIgnoreCase(nameValuePairs[i + 1], value)) {
+                        contentEqualsIgnoreCase(nameValuePairs[i + 1], value)) { // lgtm[java/index-out-of-bounds]
                     return true;
                 }
             }
         } else {
             for (int i = 0; i < nameValuePairs.length; i += 2) {
                 if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
-                        contentEquals(nameValuePairs[i + 1], value)) {
+                        contentEquals(nameValuePairs[i + 1], value)) { // lgtm[java/index-out-of-bounds]
                     return true;
                 }
             }
@@ -220,7 +221,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptySet();
         }
-        Set<String> names = new LinkedHashSet<String>(size());
+        Set<String> names = new LinkedHashSet<>(size());
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             names.add(nameValuePairs[i].toString());
         }

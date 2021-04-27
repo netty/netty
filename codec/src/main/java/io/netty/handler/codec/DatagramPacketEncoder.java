@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ByteBuf;
+import static java.util.Objects.requireNonNull;
+
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -23,7 +25,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.util.internal.StringUtil;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -54,7 +55,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
      * @param encoder the specified message encoder
      */
     public DatagramPacketEncoder(MessageToMessageEncoder<? super M> encoder) {
-        this.encoder = checkNotNull(encoder, "encoder");
+        this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override
@@ -80,9 +81,9 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
                     StringUtil.simpleClassName(encoder) + " must produce only one message.");
         }
         Object content = out.get(0);
-        if (content instanceof ByteBuf) {
+        if (content instanceof ByteBufConvertible) {
             // Replace the ByteBuf with a DatagramPacket.
-            out.set(0, new DatagramPacket((ByteBuf) content, msg.recipient(), msg.sender()));
+            out.set(0, new DatagramPacket(((ByteBufConvertible) content).asByteBuf(), msg.recipient(), msg.sender()));
         } else {
             throw new EncoderException(
                     StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");
@@ -134,11 +135,6 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         encoder.handlerRemoved(ctx);
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        encoder.exceptionCaught(ctx, cause);
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,8 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.Test;
@@ -33,11 +35,25 @@ import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class HttpConversionUtilTest {
+
+    @Test
+    public void connectNoPath() throws Exception {
+        String authority = "netty.io:80";
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.authority(authority);
+        headers.method(HttpMethod.CONNECT.asciiName());
+        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
+        assertNotNull(request);
+        assertEquals(authority, request.uri());
+        assertEquals(authority, request.headers().get(HOST));
+    }
+
     @Test
     public void setHttp2AuthorityWithoutUserInfo() {
         Http2Headers headers = new DefaultHttp2Headers();
@@ -188,5 +204,23 @@ public class HttpConversionUtilTest {
         assertFalse(outHeaders.contains(proxyConnection));
         assertFalse(outHeaders.contains(TRANSFER_ENCODING));
         assertFalse(outHeaders.contains(UPGRADE));
+    }
+
+    @Test
+    public void http2ToHttpHeaderTest() throws Exception {
+        Http2Headers http2Headers = new DefaultHttp2Headers();
+        http2Headers.status("200");
+        http2Headers.path("/meow"); // HTTP/2 Header response should not contain 'path' in response.
+        http2Headers.set("cat", "meow");
+
+        HttpHeaders httpHeaders = new DefaultHttpHeaders();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertFalse(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
+
+        httpHeaders.clear();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
     }
 }

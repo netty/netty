@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,9 @@
  */
 package io.netty.buffer;
 
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ResourceLeakTracker;
-import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 
@@ -27,7 +27,7 @@ class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
     SimpleLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {
         super(wrapped);
-        this.leak = ObjectUtil.checkNotNull(leak, "leak");
+        this.leak = requireNonNull(leak, "leak");
     }
 
     @Override

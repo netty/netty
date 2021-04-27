@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AddressedEnvelope;
@@ -24,6 +25,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -31,6 +33,7 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -44,6 +47,7 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
@@ -58,17 +62,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     private volatile boolean connected;
     private final KQueueDatagramChannelConfig config;
 
-    public KQueueDatagramChannel() {
-        super(null, newSocketDgram(), false);
+    public KQueueDatagramChannel(EventLoop eventLoop) {
+        super(null, eventLoop, newSocketDgram(), false);
         config = new KQueueDatagramChannelConfig(this);
     }
 
-    public KQueueDatagramChannel(int fd) {
-        this(new BsdSocket(fd), true);
+    public KQueueDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new BsdSocket(fd), true);
     }
 
-    KQueueDatagramChannel(BsdSocket socket, boolean active) {
-        super(null, socket, active);
+    KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
+        super(null, eventLoop, socket, active);
         config = new KQueueDatagramChannelConfig(this);
     }
 
@@ -139,14 +143,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final ChannelPromise promise) {
-
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
@@ -191,12 +189,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final ChannelPromise promise) {
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
 
@@ -214,16 +208,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress sourceToBlock, final ChannelPromise promise) {
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (sourceToBlock == null) {
-            throw new NullPointerException("sourceToBlock");
-        }
-
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }
@@ -260,11 +247,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (;;) {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
-                // Wrote all messages.
-                writeFilter(false);
                 break;
             }
 
@@ -279,18 +265,22 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 if (done) {
                     in.remove();
+                    maxMessagesPerWrite --;
                 } else {
-                    // Did not write all messages.
-                    writeFilter(true);
-                    break;
+                   break;
                 }
             } catch (IOException e) {
+                maxMessagesPerWrite --;
+
                 // Continue on write error as a DatagramChannel can write to multiple remote peers
                 //
                 // See https://github.com/netty/netty/issues/2665
                 in.remove(e);
             }
         }
+
+        // Whether all messages were written or not.
+        writeFilter(!in.isEmpty());
     }
 
     private boolean doWriteMessage(Object msg) throws Exception {
@@ -303,7 +293,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = (ByteBuf) msg;
+            data = ((ByteBufConvertible) msg).asByteBuf();
             remoteAddress = null;
         }
 
@@ -322,7 +312,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+            IovArray array = registration().cleanArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -355,20 +345,20 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBuf &&
-                    (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
+            if (e.content() instanceof ByteBufConvertible &&
+                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
-                ByteBuf content = (ByteBuf) e.content();
+                ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
+                        new DefaultAddressedEnvelope<>(
                                 newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
             }
         }
@@ -483,7 +473,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+
+                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                    // as we read anything).
+                    } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();
@@ -496,6 +489,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
+                } else {
+                    readIfIsAutoRead();
                 }
             } finally {
                 readReadyFinally(config);

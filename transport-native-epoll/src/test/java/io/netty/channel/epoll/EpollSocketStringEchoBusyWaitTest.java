@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -39,18 +40,8 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        EPOLL_LOOP = new EpollEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
-                new SelectStrategyFactory() {
-                    @Override
-                    public SelectStrategy newSelectStrategy() {
-                        return new SelectStrategy() {
-                            @Override
-                            public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks) {
-                                return SelectStrategy.BUSY_WAIT;
-                            }
-                        };
-                    }
-                });
+        EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
+                EpollHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
     }
 
     @AfterClass
@@ -63,7 +54,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                new ArrayList<>();
         final BootstrapFactory<ServerBootstrap> sbf = serverSocket();
         final BootstrapFactory<Bootstrap> cbf = clientSocket();
         list.add(new BootstrapComboFactory<ServerBootstrap, Bootstrap>() {
@@ -82,20 +73,10 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     }
 
     private static BootstrapFactory<ServerBootstrap> serverSocket() {
-        return new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(EPOLL_LOOP, EPOLL_LOOP).channel(EpollServerSocketChannel.class);
-            }
-        };
+        return () -> new ServerBootstrap().group(EPOLL_LOOP, EPOLL_LOOP).channel(EpollServerSocketChannel.class);
     }
 
     private static BootstrapFactory<Bootstrap> clientSocket() {
-        return new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(EPOLL_LOOP).channel(EpollSocketChannel.class);
-            }
-        };
+        return () -> new Bootstrap().group(EPOLL_LOOP).channel(EpollSocketChannel.class);
     }
 }

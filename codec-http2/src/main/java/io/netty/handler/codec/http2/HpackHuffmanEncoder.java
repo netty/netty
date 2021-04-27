@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,8 +34,9 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+
+import static java.util.Objects.requireNonNull;
 
 final class HpackHuffmanEncoder {
 
@@ -66,14 +67,12 @@ final class HpackHuffmanEncoder {
      * @param data the string literal to be Huffman encoded
      */
     public void encode(ByteBuf out, CharSequence data) {
-        ObjectUtil.checkNotNull(out, "out");
+        requireNonNull(out, "out");
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
+            encodeProcessor.out = out;
             try {
-                encodeProcessor.out = out;
                 string.forEachByte(encodeProcessor);
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
             } finally {
                 encodeProcessor.end();
             }
@@ -117,14 +116,9 @@ final class HpackHuffmanEncoder {
     int getEncodedLength(CharSequence data) {
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
-            try {
-                encodedLengthProcessor.reset();
-                string.forEachByte(encodedLengthProcessor);
-                return encodedLengthProcessor.length();
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
-                return -1;
-            }
+            encodedLengthProcessor.reset();
+            string.forEachByte(encodedLengthProcessor);
+            return encodedLengthProcessor.length();
         } else {
             return getEncodedLengthSlowPath(data);
         }
@@ -135,7 +129,7 @@ final class HpackHuffmanEncoder {
         for (int i = 0; i < data.length(); i++) {
             len += lengths[data.charAt(i) & 0xFF];
         }
-        return (int) ((len + 7) >> 3);
+        return (int) (len + 7 >> 3);
     }
 
     private final class EncodeProcessor implements ByteProcessor {
@@ -188,7 +182,7 @@ final class HpackHuffmanEncoder {
         }
 
         int length() {
-            return (int) ((len + 7) >> 3);
+            return (int) (len + 7 >> 3);
         }
     }
 }

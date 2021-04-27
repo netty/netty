@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,13 @@
 package io.netty.util;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -34,40 +35,33 @@ public final class CharsetUtil {
      * 16-bit UTF (UCS Transformation Format) whose byte order is identified by
      * an optional byte-order mark
      */
-    public static final Charset UTF_16 = Charset.forName("UTF-16");
+    public static final Charset UTF_16 = StandardCharsets.UTF_16;
 
     /**
      * 16-bit UTF (UCS Transformation Format) whose byte order is big-endian
      */
-    public static final Charset UTF_16BE = Charset.forName("UTF-16BE");
+    public static final Charset UTF_16BE = StandardCharsets.UTF_16BE;
 
     /**
      * 16-bit UTF (UCS Transformation Format) whose byte order is little-endian
      */
-    public static final Charset UTF_16LE = Charset.forName("UTF-16LE");
+    public static final Charset UTF_16LE = StandardCharsets.UTF_16LE;
 
     /**
      * 8-bit UTF (UCS Transformation Format)
      */
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
+    public static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     /**
      * ISO Latin Alphabet No. 1, as known as <tt>ISO-LATIN-1</tt>
      */
-    public static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
+    public static final Charset ISO_8859_1 = StandardCharsets.ISO_8859_1;
 
     /**
      * 7-bit ASCII, as known as ISO646-US or the Basic Latin block of the
      * Unicode character set
      */
-    public static final Charset US_ASCII = Charset.forName("US-ASCII");
-
-    private static final Charset[] CHARSETS = new Charset[]
-            { UTF_16, UTF_16BE, UTF_16LE, UTF_8, ISO_8859_1, US_ASCII };
-
-    public static Charset[] values() {
-        return CHARSETS;
-    }
+    public static final Charset US_ASCII = StandardCharsets.US_ASCII;
 
     /**
      * @deprecated Use {@link #encoder(Charset)}.
@@ -87,7 +81,7 @@ public final class CharsetUtil {
      */
     public static CharsetEncoder encoder(Charset charset, CodingErrorAction malformedInputAction,
                                          CodingErrorAction unmappableCharacterAction) {
-        checkNotNull(charset, "charset");
+        requireNonNull(charset, "charset");
         CharsetEncoder e = charset.newEncoder();
         e.onMalformedInput(malformedInputAction).onUnmappableCharacter(unmappableCharacterAction);
         return e;
@@ -111,7 +105,7 @@ public final class CharsetUtil {
      * @return The encoder for the specified {@code charset}
      */
     public static CharsetEncoder encoder(Charset charset) {
-        checkNotNull(charset, "charset");
+        requireNonNull(charset, "charset");
 
         Map<Charset, CharsetEncoder> map = InternalThreadLocalMap.get().charsetEncoderCache();
         CharsetEncoder e = map.get(charset);
@@ -143,7 +137,7 @@ public final class CharsetUtil {
      */
     public static CharsetDecoder decoder(Charset charset, CodingErrorAction malformedInputAction,
                                          CodingErrorAction unmappableCharacterAction) {
-        checkNotNull(charset, "charset");
+        requireNonNull(charset, "charset");
         CharsetDecoder d = charset.newDecoder();
         d.onMalformedInput(malformedInputAction).onUnmappableCharacter(unmappableCharacterAction);
         return d;
@@ -167,7 +161,7 @@ public final class CharsetUtil {
      * @return The decoder for the specified {@code charset}
      */
     public static CharsetDecoder decoder(Charset charset) {
-        checkNotNull(charset, "charset");
+        requireNonNull(charset, "charset");
 
         Map<Charset, CharsetDecoder> map = InternalThreadLocalMap.get().charsetDecoderCache();
         CharsetDecoder d = map.get(charset);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.stream;
+
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -28,7 +30,7 @@ import java.io.RandomAccessFile;
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
  * <p>
  * If your operating system supports
- * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
+ * <a href="https://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
 public class ChunkedFile implements ChunkedInput<ByteBuf> {
@@ -82,9 +84,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        requireNonNull(file, "file");
         if (offset < 0) {
             throw new IllegalArgumentException(
                     "offset: " + offset + " (expected: 0 or greater)");

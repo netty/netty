@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,13 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -41,13 +43,13 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
     @Test
     public void testBindMultiple() throws Exception {
         DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             for (int i = 0; i < 100; i++) {
                 Bootstrap udpBootstrap = new Bootstrap();
                 udpBootstrap.group(group).channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, true)
-                        .handler(new ChannelInboundHandlerAdapter() {
+                        .handler(new ChannelHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
@@ -66,8 +68,8 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
     }
 
     @Override
-    protected NioDatagramChannel newNioChannel() {
-        return new NioDatagramChannel();
+    protected NioDatagramChannel newNioChannel(EventLoopGroup group) {
+        return new NioDatagramChannel(group.next());
     }
 
     @Override

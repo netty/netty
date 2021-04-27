@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * A {@link DnsServerAddressStreamProvider} which is backed by a single {@link DnsServerAddresses}.
@@ -24,7 +25,7 @@ abstract class UniSequentialDnsServerAddressStreamProvider implements DnsServerA
     private final DnsServerAddresses addresses;
 
     UniSequentialDnsServerAddressStreamProvider(DnsServerAddresses addresses) {
-        this.addresses = ObjectUtil.checkNotNull(addresses, "addresses");
+        this.addresses = requireNonNull(addresses, "addresses");
     }
 
     @Override

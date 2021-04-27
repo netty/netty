@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,8 +23,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 
 import java.util.Collections;
-
-import static io.netty.util.internal.ObjectUtil.*;
+import java.util.Objects;
 
 /**
  * <a href="https://tools.ietf.org/id/draft-tyoshino-hybi-websocket-perframe-deflate-06.txt">perframe-deflate</a>
@@ -70,7 +69,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
-        this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.extensionFilterProvider = Objects.requireNonNull(extensionFilterProvider, "extensionFilterProvider");
     }
 
     @Override
@@ -117,8 +116,8 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         }
 
         @Override
-        public WebSocketExtensionData newReponseData() {
-            return new WebSocketExtensionData(extensionName, Collections.<String, String>emptyMap());
+        public WebSocketExtensionData newResponseData() {
+            return new WebSocketExtensionData(extensionName, Collections.emptyMap());
         }
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
@@ -55,9 +54,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
@@ -446,11 +445,11 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
     public void testEncodeHttpsSchemeWhenSslHandlerExists() throws Exception {
-        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<Http2StreamFrame>();
+        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelHandler() {
                     @Override
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                         if (msg instanceof Http2StreamFrame) {
@@ -875,12 +874,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
     public void testIsSharableBetweenChannels() throws Exception {
-        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<Http2StreamFrame>();
+        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
         final ChannelHandler sharedHandler = new Http2StreamFrameToHttpObjectCodec(false);
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
-            new ChannelOutboundHandlerAdapter() {
+            new ChannelHandler() {
                 @Override
                 public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     if (msg instanceof Http2StreamFrame) {
@@ -893,7 +892,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             }, sharedHandler);
 
         EmbeddedChannel plaintextCh = new EmbeddedChannel(
-            new ChannelOutboundHandlerAdapter() {
+            new ChannelHandler() {
                 @Override
                 public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     if (msg instanceof Http2StreamFrame) {

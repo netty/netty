@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -26,7 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
@@ -40,8 +41,13 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = requireNonNull(delegate, "delegate");
         this.logNotifyFailure = logNotifyFailure;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return delegate.executor();
     }
 
     @Override

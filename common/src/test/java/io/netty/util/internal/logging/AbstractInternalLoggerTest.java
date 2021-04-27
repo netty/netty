@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ public abstract class AbstractInternalLoggerTest<T> {
     protected String loggerName = "foo";
     protected T mockLog;
     protected InternalLogger logger;
-    protected final Map<String, Object> result = new HashMap<String, Object>();
+    protected final Map<String, Object> result = new HashMap<>();
 
     @SuppressWarnings("unchecked")
     protected <V> V getResult(String key) {

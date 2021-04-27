@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,12 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -35,7 +35,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     protected final ByteBuf newBuffer(int length, int maxCapacity) {
         Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
-        int offset = length == 0 ? 0 : PlatformDependent.threadLocalRandom().nextInt(length);
+        int offset = length == 0 ? 0 : ThreadLocalRandom.current().nextInt(length);
         ByteBuf buffer = Unpooled.buffer(length * 2);
         ByteBuf slice = newSlice(buffer, offset, length);
         assertEquals(0, slice.readerIndex());
@@ -154,23 +154,21 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
-    public void testReaderIndexAndMarks() {
+    public void testReaderIndex() {
         ByteBuf wrapped = Unpooled.buffer(16);
         try {
             wrapped.writerIndex(14);
             wrapped.readerIndex(2);
-            wrapped.markWriterIndex();
-            wrapped.markReaderIndex();
             ByteBuf slice = wrapped.slice(4, 4);
             assertEquals(0, slice.readerIndex());
             assertEquals(4, slice.writerIndex());
 
             slice.readerIndex(slice.readerIndex() + 1);
-            slice.resetReaderIndex();
+            slice.readerIndex(0);
             assertEquals(0, slice.readerIndex());
 
             slice.writerIndex(slice.writerIndex() - 1);
-            slice.resetWriterIndex();
+            slice.writerIndex(0);
             assertEquals(0, slice.writerIndex());
         } finally {
             wrapped.release();

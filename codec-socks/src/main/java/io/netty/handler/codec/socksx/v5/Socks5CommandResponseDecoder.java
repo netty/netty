@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
@@ -23,8 +25,6 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder.State;
-
-import java.util.List;
 
 /**
  * Decodes a single {@link Socks5CommandResponse} from the inbound {@link ByteBuf}s.
@@ -48,15 +48,13 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
 
     public Socks5CommandResponseDecoder(Socks5AddressDecoder addressDecoder) {
         super(State.INIT);
-        if (addressDecoder == null) {
-            throw new NullPointerException("addressDecoder");
-        }
+        requireNonNull(addressDecoder, "addressDecoder");
 
         this.addressDecoder = addressDecoder;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case INIT: {
@@ -71,13 +69,13 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
                 final String addr = addressDecoder.decodeAddress(addrType, in);
                 final int port = in.readUnsignedShort();
 
-                out.add(new DefaultSocks5CommandResponse(status, addrType, addr, port));
+                ctx.fireChannelRead(new DefaultSocks5CommandResponse(status, addrType, addr, port));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -87,11 +85,11 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
@@ -101,6 +99,6 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
         Socks5Message m = new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4, null, 0);
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
     }
 }

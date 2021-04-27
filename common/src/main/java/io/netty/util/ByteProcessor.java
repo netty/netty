@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -103,46 +103,26 @@ public interface ByteProcessor {
     /**
      * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.
      */
-    ByteProcessor FIND_CRLF = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return value != CARRIAGE_RETURN && value != LINE_FEED;
-        }
-    };
+    ByteProcessor FIND_CRLF = value -> value != CARRIAGE_RETURN && value != LINE_FEED;
 
     /**
      * Aborts on a byte which is neither a {@code CR ('\r')} nor a {@code LF ('\n')}.
      */
-    ByteProcessor FIND_NON_CRLF = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return value == CARRIAGE_RETURN || value == LINE_FEED;
-        }
-    };
+    ByteProcessor FIND_NON_CRLF = value -> value == CARRIAGE_RETURN || value == LINE_FEED;
 
     /**
      * Aborts on a linear whitespace (a ({@code ' '} or a {@code '\t'}).
      */
-    ByteProcessor FIND_LINEAR_WHITESPACE = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return value != SPACE && value != HTAB;
-        }
-    };
+    ByteProcessor FIND_LINEAR_WHITESPACE = value -> value != SPACE && value != HTAB;
 
     /**
      * Aborts on a byte which is not a linear whitespace (neither {@code ' '} nor {@code '\t'}).
      */
-    ByteProcessor FIND_NON_LINEAR_WHITESPACE = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return value == SPACE || value == HTAB;
-        }
-    };
+    ByteProcessor FIND_NON_LINEAR_WHITESPACE = value -> value == SPACE || value == HTAB;
 
     /**
      * @return {@code true} if the processor wants to continue the loop and handle the next byte in the buffer.
      *         {@code false} if the processor wants to stop handling bytes and abort the loop.
      */
-    boolean process(byte value) throws Exception;
+    boolean process(byte value);
 }

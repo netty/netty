@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,12 +23,12 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 public class NettyRuntimeTests {
@@ -75,12 +75,12 @@ public class NettyRuntimeTests {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         final CyclicBarrier barrier = new CyclicBarrier(3);
 
-        final AtomicReference<IllegalStateException> firstReference = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> firstReference = new AtomicReference<>();
         final Runnable firstTarget = getRunnable(holder, barrier, firstReference);
         final Thread firstGet = new Thread(firstTarget);
         firstGet.start();
 
-        final AtomicReference<IllegalStateException> secondRefernce = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> secondRefernce = new AtomicReference<>();
         final Runnable secondTarget = getRunnable(holder, barrier, secondRefernce);
         final Thread secondGet = new Thread(secondTarget);
         secondGet.start();
@@ -102,17 +102,14 @@ public class NettyRuntimeTests {
             final NettyRuntime.AvailableProcessorsHolder holder,
             final CyclicBarrier barrier,
             final AtomicReference<IllegalStateException> reference) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                try {
-                    holder.availableProcessors();
-                } catch (final IllegalStateException e) {
-                    reference.set(e);
-                }
-                await(barrier);
+        return () -> {
+            await(barrier);
+            try {
+                holder.availableProcessors();
+            } catch (final IllegalStateException e) {
+                reference.set(e);
             }
+            await(barrier);
         };
     }
 
@@ -120,28 +117,22 @@ public class NettyRuntimeTests {
     public void testRacingGetAndSet() throws InterruptedException {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         final CyclicBarrier barrier = new CyclicBarrier(3);
-        final Thread get = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                holder.availableProcessors();
-                await(barrier);
-            }
+        final Thread get = new Thread(() -> {
+            await(barrier);
+            holder.availableProcessors();
+            await(barrier);
         });
         get.start();
 
-        final AtomicReference<IllegalStateException> setException = new AtomicReference<IllegalStateException>();
-        final Thread set = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                try {
-                    holder.setAvailableProcessors(2048);
-                } catch (final IllegalStateException e) {
-                    setException.set(e);
-                }
-                await(barrier);
+        final AtomicReference<IllegalStateException> setException = new AtomicReference<>();
+        final Thread set = new Thread(() -> {
+            await(barrier);
+            try {
+                holder.setAvailableProcessors(2048);
+            } catch (final IllegalStateException e) {
+                setException.set(e);
             }
+            await(barrier);
         });
         set.start();
 

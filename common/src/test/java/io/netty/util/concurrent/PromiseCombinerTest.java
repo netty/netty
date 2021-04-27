@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -224,13 +224,9 @@ public class PromiseCombinerTest {
 
     @SuppressWarnings("unchecked")
     private static void mockListener(final Promise<Void> p, final GenericFutureListenerConsumer consumer) {
-        doAnswer(new Answer<Promise<Void>>() {
-            @SuppressWarnings({ "unchecked", "raw-types" })
-            @Override
-            public Promise<Void> answer(InvocationOnMock invocation) throws Throwable {
-                consumer.accept((GenericFutureListener) invocation.getArgument(0));
-                return p;
-            }
+        doAnswer(invocation -> {
+            consumer.accept((GenericFutureListener) invocation.getArgument(0));
+            return p;
         }).when(p).addListener(any(GenericFutureListener.class));
     }
 

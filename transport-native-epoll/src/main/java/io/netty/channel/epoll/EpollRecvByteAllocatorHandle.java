@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,13 +25,7 @@ import io.netty.util.UncheckedBooleanSupplier;
 class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
-    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
-        @Override
-        public boolean get() {
-            return maybeMoreDataToRead();
-        }
-    };
-    private boolean isEdgeTriggered;
+    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(ExtendedHandle handle) {
@@ -49,23 +43,14 @@ class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedH
     boolean maybeMoreDataToRead() {
         /**
          * EPOLL ET requires that we read until we get an EAGAIN
-         * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
+         * (see Q9 in <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
          * respect auto read we supporting reading to stop if auto read is off. It is expected that the
          * {@link #EpollSocketChannel} implementations will track if we are in edgeTriggered mode and all data was not
          * read, and will force a EPOLLIN ready event.
          *
          * It is assumed RDHUP is handled externally by checking {@link #isReceivedRdHup()}.
          */
-        return (isEdgeTriggered && lastBytesRead() > 0) ||
-               (!isEdgeTriggered && lastBytesRead() == attemptedBytesRead());
-    }
-
-    final void edgeTriggered(boolean edgeTriggered) {
-        isEdgeTriggered = edgeTriggered;
-    }
-
-    final boolean isEdgeTriggered() {
-        return isEdgeTriggered;
+        return lastBytesRead() > 0;
     }
 
     @Override

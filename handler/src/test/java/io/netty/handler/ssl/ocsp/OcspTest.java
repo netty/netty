@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,13 +23,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.ReferenceCountedOpenSslEngine;
@@ -163,7 +163,7 @@ public class OcspTest {
      */
     private static void testClientAcceptingOcspStaple(SslProvider sslProvider) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
@@ -171,7 +171,7 @@ public class OcspTest {
             }
         };
 
-        ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler clientHandler = new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 try {
@@ -208,10 +208,10 @@ public class OcspTest {
      * The Server provides an OCSP staple and the Client rejects it.
      */
     private static void testClientRejectingOcspStaple(SslProvider sslProvider) throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler clientHandler = new ChannelHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 try {
@@ -252,7 +252,7 @@ public class OcspTest {
      */
     private static void testServerHasNoStaple(SslProvider sslProvider) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
@@ -260,7 +260,7 @@ public class OcspTest {
             }
         };
 
-        ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler clientHandler = new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 try {
@@ -298,10 +298,10 @@ public class OcspTest {
      * The exception should bubble up on the client side and the connection should get closed.
      */
     private static void testClientException(SslProvider sslProvider) throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler clientHandler = new ChannelHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 try {
@@ -314,11 +314,8 @@ public class OcspTest {
 
         final OcspTestException clientException = new OcspTestException("testClientException");
         byte[] response = newOcspResponse();
-        OcspClientCallback callback = new OcspClientCallback() {
-            @Override
-            public boolean verify(byte[] response) throws Exception {
-                throw clientException;
-            }
+        OcspClientCallback callback = response1 -> {
+            throw clientException;
         };
 
         handshake(sslProvider, latch, null, response, clientHandler, callback);
@@ -344,7 +341,7 @@ public class OcspTest {
                         .build();
 
                 try {
-                    EventLoopGroup group = new DefaultEventLoopGroup();
+                    EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
                     try {
                         LocalAddress address = new LocalAddress("handshake-" + Math.random());
                         Channel server = newServer(group, address, serverSslContext, response, serverHandler);

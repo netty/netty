@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,6 +32,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.Enumeration;
 
 /**
@@ -42,18 +43,22 @@ import java.util.Enumeration;
  */
 public final class SocketUtils {
 
+    private static final Enumeration<Object> EMPTY = Collections.enumeration(Collections.emptyList());
+
     private SocketUtils() {
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Enumeration<T> empty() {
+        return (Enumeration<T>) EMPTY;
     }
 
     public static void connect(final Socket socket, final SocketAddress remoteAddress, final int timeout)
             throws IOException {
         try {
-            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
-                @Override
-                public Void run() throws IOException {
-                    socket.connect(remoteAddress, timeout);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+                socket.connect(remoteAddress, timeout);
+                return null;
             });
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
@@ -62,12 +67,9 @@ public final class SocketUtils {
 
     public static void bind(final Socket socket, final SocketAddress bindpoint) throws IOException {
         try {
-            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
-                @Override
-                public Void run() throws IOException {
-                    socket.bind(bindpoint);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+                socket.bind(bindpoint);
+                return null;
             });
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
@@ -77,12 +79,8 @@ public final class SocketUtils {
     public static boolean connect(final SocketChannel socketChannel, final SocketAddress remoteAddress)
             throws IOException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
-                @Override
-                public Boolean run() throws IOException {
-                    return socketChannel.connect(remoteAddress);
-                }
-            });
+            return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () ->
+                    socketChannel.connect(remoteAddress));
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
         }
@@ -91,12 +89,9 @@ public final class SocketUtils {
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static void bind(final SocketChannel socketChannel, final SocketAddress address) throws IOException {
         try {
-            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
-                @Override
-                public Void run() throws IOException {
-                    socketChannel.bind(address);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+                socketChannel.bind(address);
+                return null;
             });
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
@@ -105,12 +100,8 @@ public final class SocketUtils {
 
     public static SocketChannel accept(final ServerSocketChannel serverSocketChannel) throws IOException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<SocketChannel>() {
-                @Override
-                public SocketChannel run() throws IOException {
-                    return serverSocketChannel.accept();
-                }
-            });
+            return AccessController.doPrivileged(
+                    (PrivilegedExceptionAction<SocketChannel>) serverSocketChannel::accept);
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
         }
@@ -119,12 +110,9 @@ public final class SocketUtils {
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static void bind(final DatagramChannel networkChannel, final SocketAddress address) throws IOException {
         try {
-            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
-                @Override
-                public Void run() throws IOException {
-                    networkChannel.bind(address);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+                networkChannel.bind(address);
+                return null;
             });
         } catch (PrivilegedActionException e) {
             throw (IOException) e.getCause();
@@ -132,22 +120,13 @@ public final class SocketUtils {
     }
 
     public static SocketAddress localSocketAddress(final ServerSocket socket) {
-        return AccessController.doPrivileged(new PrivilegedAction<SocketAddress>() {
-            @Override
-            public SocketAddress run() {
-                return socket.getLocalSocketAddress();
-            }
-        });
+        return AccessController.doPrivileged((PrivilegedAction<SocketAddress>) socket::getLocalSocketAddress);
     }
 
     public static InetAddress addressByName(final String hostname) throws UnknownHostException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<InetAddress>() {
-                @Override
-                public InetAddress run() throws UnknownHostException {
-                    return InetAddress.getByName(hostname);
-                }
-            });
+            return AccessController.doPrivileged((PrivilegedExceptionAction<InetAddress>) () ->
+                    InetAddress.getByName(hostname));
         } catch (PrivilegedActionException e) {
             throw (UnknownHostException) e.getCause();
         }
@@ -155,60 +134,38 @@ public final class SocketUtils {
 
     public static InetAddress[] allAddressesByName(final String hostname) throws UnknownHostException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<InetAddress[]>() {
-                @Override
-                public InetAddress[] run() throws UnknownHostException {
-                    return InetAddress.getAllByName(hostname);
-                }
-            });
+            return AccessController.doPrivileged((PrivilegedExceptionAction<InetAddress[]>) () ->
+                    InetAddress.getAllByName(hostname));
         } catch (PrivilegedActionException e) {
             throw (UnknownHostException) e.getCause();
         }
     }
 
     public static InetSocketAddress socketAddress(final String hostname, final int port) {
-        return AccessController.doPrivileged(new PrivilegedAction<InetSocketAddress>() {
-            @Override
-            public InetSocketAddress run() {
-                return new InetSocketAddress(hostname, port);
-            }
-        });
+        return AccessController.doPrivileged((PrivilegedAction<InetSocketAddress>) () ->
+                new InetSocketAddress(hostname, port));
     }
 
     public static Enumeration<InetAddress> addressesFromNetworkInterface(final NetworkInterface intf) {
-        return AccessController.doPrivileged(new PrivilegedAction<Enumeration<InetAddress>>() {
-            @Override
-            public Enumeration<InetAddress> run() {
-                return intf.getInetAddresses();
-            }
-        });
+        Enumeration<InetAddress> addresses =
+                AccessController.doPrivileged((PrivilegedAction<Enumeration<InetAddress>>) intf::getInetAddresses);
+        // Android seems to sometimes return null even if this is not a valid return value by the api docs.
+        // Just return an empty Enumeration in this case.
+        // See https://github.com/netty/netty/issues/10045
+        if (addresses == null) {
+            return empty();
+        }
+        return addresses;
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static InetAddress loopbackAddress() {
-        return AccessController.doPrivileged(new PrivilegedAction<InetAddress>() {
-            @Override
-            public InetAddress run() {
-                if (PlatformDependent.javaVersion() >= 7) {
-                    return InetAddress.getLoopbackAddress();
-                }
-                try {
-                    return InetAddress.getByName(null);
-                } catch (UnknownHostException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-        });
+        return AccessController.doPrivileged((PrivilegedAction<InetAddress>) InetAddress::getLoopbackAddress);
     }
 
     public static byte[] hardwareAddressFromNetworkInterface(final NetworkInterface intf) throws SocketException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<byte[]>() {
-                @Override
-                public byte[] run() throws SocketException {
-                    return intf.getHardwareAddress();
-                }
-            });
+            return AccessController.doPrivileged((PrivilegedExceptionAction<byte[]>) intf::getHardwareAddress);
         } catch (PrivilegedActionException e) {
             throw (SocketException) e.getCause();
         }

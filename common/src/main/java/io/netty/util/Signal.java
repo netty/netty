@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -64,13 +64,15 @@ public final class Signal extends Error implements Constant<Signal> {
         }
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable initCause(Throwable cause) {
+    public Throwable initCause(Throwable cause) {   // lgtm[java/non-sync-override]
         return this;
     }
 
+    // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
         return this;
     }
 

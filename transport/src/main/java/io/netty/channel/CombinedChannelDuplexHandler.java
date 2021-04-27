@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,23 +15,21 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
+ *  Combines the inbound handling of one {@link ChannelHandler} with the outbound handling of
+ *  another {@link ChannelHandler}.
  */
-public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
-        extends ChannelDuplexHandler {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CombinedChannelDuplexHandler.class);
+public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends ChannelHandler>
+        extends ChannelHandlerAdapter {
 
     private DelegatingChannelHandlerContext inboundCtx;
     private DelegatingChannelHandlerContext outboundCtx;
@@ -42,7 +40,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
-     * {@link #init(ChannelInboundHandler, ChannelOutboundHandler)} before adding this handler into a
+     * {@link #init(ChannelHandler, ChannelHandler)} before adding this handler into a
      * {@link ChannelPipeline}.
      */
     protected CombinedChannelDuplexHandler() {
@@ -78,21 +76,15 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
                             " was constructed with non-default constructor.");
         }
 
-        if (inboundHandler == null) {
-            throw new NullPointerException("inboundHandler");
-        }
-        if (outboundHandler == null) {
-            throw new NullPointerException("outboundHandler");
-        }
-        if (inboundHandler instanceof ChannelOutboundHandler) {
+        requireNonNull(inboundHandler, "inboundHandler");
+        requireNonNull(outboundHandler, "outboundHandler");
+        if (ChannelHandlerMask.isOutbound(inboundHandler.getClass())) {
             throw new IllegalArgumentException(
-                    "inboundHandler must not implement " +
-                    ChannelOutboundHandler.class.getSimpleName() + " to get combined.");
+                    "inboundHandler must not implement any outbound method to get combined.");
         }
-        if (outboundHandler instanceof ChannelInboundHandler) {
+        if (ChannelHandlerMask.isInbound(outboundHandler.getClass())) {
             throw new IllegalArgumentException(
-                    "outboundHandler must not implement " +
-                    ChannelInboundHandler.class.getSimpleName() + " to get combined.");
+                    "outboundHandler must not implement any inbound method to get combined.");
         }
     }
 
@@ -111,7 +103,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     /**
-     * Removes the {@link ChannelInboundHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
+     * Removes the inbound {@link ChannelHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
      */
     public final void removeInboundHandler() {
         checkAdded();
@@ -119,7 +111,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     /**
-     * Removes the {@link ChannelOutboundHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
+     * Removes the outbound {@link ChannelHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
      */
     public final void removeOutboundHandler() {
         checkAdded();
@@ -136,35 +128,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         outboundCtx = new DelegatingChannelHandlerContext(ctx, outboundHandler);
-        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler) {
-            @SuppressWarnings("deprecation")
-            @Override
-            public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-                if (!outboundCtx.removed) {
-                    try {
-                        // We directly delegate to the ChannelOutboundHandler as this may override exceptionCaught(...)
-                        // as well
-                        outboundHandler.exceptionCaught(outboundCtx, cause);
-                    } catch (Throwable error) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug(
-                                    "An exception {}" +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:",
-                                    ThrowableUtil.stackTraceToString(error), cause);
-                        } else if (logger.isWarnEnabled()) {
-                            logger.warn(
-                                    "An exception '{}' [enable DEBUG level for full stacktrace] " +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:", error, cause);
-                        }
-                    }
-                } else {
-                    super.fireExceptionCaught(cause);
-                }
-                return this;
-            }
-        };
+        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler);
 
         // The inboundCtx and outboundCtx were created and set now it's safe to call removeInboundHandler() and
         // removeOutboundHandler().
@@ -322,6 +286,16 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        assert ctx == outboundCtx.ctx;
+        if (!outboundCtx.removed) {
+            outboundHandler.register(outboundCtx, promise);
+        } else {
+            outboundCtx.register(promise);
+        }
+    }
+
+    @Override
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
@@ -361,7 +335,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
     }
 
-    private static class DelegatingChannelHandlerContext implements ChannelHandlerContext {
+    private static final class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
         private final ChannelHandlerContext ctx;
         private final ChannelHandler handler;
@@ -477,6 +451,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
+        public ChannelFuture register() {
+            return ctx.register();
+        }
+
+        @Override
         public ChannelFuture deregister() {
             return ctx.deregister();
         }
@@ -505,6 +484,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelFuture close(ChannelPromise promise) {
             return ctx.close(promise);
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return ctx.register(promise);
         }
 
         @Override
@@ -589,17 +573,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
             return ctx.channel().hasAttr(key);
         }
 
-        final void remove() {
+        void remove() {
             EventExecutor executor = executor();
             if (executor.inEventLoop()) {
                 remove0();
             } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        remove0();
-                    }
-                });
+                executor.execute(this::remove0);
             }
         }
 

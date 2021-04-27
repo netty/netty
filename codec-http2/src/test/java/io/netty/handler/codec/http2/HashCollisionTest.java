@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -43,7 +43,7 @@ public final class HashCollisionTest {
 
     public static void main(String[] args) throws IllegalAccessException, IOException, URISyntaxException {
         // Big initial size for when all name sources are pulled in.
-        List<CharSequence> strings = new ArrayList<CharSequence>(350000);
+        List<CharSequence> strings = new ArrayList<>(350000);
         addHttpHeaderNames(strings);
         addHttpHeaderValues(strings);
         addHttp2HeaderNames(strings);
@@ -51,28 +51,20 @@ public final class HashCollisionTest {
         // More "english words" can be found here:
         // https://gist.github.com/Scottmitch/de2f03912778016ecee3c140478f07e0#file-englishwords-txt
 
-        Map<Integer, List<CharSequence>> dups = calculateDuplicates(strings, new Function<CharSequence, Integer>() {
-            @Override
-            public Integer apply(CharSequence string) {
-                int h = 0;
-                for (int i = 0; i < string.length(); ++i) {
-                    // masking with 0x1F reduces the number of overall bits that impact the hash code but makes the hash
-                    // code the same regardless of character case (upper case or lower case hash is the same).
-                    h = h * 31 + (string.charAt(i) & 0x1F);
-                }
-                return h;
+        Map<Integer, List<CharSequence>> dups = calculateDuplicates(strings, string -> {
+            int h = 0;
+            for (int i = 0; i < string.length(); ++i) {
+                // masking with 0x1F reduces the number of overall bits that impact the hash code but makes the hash
+                // code the same regardless of character case (upper case or lower case hash is the same).
+                h = h * 31 + (string.charAt(i) & 0x1F);
             }
+            return h;
         });
         PrintStream writer = System.out;
         writer.println("==Old Duplicates==");
         printResults(writer, dups);
 
-        dups = calculateDuplicates(strings, new Function<CharSequence, Integer>() {
-            @Override
-            public Integer apply(CharSequence string) {
-                return PlatformDependent.hashCodeAscii(string);
-            }
-        });
+        dups = calculateDuplicates(strings, PlatformDependent::hashCodeAscii);
         writer.println();
         writer.println("==New Duplicates==");
         printResults(writer, dups);
@@ -118,14 +110,14 @@ public final class HashCollisionTest {
 
     private static Map<Integer, List<CharSequence>> calculateDuplicates(List<CharSequence> strings,
                                                                         Function<CharSequence, Integer> hasher) {
-        Map<Integer, List<CharSequence>> hashResults = new HashMap<Integer, List<CharSequence>>();
-        Set<Integer> duplicateHashCodes = new HashSet<Integer>();
+        Map<Integer, List<CharSequence>> hashResults = new HashMap<>();
+        Set<Integer> duplicateHashCodes = new HashSet<>();
 
         for (CharSequence str : strings) {
             Integer hash = hasher.apply(str);
             List<CharSequence> results = hashResults.get(hash);
             if (results == null) {
-                results = new ArrayList<CharSequence>(1);
+                results = new ArrayList<>(1);
                 hashResults.put(hash, results);
             } else {
                 duplicateHashCodes.add(hash);
@@ -137,9 +129,9 @@ public final class HashCollisionTest {
             return Collections.emptyMap();
         }
         Map<Integer, List<CharSequence>> duplicates =
-                new HashMap<Integer, List<CharSequence>>(duplicateHashCodes.size());
+                new HashMap<>(duplicateHashCodes.size());
         for (Integer duplicateHashCode : duplicateHashCodes) {
-            List<CharSequence> realDups = new ArrayList<CharSequence>(2);
+            List<CharSequence> realDups = new ArrayList<>(2);
             Iterator<CharSequence> itr = hashResults.get(duplicateHashCode).iterator();
             // there should be at least 2 elements in the list ... bcz there may be duplicates
             realDups.add(itr.next());

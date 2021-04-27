@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * Creates a URL-encoded URI from a path string and key-value parameter pairs.
@@ -58,7 +60,7 @@ public class QueryStringEncoder {
      * path string in the specified charset.
      */
     public QueryStringEncoder(String uri, Charset charset) {
-        ObjectUtil.checkNotNull(charset, "charset");
+        Objects.requireNonNull(charset, "charset");
         uriBuilder = new StringBuilder(uri);
         this.charset = CharsetUtil.UTF_8.equals(charset) ? null : charset;
     }
@@ -67,7 +69,7 @@ public class QueryStringEncoder {
      * Adds a parameter with the specified name and value to this encoder.
      */
     public void addParam(String name, String value) {
-        ObjectUtil.checkNotNull(name, "name");
+        requireNonNull(name, "name");
         if (hasParams) {
             uriBuilder.append('&');
         } else {
@@ -155,6 +157,25 @@ public class QueryStringEncoder {
     private void encodeUtf8Component(CharSequence s) {
         for (int i = 0, len = s.length(); i < len; i++) {
             char c = s.charAt(i);
+            if (!dontNeedEncoding(c)) {
+                encodeUtf8Component(s, i, len);
+                return;
+            }
+        }
+        uriBuilder.append(s);
+    }
+
+    private void encodeUtf8Component(CharSequence s, int encodingStart, int len) {
+        if (encodingStart > 0) {
+            // Append non-encoded characters directly first.
+            uriBuilder.append(s, 0, encodingStart);
+        }
+        encodeUtf8ComponentSlow(s, encodingStart, len);
+    }
+
+    private void encodeUtf8ComponentSlow(CharSequence s, int start, int len) {
+        for (int i = start; i < len; i++) {
+            char c = s.charAt(i);
             if (c < 0x80) {
                 if (dontNeedEncoding(c)) {
                     uriBuilder.append(c);
@@ -191,7 +212,7 @@ public class QueryStringEncoder {
             return;
         }
         int codePoint = Character.toCodePoint(c, c2);
-        // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+        // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
         appendEncoded(0xf0 | (codePoint >> 18));
         appendEncoded(0x80 | ((codePoint >> 12) & 0x3f));
         appendEncoded(0x80 | ((codePoint >> 6) & 0x3f));

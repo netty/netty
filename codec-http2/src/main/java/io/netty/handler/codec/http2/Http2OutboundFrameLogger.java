@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2FrameLogger.Direction.OUTBOUND;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,8 +34,8 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     private final Http2FrameLogger logger;
 
     public Http2OutboundFrameLogger(Http2FrameWriter writer, Http2FrameLogger logger) {
-        this.writer = checkNotNull(writer, "writer");
-        this.logger = checkNotNull(logger, "logger");
+        this.writer = requireNonNull(writer, "writer");
+        this.logger = requireNonNull(logger, "logger");
     }
 
     @Override

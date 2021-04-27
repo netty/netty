@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
@@ -35,8 +36,8 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
 
         @Override
         public int size(Object msg) {
-            if (msg instanceof ByteBuf) {
-                return ((ByteBuf) msg).readableBytes();
+            if (msg instanceof ByteBufConvertible) {
+                return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
             }
             if (msg instanceof ByteBufHolder) {
                 return ((ByteBufHolder) msg).content().readableBytes();

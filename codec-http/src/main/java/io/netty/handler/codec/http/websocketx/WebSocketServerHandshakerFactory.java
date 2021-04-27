@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.internal.ObjectUtil;
+
+import java.util.Objects;
 
 /**
  * Auto-detects the version of the Web Socket protocol in use and creates a new proper
@@ -117,7 +119,7 @@ public class WebSocketServerHandshakerFactory {
             String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
-        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.decoderConfig = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     /**

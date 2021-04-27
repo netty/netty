@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -27,9 +27,9 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.util.Objects.requireNonNull;
 import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.COMMA;
 
 /**
@@ -169,6 +169,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
+    private final boolean validateHeaders;
     private boolean handlingUpgrade;
 
     /**
@@ -199,52 +200,64 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
+        this(sourceCodec, upgradeCodecFactory, maxContentLength, true);
+    }
+
+    /**
+     * Constructs the upgrader with the supported codecs.
+     *
+     * @param sourceCodec the codec that is being used initially
+     * @param upgradeCodecFactory the factory that creates a new upgrade codec
+     *                            for one of the requested upgrade protocols
+     * @param maxContentLength the maximum length of the content of an upgrade request
+     * @param validateHeaders validate the header names and values of the upgrade response.
+     */
+    public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
+                                    int maxContentLength, boolean validateHeaders) {
         super(maxContentLength);
 
-        this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
-        this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.sourceCodec = requireNonNull(sourceCodec, "sourceCodec");
+        this.upgradeCodecFactory = requireNonNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out)
+    protected void decode(final ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
         // Determine if we're already handling an upgrade request or just starting a new one.
         handlingUpgrade |= isUpgradeRequest(msg);
         if (!handlingUpgrade) {
             // Not handling an upgrade request, just pass it to the next handler.
             ReferenceCountUtil.retain(msg);
-            out.add(msg);
+            ctx.fireChannelRead(msg);
             return;
         }
 
         FullHttpRequest fullRequest;
         if (msg instanceof FullHttpRequest) {
             fullRequest = (FullHttpRequest) msg;
-            ReferenceCountUtil.retain(msg);
-            out.add(msg);
+            tryUpgrade(ctx, fullRequest.retain());
         } else {
             // Call the base class to handle the aggregation of the full request.
-            super.decode(ctx, msg, out);
-            if (out.isEmpty()) {
-                // The full request hasn't been created yet, still awaiting more data.
-                return;
-            }
-
-            // Finished aggregating the full request, get it from the output list.
-            assert out.size() == 1;
-            handlingUpgrade = false;
-            fullRequest = (FullHttpRequest) out.get(0);
+            super.decode(new DelegatingChannelHandlerContext(ctx) {
+                @Override
+                public ChannelHandlerContext fireChannelRead(Object msg) {
+                    // Finished aggregating the full request, get it from the output list.
+                    handlingUpgrade = false;
+                    tryUpgrade(ctx, (FullHttpRequest) msg);
+                    return this;
+                }
+            }, msg);
         }
+    }
 
-        if (upgrade(ctx, fullRequest)) {
-            // The upgrade was successful, remove the message from the output list
-            // so that it's not propagated to the next handler. This request will
-            // be propagated as a user event instead.
-            out.clear();
+    private void tryUpgrade(ChannelHandlerContext ctx, FullHttpRequest request) {
+        if (!upgrade(ctx, request)) {
+
+            // The upgrade did not succeed, just allow the full request to propagate to the
+            // next handler.
+            ctx.fireChannelRead(request);
         }
-
-        // The upgrade did not succeed, just allow the full request to propagate to the
-        // next handler.
     }
 
     /**
@@ -331,12 +344,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             sourceCodec.upgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, request);
 
-            // Remove this handler from the pipeline.
-            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
-
             // Notify that the upgrade has occurred. Retain the event to offset
             // the release() in the finally block.
             ctx.fireUserEventTriggered(event.retain());
+
+            // Remove this handler from the pipeline.
+            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
 
             // Add the listener last to avoid firing upgrade logic after
             // the channel is already closed since the listener may fire
@@ -352,9 +365,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     /**
      * Creates the 101 Switching Protocols response message.
      */
-    private static FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS,
-                Unpooled.EMPTY_BUFFER, false);
+    private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
+        DefaultFullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, validateHeaders);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;
@@ -366,7 +379,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private static List<CharSequence> splitHeader(CharSequence header) {
         final StringBuilder builder = new StringBuilder(header.length());
-        final List<CharSequence> protocols = new ArrayList<CharSequence>(4);
+        final List<CharSequence> protocols = new ArrayList<>(4);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
             if (Character.isWhitespace(c)) {

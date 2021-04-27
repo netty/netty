@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,9 +19,13 @@ import io.netty.channel.socket.ServerSocketChannel;
 
 /**
  * A {@link Channel} that accepts an incoming connection attempt and creates
- * its child {@link Channel}s by accepting them.  {@link ServerSocketChannel} is
+ * its child {@link Channel}s by accepting them. {@link ServerSocketChannel} is
  * a good example.
  */
 public interface ServerChannel extends Channel {
-    // This is a tag interface.
+
+    /**
+     * Returns the {@link EventLoopGroup} that is used to register the child {@link Channel}s on.
+     */
+    EventLoopGroup childEventLoopGroup();
 }

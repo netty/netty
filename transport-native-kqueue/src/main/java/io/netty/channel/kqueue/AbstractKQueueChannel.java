@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,6 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -52,7 +51,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -63,19 +62,21 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
+    private KQueueRegistration registration;
 
     final BsdSocket socket;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
+
     protected volatile boolean active;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent);
-        socket = checkNotNull(fd, "fd");
+    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+        super(parent, eventLoop);
+        socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
@@ -85,9 +86,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(parent);
-        socket = checkNotNull(fd, "fd");
+    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop);
+        socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
@@ -101,6 +102,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    protected KQueueRegistration registration() {
+        assert registration != null;
+        return registration;
     }
 
     @Override
@@ -138,30 +144,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        ((KQueueEventLoop) eventLoop()).remove(this);
-
-        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
-        // to false to ensure a consistent state in all cases.
-        readFilterEnabled = false;
-        writeFilterEnabled = false;
-    }
-
-    void unregisterFilters() throws Exception {
-        // Make sure we unregister our filters from kqueue!
-        readFilter(false);
-        writeFilter(false);
-        evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
     }
 
     @Override
@@ -182,23 +166,39 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    @Override
-    protected void doRegister() throws Exception {
+    void register0(KQueueRegistration registration)  {
+        this.registration = registration;
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
 
-        ((KQueueEventLoop) eventLoop()).add(this);
-
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
-            evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
+            evSet0(registration, Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
         }
         if (readFilterEnabled) {
-            evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
+            evSet0(registration, Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
-        evSet0(Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
+        evSet0(registration, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
+    }
+
+    void deregister0() {
+        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
+        // to false to ensure a consistent state in all cases.
+        readFilterEnabled = false;
+        writeFilterEnabled = false;
+    }
+
+    void unregisterFilters() throws Exception {
+        // Make sure we unregister our filters from kqueue!
+        readFilter(false);
+        writeFilter(false);
+
+        if (registration != null) {
+            evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE, 0);
+            registration = null;
+        }
     }
 
     @Override
@@ -315,13 +315,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 unsafe.clearReadFilter0();
             } else {
                 // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
-                            // Still no read triggered so clear it now
-                            unsafe.clearReadFilter0();
-                        }
+                loop.execute(() -> {
+                    if (!unsafe.readPending && !config().isAutoRead()) {
+                        // Still no read triggered so clear it now
+                        unsafe.clearReadFilter0();
                     }
                 });
             }
@@ -348,18 +345,18 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     private void evSet(short filter, short flags) {
         if (isRegistered()) {
-            evSet0(filter, flags);
+            evSet0(registration, filter, flags);
         }
     }
 
-    private void evSet0(short filter, short flags) {
-        evSet0(filter, flags, 0);
+    private void evSet0(KQueueRegistration registration, short filter, short flags) {
+        evSet0(registration, filter, flags, 0);
     }
 
-    private void evSet0(short filter, short flags, int fflags) {
+    private void evSet0(KQueueRegistration registration, short filter, short flags, int fflags) {
         // Only try to add to changeList if the FD is still open, if not we already closed it in the meantime.
         if (isOpen()) {
-            ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags);
+            registration.evSet(filter, flags, fflags);
         }
     }
 
@@ -554,29 +551,23 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
-                                ConnectTimeoutException cause =
-                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                    close(voidPromise());
-                                }
+                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                            ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                            if (connectPromise != null && !connectPromise.isDone()
+                                    && connectPromise.tryFailure(new ConnectTimeoutException(
+                                    "connection timed out: " + remoteAddress))) {
+                                close(voidPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (future.isCancelled()) {
-                                if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
-                                }
-                                connectPromise = null;
-                                close(voidPromise());
+                    promise.addListener((ChannelFutureListener) future -> {
+                        if (future.isCancelled()) {
+                            if (connectTimeoutFuture != null) {
+                                connectTimeoutFuture.cancel(false);
                             }
+                            connectPromise = null;
+                            close(voidPromise());
                         }
                     });
                 }
@@ -604,6 +595,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // because what happened is what happened.
             if (!wasActive && active) {
                 pipeline().fireChannelActive();
+                readIfIsAutoRead();
             }
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().

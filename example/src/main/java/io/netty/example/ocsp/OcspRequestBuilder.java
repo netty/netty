@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 
 package io.netty.example.ocsp;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -77,10 +77,10 @@ public class OcspRequestBuilder {
      * and CA's will (should) reject subsequent requests that have the same nonce value.
      */
     public OCSPReq build() throws OCSPException, IOException, CertificateEncodingException {
-        SecureRandom generator = checkNotNull(this.generator, "generator");
-        DigestCalculator calculator = checkNotNull(this.calculator, "calculator");
-        X509Certificate certificate = checkNotNull(this.certificate, "certificate");
-        X509Certificate issuer = checkNotNull(this.issuer, "issuer");
+        SecureRandom generator = requireNonNull(this.generator, "generator");
+        DigestCalculator calculator = requireNonNull(this.calculator, "calculator");
+        X509Certificate certificate = requireNonNull(this.certificate, "certificate");
+        X509Certificate issuer = requireNonNull(this.issuer, "issuer");
 
         BigInteger serial = certificate.getSerialNumber();
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -50,7 +50,8 @@ public final class MqttMessageFactory {
             case UNSUBACK:
                 return new MqttUnsubAckMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader);
+                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttUnsubAckPayload) payload);
 
             case UNSUBSCRIBE:
                 return new MqttUnsubscribeMessage(
@@ -65,16 +66,23 @@ public final class MqttMessageFactory {
                         (ByteBuf) payload);
 
             case PUBACK:
+                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
                 return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBREC:
             case PUBREL:
             case PUBCOMP:
+                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
                 return new MqttMessage(mqttFixedHeader, variableHeader);
 
             case PINGREQ:
             case PINGRESP:
-            case DISCONNECT:
                 return new MqttMessage(mqttFixedHeader);
+
+            case DISCONNECT:
+            case AUTH:
+                //Having MqttReasonCodeAndPropertiesVariableHeader
+                return new MqttMessage(mqttFixedHeader,
+                        (MqttReasonCodeAndPropertiesVariableHeader) variableHeader);
 
             default:
                 throw new IllegalArgumentException("unknown message type: " + mqttFixedHeader.messageType());

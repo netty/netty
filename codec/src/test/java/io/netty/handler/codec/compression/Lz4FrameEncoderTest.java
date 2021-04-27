@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,8 +27,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.EncoderException;
@@ -48,13 +49,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 
 public class Lz4FrameEncoderTest extends AbstractEncoderTest {
@@ -240,11 +241,11 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Test(timeout = 3000)
     public void writingAfterClosedChannelDoesNotNPE() throws InterruptedException {
-        EventLoopGroup group = new NioEventLoopGroup(2);
+        EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
         Channel serverChannel = null;
         Channel clientChannel = null;
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> writeFailCauseRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> writeFailCauseRef = new AtomicReference<>();
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group);
@@ -269,24 +270,18 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             final Channel finalClientChannel = clientChannel;
-            clientChannel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    finalClientChannel.close();
-                    final int size = 27;
-                    ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
-                    finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
-                            .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+            clientChannel.eventLoop().execute(() -> {
+                finalClientChannel.close();
+                final int size = 27;
+                ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
+                finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
+                        .addListener((ChannelFutureListener) future -> {
                             try {
                                 writeFailCauseRef.set(future.cause());
                             } finally {
                                 latch.countDown();
                             }
-                        }
-                    });
-                }
+                        });
             });
             latch.await();
             Throwable writeFailCause = writeFailCauseRef.get();

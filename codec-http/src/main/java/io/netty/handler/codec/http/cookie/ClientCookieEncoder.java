@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,8 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.InternalThreadLocalMap;
 
@@ -31,7 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
+ * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
  * only name=value pairs are sent.
  *
  * Note that multiple cookies are supposed to be sent at once in a single "Cookie" header.
@@ -83,7 +84,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      */
     public String encode(Cookie cookie) {
         StringBuilder buf = stringBuilder();
-        encode(buf, checkNotNull(cookie, "cookie"));
+        encode(buf, requireNonNull(cookie, "cookie"));
         return stripTrailingSeparator(buf);
     }
 
@@ -91,26 +92,21 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * Sort cookies into decreasing order of path length, breaking ties by sorting into increasing chronological
      * order of creation time, as recommended by RFC 6265.
      */
-    private static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
-        @Override
-        public int compare(Cookie c1, Cookie c2) {
-            String path1 = c1.path();
-            String path2 = c2.path();
-            // Cookies with unspecified path default to the path of the request. We don't
-            // know the request path here, but we assume that the length of an unspecified
-            // path is longer than any specified path (i.e. pathless cookies come first),
-            // because setting cookies with a path longer than the request path is of
-            // limited use.
-            int len1 = path1 == null ? Integer.MAX_VALUE : path1.length();
-            int len2 = path2 == null ? Integer.MAX_VALUE : path2.length();
-            int diff = len2 - len1;
-            if (diff != 0) {
-                return diff;
-            }
-            // Rely on Java's sort stability to retain creation order in cases where
-            // cookies have same path length.
-            return -1;
-        }
+    // package-private for testing only
+    static final Comparator<Cookie> COOKIE_COMPARATOR = (c1, c2) -> {
+        String path1 = c1.path();
+        String path2 = c2.path();
+        // Cookies with unspecified path default to the path of the request. We don't
+        // know the request path here, but we assume that the length of an unspecified
+        // path is longer than any specified path (i.e. pathless cookies come first),
+        // because setting cookies with a path longer than the request path is of
+        // limited use.
+        int len1 = path1 == null ? Integer.MAX_VALUE : path1.length();
+        int len2 = path2 == null ? Integer.MAX_VALUE : path2.length();
+
+        // Rely on Arrays.sort's stability to retain creation order in cases where
+        // cookies have same path length.
+        return len2 - len1;
     };
 
     /**
@@ -121,7 +117,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Cookie... cookies) {
-        if (checkNotNull(cookies, "cookies").length == 0) {
+        if (requireNonNull(cookies, "cookies").length == 0) {
             return null;
         }
 
@@ -152,7 +148,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Collection<? extends Cookie> cookies) {
-        if (checkNotNull(cookies, "cookies").isEmpty()) {
+        if (requireNonNull(cookies, "cookies").isEmpty()) {
             return null;
         }
 
@@ -182,7 +178,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Iterable<? extends Cookie> cookies) {
-        Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
+        Iterator<? extends Cookie> cookiesIt = requireNonNull(cookies, "cookies").iterator();
         if (!cookiesIt.hasNext()) {
             return null;
         }

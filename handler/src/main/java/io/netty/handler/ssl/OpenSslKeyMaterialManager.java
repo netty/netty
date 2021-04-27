@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,13 @@
 package io.netty.handler.ssl;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -46,7 +48,7 @@ final class OpenSslKeyMaterialManager {
     static final String KEY_TYPE_EC_RSA = "EC_RSA";
 
     // key type mappings for types.
-    private static final Map<String, String> KEY_TYPES = new HashMap<String, String>();
+    private static final Map<String, String> KEY_TYPES = new HashMap<>();
     static {
         KEY_TYPES.put("RSA", KEY_TYPE_RSA);
         KEY_TYPES.put("DHE_RSA", KEY_TYPE_RSA);
@@ -66,38 +68,47 @@ final class OpenSslKeyMaterialManager {
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
         String[] authMethods = engine.authMethods();
         if (authMethods.length == 0) {
-            return;
+            throw new SSLHandshakeException("Unable to find key material");
         }
-        Set<String> aliases = new HashSet<String>(authMethods.length);
+
+        // authMethods may contain duplicates or may result in the same type
+        // but call chooseServerAlias(...) may be expensive. So let's ensure
+        // we filter out duplicates.
+        Set<String> typeSet = new HashSet<>(KEY_TYPES.size());
         for (String authMethod : authMethods) {
             String type = KEY_TYPES.get(authMethod);
-            if (type != null) {
+            if (type != null && typeSet.add(type)) {
                 String alias = chooseServerAlias(engine, type);
-                if (alias != null && aliases.add(alias)) {
-                    if (!setKeyMaterial(engine, alias)) {
-                        return;
-                    }
+                if (alias != null) {
+                    // We found a match... let's set the key material and return.
+                    setKeyMaterial(engine, alias);
+                    return;
                 }
             }
         }
+        throw new SSLHandshakeException("Unable to find key material for auth method(s): "
+                + Arrays.toString(authMethods));
     }
 
     void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
                                   X500Principal[] issuer) throws SSLException {
         String alias = chooseClientAlias(engine, keyTypes, issuer);
         // Only try to set the keymaterial if we have a match. This is also consistent with what OpenJDK does:
-        // http://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
+        // https://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
         // src/java.base/share/classes/sun/security/ssl/CertificateRequest.java#l362
         if (alias != null) {
             setKeyMaterial(engine, alias);
         }
     }
 
-    private boolean setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
+    private void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
         OpenSslKeyMaterial keyMaterial = null;
         try {
             keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
-            return keyMaterial == null || engine.setKeyMaterial(keyMaterial);
+            if (keyMaterial == null) {
+                return;
+            }
+            engine.setKeyMaterial(keyMaterial);
         } catch (SSLException e) {
             throw e;
         } catch (Exception e) {

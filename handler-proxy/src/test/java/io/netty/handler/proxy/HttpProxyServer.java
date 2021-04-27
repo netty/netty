@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,11 @@
 
 package io.netty.handler.proxy;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -32,15 +30,16 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SocketUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
 
 final class HttpProxyServer extends ProxyServer {
 
@@ -88,15 +87,11 @@ final class HttpProxyServer extends ProxyServer {
             CharSequence authz = req.headers().get(HttpHeaderNames.PROXY_AUTHORIZATION);
             if (authz != null) {
                 String[] authzParts = authz.toString().split(" ", 2);
-                ByteBuf authzBuf64 = Unpooled.copiedBuffer(authzParts[1], CharsetUtil.US_ASCII);
-                ByteBuf authzBuf = Base64.decode(authzBuf64);
+                byte[] authzCreds = Base64.getDecoder().decode(authzParts[1]);
 
                 String expectedAuthz = username + ':' + password;
                 authzSuccess = "Basic".equals(authzParts[0]) &&
-                               expectedAuthz.equals(authzBuf.toString(CharsetUtil.US_ASCII));
-
-                authzBuf64.release();
-                authzBuf.release();
+                        expectedAuthz.equals(new String(authzCreds, StandardCharsets.UTF_8));
             }
         } else {
             authzSuccess = true;
@@ -159,7 +154,7 @@ final class HttpProxyServer extends ProxyServer {
             ctx.pipeline().get(HttpServerCodec.class).removeOutboundHandler();
 
             if (sendGreeting) {
-                ctx.write(Unpooled.copiedBuffer("0\n", CharsetUtil.US_ASCII));
+                ctx.write(Unpooled.copiedBuffer("0\n", StandardCharsets.US_ASCII));
             }
 
             return true;

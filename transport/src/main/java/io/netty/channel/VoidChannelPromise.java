@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,9 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.AbstractFuture;
+import static java.util.Objects.requireNonNull;
+
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.UnstableApi;
@@ -23,7 +25,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.concurrent.TimeUnit;
 
 @UnstableApi
-public final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
+public final class VoidChannelPromise implements ChannelPromise {
 
     private final Channel channel;
     // Will be null if we should not propagate exceptions through the pipeline on failure case.
@@ -35,23 +37,23 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
      * @param channel the {@link Channel} associated with this future
      */
     public VoidChannelPromise(final Channel channel, boolean fireException) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         this.channel = channel;
         if (fireException) {
-            fireExceptionListener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        fireException0(cause);
-                    }
+            fireExceptionListener = future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    fireException0(cause);
                 }
             };
         } else {
             fireExceptionListener = null;
         }
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return channel.eventLoop();
     }
 
     @Override
