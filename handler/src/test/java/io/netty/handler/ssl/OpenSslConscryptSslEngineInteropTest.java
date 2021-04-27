@@ -144,6 +144,27 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     }
 
     @Override
+    @Test
+    public void testSessionCache() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCache();
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheTimeout() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheTimeout();
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheSize() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheSize();
+    }
+
+    @Override
     protected void invalidateSessionsAndAssert(SSLSessionContext context) {
         // Not supported by conscrypt
     }

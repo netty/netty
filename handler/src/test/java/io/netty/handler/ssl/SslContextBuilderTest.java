@@ -102,6 +102,7 @@ public class SslContextBuilderTest {
     @Test
     public void testContextFromManagersOpenssl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
+        Assume.assumeTrue(OpenSsl.supportsKeyManagerFactory());
         testContextFromManagers(SslProvider.OPENSSL);
     }
 
