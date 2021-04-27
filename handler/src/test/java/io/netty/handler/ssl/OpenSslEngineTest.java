@@ -1382,6 +1382,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     @Override
+    public void testSessionLocalWhenNonMutualWithoutKeyManager() throws Exception {
+        // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
+        // we need to provide a cert.
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testSessionLocalWhenNonMutualWithoutKeyManager();
+    }
+
+    @Override
     protected SslProvider sslClientProvider() {
         return SslProvider.OPENSSL;
     }
@@ -1425,12 +1433,27 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return context;
     }
 
-    @Test
     @Override
+    @Test
     public void testSessionCache() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCache();
         assertSessionContext(clientSslCtx);
         assertSessionContext(serverSslCtx);
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheTimeout() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheTimeout();
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheSize() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheSize();
     }
 
     private static void assertSessionContext(SslContext context) {

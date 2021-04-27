@@ -384,6 +384,10 @@ public final class OpenSsl {
         }
     }
 
+    static boolean isSessionCacheSupported() {
+        return version() >= 0x10100000L;
+    }
+
     /**
      * Returns a self-signed {@link X509Certificate} for {@code netty.io}.
      */
