@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -102,6 +103,7 @@ public class SslContextBuilderTest {
     @Test
     public void testContextFromManagersOpenssl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
+        Assume.assumeTrue(OpenSsl.useKeyManagerFactory());
         testContextFromManagers(SslProvider.OPENSSL);
     }
 

@@ -526,6 +526,7 @@ public abstract class SSLEngineTest {
     @Test(expected = SSLHandshakeException.class)
     public void testIncompatibleCiphers() throws Exception {
         assumeTrue(SslProvider.isTlsv13Supported(sslClientProvider()));
+        assumeTrue(SslProvider.isTlsv13Supported(sslServerProvider()));
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail

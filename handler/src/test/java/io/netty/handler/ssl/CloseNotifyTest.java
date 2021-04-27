@@ -82,6 +82,10 @@ public class CloseNotifyTest {
     public void eventsOrder() throws Exception {
         assumeTrue("OpenSSL is not available", provider != SslProvider.OPENSSL || OpenSsl.isAvailable());
 
+        if (PROTOCOL_TLS_V1_3.equals(protocol)) {
+            // Ensure we support TLSv1.3
+            assumeTrue(SslProvider.isTlsv13Supported(provider));
+        }
         BlockingQueue<Object> clientEventQueue = new LinkedBlockingQueue<Object>();
         BlockingQueue<Object> serverEventQueue = new LinkedBlockingQueue<Object>();
 

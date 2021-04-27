@@ -70,8 +70,10 @@ jobs:
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
           # we can load the native module on aarch64
+          #
+          # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 mvn -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 mvn -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
