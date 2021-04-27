@@ -141,6 +141,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager();
     }
+
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager() throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
