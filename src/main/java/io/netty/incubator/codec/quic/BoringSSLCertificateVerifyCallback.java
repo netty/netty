@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.handler.ssl.OpenSslCertificateException;
 
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -26,10 +27,22 @@ import java.security.cert.X509Certificate;
 
 final class BoringSSLCertificateVerifyCallback {
 
-    private final QuicheQuicSslEngineMap engineMap;
-    private final X509ExtendedTrustManager manager;
+    private static final boolean TRY_USING_EXTENDED_TRUST_MANAGER;
+    static {
+        boolean tryUsingExtendedTrustManager;
+        try {
+            Class.forName(BoringSSLCertificateVerifyCallback.class.getName());
+            tryUsingExtendedTrustManager = true;
+        } catch (Throwable cause) {
+            tryUsingExtendedTrustManager = false;
+        }
+        TRY_USING_EXTENDED_TRUST_MANAGER = tryUsingExtendedTrustManager;
+    }
 
-    BoringSSLCertificateVerifyCallback(QuicheQuicSslEngineMap engineMap, X509ExtendedTrustManager manager) {
+    private final QuicheQuicSslEngineMap engineMap;
+    private final X509TrustManager manager;
+
+    BoringSSLCertificateVerifyCallback(QuicheQuicSslEngineMap engineMap, X509TrustManager manager) {
         this.engineMap = engineMap;
         this.manager = manager;
     }
@@ -50,9 +63,17 @@ final class BoringSSLCertificateVerifyCallback {
         X509Certificate[] peerCerts = BoringSSL.certificates(x509);
         try {
             if (engine.getUseClientMode()) {
-                manager.checkServerTrusted(peerCerts, authAlgorithm, engine);
+                if (TRY_USING_EXTENDED_TRUST_MANAGER && manager instanceof X509ExtendedTrustManager) {
+                    ((X509ExtendedTrustManager) manager).checkServerTrusted(peerCerts, authAlgorithm, engine);
+                } else {
+                    manager.checkServerTrusted(peerCerts, authAlgorithm);
+                }
             } else {
-                manager.checkClientTrusted(peerCerts, authAlgorithm, engine);
+                if (TRY_USING_EXTENDED_TRUST_MANAGER && manager instanceof X509ExtendedTrustManager) {
+                    ((X509ExtendedTrustManager) manager).checkClientTrusted(peerCerts, authAlgorithm, engine);
+                } else {
+                    manager.checkClientTrusted(peerCerts, authAlgorithm);
+                }
             }
             return BoringSSL.X509_V_OK;
         } catch (Throwable cause) {

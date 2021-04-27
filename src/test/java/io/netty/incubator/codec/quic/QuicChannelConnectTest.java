@@ -36,6 +36,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -344,19 +345,42 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     }
 
     @Test
+    public void testExtendedTrustManagerFailureOnTheClient() throws Throwable {
+        testTrustManagerFailureOnTheClient(true);
+    }
+
+    @Test
     public void testTrustManagerFailureOnTheClient() throws Throwable {
+        testTrustManagerFailureOnTheClient(false);
+    }
+
+    private void testTrustManagerFailureOnTheClient(boolean extended) throws Throwable {
+        final X509TrustManager trustManager;
+        if (extended) {
+            trustManager = new TestX509ExtendedTrustManager() {
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                        throws CertificateException {
+                    throw new CertificateException();
+                }
+            };
+        } else {
+            trustManager = new TestX509TrustManager() {
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType)
+                        throws CertificateException {
+                    throw new CertificateException();
+                }
+            };
+        }
         Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(new TrustManagerFactoryWrapper(new TestTrustManager() {
-
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
-                            throws CertificateException {
-                        throw new CertificateException();
-                    }
-                })).applicationProtocols(QuicTestUtils.PROTOS).build()));
+                .trustManager(new TrustManagerFactoryWrapper(trustManager))
+                .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             Throwable cause = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -587,7 +611,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    private abstract static class TestTrustManager extends X509ExtendedTrustManager {
+    private abstract static class TestX509ExtendedTrustManager extends X509ExtendedTrustManager {
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
                 throws CertificateException {
@@ -611,6 +635,24 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 throws CertificateException {
             // NOOP
         }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            // NOOP
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+        }
+    }
+
+    private abstract static class TestX509TrustManager implements X509TrustManager {
 
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {

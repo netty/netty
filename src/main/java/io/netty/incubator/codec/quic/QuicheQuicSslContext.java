@@ -30,7 +30,7 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -71,7 +71,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         Quic.ensureAvailability();
         this.server = server;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
-        final X509ExtendedTrustManager trustManager;
+        final X509TrustManager trustManager;
         if (trustManagerFactory == null) {
             try {
                 trustManagerFactory =
@@ -117,10 +117,10 @@ final class QuicheQuicSslContext extends QuicSslContext {
         throw new IllegalArgumentException("No X509ExtendedKeyManager included");
     }
 
-    private static X509ExtendedTrustManager chooseTrustManager(TrustManagerFactory trustManagerFactory) {
+    private static X509TrustManager chooseTrustManager(TrustManagerFactory trustManagerFactory) {
         for (TrustManager manager: trustManagerFactory.getTrustManagers()) {
-            if (manager instanceof X509ExtendedTrustManager) {
-                return (X509ExtendedTrustManager) manager;
+            if (manager instanceof X509TrustManager) {
+                return (X509TrustManager) manager;
             }
         }
         throw new IllegalArgumentException("No X509ExtendedTrustManager included");
