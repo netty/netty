@@ -35,6 +35,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -178,7 +179,26 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         this.factory = checkNotNull(factory, "factory");
         // Fill default values
 
-        setMultipart(this.request.headers().get(HttpHeaderNames.CONTENT_TYPE));
+        String contentTypeValue = this.request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeValue == null) {
+            throw new ErrorDataDecoderException("No '" + HttpHeaderNames.CONTENT_TYPE + "' header present.");
+        }
+
+        String[] dataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentTypeValue);
+        if (dataBoundary != null) {
+            multipartDataBoundary = dataBoundary[0];
+            if (dataBoundary.length > 1 && dataBoundary[1] != null) {
+                try {
+                    this.charset = Charset.forName(dataBoundary[1]);
+                } catch (IllegalCharsetNameException e) {
+                    throw new ErrorDataDecoderException(e);
+                }
+            }
+        } else {
+            multipartDataBoundary = null;
+        }
+        currentStatus = MultiPartStatus.HEADERDELIMITER;
+
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089
@@ -186,22 +206,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         } else {
             parseBody();
         }
-    }
-
-    /**
-     * Set from the request ContentType the multipartDataBoundary and the possible charset.
-     */
-    private void setMultipart(String contentType) {
-        String[] dataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
-        if (dataBoundary != null) {
-            multipartDataBoundary = dataBoundary[0];
-            if (dataBoundary.length > 1 && dataBoundary[1] != null) {
-                charset = Charset.forName(dataBoundary[1]);
-            }
-        } else {
-            multipartDataBoundary = null;
-        }
-        currentStatus = MultiPartStatus.HEADERDELIMITER;
     }
 
     private void checkDestroyed() {
