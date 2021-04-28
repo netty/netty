@@ -31,6 +31,7 @@ import static io.netty.buffer.ByteBufUtil.*;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.getMqttVersion;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidClientId;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.setMqttVersion;
+import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
 
 /**
  * Encodes Mqtt messages into bytes following the protocol specification v3.1
@@ -124,7 +125,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         // Client id
         String clientIdentifier = payload.clientIdentifier();
-        if (!isValidClientId(mqttVersion, clientIdentifier)) {
+        if (!isValidClientId(mqttVersion, DEFAULT_MAX_CLIENT_ID_LENGTH, clientIdentifier)) {
             throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
         }
         int clientIdentifierBytes = utf8Bytes(clientIdentifier);
