@@ -453,6 +453,7 @@ public class Http2MultiplexTransportTest {
 
     @Test(timeout = 5000L)
     public void testFireChannelReadAfterHandshakeSuccess_OPENSSL() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
         assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL));
         testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL);
     }
