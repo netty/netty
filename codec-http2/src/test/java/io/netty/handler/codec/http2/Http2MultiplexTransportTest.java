@@ -507,7 +507,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
                     .sslProvider(provider)
@@ -564,7 +564,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
 
             latch.await();
         } finally {
