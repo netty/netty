@@ -510,7 +510,7 @@ public class Http2MultiplexTransportTest {
             serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
-                    .sslProvider(SslProvider.OPENSSL)
+                    .sslProvider(provider)
                     .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .applicationProtocolConfig(new ApplicationProtocolConfig(
