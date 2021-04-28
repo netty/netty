@@ -31,7 +31,7 @@ final class BoringSSLCertificateVerifyCallback {
     static {
         boolean tryUsingExtendedTrustManager;
         try {
-            Class.forName(BoringSSLCertificateVerifyCallback.class.getName());
+            Class.forName(X509ExtendedTrustManager.class.getName());
             tryUsingExtendedTrustManager = true;
         } catch (Throwable cause) {
             tryUsingExtendedTrustManager = false;

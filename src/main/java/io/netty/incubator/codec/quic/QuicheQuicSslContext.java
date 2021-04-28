@@ -123,7 +123,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 return (X509TrustManager) manager;
             }
         }
-        throw new IllegalArgumentException("No X509ExtendedTrustManager included");
+        throw new IllegalArgumentException("No X509TrustManager included");
     }
 
      static X509Certificate[] toX509Certificates0(File file) throws CertificateException {
