@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartSta
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -199,12 +200,17 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         currentStatus = MultiPartStatus.HEADERDELIMITER;
 
-        if (request instanceof HttpContent) {
-            // Offer automatically if the given request is als type of HttpContent
-            // See #1089
-            offer((HttpContent) request);
-        } else {
-            parseBody();
+        try {
+            if (request instanceof HttpContent) {
+                // Offer automatically if the given request is als type of HttpContent
+                // See #1089
+                offer((HttpContent) request);
+            } else {
+                parseBody();
+            }
+        } catch (Throwable e) {
+            destroy();
+            PlatformDependent.throwException(e);
         }
     }
 
