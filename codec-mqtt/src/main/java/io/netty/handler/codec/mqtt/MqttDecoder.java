@@ -24,6 +24,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.MqttDecoder.DecoderState;
 import io.netty.handler.codec.mqtt.MqttProperties.IntegerProperty;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,8 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidMessageId;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidPublishTopicName;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.resetUnusedFields;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
+import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_BYTES_IN_MESSAGE;
+import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
 import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlingPolicy;
 
 /**
@@ -44,8 +47,6 @@ import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlin
  * version specified in the CONNECT message that first goes through the channel.
  */
 public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
-
-    private static final int DEFAULT_MAX_BYTES_IN_MESSAGE = 8092;
 
     /**
      * States of the decoder.
@@ -64,14 +65,20 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private int bytesRemainingInVariablePart;
 
     private final int maxBytesInMessage;
+    private final int maxClientIdLength;
 
     public MqttDecoder() {
-      this(DEFAULT_MAX_BYTES_IN_MESSAGE);
+      this(DEFAULT_MAX_BYTES_IN_MESSAGE, DEFAULT_MAX_CLIENT_ID_LENGTH);
     }
 
     public MqttDecoder(int maxBytesInMessage) {
+        this(maxBytesInMessage, DEFAULT_MAX_CLIENT_ID_LENGTH);
+    }
+
+    public MqttDecoder(int maxBytesInMessage, int maxClientIdLength) {
         super(DecoderState.READ_FIXED_HEADER);
-        this.maxBytesInMessage = maxBytesInMessage;
+        this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
+        this.maxClientIdLength = ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
     }
 
     @Override
@@ -108,6 +115,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                                 buffer,
                                 mqttFixedHeader.messageType(),
                                 bytesRemainingInVariablePart,
+                                maxClientIdLength,
                                 variableHeader);
                 bytesRemainingInVariablePart -= decodedPayload.numberOfBytesConsumed;
                 if (bytesRemainingInVariablePart != 0) {
@@ -434,10 +442,11 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             ByteBuf buffer,
             MqttMessageType messageType,
             int bytesRemainingInVariablePart,
+            int maxClientIdLength,
             Object variableHeader) {
         switch (messageType) {
             case CONNECT:
-                return decodeConnectionPayload(buffer, (MqttConnectVariableHeader) variableHeader);
+                return decodeConnectionPayload(buffer, maxClientIdLength, (MqttConnectVariableHeader) variableHeader);
 
             case SUBSCRIBE:
                 return decodeSubscribePayload(buffer, bytesRemainingInVariablePart);
@@ -462,12 +471,13 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     private static Result<MqttConnectPayload> decodeConnectionPayload(
             ByteBuf buffer,
+            int maxClientIdLength,
             MqttConnectVariableHeader mqttConnectVariableHeader) {
         final Result<String> decodedClientId = decodeString(buffer);
         final String decodedClientIdValue = decodedClientId.value;
         final MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(mqttConnectVariableHeader.name(),
                 (byte) mqttConnectVariableHeader.version());
-        if (!isValidClientId(mqttVersion, decodedClientIdValue)) {
+        if (!isValidClientId(mqttVersion, maxClientIdLength, decodedClientIdValue)) {
             throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + decodedClientIdValue);
         }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
