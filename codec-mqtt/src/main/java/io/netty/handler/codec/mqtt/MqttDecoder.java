@@ -77,10 +77,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     public MqttDecoder(int maxBytesInMessage, int maxClientIdLength) {
         super(DecoderState.READ_FIXED_HEADER);
-        ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
-        ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
-        this.maxClientIdLength = maxClientIdLength;
-        this.maxBytesInMessage = maxBytesInMessage;
+        this.maxClientIdLength = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
+        this.maxBytesInMessage = ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
     }
 
     @Override
