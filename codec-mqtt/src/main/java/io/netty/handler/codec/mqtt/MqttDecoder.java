@@ -24,6 +24,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.MqttDecoder.DecoderState;
 import io.netty.handler.codec.mqtt.MqttProperties.IntegerProperty;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +77,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     public MqttDecoder(int maxBytesInMessage, int maxClientIdLength) {
         super(DecoderState.READ_FIXED_HEADER);
+        ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
+        ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
         this.maxClientIdLength = maxClientIdLength;
         this.maxBytesInMessage = maxBytesInMessage;
     }
