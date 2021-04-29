@@ -324,6 +324,7 @@ public abstract class WebSocketClientHandshakerTest {
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                         handshaker.finishHandshake(ctx.channel(), msg);
                         ctx.pipeline().remove(this);
+                        assertTrue(handshaker.handshakeFuture().isSuccess());
                     }
                 });
         if (codec) {

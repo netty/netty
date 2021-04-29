@@ -78,6 +78,8 @@ public abstract class WebSocketClientHandshaker {
 
     private final boolean absoluteUpgradeUrl;
 
+    private ChannelPromise handshakePromise;
+
     /**
      * Base constructor
      *
@@ -228,23 +230,29 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
+     * Returns a {@link ChannelFuture} of handshake process.
+     */
+    public ChannelFuture handshakeFuture() {
+        return handshakePromise;
+    }
+
+    /**
      * Begins the opening handshake
      *
-     * @param channel
-     *            Channel
+     * @param channel Channel
+     * @return the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public ChannelFuture handshake(Channel channel) {
         ObjectUtil.checkNotNull(channel, "channel");
+        handshakePromise = channel.newPromise();
         return handshake(channel, channel.newPromise());
     }
 
     /**
      * Begins the opening handshake
      *
-     * @param channel
-     *            Channel
-     * @param promise
-     *            the {@link ChannelPromise} to be notified when the opening handshake is sent
+     * @param channel Channel
+     * @param promise the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         ChannelPipeline pipeline = channel.pipeline();
@@ -252,9 +260,10 @@ public abstract class WebSocketClientHandshaker {
         if (decoder == null) {
             HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
-               promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                       "an HttpResponseDecoder or HttpClientCodec"));
-               return promise;
+                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                        "an HttpResponseDecoder or HttpClientCodec"));
+                handshakePromise.tryFailure(promise.cause());
+                return promise;
             }
         }
 
@@ -272,6 +281,7 @@ public abstract class WebSocketClientHandshaker {
                     if (ctx == null) {
                         promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                                 "an HttpRequestEncoder or HttpClientCodec"));
+                        handshakePromise.tryFailure(promise.cause());
                         return;
                     }
                     p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
@@ -279,6 +289,7 @@ public abstract class WebSocketClientHandshaker {
                     promise.setSuccess();
                 } else {
                     promise.setFailure(future.cause());
+                    handshakePromise.tryFailure(promise.cause());
                 }
             }
         });
@@ -293,10 +304,8 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
      *
-     * @param channel
-     *            Channel
-     * @param response
-     *            HTTP response containing the closing handshake details
+     * @param channel Channel
+     * @param response HTTP response containing the closing handshake details
      */
     public final void finishHandshake(Channel channel, FullHttpResponse response) {
         verify(response);
@@ -348,8 +357,10 @@ public abstract class WebSocketClientHandshaker {
         if (ctx == null) {
             ctx = p.context(HttpClientCodec.class);
             if (ctx == null) {
-                throw new IllegalStateException("ChannelPipeline does not contain " +
+                IllegalStateException ex = new IllegalStateException("ChannelPipeline does not contain " +
                         "an HttpRequestEncoder or HttpClientCodec");
+                handshakePromise.tryFailure(ex);
+                throw ex;
             }
             final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
@@ -383,6 +394,13 @@ public abstract class WebSocketClientHandshaker {
                     p.remove(context.handler());
                 }
             });
+        }
+
+        // If Handshake is successfully completed then mark `handshakePromise` success.
+        // We're doing this in bottom of method because we want pipeline to be configured properly
+        // before marking promise as success.
+        if (isHandshakeComplete()) {
+            handshakePromise.trySuccess();
         }
     }
 
@@ -427,8 +445,10 @@ public abstract class WebSocketClientHandshaker {
             if (ctx == null) {
                 ctx = p.context(HttpClientCodec.class);
                 if (ctx == null) {
-                    return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                    promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                             "an HttpResponseDecoder or HttpClientCodec"));
+                    handshakePromise.tryFailure(promise.cause());
+                    return promise;
                 }
             }
             // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more
@@ -455,6 +475,7 @@ public abstract class WebSocketClientHandshaker {
                     // Remove ourself and fail the handshake promise.
                     ctx.pipeline().remove(this);
                     promise.setFailure(cause);
+                    handshakePromise.tryFailure(cause);
                 }
 
                 @Override
@@ -462,6 +483,7 @@ public abstract class WebSocketClientHandshaker {
                     // Fail promise if Channel was closed
                     if (!promise.isDone()) {
                         promise.tryFailure(new ClosedChannelException());
+                        handshakePromise.tryFailure(new ClosedChannelException());
                     }
                     ctx.fireChannelInactive();
                 }
@@ -470,6 +492,7 @@ public abstract class WebSocketClientHandshaker {
                 ctx.fireChannelRead(ReferenceCountUtil.retain(response));
             } catch (Throwable cause) {
                 promise.setFailure(cause);
+                handshakePromise.tryFailure(cause);
             }
         }
         return promise;
@@ -600,8 +623,8 @@ public abstract class WebSocketClientHandshaker {
         int port = wsURL.getPort();
         final int defaultPort;
         if (WebSocketScheme.WSS.name().contentEquals(scheme)
-            || HttpScheme.HTTPS.name().contentEquals(scheme)
-            || (scheme == null && port == WebSocketScheme.WSS.port())) {
+                || HttpScheme.HTTPS.name().contentEquals(scheme)
+                || (scheme == null && port == WebSocketScheme.WSS.port())) {
 
             schemePrefix = HTTPS_SCHEME_PREFIX;
             defaultPort = WebSocketScheme.WSS.port();
