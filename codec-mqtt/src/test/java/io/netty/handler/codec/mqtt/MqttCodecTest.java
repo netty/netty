@@ -327,6 +327,7 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
 
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateConnectVariableHeader(message.variableHeader(),
@@ -348,6 +349,7 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
 
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateConnectVariableHeader(message.variableHeader(),
@@ -369,6 +371,8 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
+
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateDecoderExceptionTooLargeMessage(decodedMessage);
         } finally {
@@ -387,6 +391,7 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
 
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validatePublishVariableHeader(message.variableHeader(),
@@ -408,6 +413,8 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
+
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateMessageIdVariableHeader(message.variableHeader(),
                     (MqttMessageIdVariableHeader) decodedMessage.variableHeader());
@@ -428,6 +435,8 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
+
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateMessageIdVariableHeader(message.variableHeader(),
                     (MqttMessageIdVariableHeader) decodedMessage.variableHeader());
@@ -448,6 +457,8 @@ public class MqttCodecTest {
             verify(ctx).fireChannelRead(captor.capture());
 
             final MqttMessage decodedMessage = captor.getValue();
+            assertEquals(0, byteBuf.readableBytes());
+
             validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
             validateMessageIdVariableHeader(message.variableHeader(),
                     (MqttMessageIdVariableHeader) decodedMessage.variableHeader());
