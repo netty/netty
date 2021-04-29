@@ -74,8 +74,8 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -1032,15 +1032,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private SSLEngineResult newResultMayFinishHandshake(SSLEngineResult.HandshakeStatus hs,
                                                         int bytesConsumed, int bytesProduced) throws SSLException {
-        return newResult(mayFinishHandshake(hs != FINISHED ? getHandshakeStatus() : FINISHED),
-                         bytesConsumed, bytesProduced);
+        return newResult(mayFinishHandshake(hs, bytesConsumed, bytesProduced), bytesConsumed, bytesProduced);
     }
 
     private SSLEngineResult newResultMayFinishHandshake(SSLEngineResult.Status status,
                                                         SSLEngineResult.HandshakeStatus hs,
                                                         int bytesConsumed, int bytesProduced) throws SSLException {
-        return newResult(status, mayFinishHandshake(hs != FINISHED ? getHandshakeStatus() : FINISHED),
-                         bytesConsumed, bytesProduced);
+        return newResult(status, mayFinishHandshake(hs, bytesConsumed, bytesProduced), bytesConsumed, bytesProduced);
     }
 
     /**
@@ -1925,6 +1923,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 SSL.getTime(ssl) * 1000L, parentContext.sessionTimeout() * 1000L);
         selectApplicationProtocol();
         return FINISHED;
+    }
+
+    private SSLEngineResult.HandshakeStatus mayFinishHandshake(
+            SSLEngineResult.HandshakeStatus hs, int bytesConsumed, int bytesProduced) throws SSLException {
+        return hs == NEED_UNWRAP && bytesProduced > 0 || hs == NEED_WRAP && bytesConsumed > 0 ?
+            handshake() : mayFinishHandshake(hs != FINISHED ? getHandshakeStatus() : FINISHED);
     }
 
     private SSLEngineResult.HandshakeStatus mayFinishHandshake(SSLEngineResult.HandshakeStatus status)
