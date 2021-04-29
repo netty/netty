@@ -98,6 +98,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 final Result<?> decodedVariableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
                 variableHeader = decodedVariableHeader.value;
                 if (bytesRemainingInVariablePart > maxBytesInMessage) {
+                    buffer.skipBytes(buffer.readableBytes());
                     throw new TooLongFrameException("too large message: " + bytesRemainingInVariablePart + " bytes");
                 }
                 bytesRemainingInVariablePart -= decodedVariableHeader.numberOfBytesConsumed;
