@@ -29,6 +29,9 @@ public class Http2FrameCodecBuilder extends
 
     private Http2FrameWriter frameWriter;
 
+    public Http2FrameCodecBuilder() {
+    }
+
     Http2FrameCodecBuilder(boolean server) {
         server(server);
         // For backwards compatibility we should disable to timeout by default at this layer.
