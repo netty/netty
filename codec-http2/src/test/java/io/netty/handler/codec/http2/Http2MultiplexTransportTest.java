@@ -31,7 +31,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
@@ -437,6 +439,134 @@ public class Http2MultiplexTransportTest {
             if (error != null) {
                 throw error;
             }
+        } finally {
+            if (ssc != null) {
+                ssc.delete();
+            }
+        }
+    }
+
+    @Test(timeout = 5000L)
+    public void testFireChannelReadAfterHandshakeSuccess_JDK() throws Exception {
+        assumeTrue(SslProvider.isAlpnSupported(SslProvider.JDK));
+        testFireChannelReadAfterHandshakeSuccess(SslProvider.JDK);
+    }
+
+    @Test(timeout = 5000L)
+    public void testFireChannelReadAfterHandshakeSuccess_OPENSSL() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL));
+        testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL);
+    }
+
+    private void testFireChannelReadAfterHandshakeSuccess(SslProvider provider) throws Exception {
+        SelfSignedCertificate ssc = null;
+        try {
+            ssc = new SelfSignedCertificate();
+            final SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                    .sslProvider(provider)
+                    .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+                    .applicationProtocolConfig(new ApplicationProtocolConfig(
+                            ApplicationProtocolConfig.Protocol.ALPN,
+                            ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+                            ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+                            ApplicationProtocolNames.HTTP_2,
+                            ApplicationProtocolNames.HTTP_1_1))
+                    .build();
+
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(eventLoopGroup);
+            sb.channel(NioServerSocketChannel.class);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(serverCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+                        @Override
+                        protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                            ctx.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                            ctx.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+                                    if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+                                        ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
+                                                new DefaultHttp2Headers(), false))
+                                           .addListener(new ChannelFutureListener() {
+                                               @Override
+                                               public void operationComplete(ChannelFuture future) {
+                                                   ctx.writeAndFlush(new DefaultHttp2DataFrame(
+                                                           Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
+                                                           true));
+                                               }
+                                           });
+                                    }
+                                    ReferenceCountUtil.release(msg);
+                                }
+                            }));
+                        }
+                    });
+                }
+            });
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
+
+            final SslContext clientCtx = SslContextBuilder.forClient()
+                    .sslProvider(provider)
+                    .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .applicationProtocolConfig(new ApplicationProtocolConfig(
+                            ApplicationProtocolConfig.Protocol.ALPN,
+                            ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+                            ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+                            ApplicationProtocolNames.HTTP_2,
+                            ApplicationProtocolNames.HTTP_1_1))
+                    .build();
+
+            final CountDownLatch latch = new CountDownLatch(1);
+            Bootstrap bs = new Bootstrap();
+            bs.group(eventLoopGroup);
+            bs.channel(NioSocketChannel.class);
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt instanceof SslHandshakeCompletionEvent) {
+                                SslHandshakeCompletionEvent handshakeCompletionEvent =
+                                        (SslHandshakeCompletionEvent) evt;
+                                if (handshakeCompletionEvent.isSuccess()) {
+                                    Http2StreamChannelBootstrap h2Bootstrap =
+                                            new Http2StreamChannelBootstrap(clientChannel);
+                                    h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                                        @Override
+                                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                            if (msg instanceof Http2DataFrame && ((Http2DataFrame) msg).isEndStream()) {
+                                                latch.countDown();
+                                            }
+                                            ReferenceCountUtil.release(msg);
+                                        }
+                                    });
+                                    h2Bootstrap.open().addListener(new FutureListener<Channel>() {
+                                        @Override
+                                        public void operationComplete(Future<Channel> future) {
+                                            if (future.isSuccess()) {
+                                                future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
+                                                        new DefaultHttp2Headers(), true));
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
+
+            latch.await();
         } finally {
             if (ssc != null) {
                 ssc.delete();
