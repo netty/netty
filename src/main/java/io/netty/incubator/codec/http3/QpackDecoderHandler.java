@@ -79,16 +79,26 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         // +---+---+-----------------------+
         if ((b & 0b1100_0000) == 0b0000_0000) {
             long increment = QpackUtil.decodePrefixedInteger(in, 6);
-            if (increment <= 0) {
+            if (increment == 0) {
                 discard = true;
+                // Zero is not allowed as an increment
+                // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment
+                // Increment is an unsigned integer, so only 0 is the invalid value.
+                // https://www.rfc-editor.org/rfc/rfc7541#section-5
                 Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECODER_STREAM_ERROR,
                         "Invalid increment '" + increment + "'.",  false);
                 return;
             }
+            if (increment < 0) {
+                return;
+            }
+            // Do nothing for now
             return;
         }
-        // TODO: Handle me
-        in.skipBytes(in.readableBytes());
+        // unknown frame
+        discard = true;
+        Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECODER_STREAM_ERROR,
+                "Unknown decoder instruction '" + b + "'.",  false);
     }
 
     @Override
