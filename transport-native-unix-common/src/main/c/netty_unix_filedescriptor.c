@@ -279,7 +279,7 @@ static const jint method_table_size = sizeof(method_table) / sizeof(method_table
 // JNI Method Registration Table End
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
-//            Unix.preloadClasses() to reflect that.
+//            Unix to reflect that.
 jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     void* mem = NULL;

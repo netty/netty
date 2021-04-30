@@ -282,7 +282,7 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 // JNI Method Registration Table End
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
-//            Native.preloadClasses() to reflect that.
+//            Native to reflect that.
 static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
