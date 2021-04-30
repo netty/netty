@@ -15,7 +15,10 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Unix;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -25,7 +28,12 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.PortUnreachableException;
+import java.nio.channels.ClosedChannelException;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evAdd;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evClear;
@@ -49,8 +57,11 @@ import static io.netty.channel.unix.Errors.newIOException;
  */
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+    private static final Set<Class<?>> PRELOADED_CLASSES = new HashSet<Class<?>>();
 
     static {
+        preloadClasses();
+
         try {
             // First, try calling a side-effect free JNI method to see if the library was already
             // loaded by the application.
@@ -65,6 +76,24 @@ final class Native {
                 registerUnix();
             }
         });
+    }
+
+    // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+    // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+    private static void preloadClasses() {
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+
+        // netty_kqueue_bsdsocket
+        PRELOADED_CLASSES.add(DefaultFileRegion.class);
+        try {
+            PRELOADED_CLASSES.add(Class.forName("sun.nio.ch.FileChannelImpl"));
+        } catch (ClassNotFoundException ignore) {
+            // ignore
+        }
+        PRELOADED_CLASSES.add(java.io.FileDescriptor.class);
+        PRELOADED_CLASSES.add(PeerCredentials.class);
+        PRELOADED_CLASSES.add(String.class);
     }
 
     private static native int registerUnix();
