@@ -47,7 +47,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
-    private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
+    private int localConnIdLength;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
     private int version;
@@ -55,6 +55,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
         this.version = Quiche.QUICHE_PROTOCOL_VERSION;
+        this.localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
         this.server = server;
     }
 
