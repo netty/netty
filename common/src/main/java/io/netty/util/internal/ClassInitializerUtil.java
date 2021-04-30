@@ -26,18 +26,6 @@ public final class ClassInitializerUtil {
      * Preload the given classes and so ensure the {@link ClassLoader} has these loaded after this method call.
      *
      * @param classLoader   the {@link ClassLoader}
-     * @param classNames    the classes to load.
-     */
-    public static void tryLoadClasses(ClassLoader classLoader, String... classNames) {
-        for (String className: classNames) {
-            tryLoadClass(classLoader, className);
-        }
-    }
-
-    /**
-     * Preload the given classes and so ensure the {@link ClassLoader} has these loaded after this method call.
-     *
-     * @param classLoader   the {@link ClassLoader}
      * @param classes    the classes to load.
      */
     public static void tryLoadClasses(ClassLoader classLoader, Class<?>... classes) {
