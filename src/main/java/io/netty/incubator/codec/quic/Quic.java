@@ -50,6 +50,16 @@ public final class Quic {
     }
 
     /**
+     * Return if the given QUIC version is supported.
+     *
+     * @param version   the version.
+     * @return          {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isVersionSupported(int version) {
+        return isAvailable() && Quiche.quiche_version_is_supported(version);
+    }
+
+    /**
      * Returns {@code true} if and only if the QUIC implementation is usable on the running platform is available.
      *
      * @return {@code true} if this QUIC implementation can be used on the current platform, {@code false} otherwise.

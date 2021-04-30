@@ -24,7 +24,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class QuicTest extends AbstractQuicTest {
 
@@ -32,6 +34,16 @@ public class QuicTest extends AbstractQuicTest {
     public void test() {
         Quic.ensureAvailability();
         assertNotNull(Quiche.quiche_version());
+    }
+
+    @Test
+    public void testVersionSupported() {
+        // draft-27, draft-28 and draft-29 should be supported.
+        assertTrue(Quic.isVersionSupported(0xff00_001b));
+        assertTrue(Quic.isVersionSupported(0xff00_001c));
+        assertTrue(Quic.isVersionSupported(0xff00_001d));
+        // version 1 is not supported atm.
+        assertFalse(Quic.isVersionSupported(0x0000_0001));
     }
 
     @Test
