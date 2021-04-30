@@ -15,12 +15,11 @@
  */
 package io.netty.resolver.dns.macos;
 
-import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.unix.PeerCredentials;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -32,10 +31,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -53,10 +50,17 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
 
     // Let's refresh every 10 seconds.
     private static final long REFRESH_INTERVAL = TimeUnit.SECONDS.toNanos(10);
-    private static final Set<Class<?>> PRELOADED_CLASSES = new HashSet<Class<?>>();
 
     static {
-        preloadClasses();
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(PlatformDependent.getClassLoader(MacOSDnsServerAddressStreamProvider.class),
+                // netty_resolver_dns_macos
+                byte[].class, String.class
+        );
 
         Throwable cause = null;
         try {
@@ -65,17 +69,6 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
             cause = error;
         }
         UNAVAILABILITY_CAUSE = cause;
-    }
-
-    // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
-    // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
-    private static void preloadClasses() {
-        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
-        // NETTY_JNI_UTIL_FIND_CLASS.
-
-        // netty_resolver_dns_macos
-        PRELOADED_CLASSES.add(byte[].class);
-        PRELOADED_CLASSES.add(String.class);
     }
 
     private static void loadNativeLibrary() {
