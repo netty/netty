@@ -50,8 +50,8 @@ public final class ClassInitializerUtil {
         try {
             // Load the class and also ensure we init it which means its linked etc.
             Class.forName(className, true, classLoader);
-        } catch (Throwable ignore) {
-            // ignore
+        } catch (Exception e) {
+            throw new RuntimeException("Error during loading class " + className, e);
         }
     }
 }
