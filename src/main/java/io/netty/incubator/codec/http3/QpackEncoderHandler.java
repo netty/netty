@@ -79,8 +79,11 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //   +-------------------------------+
         if ((b & 0b1000_0000) == 0b1000_0000) {
             int readerIndex = in.readerIndex();
-            // Just skip the first byte for now
-            in.readerIndex(readerIndex + 1);
+            final long nameIdx = QpackUtil.decodePrefixedInteger(in, 6);
+            if (nameIdx < 0) {
+                // Not enough readable bytes
+                return;
+            }
 
             long length = QpackUtil.decodePrefixedInteger(in, 7);
             if (length < 0) {
