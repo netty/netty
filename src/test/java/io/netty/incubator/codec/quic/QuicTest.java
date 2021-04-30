@@ -38,12 +38,13 @@ public class QuicTest extends AbstractQuicTest {
 
     @Test
     public void testVersionSupported() {
-        // draft-27, draft-28 and draft-29 should be supported.
+        // draft-27, draft-28, draft-29 and 1 should be supported.
         assertTrue(Quic.isVersionSupported(0xff00_001b));
         assertTrue(Quic.isVersionSupported(0xff00_001c));
         assertTrue(Quic.isVersionSupported(0xff00_001d));
-        // version 1 is not supported atm.
-        assertFalse(Quic.isVersionSupported(0x0000_0001));
+        assertTrue(Quic.isVersionSupported(0x0000_0001));
+
+        assertFalse(Quic.isVersionSupported(0xff00_001a));
     }
 
     @Test
