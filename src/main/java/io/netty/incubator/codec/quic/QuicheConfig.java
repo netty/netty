@@ -19,14 +19,14 @@ final class QuicheConfig {
     private final boolean isDatagramSupported;
     private long config = -1;
 
-    QuicheConfig(Boolean grease, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
+    QuicheConfig(int version, Boolean grease, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
                         Long maxRecvUdpPayloadSize, Long initialMaxData,
                         Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
                         QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  Integer recvQueueLen, Integer sendQueueLen) {
-        long config = Quiche.quiche_config_new(Quiche.QUICHE_PROTOCOL_VERSION);
+        long config = Quiche.quiche_config_new(version);
         try {
             if (grease != null) {
                 Quiche.quiche_config_grease(config, grease);

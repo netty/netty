@@ -16,7 +16,6 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -51,9 +50,11 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private int localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
+    private int version;
 
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
+        this.version = Quiche.QUICHE_PROTOCOL_VERSION;
         this.server = server;
     }
 
@@ -78,6 +79,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
         this.flushStrategy = builder.flushStrategy;
+        this.version = builder.version;
     }
 
     /**
@@ -335,6 +337,19 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return self();
     }
 
+    /**
+     * Allows to configure the {@code QUIC version} that should be used.
+     *
+     * The default value is the latest supported version by the underlying library.
+     *
+     * @param version the {@code QUIC version} to use.
+     * @return        the instance itself.
+     */
+    public final B version(int version) {
+        this.version = version;
+        return self();
+    }
+
     private Integer recvQueueLen;
     private Integer sendQueueLen;
 
@@ -383,7 +398,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     private QuicheConfig createConfig() {
-        return new QuicheConfig(grease,
+        return new QuicheConfig(version, grease,
                 maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
