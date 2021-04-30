@@ -33,6 +33,7 @@ public final class ClassInitializerUtil {
             tryLoadClass(classLoader, className);
         }
     }
+
     /**
      * Preload the given classes and so ensure the {@link ClassLoader} has these loaded after this method call.
      *
