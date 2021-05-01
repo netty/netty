@@ -6,7 +6,7 @@ services:
     image: netty:centos-6-openj9-1.11
     build:
       args:
-        java_version : "adopt-openj9@1.11.0-9"
+        java_version : "adopt-openj9@1.11.0-11"
 
   build:
     image: netty:centos-6-openj9-1.11
