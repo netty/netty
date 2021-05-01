@@ -6,7 +6,7 @@ services:
     image: netty:centos-6-1.8
     build:
       args:
-        java_version : "adopt@1.8.0-272"
+        java_version : "adopt@1.8.0-292"
 
   build:
     image: netty:centos-6-1.8

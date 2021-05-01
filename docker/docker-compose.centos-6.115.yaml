@@ -8,7 +8,7 @@ services:
       args:
         # use zulu and not adoptjdk for now as adoptjdk15 does not support centos6
         # https://github.com/AdoptOpenJDK/openjdk-build/issues/2097
-        java_version : "zulu@1.15.0-1"
+        java_version : "zulu@1.15.0-2"
 
   build:
     image: netty:centos-6-1.15
