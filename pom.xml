@@ -80,6 +80,7 @@
     <boringsslHomeDir>${project.build.directory}/boringssl</boringsslHomeDir>
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
+    <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Follow what is used in quiche for now -->
     <!-- https://github.com/cloudflare/quiche/tree/master/deps -->
     <boringsslBranch>master</boringsslBranch>
@@ -90,6 +91,7 @@
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
     <quicheHomeBuildDir>${quicheHomeDir}/build</quicheHomeBuildDir>
     <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
+    <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
     <quicheCommitSha>e1515ca570e2b0c1c2cea67e48a361c4eb291cfd</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
@@ -326,7 +328,7 @@
                         <arg value="clone" />
                         <arg value="--branch" />
                         <arg value="${boringsslBranch}" />
-                        <arg value="https://boringssl.googlesource.com/boringssl" />
+                        <arg value="${boringsslRepository}" />
                         <arg value="${boringsslSourceDir}" />
                       </exec>
                     </else>
@@ -413,7 +415,7 @@
                         <arg value="--recursive" />
                         <arg value="--branch" />
                         <arg value="${quicheBranch}" />
-                        <arg value="https://github.com/cloudflare/quiche" />
+                        <arg value="${quicheRepository}" />
                         <arg value="${quicheSourceDir}" />
                       </exec>
 
