@@ -16,6 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Caching of maven dependencies
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: sinstall-jars-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            install-jars-linux-aarch64-maven-cache-
+
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true

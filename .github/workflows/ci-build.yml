@@ -17,6 +17,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Caching of maven dependencies
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: build-linux-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            build-linux-x86_64-maven-cache-
+
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
@@ -46,13 +54,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Caching of maven dependencies
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: build-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            build-linux-aarch64-maven-cache-
+
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
         with:
-          key: build-linux-x86_64-docker-cache-{hash}
+          key: build-linux-aarch64-docker-cache-{hash}
           restore-keys: |
-            build-linux-x86_64-docker-cache-
+            build-linux-aarch64-docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-7.yaml build
@@ -100,14 +116,11 @@ jobs:
 
       # Cache .m2/repository
       - uses: actions/cache@v2
-        env:
-          cache-name: build-cache-windows-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-
-            ${{ runner.os }}-
+            windows-x86_64-maven-cache-
 
       - name: Build project
         run: mvn --file pom.xml clean package

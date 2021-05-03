@@ -70,7 +70,3 @@ RUN echo '#define static_assert _Static_assert'  >>  ~/.include/assert.h
 RUN echo 'export C_INCLUDE_PATH="$HOME/.include/"' >>  ~/.bashrc
 # Needed to compile against old glibc
 RUN echo 'export LDFLAGS=-lrt' >>  ~/.bashrc
-
-COPY ./pom.xml $SOURCE_DIR/pom.xml
-WORKDIR $SOURCE_DIR
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp && rm -rf target'

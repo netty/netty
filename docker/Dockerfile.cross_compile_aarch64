@@ -54,15 +54,9 @@ RUN /root/.cargo/bin/rustup target add aarch64-unknown-linux-gnu
 RUN echo '[target.aarch64-unknown-linux-gnu]' >> /root/.cargo/config
 RUN echo 'linker = "aarch64-none-linux-gnu-gcc"' >> /root/.cargo/config
 
-
 WORKDIR /opt
 RUN curl https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz | tar -xz
 RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
 
 # Prepare our own build
 ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
-
-COPY ./pom.xml $SOURCE_DIR/pom.xml
-WORKDIR $SOURCE_DIR
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp && rm -rf target'
-

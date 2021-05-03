@@ -28,16 +28,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
-      # Cache .m2/repository
+      # Caching of maven dependencies
       - uses: actions/cache@v2
-        env:
-          cache-name: release-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: prepare-release-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pr-${{ env.cache-name }}-
-            ${{ runner.os }}-pr-
+            prepare-release-maven-cache-
 
       - name: Prepare release with Maven
         run: |
@@ -93,6 +90,14 @@ jobs:
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Caching of maven dependencies
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: staging-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            staging-${{ matrix.setup }}-maven-cache-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
@@ -196,16 +201,13 @@ jobs:
         with:
           args: install ninja nasm
 
-      # Cache .m2/repository
+      # Caching of maven dependencies
       - uses: actions/cache@v2
-        env:
-          cache-name: staging-cache-windows-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: stage-release-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-
-            ${{ runner.os }}-
+            stage-release-windows-x86_64-maven-cache-
 
       - uses: s4u/maven-settings-action@v2.2.0
         with:
@@ -285,6 +287,14 @@ jobs:
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/windows-x86_64-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-x86_64-local-staging/staging
+
+      # Caching of maven dependencies
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: deploy-staged-release-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            deploy-staged-release-maven-cache-
 
       - uses: s4u/maven-settings-action@v2.2.0
         with:

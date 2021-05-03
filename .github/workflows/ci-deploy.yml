@@ -27,16 +27,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # Cache .m2/repository
+      # Caching of maven dependencies
       - uses: actions/cache@v2
-        env:
-          cache-name: staging-${{ matrix.setup }}-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-staging-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: stage-snapshot-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-staging-${{ env.cache-name }}-
-            ${{ runner.os }}-staging-
+            stage-snapshot-${{ matrix.setup }}-maven-cache-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
@@ -96,16 +93,13 @@ jobs:
         with:
           args: install ninja nasm
 
-      # Cache .m2/repository
+      # Caching of maven dependencies
       - uses: actions/cache@v2
-        env:
-          cache-name: staging-cache-windows-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: stage-snapshot-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-
-            ${{ runner.os }}-
+            stage-snapshot-windows-x86_64-maven-cache-
 
       - name: Stage snapshots to local staging directory
         run: mvn --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
@@ -129,16 +123,13 @@ jobs:
         with:
           java-version: 8
 
-      # Cache .m2/repository
+      # Caching of maven dependencies
       - uses: actions/cache@v2
-        env:
-          cache-name: deploy-staging-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-deploy-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: deploy-staged-snapshots-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-deploy-${{ env.cache-name }}-
-            ${{ runner.os }}-deploy-
+            deploy-staged-snapshots-maven-cache-
 
       # Setup some env to re-use later.
       - name: Prepare enviroment variables

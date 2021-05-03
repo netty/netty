@@ -38,16 +38,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Cache .m2/repository
+    # Caching of maven dependencies
     - uses: actions/cache@v2
-      env:
-        cache-name: ${{ matrix.language }}-cache-m2-repository
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-analyze-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+        key: analyze-${{ matrix.language }}-maven-cache-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-analyze-${{ env.cache-name }}-
-          ${{ runner.os }}-analyze-
+          analyze-${{ matrix.language }}-maven-cache-
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
