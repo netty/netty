@@ -33,6 +33,20 @@ final class Quiche {
     private static final boolean DEBUG_LOGGING_ENABLED = logger.isDebugEnabled();
 
     static {
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        tryLoadClasses(Quiche.class,
+                // netty_quic_boringssl
+                byte[].class, String.class, BoringSSLCertificateCallback.class,
+                BoringSSLCertificateVerifyCallback.class, BoringSSLHandshakeCompleteCallback.class,
+
+                //netty_quic_quiche
+                QuicheLogger.class
+        );
+
         try {
             // First, try calling a side-effect free JNI method to see if the library was already
             // loaded by the application.
@@ -45,6 +59,24 @@ final class Quiche {
         // Let's enable debug logging for quiche if its enabled in our logger.
         if (DEBUG_LOGGING_ENABLED) {
             quiche_enable_debug_logging(new QuicheLogger(logger));
+        }
+    }
+
+    private static void tryLoadClasses(Class<?> loadingClass, Class<?>... classes) {
+        ClassLoader loader = PlatformDependent.getClassLoader(loadingClass);
+        for (Class<?> clazz: classes) {
+            tryLoadClass(loader, clazz.getName());
+        }
+    }
+
+    private static void tryLoadClass(ClassLoader classLoader, String className) {
+        try {
+            // Load the class and also ensure we init it which means its linked etc.
+            Class.forName(className, true, classLoader);
+        } catch (ClassNotFoundException ignore) {
+            // Ignore
+        } catch (SecurityException ignore) {
+            // Ignore
         }
     }
 

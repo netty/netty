@@ -759,6 +759,8 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 
 // JNI Method Registration Table End
 
+// IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
+//            Quiche to reflect that.
 jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     int staticallyRegistered = 0;
