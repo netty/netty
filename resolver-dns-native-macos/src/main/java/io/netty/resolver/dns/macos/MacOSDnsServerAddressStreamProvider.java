@@ -57,7 +57,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
         // NETTY_JNI_UTIL_FIND_CLASS.
-        ClassInitializerUtil.tryLoadClasses(PlatformDependent.getClassLoader(MacOSDnsServerAddressStreamProvider.class),
+        ClassInitializerUtil.tryLoadClasses(MacOSDnsServerAddressStreamProvider.class,
                 // netty_resolver_dns_macos
                 byte[].class, String.class
         );

@@ -16,7 +16,6 @@
 package io.netty.channel.unix;
 
 import io.netty.util.internal.ClassInitializerUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -38,7 +37,7 @@ public final class Unix {
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
         // NETTY_JNI_UTIL_FIND_CLASS.
-        ClassInitializerUtil.tryLoadClasses(PlatformDependent.getClassLoader(Unix.class),
+        ClassInitializerUtil.tryLoadClasses(Unix.class,
                 // netty_unix_errors
                 OutOfMemoryError.class, RuntimeException.class, ClosedChannelException.class,
                 IOException.class, PortUnreachableException.class,

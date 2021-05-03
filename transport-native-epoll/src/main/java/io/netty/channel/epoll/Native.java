@@ -71,7 +71,7 @@ public final class Native {
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
         // NETTY_JNI_UTIL_FIND_CLASS.
-        ClassInitializerUtil.tryLoadClasses(PlatformDependent.getClassLoader(Native.class),
+        ClassInitializerUtil.tryLoadClasses(Native.class,
                 // netty_epoll_linuxsocket
                 PeerCredentials.class, DefaultFileRegion.class, FileChannel.class, java.io.FileDescriptor.class,
                 // netty_epoll_native

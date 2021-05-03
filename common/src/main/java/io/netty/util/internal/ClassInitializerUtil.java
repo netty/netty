@@ -25,12 +25,13 @@ public final class ClassInitializerUtil {
     /**
      * Preload the given classes and so ensure the {@link ClassLoader} has these loaded after this method call.
      *
-     * @param classLoader   the {@link ClassLoader}
-     * @param classes    the classes to load.
+     * @param loadingClass      the {@link Class} that wants to load the classes.
+     * @param classes           the classes to load.
      */
-    public static void tryLoadClasses(ClassLoader classLoader, Class<?>... classes) {
+    public static void tryLoadClasses(Class<?> loadingClass, Class<?>... classes) {
+        ClassLoader loader = PlatformDependent.getClassLoader(loadingClass);
         for (Class<?> clazz: classes) {
-            tryLoadClass(classLoader, clazz.getName());
+            tryLoadClass(loader, clazz.getName());
         }
     }
 
