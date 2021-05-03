@@ -22,6 +22,8 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
+// IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
+//            Unix to reflect that.
 jint netty_unix_register(JNIEnv* env, const char* packagePrefix) {
     int limitsOnLoadCalled = 0;
     int errorsOnLoadCalled = 0;

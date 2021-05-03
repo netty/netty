@@ -15,9 +15,12 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.Unix;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -26,6 +29,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 import java.util.Locale;
 
@@ -61,6 +65,19 @@ public final class Native {
         } catch (IOException ignore) {
             // Just ignore
         }
+
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(Native.class,
+                // netty_epoll_linuxsocket
+                PeerCredentials.class, DefaultFileRegion.class, FileChannel.class, java.io.FileDescriptor.class,
+                // netty_epoll_native
+                NativeDatagramPacketArray.NativeDatagramPacket.class
+        );
+
         try {
             // First, try calling a side-effect free JNI method to see if the library was already
             // loaded by the application.

@@ -15,8 +15,13 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.PortUnreachableException;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -25,6 +30,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class Unix {
     private static final AtomicBoolean registered = new AtomicBoolean();
+
+    static {
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(Unix.class,
+                // netty_unix_errors
+                OutOfMemoryError.class, RuntimeException.class, ClosedChannelException.class,
+                IOException.class, PortUnreachableException.class,
+
+                // netty_unix_socket
+                DatagramSocketAddress.class, InetSocketAddress.class
+        );
+    }
 
     /**
      * Internal method... Should never be called from the user.

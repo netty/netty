@@ -19,6 +19,7 @@ import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -51,6 +52,16 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     private static final long REFRESH_INTERVAL = TimeUnit.SECONDS.toNanos(10);
 
     static {
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(MacOSDnsServerAddressStreamProvider.class,
+                // netty_resolver_dns_macos
+                byte[].class, String.class
+        );
+
         Throwable cause = null;
         try {
             loadNativeLibrary();
