@@ -12,7 +12,7 @@ jobs:
         include:
           - setup: linux-x86_64-java8
           - setup: linux-x86_64-java11
-          - setup: linux-x86_64-java15
+          - setup: linux-x86_64-java16
           - setup: linux-x86_64-java11-boringssl
     steps:
       - name: Download Artifacts
