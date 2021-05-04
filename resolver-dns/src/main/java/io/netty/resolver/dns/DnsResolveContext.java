@@ -951,7 +951,8 @@ abstract class DnsResolveContext<T> {
             // If cause != null we know this was caused by a timeout / cancel / transport exception. In this case we
             // won't try to resolve the CNAME as we only should do this if we could not get the expected records
             // because they do not exist and the DNS server did probably signal it.
-            if (cause == null && !triedCNAME) {
+            if (cause == null && !triedCNAME &&
+                    (question.type() == DnsRecordType.A || question.type() == DnsRecordType.AAAA)) {
                 // As the last resort, try to query CNAME, just in case the name server has it.
                 triedCNAME = true;
 
