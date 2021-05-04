@@ -38,7 +38,8 @@ public final class Http3 {
             "h3-29",
             "h3-30",
             "h3-31",
-            "h3-32"
+            "h3-32",
+            "h3"
     };
 
     private static final AttributeKey<QuicStreamChannel> HTTP3_CONTROL_STREAM_KEY =
