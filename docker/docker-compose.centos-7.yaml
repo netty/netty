@@ -50,6 +50,7 @@ services:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
       - ~/.m2/repository:/root/.m2/repository
+      - ~/.m2/settings.xml:/root/.m2/settings.xml
       - ~/local-staging:/root/local-staging
       - ..:/code
     command: /bin/bash -cl "mvn -Plinux-aarch64 clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"

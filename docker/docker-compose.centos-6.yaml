@@ -55,6 +55,7 @@ services:
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
+      - ~/.m2/settings.xml:/root/.m2/settings.xml
       - ~/.m2/repository:/root/.m2/repository
       - ~/local-staging:/root/local-staging
       - ..:/code
@@ -68,6 +69,7 @@ services:
       - GPG_PRIVATE_KEY
     volumes:
       - ~/.ssh:/root/.ssh
+      - ~/.m2/settings.xml:/root/.m2/settings.xml
       - ~/.m2/repository:/root/.m2/repository
       - ~/local-staging:/root/local-staging
       - ..:/code
