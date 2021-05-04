@@ -25,11 +25,3 @@ RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 WORKDIR /opt
 RUN curl https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz | tar -xz
 RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
-
-# Prepare our own build
-ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
-ENV JAVA_HOME /jdk/
-
-COPY ./pom.xml $SOURCE_DIR/pom.xml
-WORKDIR $SOURCE_DIR
-RUN /bin/bash -c 'source $HOME/.bashrc && mvn dependency:go-offline surefire:test -ntp'

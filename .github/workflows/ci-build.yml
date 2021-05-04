@@ -16,6 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: build-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            build-cache-m2-repository-
+
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
@@ -23,7 +31,6 @@ jobs:
           key: docker-cache-build-{hash}
           restore-keys: |
             docker-cache-build-
-            docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build

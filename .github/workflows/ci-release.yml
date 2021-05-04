@@ -44,6 +44,14 @@ jobs:
                 "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
 
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: release-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            release-cache-m2-repository-
+
       - name: Prepare release with Maven
         run:  mvn -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
 

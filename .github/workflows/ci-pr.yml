@@ -18,14 +18,11 @@ jobs:
           java-version: 8
       # Cache .m2/repository
       - uses: actions/cache@v2
-        env:
-          cache-name: verify-cache-m2-repository
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: verify-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pr-${{ env.cache-name }}-
-            ${{ runner.os }}-pr-
+            verify-cache-m2-repository-
       - name: Verify with Maven
         run: mvn verify -B --file pom.xml -DskipTests=true -DskipH3Spec=true
 
@@ -34,6 +31,14 @@ jobs:
     needs: verify
     steps:
       - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: pr-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            pr-cache-m2-repository-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
