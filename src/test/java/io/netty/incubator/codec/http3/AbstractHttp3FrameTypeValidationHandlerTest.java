@@ -15,22 +15,19 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.Test;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
+import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
-import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
-import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 
 public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http3Frame> {
 
@@ -42,7 +39,8 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testValidTypeInbound() {
-        EmbeddedChannel channel = newChannel(newHandler());
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedChannel channel = newChannel(parent, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeInbound(valid));
@@ -54,7 +52,8 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testValidTypeOutput() {
-        EmbeddedChannel channel = newChannel(newHandler());
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedChannel channel = newChannel(parent, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeOutbound(valid));
@@ -66,7 +65,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testInvalidTypeInbound() {
-        QuicChannel parent = mockParent();
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         EmbeddedChannel channel = newChannel(parent, newHandler());
 
         Http3ErrorCode errorCode = inboundErrorCodeInvalid();
@@ -90,7 +89,8 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testInvalidTypeOutput() {
-        EmbeddedChannel channel = newChannel(newHandler());
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedChannel channel = newChannel(parent, newHandler());
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
@@ -105,11 +105,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         assertFalse(channel.finish());
     }
 
-    private EmbeddedChannel newChannel(Http3FrameTypeValidationHandler<T> handler) {
-        return newChannel(null, handler);
-    }
-
-    protected EmbeddedChannel newChannel(Channel parent, Http3FrameTypeValidationHandler<T> handler) {
+    protected EmbeddedChannel newChannel(EmbeddedQuicChannel parent, Http3FrameTypeValidationHandler<T> handler) {
         return new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false, handler);
     }
 }

@@ -17,7 +17,6 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 import static org.junit.Assert.assertNotNull;
@@ -36,7 +35,7 @@ public class Http3ServerConnectionHandlerTest extends AbtractHttp3ConnectionHand
     }
 
     @Override
-    protected void assertBidirectionalStreamHandled(QuicChannel channel, QuicStreamChannel streamChannel) {
+    protected void assertBidirectionalStreamHandled(EmbeddedQuicChannel channel, QuicStreamChannel streamChannel) {
         assertNotNull(streamChannel.pipeline().context(REQUEST_HANDLER));
     }
 }

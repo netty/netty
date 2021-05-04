@@ -16,13 +16,11 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.DefaultChannelId;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -31,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
-import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -52,10 +49,10 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     @Test
-    public void testInvalidFrameSequenceStartInbound() {
-        QuicChannel parent = mockParent();
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                newHandler());
+    public void testInvalidFrameSequenceStartInbound() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        final EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, newHandler()).get();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         try {
             channel.writeInbound(dataFrame);
@@ -69,11 +66,11 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     @Test
-    public void testInvalidFrameSequenceEndInbound() {
-        QuicChannel parent = mockParent();
+    public void testInvalidFrameSequenceEndInbound() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        final EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, newHandler()).get();
 
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                newHandler());
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
         Http3DataFrame dataFrame2 = new DefaultHttp3DataFrame(Unpooled.buffer());

@@ -16,24 +16,19 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
-import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -59,18 +54,19 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Test
     public void testStreamClosedWhileParentStillActive() {
-        QuicChannel parent = mockParent();
-        EmbeddedChannel channel = newChannel(parent, newHandler(), true);
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedChannel channel = newChannel(parent, newHandler());
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
     }
 
     @Test
-    public void testGoAwayIdDecreaseWorks() {
-        QuicChannel parent = mockParent();
+    public void testGoAwayIdDecreaseWorks() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()));
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(8)));
         ReferenceCountUtil.release(channel.readOutbound());
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
@@ -80,11 +76,12 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Test
-    public void testGoAwayIdIncreaseFails() {
-        QuicChannel parent = mockParent();
+    public void testGoAwayIdIncreaseFails() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
+        parent.close().get();
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()));
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
         ReferenceCountUtil.release(channel.readOutbound());
 
@@ -98,11 +95,12 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Test
-    public void testGoAwayIdUseInvalidId() {
-        QuicChannel parent = mockParent();
+    public void testGoAwayIdUseInvalidId() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
         EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()), false);
+                true, settingsFrame, new ChannelInboundHandlerAdapter()));
         try {
             channel.writeOutbound(new DefaultHttp3GoAwayFrame(2));
             fail();
@@ -113,18 +111,8 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Override
-    protected EmbeddedChannel newChannel(Channel parent,
+    protected EmbeddedChannel newChannel(EmbeddedQuicChannel parent,
                                          Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler) {
-        if (parent == null) {
-            parent = Mockito.mock(QuicChannel.class);
-        }
-        return newChannel(parent, handler, false);
-    }
-
-    private EmbeddedChannel newChannel(Channel parent, Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler,
-                                       boolean parentActive) {
-        Mockito.when(parent.isActive()).thenReturn(parentActive);
-
         EmbeddedChannel channel = super.newChannel(parent, handler);
         ByteBuf buffer = channel.readOutbound();
         // Verify that we did write the control stream prefix

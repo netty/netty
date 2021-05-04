@@ -37,7 +37,6 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 

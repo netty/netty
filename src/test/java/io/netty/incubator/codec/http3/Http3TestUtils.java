@@ -16,8 +16,6 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -27,26 +25,13 @@ import org.mockito.ArgumentCaptor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 final class Http3TestUtils {
 
     private Http3TestUtils() { }
-
-    static QuicChannel mockParent() {
-        QuicChannel parent = mock(QuicChannel.class);
-        when(parent.close(anyBoolean(), anyInt(),
-                any(ByteBuf.class))).thenReturn(new DefaultChannelPromise(parent));
-        when(parent.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
-        return parent;
-    }
 
     static void assertException(Http3ErrorCode code, Throwable e) {
         MatcherAssert.assertThat(e, CoreMatchers.instanceOf(Http3Exception.class));
@@ -54,20 +39,13 @@ final class Http3TestUtils {
         assertEquals(code, exception.errorCode());
     }
 
-    static void verifyClose(Http3ErrorCode expectedCode, QuicChannel parent) {
-        verifyClose(1, expectedCode, parent);
+    static void verifyClose(int times, Http3ErrorCode expectedCode, EmbeddedQuicChannel channel) {
+        assertEquals("Close not invoked with expected times with error code: " + expectedCode.code, times,
+                channel.closeErrorCodes().stream().filter(integer -> integer == expectedCode.code).count());
     }
 
-    static void verifyClose(int times, Http3ErrorCode expectedCode, QuicChannel parent) {
-        ArgumentCaptor<ByteBuf> argumentCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        try {
-            verify(parent, times(times)).close(eq(true),
-                    eq(expectedCode.code), argumentCaptor.capture());
-        } finally {
-            for (ByteBuf buffer : argumentCaptor.getAllValues()) {
-                buffer.release();
-            }
-        }
+    static void verifyClose(Http3ErrorCode expectedCode, EmbeddedQuicChannel channel) {
+        verifyClose(1, expectedCode, channel);
     }
 
     static void assertBufferEquals(ByteBuf expected, ByteBuf actual) {

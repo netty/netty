@@ -22,9 +22,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.util.AttributeMap;
-import io.netty.util.DefaultAttributeMap;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,18 +30,15 @@ import org.junit.runners.Parameterized;
 
 import java.util.function.LongFunction;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_DECODER_STREAM_TYPE;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_ENCODER_STREAM_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_DECODER_STREAM_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_ENCODER_STREAM_TYPE;
 
 @RunWith(Parameterized.class)
 public class Http3UnidirectionalStreamInboundHandlerTest {
@@ -60,7 +55,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
-    public void testUnkownStream() {
+    public void testUnkownStream() throws Exception {
         EmbeddedChannel channel = newChannel();
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 0x06);
@@ -77,7 +72,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
-    public void testUnknownStreamWithCustomHandler() {
+    public void testUnknownStreamWithCustomHandler() throws Exception {
         long streamType = 0x06;
         EmbeddedChannel channel = newChannel(v -> {
             assertEquals(streamType, v);
@@ -101,7 +96,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
-    public void testPushStream() {
+    public void testPushStream() throws Exception {
         EmbeddedChannel channel = newChannel();
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, HTTP3_PUSH_STREAM_TYPE);
@@ -109,7 +104,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
         if (server) {
-            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
+            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (EmbeddedQuicChannel) channel.parent());
         } else {
             ByteBuf b = Unpooled.buffer();
             assertFalse(channel.writeInbound(b));
@@ -119,30 +114,29 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
-    public void testPushStreamNoMaxPushIdFrameSent() {
+    public void testPushStreamNoMaxPushIdFrameSent() throws Exception {
         testPushStream(-1);
     }
 
     @Test
-    public void testPushStreamMaxPushIdFrameSentWithSmallerId() {
+    public void testPushStreamMaxPushIdFrameSentWithSmallerId() throws Exception {
         testPushStream(0);
     }
 
     @Test
-    public void testPushStreamMaxPushIdFrameSentWithSameId() {
+    public void testPushStreamMaxPushIdFrameSentWithSameId() throws Exception {
         testPushStream(2);
     }
 
-    private void testPushStream(long pushId) {
-        QuicChannel parent = Http3TestUtils.mockParent();
-        AttributeMap map = new DefaultAttributeMap();
-        when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
-
+    private void testPushStream(long pushId) throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         Http3ControlStreamOutboundHandler outboundControlHandler = new Http3ControlStreamOutboundHandler(server,
                 new DefaultHttp3SettingsFrame(), new CodecHandler());
 
-        EmbeddedChannel outboundControlChannel = new EmbeddedChannel(
-                parent, DefaultChannelId.newInstance(), true, false, outboundControlHandler);
+        EmbeddedQuicStreamChannel outboundControlChannel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, outboundControlHandler)
+                        .get();
+
         // Let's drain everything that was written while channelActive(...) was called.
         for (;;) {
             Object written = outboundControlChannel.readOutbound();
@@ -161,8 +155,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
                 v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null),
                 outboundControlHandler, null);
-        EmbeddedChannel channel =  new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
-                true, false, handler);
+        EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
 
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, HTTP3_PUSH_STREAM_TYPE);
@@ -171,10 +165,10 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
         if (server) {
-            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
+            Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, parent);
         } else {
             if (pushId <= 0) {
-                Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, (QuicChannel) channel.parent());
+                Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
             } else {
                assertNotNull(channel.pipeline().context(CodecHandler.class));
             }
@@ -184,21 +178,21 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @Test
-    public void testControlStream() {
+    public void testControlStream() throws Exception {
         testStreamSetup(HTTP3_CONTROL_STREAM_TYPE, Http3ControlStreamInboundHandler.class, true);
     }
 
     @Test
-    public void testQpackEncoderStream() {
+    public void testQpackEncoderStream() throws Exception {
         testStreamSetup(HTTP3_QPACK_ENCODER_STREAM_TYPE, QpackEncoderHandler.class, false);
     }
 
     @Test
-    public void testQpackDecoderStream() {
+    public void testQpackDecoderStream() throws Exception {
         testStreamSetup(HTTP3_QPACK_DECODER_STREAM_TYPE, QpackDecoderHandler.class, false);
     }
 
-    private void testStreamSetup(long type, Class<? extends ChannelHandler> clazz, boolean hasCodec) {
+    private void testStreamSetup(long type, Class<? extends ChannelHandler> clazz, boolean hasCodec) throws Exception {
         EmbeddedChannel channel = newChannel();
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
@@ -224,24 +218,21 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
-        Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (QuicChannel) channel.parent());
+        Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, (EmbeddedQuicChannel) channel.parent());
         assertFalse(channel.finish());
     }
 
-    private EmbeddedChannel newChannel() {
+    private EmbeddedChannel newChannel() throws Exception {
         return newChannel(null);
     }
 
-    private EmbeddedChannel newChannel(LongFunction<ChannelHandler> factory) {
-        QuicChannel parent = Http3TestUtils.mockParent();
-        AttributeMap map = new DefaultAttributeMap();
-        when(parent.attr(any())).then(i -> map.attr(i.getArgument(0)));
+    private EmbeddedChannel newChannel(LongFunction<ChannelHandler> factory) throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
                 v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null),
                 new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                         new CodecHandler()), factory);
-        return new EmbeddedChannel(parent, DefaultChannelId.newInstance(),
-                true, false, handler);
+        return (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
     }
 
     private static final class CodecHandler extends ChannelHandlerAdapter {  }

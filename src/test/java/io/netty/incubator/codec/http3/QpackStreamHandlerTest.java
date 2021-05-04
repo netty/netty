@@ -17,13 +17,9 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.DefaultChannelId;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.Test;
-import org.mockito.Mockito;
 
-import static io.netty.incubator.codec.http3.Http3TestUtils.mockParent;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,30 +27,35 @@ import static org.junit.Assert.assertFalse;
 public class QpackStreamHandlerTest {
 
     @Test
-    public void testStreamClosedWhileParentStillActive() {
-        QuicChannel parent = mockParent();
-        Mockito.when(parent.isActive()).thenReturn(true);
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, new QpackDecoderHandler());
+    public void testStreamClosedWhileParentStillActive() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+
+        EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
+                        new QpackDecoderHandler()).get();
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
     }
 
     @Test
-    public void testStreamClosedWhileParentIsInactive() {
-        QuicChannel parent = mockParent();
-        Mockito.when(parent.isActive()).thenReturn(false);
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, new QpackDecoderHandler());
+    public void testStreamClosedWhileParentIsInactive() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        parent.close().get();
+
+        EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
+                        new QpackDecoderHandler()).get();
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStreamDropsInboundData() {
-        QuicChannel parent = mockParent();
-        Mockito.when(parent.isActive()).thenReturn(false);
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true,
-                false, new QpackDecoderHandler());
+    public void testStreamDropsInboundData() throws Exception {
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        parent.close().get();
+
+        EmbeddedQuicStreamChannel channel =
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
+                        new QpackDecoderHandler()).get();
         ByteBuf buffer = Unpooled.buffer();
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());

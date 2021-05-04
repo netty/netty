@@ -15,7 +15,6 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
@@ -26,7 +25,7 @@ public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHand
     }
 
     @Override
-    protected void assertBidirectionalStreamHandled(QuicChannel channel, QuicStreamChannel streamChannel) {
+    protected void assertBidirectionalStreamHandled(EmbeddedQuicChannel channel, QuicStreamChannel streamChannel) {
         Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, channel);
     }
 }
