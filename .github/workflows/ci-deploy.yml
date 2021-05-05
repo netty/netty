@@ -35,6 +35,15 @@ jobs:
           restore-keys: |
             stage-snapshot-${{ matrix.setup }}-maven-cache-
 
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         env:
@@ -100,6 +109,15 @@ jobs:
           key: stage-snapshot-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             stage-snapshot-windows-x86_64-maven-cache-
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
 
       - name: Stage snapshots to local staging directory
         run: mvn --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
