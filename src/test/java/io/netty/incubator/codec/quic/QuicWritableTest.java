@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -25,8 +26,11 @@ import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -132,6 +136,127 @@ public class QuicWritableTest extends AbstractQuicTest {
             stream.read();
 
             writePromise.sync();
+            stream.closeFuture().sync();
+            quicChannel.close().sync();
+
+            throwIfNotNull(serverErrorRef);
+            throwIfNotNull(clientErrorRef);
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testBytesUntilUnwritable() throws Throwable  {
+        Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
+        final CountDownLatch writableAgainLatch = new CountDownLatch(1);
+        int firstWriteNumBytes = 8;
+        int maxData = 32 * 1024;
+        final AtomicLong beforeWritableRef = new AtomicLong();
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
+                InsecureQuicTokenHandler.INSTANCE,
+                null, new ChannelInboundHandlerAdapter() {
+
+                    private int numBytesRead;
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buffer = (ByteBuf) msg;
+                        numBytesRead += buffer.readableBytes();
+                        buffer.release();
+                        if (numBytesRead == firstWriteNumBytes) {
+                            long before = ctx.channel().bytesBeforeUnwritable();
+                            beforeWritableRef.set(before);
+                            assertTrue(before > 0);
+
+                            while (before != 0) {
+                                int size = (int) Math.min(before, 1024);
+                                ctx.write(ctx.alloc().buffer(size).writeZero(size));
+                                long newBefore = ctx.channel().bytesBeforeUnwritable();
+
+                                assertEquals(before, newBefore + size);
+                                before = newBefore;
+                            }
+                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(writePromise));
+                        }
+                    }
+
+                    @Override
+                    public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                        if (ctx.channel().isWritable()) {
+                            if (ctx.channel().bytesBeforeUnwritable() > 0) {
+                                writableAgainLatch.countDown();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        serverErrorRef.set(cause);
+                    }
+
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                });
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .initialMaxStreamDataBidirectionalLocal(maxData));
+        try {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            QuicStreamChannel stream = quicChannel.createStream(
+                    QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                        int bytes;
+
+                        @Override
+                        public void channelRegistered(ChannelHandlerContext ctx) {
+                            ctx.channel().config().setAutoRead(false);
+                        }
+
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            ctx.writeAndFlush(ctx.alloc().buffer(firstWriteNumBytes).writeZero(firstWriteNumBytes));
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ByteBuf buffer = (ByteBuf) msg;
+                            bytes += buffer.readableBytes();
+                            buffer.release();
+                            if (bytes == beforeWritableRef.get()) {
+                                assertTrue(writePromise.isDone());
+                            }
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) {
+                            ctx.read();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            clientErrorRef.set(cause);
+                        }
+                    }).get();
+            assertFalse(writePromise.isDone());
+
+            // Let's trigger the reads. This will ensure we will consume the data and the remote peer
+            // should be notified that it can write more data.
+            stream.read();
+
+            writePromise.sync();
+            writableAgainLatch.await();
+            stream.close().sync();
             stream.closeFuture().sync();
             quicChannel.close().sync();
 

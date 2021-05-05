@@ -374,6 +374,12 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L285">quiche_conn_writable</a>.
+     */
+    static native long quiche_conn_writable(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L329">quiche_stream_iter_next</a>.
      *
      * This method will fill the {@code streamIds} array and return the number of streams that were filled into

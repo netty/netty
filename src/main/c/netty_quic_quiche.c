@@ -303,6 +303,14 @@ static jlong netty_quiche_conn_readable(JNIEnv* env, jclass clazz, jlong conn) {
     return (jlong) iter;
 }
 
+static jlong netty_quiche_conn_writable(JNIEnv* env, jclass clazz, jlong conn) {
+    quiche_stream_iter* iter = quiche_conn_writable((quiche_conn *) conn);
+    if (iter == NULL) {
+        return -1;
+    }
+    return (jlong) iter;
+}
+
 static void netty_quiche_stream_iter_free(JNIEnv* env, jclass clazz, jlong iter) {
     quiche_stream_iter_free((quiche_stream_iter*) iter);
 }
@@ -500,6 +508,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_timeout_as_nanos", "(J)J", (void *) netty_quiche_conn_timeout_as_nanos },
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quiche_conn_on_timeout },
   { "quiche_conn_readable", "(J)J", (void *) netty_quiche_conn_readable },
+  { "quiche_conn_writable", "(J)J", (void *) netty_quiche_conn_writable },
   { "quiche_stream_iter_free", "(J)V", (void *) netty_quiche_stream_iter_free },
   { "quiche_stream_iter_next", "(J[J)I", (void *) netty_quiche_stream_iter_next },
   { "quiche_conn_dgram_max_writable_len", "(J)I", (void* ) netty_quiche_conn_dgram_max_writable_len },

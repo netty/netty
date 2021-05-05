@@ -99,8 +99,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
+    private final long[] writableStreams = new long[128];
+
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
-    private final Queue<Long> flushPendingQueue = new ArrayDeque<>();
     private final QuicheQuicChannelConfig config;
     private final boolean server;
     private final QuicStreamIdGenerator idGenerator;
@@ -316,7 +317,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             state = CLOSED;
 
             closeStreams();
-            flushPendingQueue.clear();
 
             if (finBuffer != null) {
                 finBuffer.release();
@@ -782,53 +782,56 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    void streamHasPendingWrites(long streamId) {
-        flushPendingQueue.add(streamId);
+    int streamCapacity(long streamId) {
+        if (connection.isClosed()) {
+            return 0;
+        }
+        return Quiche.quiche_conn_stream_capacity(connection.address(), streamId);
     }
 
     private boolean handleWritableStreams() {
-        int pending = flushPendingQueue.size();
-        if (isConnDestroyed() || pending == 0) {
+        if (isConnDestroyed()) {
             return false;
         }
         inHandleWritableStreams = true;
         try {
             long connAddr = connection.address();
             boolean mayNeedWrite = false;
+
             if (Quiche.quiche_conn_is_established(connAddr) ||
                     Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                // We only want to process the number of channels that were in the queue when we entered
-                // handleWritableStreams(). Otherwise we may would loop forever as a channel may add itself again
-                // if the write was again partial.
-                for (int i = 0; i < pending; i++) {
-                    Long streamId = flushPendingQueue.poll();
-                    if (streamId == null) {
-                        break;
-                    }
-                    // Checking quiche_conn_stream_capacity(...) is cheaper then calling channel.writable() just
-                    // to notice that we can not write again.
-                    int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
-                    if (capacity == 0) {
-                        // Still not writable, put back in the queue.
-                        flushPendingQueue.add(streamId);
-                    } else {
-                        long sid = streamId;
-                        QuicheQuicStreamChannel channel = streams.get(sid);
-                        if (channel != null) {
-                            if (capacity > 0) {
-                                mayNeedWrite = true;
-                                channel.writable(capacity);
-                            } else {
-                                if (!Quiche.quiche_conn_stream_finished(connAddr, sid)) {
-                                    // Only fire an exception if the error was not caused because the stream is
-                                    // considered finished.
-                                    channel.pipeline().fireExceptionCaught(Quiche.newException(capacity));
+                long writableIterator = Quiche.quiche_conn_writable(connAddr);
+
+                try {
+                    // For streams we always process all streams when at least on read was requested.
+                    for (;;) {
+                        int writable = Quiche.quiche_stream_iter_next(
+                                writableIterator, writableStreams);
+                        for (int i = 0; i < writable; i++) {
+                            long streamId = writableStreams[i];
+                            QuicheQuicStreamChannel streamChannel = streams.get(streamId);
+                            if (streamChannel != null) {
+                                int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
+                                if (capacity < 0) {
+                                    if (!Quiche.quiche_conn_stream_finished(connAddr, streamId)) {
+                                        // Only fire an exception if the error was not caused because the stream is
+                                        // considered finished.
+                                        streamChannel.pipeline().fireExceptionCaught(Quiche.newException(capacity));
+                                    }
+                                    // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
+                                    streamChannel.forceClose();
+                                } else if (streamChannel.writable(capacity)) {
+                                    mayNeedWrite = true;
                                 }
-                                // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
-                                channel.forceClose();
                             }
                         }
+                        if (writable < writableStreams.length) {
+                            // We did handle all writable streams.
+                            break;
+                        }
                     }
+                } finally {
+                    Quiche.quiche_stream_iter_free(writableIterator);
                 }
             }
             return mayNeedWrite;
@@ -1343,6 +1346,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     QuicheQuicChannel.this, streamId);
             QuicheQuicStreamChannel old = streams.put(streamId, streamChannel);
             assert old == null;
+            streamChannel.writable(streamCapacity(streamId));
             return streamChannel;
         }
     }

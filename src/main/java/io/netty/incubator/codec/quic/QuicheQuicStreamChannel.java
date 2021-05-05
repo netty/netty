@@ -74,6 +74,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
     private volatile QuicStreamPriority priority;
+    private volatile int capacity;
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         this.parent = parent;
@@ -328,12 +329,16 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     @Override
     public long bytesBeforeUnwritable() {
-        return 0;
+        return capacity;
     }
 
     @Override
     public long bytesBeforeWritable() {
-        return 0;
+        if (writable) {
+            return 0;
+        }
+        // Just return something positive for now
+        return 8;
     }
 
     @Override
@@ -359,8 +364,18 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     /**
      * Stream is writable.
      */
-    void writable(@SuppressWarnings("unused") int capacity) {
-        ((QuicStreamChannelUnsafe) unsafe()).writeQueued();
+    boolean writable(@SuppressWarnings("unused") int capacity) {
+        this.capacity = capacity;
+        boolean mayNeedWrite = ((QuicStreamChannelUnsafe) unsafe()).writeQueued();
+        updateWritabilityIfNeeded(capacity > 0);
+        return mayNeedWrite;
+    }
+
+    private void updateWritabilityIfNeeded(boolean newWritable) {
+        if (writable != newWritable) {
+            writable = newWritable;
+            pipeline.fireChannelWritabilityChanged();
+        }
     }
 
     /**
@@ -559,10 +574,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        void writeQueued() {
+        boolean writeQueued() {
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
             inWriteQueued = true;
             try {
+                if (queue.isEmpty()) {
+                    return false;
+                }
+                boolean written = false;
                 for (;;) {
                     Object msg = queue.current();
                     if (msg == null) {
@@ -570,18 +589,17 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     }
                     try {
                         if (!write0(msg)) {
-                            return;
+                            return written;
                         }
                     } catch (Exception e) {
                         queue.remove().setFailure(e);
                         continue;
                     }
                     queue.remove().setSuccess();
+                    written = true;
                 }
-                if (!writable) {
-                    writable = true;
-                    pipeline.fireChannelWritabilityChanged();
-                }
+                updateWritabilityIfNeeded(true);
+                return written;
             } finally {
                 closeIfNeeded(wasFinSent);
                 inWriteQueued = false;
@@ -626,21 +644,24 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
 
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
+            boolean mayNeedWritabilityUpdate = false;
             try {
                 if (write0(msg)) {
                     ReferenceCountUtil.release(msg);
                     promise.setSuccess();
+                    mayNeedWritabilityUpdate = capacity == 0;
                 } else {
                     queue.add(msg, promise);
-                    if (writable) {
-                        writable = false;
-                        pipeline.fireChannelWritabilityChanged();
-                    }
+                    mayNeedWritabilityUpdate = true;
                 }
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
                 promise.setFailure(e);
+                mayNeedWritabilityUpdate = capacity == 0;
             } finally {
+                if (mayNeedWritabilityUpdate) {
+                    updateWritabilityIfNeeded(false);
+                }
                 closeIfNeeded(wasFinSent);
             }
         }
@@ -673,8 +694,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             try {
                 do {
                     int res = parent().streamSend(streamId(), buffer, fin);
+
+                    // Update the capacity as well.
+                    int cap = parent.streamCapacity(streamId());
+                    if (cap >= 0) {
+                        capacity = cap;
+                    }
                     if (Quiche.throwIfError(res) || res == 0) {
-                        parent.streamHasPendingWrites(streamId());
                         return false;
                     }
                     sendSomething = true;
