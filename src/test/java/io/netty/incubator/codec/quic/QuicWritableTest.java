@@ -248,7 +248,6 @@ public class QuicWritableTest extends AbstractQuicTest {
                             clientErrorRef.set(cause);
                         }
                     }).get();
-            assertFalse(writePromise.isDone());
 
             // Let's trigger the reads. This will ensure we will consume the data and the remote peer
             // should be notified that it can write more data.
