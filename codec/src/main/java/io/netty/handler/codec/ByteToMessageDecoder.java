@@ -440,7 +440,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     if (ctx.isRemoved()) {
                         break;
                     }
-                    outSize = 0;
                 }
 
                 int oldInputLength = in.readableBytes();
@@ -454,7 +453,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     break;
                 }
 
-                if (outSize == out.size()) {
+                if (0 == out.size()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
