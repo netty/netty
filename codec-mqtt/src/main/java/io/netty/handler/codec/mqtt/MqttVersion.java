@@ -59,6 +59,8 @@ public enum MqttVersion {
         case 5:
             mv = MQTT_5;
             break;
+        default:
+            break;
         }
         if (mv == null) {
             throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
