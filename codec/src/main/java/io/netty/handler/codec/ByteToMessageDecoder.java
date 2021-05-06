@@ -426,7 +426,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             while (in.isReadable()) {
-                int outSize = out.size();
+                final int outSize = out.size();
 
                 if (outSize > 0) {
                     fireChannelRead(ctx, out, outSize);
@@ -453,7 +453,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     break;
                 }
 
-                if (0 == out.size()) {
+                if (out.isEmpty()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
