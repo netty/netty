@@ -23,25 +23,41 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.ReferenceCountUtil;
 
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
 
 public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
     @Test
     public void testCloseFromServerWhileInActiveUnidirectional() throws Exception {
-        testCloseFromServerWhileInActive(QuicStreamType.UNIDIRECTIONAL);
+        testCloseFromServerWhileInActive(QuicStreamType.UNIDIRECTIONAL, false);
     }
 
     @Test
     public void testCloseFromServerWhileInActiveBidirectional() throws Exception {
-        testCloseFromServerWhileInActive(QuicStreamType.BIDIRECTIONAL);
+        testCloseFromServerWhileInActive(QuicStreamType.BIDIRECTIONAL, false);
     }
 
-    private static void testCloseFromServerWhileInActive(QuicStreamType type) throws Exception {
+    @Test
+    public void testHalfCloseFromServerWhileInActiveUnidirectional() throws Exception {
+        testCloseFromServerWhileInActive(QuicStreamType.UNIDIRECTIONAL, true);
+    }
+
+    @Test
+    public void testHalfCloseFromServerWhileInActiveBidirectional() throws Exception {
+        testCloseFromServerWhileInActive(QuicStreamType.BIDIRECTIONAL, true);
+    }
+
+    private static void testCloseFromServerWhileInActive(QuicStreamType type,
+                                                         boolean halfClose) throws Exception {
         Channel server = null;
         Channel channel = null;
         try {
-            server = QuicTestUtils.newServer(new StreamCreationHandler(type),
+            final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+            server = QuicTestUtils.newServer(new StreamCreationHandler(type, halfClose, streamPromise),
                     new ChannelInboundHandlerAdapter());
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -50,6 +66,13 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
+
+            Channel streamChannel = streamPromise.get();
+
+            // Wait for the steam to close. It needs to happen before the 5-second connection idle timeout.
+            streamChannel.closeFuture().get(3000, TimeUnit.MILLISECONDS);
+
+            streamChannel.parent().close();
 
             // Wait till the client was closed
             quicChannel.closeFuture().sync();
@@ -61,28 +84,47 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
     @Test
     public void testCloseFromClientWhileInActiveUnidirectional() throws Exception {
-        testCloseFromClientWhileInActive(QuicStreamType.UNIDIRECTIONAL);
+        testCloseFromClientWhileInActive(QuicStreamType.UNIDIRECTIONAL, false);
     }
 
     @Test
     public void testCloseFromClientWhileInActiveBidirectional() throws Exception {
-        testCloseFromClientWhileInActive(QuicStreamType.BIDIRECTIONAL);
+        testCloseFromClientWhileInActive(QuicStreamType.BIDIRECTIONAL, false);
     }
 
-    private static void testCloseFromClientWhileInActive(QuicStreamType type) throws Exception {
+    @Test
+    public void testHalfCloseFromClientWhileInActiveUnidirectional() throws Exception {
+        testCloseFromClientWhileInActive(QuicStreamType.UNIDIRECTIONAL, true);
+    }
+
+    @Test
+    public void testHalfCloseFromClientWhileInActiveBidirectional() throws Exception {
+        testCloseFromClientWhileInActive(QuicStreamType.BIDIRECTIONAL, true);
+    }
+
+    private static void testCloseFromClientWhileInActive(QuicStreamType type,
+                                                         boolean halfClose) throws Exception {
         Channel server = null;
         Channel channel = null;
         try {
+            final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             server = QuicTestUtils.newServer(null, new StreamHandler());
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new StreamCreationHandler(type))
+                    .handler(new StreamCreationHandler(type, halfClose, streamPromise))
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
 
-            // Close stream and quic channel
+            Channel streamChannel = streamPromise.get();
+
+            // Wait for the steam to close. It needs to happen before the 5-second connection idle timeout.
+            streamChannel.closeFuture().get(3000, TimeUnit.MILLISECONDS);
+
+            streamChannel.parent().close();
+
+            // Wait till the client was closed
             quicChannel.closeFuture().sync();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
@@ -92,9 +134,13 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
     private static final class StreamCreationHandler extends ChannelInboundHandlerAdapter {
         private final QuicStreamType type;
+        private final boolean halfClose;
+        private final Promise<Channel> streamPromise;
 
-        StreamCreationHandler(QuicStreamType type) {
+        StreamCreationHandler(QuicStreamType type, boolean halfClose, Promise<Channel> streamPromise) {
             this.type = type;
+            this.halfClose = halfClose;
+            this.streamPromise = streamPromise;
         }
 
         @Override
@@ -103,21 +149,18 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             channel.createStream(type, new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
+                    streamPromise.trySuccess(ctx.channel());
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(ChannelFutureListener.CLOSE);
+                            .addListener(halfClose
+                                    ? QuicStreamChannel.SHUTDOWN_OUTPUT
+                                    : ChannelFutureListener.CLOSE);
                 }
             });
         }
     }
 
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) {
-            // Close the QUIC channel as well.
-            ctx.channel().parent().close();
-        }
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

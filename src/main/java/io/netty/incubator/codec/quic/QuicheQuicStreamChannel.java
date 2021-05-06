@@ -706,7 +706,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 buffer = frame.content();
             }
 
-            if (!fin && !buffer.isReadable()) {
+            boolean readable = buffer.isReadable();
+            if (!fin && !readable) {
                 return true;
             }
 
@@ -720,7 +721,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     if (cap >= 0) {
                         capacity = cap;
                     }
-                    if (Quiche.throwIfError(res) || res == 0) {
+                    if (Quiche.throwIfError(res) || (readable && res == 0)) {
                         return false;
                     }
                     sendSomething = true;
