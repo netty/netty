@@ -29,7 +29,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -42,6 +44,16 @@ import java.util.concurrent.atomic.AtomicLong;
  * current nameserver configuration of the system.
  */
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
+
+    private static final Comparator<DnsResolver> RESOLVER_COMPARATOR =
+            new Comparator<DnsResolver>() {
+                @Override
+                public int compare(DnsResolver r1, DnsResolver r2) {
+                    // Note: order is descending (from higher to lower) so entries with lower search order override
+                    // entries with higher search order.
+                    return r1.searchOrder() < r2.searchOrder() ? 1 : (r1.searchOrder() == r2.searchOrder() ? 0 : -1);
+                }
+            };
 
     private static final Throwable UNAVAILABILITY_CAUSE;
 
@@ -120,6 +132,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         if (resolvers == null || resolvers.length == 0) {
             return Collections.emptyMap();
         }
+        Arrays.sort(resolvers, RESOLVER_COMPARATOR);
         Map<String, DnsServerAddresses> resolverMap = new HashMap<String, DnsServerAddresses>(resolvers.length);
         for (DnsResolver resolver: resolvers) {
             // Skip mdns
