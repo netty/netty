@@ -68,6 +68,14 @@
   </developers>
 
   <profiles>
+    <profile>
+      <id>ci</id>
+      <properties>
+        <http.keepAlive>false</http.keepAlive>
+        <maven.wagon.http.pool>false</maven.wagon.http.pool>
+        <maven.wagon.httpconnectionManager.ttlSeconds>120</maven.wagon.httpconnectionManager.ttlSeconds>
+      </properties>
+    </profile>
     <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
     <profile>
       <id>graal</id>
