@@ -328,6 +328,14 @@
 
   <profiles>
     <profile>
+      <id>ci</id>
+      <properties>
+        <http.keepAlive>false</http.keepAlive>
+        <maven.wagon.http.pool>false</maven.wagon.http.pool>
+        <maven.wagon.httpconnectionManager.ttlSeconds>120</maven.wagon.httpconnectionManager.ttlSeconds>
+      </properties>
+    </profile>
+    <profile>
       <id>leak</id>
       <properties>
         <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>

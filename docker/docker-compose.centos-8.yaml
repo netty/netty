@@ -20,15 +20,15 @@ services:
 
   build:
     <<: *common
-    command: /bin/bash -cl "mvn clean package"
+    command: /bin/bash -cl "mvn -Pci clean package"
 
   build-leak:
     <<: *common
-    command: /bin/bash -cl "mvn -Pleak clean package"
+    command: /bin/bash -cl "mvn -Pci,leak clean package"
 
   deploy:
     <<: *common
-    command: /bin/bash -cl "mvn clean deploy -DskipTests=true"
+    command: /bin/bash -cl "mvn -Pci clean deploy -DskipTests=true"
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg

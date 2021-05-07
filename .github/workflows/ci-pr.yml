@@ -24,7 +24,7 @@ jobs:
           restore-keys: |
             verify-cache-m2-repository-
       - name: Verify with Maven
-        run: mvn verify -B --file pom.xml -DskipTests=true -DskipH3Spec=true
+        run: mvn -Pci -B --file pom.xml verify -DskipTests=true -DskipH3Spec=true
 
   build:
     runs-on: ubuntu-latest
