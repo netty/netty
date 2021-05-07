@@ -27,7 +27,7 @@ jobs:
             ${{ runner.os }}-pr-${{ env.cache-name }}-
             ${{ runner.os }}-pr-
       - name: Verify with Maven
-        run: mvn verify -B --file pom.xml -DskipTests=true -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
+        run: mvn verify -B --file pom.xml -Pci -DskipTests=true
 
   build-pr-aarch64:
     name: linux-aarch64-verify-native
@@ -73,7 +73,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 mvn -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier= -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 mvn -Pci -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
