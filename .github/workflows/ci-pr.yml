@@ -132,7 +132,7 @@ jobs:
             pr-windows-x86_64-maven-cache-
 
       - name: Build project
-        run: mvn --file pom.xml clean package
+        run: mvn --file pom.xml -Pci clean package
 
       - name: Upload Test Results
         if: always()

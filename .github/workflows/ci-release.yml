@@ -38,7 +38,7 @@ jobs:
 
       - name: Prepare release with Maven
         run: |
-          mvn -DpreparationGoals=clean release:prepare -B --file pom.xml -DskipTests=true
+          mvn -DpreparationGoals=clean release:prepare -B --file pom.xml -Pci -DskipTests=true
           mvn clean
 
       - name: Checkout tag
@@ -220,7 +220,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: prepare-release-workspace
-        run: mvn --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
+        run: mvn --file pom.xml -Pci clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v2
@@ -308,7 +308,7 @@ jobs:
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/
         # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: mvn -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+        run: mvn -B --file pom.xml -Pci org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/

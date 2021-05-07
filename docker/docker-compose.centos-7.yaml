@@ -33,7 +33,7 @@ services:
 
   cross-compile-aarch64-build:
     <<: *cross-compile-aarch64-common
-    command: /bin/bash -cl "mvn clean package -Plinux-aarch64 -DskipTests"
+    command: /bin/bash -cl "mvn clean package -Pci,linux-aarch64 -DskipTests"
 
   cross-compile-aarch64-deploy:
     <<: *cross-compile-aarch64-common
@@ -42,7 +42,7 @@ services:
       - ~/.gnupg:/root/.gnupg
       - ~/.m2/repository:/root/.m2/repository
       - ~/.m2/settings.xml:/root/.m2/settings.xml
-    command: /bin/bash -cl "mvn clean deploy -Plinux-aarch64 -DskipTests"
+    command: /bin/bash -cl "mvn clean deploy -Pci,linux-aarch64 -DskipTests"
 
   cross-compile-aarch64-stage-snapshot:
     <<: *cross-compile-aarch64-common
@@ -53,7 +53,7 @@ services:
       - ~/.m2/settings.xml:/root/.m2/settings.xml
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "mvn -Plinux-aarch64 clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
+    command: /bin/bash -cl "mvn -Pci,linux-aarch64 clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
 
   cross-compile-aarch64-stage-release:
     <<: *cross-compile-aarch64-common
@@ -67,7 +67,7 @@ services:
       - ~/.m2/repository:/root/.m2/repository
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && mvn -Plinux-aarch64 clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && mvn -Pci,linux-aarch64 clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
 
   cross-compile-aarch64-install:
     <<: *cross-compile-aarch64-common
@@ -76,4 +76,4 @@ services:
       - ~/.gnupg:/root/.gnupg
       - ~/.m2:/root/.m2
       - ..:/code
-    command: /bin/bash -cl "mvn clean install -Plinux-aarch64 -DskipTests=true"
+    command: /bin/bash -cl "mvn clean install -Pci,linux-aarch64 -DskipTests=true"

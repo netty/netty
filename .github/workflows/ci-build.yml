@@ -123,7 +123,7 @@ jobs:
             windows-x86_64-maven-cache-
 
       - name: Build project
-        run: mvn --file pom.xml clean package
+        run: mvn --file pom.xml -Pci clean package
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
