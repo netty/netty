@@ -27,6 +27,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
@@ -1102,6 +1103,7 @@ public abstract class SslContext {
                                   char[] keyPasswordChars, String keyStoreType)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
+        ObjectUtil.checkNotNull(certChain, "certChain");
         if (keyStoreType == null) {
             keyStoreType = KeyStore.getDefaultType();
         }

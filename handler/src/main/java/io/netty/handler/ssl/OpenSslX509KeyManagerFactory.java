@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -254,6 +255,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
     public static OpenSslX509KeyManagerFactory newEngineBased(X509Certificate[] certificateChain, String password)
             throws CertificateException, IOException,
                    KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        checkNotNull(certificateChain, "certificateChain");
         KeyStore store = new OpenSslKeyStore(certificateChain.clone(), false);
         store.load(null, null);
         OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
@@ -286,6 +288,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
     public static OpenSslX509KeyManagerFactory newKeyless(X509Certificate... certificateChain)
             throws CertificateException, IOException,
             KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        checkNotNull(certificateChain, "certificateChain");
         KeyStore store = new OpenSslKeyStore(certificateChain.clone(), true);
         store.load(null, null);
         OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
