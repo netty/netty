@@ -23,7 +23,7 @@ final class QuicStreamIdGenerator {
     private long nextUnidirectionalStreamId;
 
     QuicStreamIdGenerator(boolean server) {
-        // See https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-2.1
+        // See https://quicwg.org/base-drafts/rfc9000.html#name-stream-types-and-identifier
         nextBidirectionalStreamId = server ? 1 : 0;
         nextUnidirectionalStreamId = server ? 3 : 2;
     }

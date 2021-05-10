@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 /**
  * The type of the
- * <a href="https://www.ietf.org/archive/id/draft-ietf-quic-transport-32.html#name-packets-and-frames">QUIC packet</a>.
+ * <a href="https://quicwg.org/base-drafts/rfc9000.html#name-packets-and-frames">QUIC packet</a>.
  */
 public enum QuicPacketType {
     /**
