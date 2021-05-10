@@ -83,6 +83,26 @@
       <artifactId>lzma-java</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>brotli4j</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-x86_64</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-osx-x86_64</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-windows-x86_64</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
