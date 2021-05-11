@@ -23,7 +23,6 @@ import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -33,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -84,9 +82,8 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     }
 
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("mac")) {
-            throw new IllegalStateException("Only supported on MacOS");
+        if (PlatformDependent.isOsx()) {
+            throw new IllegalStateException("Only supported on MacOS/OSX");
         }
         String staticLibName = "netty_resolver_dns_native_macos";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();

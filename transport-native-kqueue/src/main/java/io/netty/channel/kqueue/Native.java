@@ -22,14 +22,12 @@ import io.netty.channel.unix.Unix;
 import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import java.util.Locale;
 
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evAdd;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evClear;
@@ -135,9 +133,9 @@ final class Native {
     static native int offsetofKeventData();
 
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("mac") && !name.contains("bsd") && !name.startsWith("darwin")) {
-            throw new IllegalStateException("Only supported on BSD");
+        String name = PlatformDependent.normalizedOs();
+        if (!"osx".equals(name) && !name.contains("bsd")) {
+            throw new IllegalStateException("Only supported on OSX/BSD");
         }
         String staticLibName = "netty_transport_native_kqueue";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
