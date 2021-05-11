@@ -332,6 +332,8 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
+        fqdn = fqdn.replaceFirst("\\*", "X"); // Change asterisk to 'X'
+
         File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
