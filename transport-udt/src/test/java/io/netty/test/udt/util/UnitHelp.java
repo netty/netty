@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.IntBuffer;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -69,7 +70,7 @@ public final class UnitHelp {
      * Measure ping time to a host.
      */
     public static long ping(final String host) throws Exception {
-        final String name = System.getProperty("os.name").toLowerCase();
+        final String name = System.getProperty("os.name").toLowerCase(Locale.US);
 
         final String command;
         if (name.contains("linux")) {

@@ -83,11 +83,6 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
-    private static final boolean IS_WINDOWS = isWindows0();
-    private static final boolean IS_OSX = isOsx0();
-    private static final boolean IS_J9_JVM = isJ9Jvm0();
-    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
-
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
@@ -111,6 +106,11 @@ public final class PlatformDependent {
     // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
     private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
     private static final Set<String> LINUX_OS_CLASSIFIERS;
+
+    private static final boolean IS_WINDOWS = isWindows0();
+    private static final boolean IS_OSX = isOsx0();
+    private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final int ADDRESS_SIZE = addressSize0();
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
@@ -1058,7 +1058,7 @@ public final class PlatformDependent {
     }
 
     private static boolean isWindows0() {
-        boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
+        boolean windows = "windows".equals(NORMALIZED_OS);
         if (windows) {
             logger.debug("Platform: Windows");
         }
@@ -1066,10 +1066,7 @@ public final class PlatformDependent {
     }
 
     private static boolean isOsx0() {
-        String osname = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US)
-                .replaceAll("[^a-z0-9]+", "");
-        boolean osx = osname.startsWith("macosx") || osname.startsWith("osx");
-
+        boolean osx = "osx".equals(NORMALIZED_OS);
         if (osx) {
             logger.debug("Platform: MacOS");
         }
@@ -1517,7 +1514,7 @@ public final class PlatformDependent {
         if (value.startsWith("linux")) {
             return "linux";
         }
-        if (value.startsWith("macosx") || value.startsWith("osx")) {
+        if (value.startsWith("macosx") || value.startsWith("osx") || value.startsWith("darwin")) {
             return "osx";
         }
         if (value.startsWith("freebsd")) {

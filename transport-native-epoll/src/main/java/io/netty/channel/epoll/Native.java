@@ -23,7 +23,6 @@ import io.netty.channel.unix.Unix;
 import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,7 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
-import java.util.Locale;
 
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
@@ -296,8 +294,8 @@ public final class Native {
     public static native int offsetofEpollData();
 
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("linux")) {
+        String name = PlatformDependent.normalizedOs();
+        if (!"linux".equals(name)) {
             throw new IllegalStateException("Only supported on Linux");
         }
         String staticLibName = "netty_transport_native_epoll";
