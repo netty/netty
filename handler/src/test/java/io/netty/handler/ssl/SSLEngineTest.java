@@ -2052,6 +2052,15 @@ public abstract class SSLEngineTest {
         }
     }
 
+    private String[] nonContiguousProtocols(SslProvider provider) {
+        if (provider != null) {
+            // conscrypt not correctly filters out TLSv1 and TLSv1.1 which is required now by the JDK.
+            // https://github.com/google/conscrypt/issues/1013
+            return new String[] { PROTOCOL_TLS_V1_2 };
+        }
+        return new String[] {PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1};
+    }
+
     @Test
     public void testHandshakeCompletesWithNonContiguousProtocolsTLSv1_2CipherOnly() throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -2061,14 +2070,14 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
-                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(nonContiguousProtocols(sslClientProvider()))
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .ciphers(Collections.singletonList(sharedCipher))
-                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(nonContiguousProtocols(sslServerProvider()))
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
@@ -2094,14 +2103,14 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
-                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(nonContiguousProtocols(sslClientProvider()))
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
-                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(nonContiguousProtocols(sslServerProvider()))
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
