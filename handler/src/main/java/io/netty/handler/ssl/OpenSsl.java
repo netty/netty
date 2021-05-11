@@ -575,7 +575,7 @@ public final class OpenSsl {
 
         // First, try loading the platform-specific library. Platform-specific
         // libraries will be available if using a tcnative uber jar.
-        if ("linux".equalsIgnoreCase(os)) {
+        if ("linux".equals(os)) {
             Set<String> classifiers = PlatformDependent.normalizedLinuxClassifiers();
             for (String classifier : classifiers) {
                 libNames.add(staticLibName + "_" + os + '_' + arch + "_" + classifier);
