@@ -37,15 +37,13 @@ jobs:
         fetch-depth: 2
 
     # Cache .m2/repository
-    - uses: actions/cache@v2
-      env:
-        cache-name: verify-cache-m2-repository
+    - name: Cache local Maven repository
+      uses: actions/cache@v2
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-pr-${{ env.cache-name }}-
-          ${{ runner.os }}-pr-
+          ${{ runner.os }}-maven-
 
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.

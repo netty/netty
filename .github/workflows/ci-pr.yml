@@ -17,15 +17,13 @@ jobs:
         with:
           java-version: 8
       # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: verify-cache-m2-repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pr-${{ env.cache-name }}-
-            ${{ runner.os }}-pr-
+            ${{ runner.os }}-maven-
       - name: Verify with Maven
         run: mvn verify -B --file pom.xml -Pci -DskipTests=true
 
@@ -38,15 +36,13 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: build-pr-aarch64-cache-m2-repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pr-${{ env.cache-name }}-
-            ${{ runner.os }}-pr-
+            ${{ runner.os }}-maven-
 
       - uses: uraimo/run-on-arch-action@v2.0.9
         name: Run commands
@@ -99,15 +95,13 @@ jobs:
       - uses: actions/checkout@v2
 
       # Cache .m2/repository
-      - uses: actions/cache@v2
-        env:
-          cache-name: build-${{ matrix.setup }}-cache-m2-repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pr-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pr-${{ env.cache-name }}-
-            ${{ runner.os }}-pr-
+            ${{ runner.os }}-maven-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
