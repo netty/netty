@@ -297,6 +297,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             int options = SSLContext.getOptions(ctx) |
                           SSL.SSL_OP_NO_SSLv2 |
                           SSL.SSL_OP_NO_SSLv3 |
+                          // Disable TLSv1 and TLSv1.1 by default as these are not considered secure anymore
+                          // and the JDK is doing the same:
+                          // https://www.oracle.com/java/technologies/javase/8u291-relnotes.html
+                          SSL.SSL_OP_NO_TLSv1 |
+                          SSL.SSL_OP_NO_TLSv1_1 |
 
                           SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
 
