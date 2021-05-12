@@ -39,7 +39,7 @@ public final class HostsFileParser {
      * @return a {@link HostsFileEntries}
      */
     public static HostsFileEntries parseSilently() {
-        return parseSilently(HostsFileEntriesProvider.parser());
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parseSilently());
     }
 
     /**
@@ -50,7 +50,7 @@ public final class HostsFileParser {
      * @return a {@link HostsFileEntries}
      */
     public static HostsFileEntries parseSilently(Charset... charsets) {
-        return parseSilently(HostsFileEntriesProvider.parser().charsets(charsets));
+        return hostsFileEntries(HostsFileEntriesProvider.parser().charsets(charsets).parseSilently());
     }
 
     /**
@@ -60,7 +60,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse() throws IOException {
-        return parse(HostsFileEntriesProvider.parser());
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parse());
     }
 
     /**
@@ -71,7 +71,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file) throws IOException {
-        return parse(HostsFileEntriesProvider.parser().file(file));
+        return hostsFileEntries(HostsFileEntriesProvider.parser().file(file).parse());
     }
 
     /**
@@ -83,7 +83,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
-        return parse(HostsFileEntriesProvider.parser().file(file).charsets(charsets));
+        return hostsFileEntries(HostsFileEntriesProvider.parser().file(file).charsets(charsets).parse());
     }
 
     /**
@@ -94,7 +94,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(Reader reader) throws IOException {
-        return parse(HostsFileEntriesProvider.parser().reader(reader));
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parse(reader));
     }
 
     /**
@@ -104,16 +104,7 @@ public final class HostsFileParser {
     }
 
     @SuppressWarnings("unchecked")
-    private static HostsFileEntries parse(HostsFileEntriesProvider.Parser parser) throws IOException {
-        HostsFileEntriesProvider provider = parser.parse();
-        return provider == HostsFileEntriesProvider.EMPTY ? HostsFileEntries.EMPTY :
-                new HostsFileEntries((Map<String, Inet4Address>) toMapWithSingleValue(provider.ipv4Entries()),
-                        (Map<String, Inet6Address>) toMapWithSingleValue(provider.ipv6Entries()));
-    }
-
-    @SuppressWarnings("unchecked")
-    private static HostsFileEntries parseSilently(HostsFileEntriesProvider.Parser parser) {
-        HostsFileEntriesProvider provider = parser.parseSilently();
+    private static HostsFileEntries hostsFileEntries(HostsFileEntriesProvider provider) {
         return provider == HostsFileEntriesProvider.EMPTY ? HostsFileEntries.EMPTY :
                 new HostsFileEntries((Map<String, Inet4Address>) toMapWithSingleValue(provider.ipv4Entries()),
                         (Map<String, Inet6Address>) toMapWithSingleValue(provider.ipv6Entries()));

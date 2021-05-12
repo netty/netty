@@ -49,7 +49,7 @@ class HostsFileEntriesProviderTest {
                 .toString();
 
         HostsFileEntriesProvider entries = HostsFileEntriesProvider.parser()
-                .reader(new BufferedReader(new StringReader(hostsString))).parse();
+                .parse(new BufferedReader(new StringReader(hostsString)));
         Map<String, List<InetAddress>> inet4Entries = entries.ipv4Entries();
         Map<String, List<InetAddress>> inet6Entries = entries.ipv6Entries();
 
@@ -108,8 +108,8 @@ class HostsFileEntriesProviderTest {
     void testReaderInputValidation() {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
-            public void execute() {
-                HostsFileEntriesProvider.parser().reader(null);
+            public void execute() throws IOException {
+                HostsFileEntriesProvider.parser().parse(null);
             }
         });
     }

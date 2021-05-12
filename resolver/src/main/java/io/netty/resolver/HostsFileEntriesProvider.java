@@ -58,21 +58,12 @@ public final class HostsFileEntriesProvider {
 
         /**
          * Specifies the hosts file to be parsed.
-         * If neither hosts file nor reader is specified, hosts file at standard OS location is used.
+         * If a hosts file is not specified, the hosts file at standard OS location is used.
          *
          * @param file the hosts file
          * @return {@code this}
          */
         Parser file(File file);
-
-        /**
-         * Specifies the reader of hosts file format.
-         * If neither hosts file nor reader is specified, hosts file at standard OS location is used.
-         *
-         * @param reader the reader of hosts file format
-         * @return {@code this}
-         */
-        Parser reader(Reader reader);
 
         /**
          * Parses the hosts file.
@@ -81,6 +72,14 @@ public final class HostsFileEntriesProvider {
          * @throws IOException file could not be read
          */
         HostsFileEntriesProvider parse() throws IOException;
+
+        /**
+         * Performs the parsing operation using the provided reader of hosts file format.
+         *
+         * @param reader the reader of hosts file format
+         * @return a new {@link HostsFileEntriesProvider}
+         */
+        HostsFileEntriesProvider parse(Reader reader) throws IOException;
 
         /**
          * Parses the hosts file.
@@ -142,7 +141,6 @@ public final class HostsFileEntriesProvider {
 
         private Charset[] charsets = new Charset[]{Charset.defaultCharset()};
         private File file;
-        private Reader reader;
 
         @Override
         public Parser charsets(Charset... charsets) {
@@ -153,37 +151,25 @@ public final class HostsFileEntriesProvider {
         @Override
         public Parser file(File file) {
             this.file = checkNotNull(file, "file");
-            this.reader = null;
-            return this;
-        }
-
-        @Override
-        public Parser reader(Reader reader) {
-            this.reader = checkNotNull(reader, "reader");
-            this.file = null;
             return this;
         }
 
         @Override
         public HostsFileEntriesProvider parse() throws IOException {
-            if (reader != null) {
-                return parse(reader);
-            } else {
-                if (file == null) {
-                    file = locateHostsFile();
-                }
-                if (file.exists() && file.isFile()) {
-                    for (Charset charset : charsets) {
-                        BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(new FileInputStream(file), charset));
-                        try {
-                            HostsFileEntriesProvider entries = parse(reader);
-                            if (entries != HostsFileEntriesProvider.EMPTY) {
-                                return entries;
-                            }
-                        } finally {
-                            reader.close();
+            if (file == null) {
+                file = locateHostsFile();
+            }
+            if (file.exists() && file.isFile()) {
+                for (Charset charset : charsets) {
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(new FileInputStream(file), charset));
+                    try {
+                        HostsFileEntriesProvider entries = parse(reader);
+                        if (entries != HostsFileEntriesProvider.EMPTY) {
+                            return entries;
                         }
+                    } finally {
+                        reader.close();
                     }
                 }
             }
@@ -191,31 +177,7 @@ public final class HostsFileEntriesProvider {
         }
 
         @Override
-        public HostsFileEntriesProvider parseSilently() {
-            try {
-                return parse();
-            } catch (IOException e) {
-                if (file != null && logger.isWarnEnabled()) {
-                    logger.warn("Failed to load and parse hosts file at " + file.getPath(), e);
-                }
-                return HostsFileEntriesProvider.EMPTY;
-            }
-        }
-
-        private static File locateHostsFile() {
-            File hostsFile;
-            if (PlatformDependent.isWindows()) {
-                hostsFile = new File(System.getenv("SystemRoot") + WINDOWS_HOSTS_FILE_RELATIVE_PATH);
-                if (!hostsFile.exists()) {
-                    hostsFile = new File(WINDOWS_DEFAULT_SYSTEM_ROOT + WINDOWS_HOSTS_FILE_RELATIVE_PATH);
-                }
-            } else {
-                hostsFile = new File(X_PLATFORMS_HOSTS_FILE_PATH);
-            }
-            return hostsFile;
-        }
-
-        private static HostsFileEntriesProvider parse(Reader reader) throws IOException {
+        public HostsFileEntriesProvider parse(Reader reader) throws IOException {
             BufferedReader buff = new BufferedReader(reader);
             try {
                 Map<String, List<InetAddress>> ipv4Entries = new HashMap<String, List<InetAddress>>();
@@ -286,6 +248,31 @@ public final class HostsFileEntriesProvider {
                     logger.warn("Failed to close a reader", e);
                 }
             }
+        }
+
+        @Override
+        public HostsFileEntriesProvider parseSilently() {
+            try {
+                return parse();
+            } catch (IOException e) {
+                if (file != null && logger.isWarnEnabled()) {
+                    logger.warn("Failed to load and parse hosts file at " + file.getPath(), e);
+                }
+                return HostsFileEntriesProvider.EMPTY;
+            }
+        }
+
+        private static File locateHostsFile() {
+            File hostsFile;
+            if (PlatformDependent.isWindows()) {
+                hostsFile = new File(System.getenv("SystemRoot") + WINDOWS_HOSTS_FILE_RELATIVE_PATH);
+                if (!hostsFile.exists()) {
+                    hostsFile = new File(WINDOWS_DEFAULT_SYSTEM_ROOT + WINDOWS_HOSTS_FILE_RELATIVE_PATH);
+                }
+            } else {
+                hostsFile = new File(X_PLATFORMS_HOSTS_FILE_PATH);
+            }
+            return hostsFile;
         }
     }
 }

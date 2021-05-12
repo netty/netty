@@ -62,6 +62,14 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         }
     }
 
+    /**
+     * Resolves all addresses of a hostname against the entries in a hosts file, depending on the specified
+     * {@link ResolvedAddressTypes}.
+     *
+     * @param inetHost the hostname to resolve
+     * @param resolvedAddressTypes the address types to resolve
+     * @return all matching addresses
+     */
     public List<InetAddress> addresses(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
         String normalized = normalize(inetHost);
         switch (resolvedAddressTypes) {
@@ -88,7 +96,8 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     }
 
     private static List<InetAddress> allAddresses(List<InetAddress> a, List<InetAddress> b) {
-        List<InetAddress> result = new ArrayList<InetAddress>(a);
+        List<InetAddress> result = new ArrayList<InetAddress>(a.size() + (b == null ? 0 : b.size()));
+        result.addAll(a);
         if (b != null) {
             result.addAll(b);
         }
