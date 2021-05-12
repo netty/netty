@@ -494,11 +494,8 @@ public class DnsNameResolverTest {
             for (Entry<String, InetAddress> e : resultA.entrySet()) {
                 InetAddress expected = e.getValue();
                 InetAddress actual = resultB.get(e.getKey());
-                if (!actual.equals(expected)) {
-                    // Print the content of the cache when test failure is expected.
-                    System.err.println("Cache for " + e.getKey() + ": " + resolver.resolveAll(e.getKey()).getNow());
-                }
-                assertThat(actual, is(expected));
+                assertThat("Cache for " + e.getKey() + ": " + resolver.resolveAll(e.getKey()).getNow(),
+                        actual, is(expected));
             }
         } finally {
             resolver.close();

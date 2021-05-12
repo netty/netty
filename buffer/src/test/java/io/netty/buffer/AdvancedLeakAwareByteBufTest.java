@@ -46,7 +46,6 @@ public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
         composite.addComponent(true, leakAwareBuf);
         byte[] result = new byte[5];
         ByteBuf bb = composite.component(0);
-        System.out.println(bb);
         bb.readBytes(result);
         assertArrayEquals("world".getBytes(CharsetUtil.US_ASCII), result);
         composite.release();
