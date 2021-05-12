@@ -332,6 +332,9 @@ public final class SelfSignedCertificate {
             wrappedBuf.release();
         }
 
+        // Change all asterisk to 'x' for file name safety.
+        fqdn = fqdn.replaceAll("[^\\w.-]", "x");
+
         File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
