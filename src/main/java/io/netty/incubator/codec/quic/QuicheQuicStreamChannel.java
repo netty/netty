@@ -368,6 +368,28 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     /**
+     * Returns the ID of this channel.
+     */
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified object is identical
+     * with this channel (i.e: {@code this == o}).
+     */
+    @Override
+    public boolean equals(Object o) {
+        return this == o;
+    }
+
+    @Override
+    public String toString() {
+        return "[id: 0x" + id.asShortText() + ", " + address + "]";
+    }
+
+    /**
      * Stream is writable.
      */
     boolean writable(@SuppressWarnings("unused") int capacity) {
