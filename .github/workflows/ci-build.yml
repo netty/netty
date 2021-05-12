@@ -126,7 +126,7 @@ jobs:
             windows-x86_64-maven-cache-
 
       - name: Build project
-        run: mvn --file pom.xml clean package
+        run: ./mvnw.cmd --file pom.xml clean package
 
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
