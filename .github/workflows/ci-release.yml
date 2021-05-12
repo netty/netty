@@ -34,8 +34,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-prepare-release-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
+            ${{ runner.os }}-maven-prepare-release-
             ${{ runner.os }}-maven-
 
       - name: Prepare release with Maven
@@ -95,13 +96,12 @@ jobs:
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
-        env:
-          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
         continue-on-error: true
         with:
-          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
+          key: ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-{hash}
           restore-keys: |
-            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
+            ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-
+            ${{ runner.os }}-staging-docker-cache-
 
       - uses: s4u/maven-settings-action@v2.2.0
         with:
@@ -111,6 +111,16 @@ jobs:
               "username": "${{ secrets.SONATYPE_USERNAME }}",
               "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ matrix.setup }-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ matrix.setup }-
+            ${{ runner.os }}-maven-
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
@@ -195,6 +205,16 @@ jobs:
               "username": "${{ secrets.SONATYPE_USERNAME }}",
               "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-deploy-staged-release-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-deploy-staged-release-
+            ${{ runner.os }}-maven-
 
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/

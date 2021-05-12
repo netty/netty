@@ -29,17 +29,19 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
+            ${{ runner.os }}-maven-${{ matrix.setup }}-
             ${{ runner.os }}-maven-
 
       # Enable caching of Docker layers
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
         with:
-          key: build-${{ matrix.setup }}-docker-cache-{hash}
+          key: build-docker-cache-${{ matrix.setup }}-{hash}
           restore-keys: |
-            build-${{ matrix.setup }}-docker-cache-
+            build-docker-cache-${{ matrix.setup }}-
+            build-docker-cache-
 
       - name: Build docker image
         run: docker-compose ${{ matrix.docker-compose-build }}
