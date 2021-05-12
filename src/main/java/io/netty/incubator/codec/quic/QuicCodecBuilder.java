@@ -54,7 +54,10 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
 
     QuicCodecBuilder(boolean server) {
         Quic.ensureAvailability();
-        this.version = Quiche.QUICHE_PROTOCOL_VERSION;
+        // Use draft29 for now until v1 is really ready to use by default.
+        //
+        // See https://mailarchive.ietf.org/arch/msg/quic/i7CdtRA-iskuTftpEpMXMrB0FSY/
+        this.version = 0xff00_001d;
         this.localConnIdLength = Quiche.QUICHE_MAX_CONN_ID_LEN;
         this.server = server;
     }
