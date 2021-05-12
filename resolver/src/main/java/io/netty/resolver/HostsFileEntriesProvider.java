@@ -47,31 +47,35 @@ public final class HostsFileEntriesProvider {
     public interface Parser {
 
         /**
-         * Specifies {@link Charset}s that are used one after another until the parser is able to return a result
-         * or none is left.
-         * If charsets is not specified, the system default {@link Charset} is used for decoding.
-         *
-         * @param charsets the {@link Charset}s to try as file encodings when parsing
-         * @return {@code this}
-         */
-        Parser charsets(Charset... charsets);
-
-        /**
-         * Specifies the hosts file to be parsed.
-         * If a hosts file is not specified, the hosts file at standard OS location is used.
-         *
-         * @param file the hosts file
-         * @return {@code this}
-         */
-        Parser file(File file);
-
-        /**
-         * Parses the hosts file.
+         * Parses the hosts file at standard OS location using the system default {@link Charset} for decoding.
          *
          * @return a new {@link HostsFileEntriesProvider}
          * @throws IOException file could not be read
          */
         HostsFileEntriesProvider parse() throws IOException;
+
+        /**
+         * Parses the hosts file at standard OS location using the given {@link Charset}s one after another until
+         * parse something or none is left.
+         *
+         * @param charsets the {@link Charset}s to try as file encodings when parsing
+         * @return a new {@link HostsFileEntriesProvider}
+         * @throws IOException file could not be read
+         */
+        HostsFileEntriesProvider parse(Charset... charsets) throws IOException;
+
+        /**
+         * Parses the provided hosts file using the given {@link Charset}s one after another until
+         * parse something or none is left. In case {@link Charset}s are not provided,
+         * the system default {@link Charset} is used for decoding.
+         *
+         * @param file the file to be parsed
+         * @param charsets the {@link Charset}s to try as file encodings when parsing, in case {@link Charset}s
+         * are not provided, the system default {@link Charset} is used for decoding
+         * @return a new {@link HostsFileEntriesProvider}
+         * @throws IOException file could not be read
+         */
+        HostsFileEntriesProvider parse(File file, Charset... charsets) throws IOException;
 
         /**
          * Performs the parsing operation using the provided reader of hosts file format.
@@ -82,11 +86,32 @@ public final class HostsFileEntriesProvider {
         HostsFileEntriesProvider parse(Reader reader) throws IOException;
 
         /**
-         * Parses the hosts file.
+         * Parses the hosts file at standard OS location using the system default {@link Charset} for decoding.
          *
          * @return a new {@link HostsFileEntriesProvider}
          */
         HostsFileEntriesProvider parseSilently();
+
+        /**
+         * Parses the hosts file at standard OS location using the given {@link Charset}s one after another until
+         * parse something or none is left.
+         *
+         * @param charsets the {@link Charset}s to try as file encodings when parsing
+         * @return a new {@link HostsFileEntriesProvider}
+         */
+        HostsFileEntriesProvider parseSilently(Charset... charsets);
+
+        /**
+         * Parses the provided hosts file using the given {@link Charset}s one after another until
+         * parse something or none is left. In case {@link Charset}s are not provided,
+         * the system default {@link Charset} is used for decoding.
+         *
+         * @param file the file to be parsed
+         * @param charsets the {@link Charset}s to try as file encodings when parsing, in case {@link Charset}s
+         * are not provided, the system default {@link Charset} is used for decoding
+         * @return a new {@link HostsFileEntriesProvider}
+         */
+        HostsFileEntriesProvider parseSilently(File file, Charset... charsets);
     }
 
     /**
@@ -139,25 +164,22 @@ public final class HostsFileEntriesProvider {
 
         private static final InternalLogger logger = InternalLoggerFactory.getInstance(Parser.class);
 
-        private Charset[] charsets = new Charset[]{Charset.defaultCharset()};
-        private File file;
-
-        @Override
-        public Parser charsets(Charset... charsets) {
-            this.charsets = checkNotNull(charsets, "charsets");
-            return this;
-        }
-
-        @Override
-        public Parser file(File file) {
-            this.file = checkNotNull(file, "file");
-            return this;
-        }
-
         @Override
         public HostsFileEntriesProvider parse() throws IOException {
-            if (file == null) {
-                file = locateHostsFile();
+            return parse(locateHostsFile(), Charset.defaultCharset());
+        }
+
+        @Override
+        public HostsFileEntriesProvider parse(Charset... charsets) throws IOException {
+            return parse(locateHostsFile(), charsets);
+        }
+
+        @Override
+        public HostsFileEntriesProvider parse(File file, Charset... charsets) throws IOException {
+            checkNotNull(file, "file");
+            checkNotNull(charsets, "charsets");
+            if (charsets.length == 0) {
+                charsets = new Charset[]{Charset.defaultCharset()};
             }
             if (file.exists() && file.isFile()) {
                 for (Charset charset : charsets) {
@@ -178,6 +200,7 @@ public final class HostsFileEntriesProvider {
 
         @Override
         public HostsFileEntriesProvider parse(Reader reader) throws IOException {
+            checkNotNull(reader, "reader");
             BufferedReader buff = new BufferedReader(reader);
             try {
                 Map<String, List<InetAddress>> ipv4Entries = new HashMap<String, List<InetAddress>>();
@@ -252,10 +275,20 @@ public final class HostsFileEntriesProvider {
 
         @Override
         public HostsFileEntriesProvider parseSilently() {
+            return parseSilently(locateHostsFile(), Charset.defaultCharset());
+        }
+
+        @Override
+        public HostsFileEntriesProvider parseSilently(Charset... charsets) {
+            return parseSilently(locateHostsFile(), charsets);
+        }
+
+        @Override
+        public HostsFileEntriesProvider parseSilently(File file, Charset... charsets) {
             try {
-                return parse();
+                return parse(file, charsets);
             } catch (IOException e) {
-                if (file != null && logger.isWarnEnabled()) {
+                if (logger.isWarnEnabled()) {
                     logger.warn("Failed to load and parse hosts file at " + file.getPath(), e);
                 }
                 return HostsFileEntriesProvider.EMPTY;

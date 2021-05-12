@@ -114,7 +114,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
             // try multiple until we either were able to parse it or there is none left and so we return an
             // empty instance.
             return HostsFileEntriesProvider.parser()
-                    .charsets(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8).parseSilently();
+                    .parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
         }
         return HostsFileEntriesProvider.parser().parseSilently();
     }

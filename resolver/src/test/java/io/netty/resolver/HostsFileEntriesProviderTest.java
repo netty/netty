@@ -19,7 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -88,8 +90,29 @@ class HostsFileEntriesProviderTest {
     void testCharsetInputValidation() {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
+            public void execute() throws IOException {
+                HostsFileEntriesProvider.parser().parse((Charset[]) null);
+            }
+        });
+
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws IOException {
+                HostsFileEntriesProvider.parser().parse(new File(""), (Charset[]) null);
+            }
+        });
+
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
             public void execute() {
-                HostsFileEntriesProvider.parser().charsets((Charset[]) null);
+                HostsFileEntriesProvider.parser().parseSilently((Charset[]) null);
+            }
+        });
+
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                HostsFileEntriesProvider.parser().parseSilently(new File(""), (Charset[]) null);
             }
         });
     }
@@ -98,8 +121,15 @@ class HostsFileEntriesProviderTest {
     void testFileInputValidation() {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
+            public void execute() throws IOException {
+                HostsFileEntriesProvider.parser().parse((File) null);
+            }
+        });
+
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
             public void execute() {
-                HostsFileEntriesProvider.parser().file(null);
+                HostsFileEntriesProvider.parser().parseSilently((File) null);
             }
         });
     }
@@ -109,7 +139,7 @@ class HostsFileEntriesProviderTest {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
             public void execute() throws IOException {
-                HostsFileEntriesProvider.parser().parse(null);
+                HostsFileEntriesProvider.parser().parse((Reader) null);
             }
         });
     }

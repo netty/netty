@@ -50,7 +50,7 @@ public final class HostsFileParser {
      * @return a {@link HostsFileEntries}
      */
     public static HostsFileEntries parseSilently(Charset... charsets) {
-        return hostsFileEntries(HostsFileEntriesProvider.parser().charsets(charsets).parseSilently());
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parseSilently(charsets));
     }
 
     /**
@@ -71,7 +71,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file) throws IOException {
-        return hostsFileEntries(HostsFileEntriesProvider.parser().file(file).parse());
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parse(file));
     }
 
     /**
@@ -83,7 +83,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
-        return hostsFileEntries(HostsFileEntriesProvider.parser().file(file).charsets(charsets).parse());
+        return hostsFileEntries(HostsFileEntriesProvider.parser().parse(file, charsets));
     }
 
     /**
