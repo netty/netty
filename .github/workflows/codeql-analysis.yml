@@ -41,8 +41,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-maven-${{ matrix.language }} ${{ hashFiles('**/pom.xml') }}
         restore-keys: |
+          ${{ runner.os }}-maven-${{ matrix.language }}
           ${{ runner.os }}-maven-
 
     # If this run was triggered by a pull request event, then checkout
