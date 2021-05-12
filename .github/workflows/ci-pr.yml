@@ -7,6 +7,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   verify-pr:
     runs-on: ubuntu-18.04
@@ -26,7 +29,7 @@ jobs:
             ${{ runner.os }}-maven-verify-pr-
             ${{ runner.os }}-maven-
       - name: Verify with Maven
-        run: mvn verify -B --file pom.xml -Pci -DskipTests=true
+        run: ./mvnw verify -B --file pom.xml -DskipTests=true
 
   build-pr-aarch64:
     name: linux-aarch64-verify-native
@@ -71,7 +74,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 mvn -Pci -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
