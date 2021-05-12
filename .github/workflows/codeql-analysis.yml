@@ -14,6 +14,9 @@ on:
   schedule:
     - cron: '0 13 * * 3'
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   analyze:
     name: Analyze
@@ -73,7 +76,8 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - run: ./mvnw -Pci clean package -DskipTests=true -ntp -B
+    - name: Compile project
+      run: ./mvnw clean package -DskipTests=true -ntp -B
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

@@ -4,6 +4,9 @@ on:
     workflows: [ "Build PR" ]
     types:
       - completed
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   tests:
     runs-on: ubuntu-latest

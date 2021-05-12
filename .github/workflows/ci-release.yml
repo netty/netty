@@ -5,6 +5,9 @@ on:
   # Releases can only be triggered via the action tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   prepare-release:
     runs-on: ubuntu-18.04
@@ -41,8 +44,8 @@ jobs:
 
       - name: Prepare release with Maven
         run: |
-          mvn -B --file pom.xml -Pci release:prepare -DpreparationGoals=clean -DskipTests=true
-          mvn -Pci clean
+          ./mvnw -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+          ./mvnw clean
 
       - name: Checkout tag
         run: ./.github/scripts/release_checkout_tag.sh release.properties
@@ -161,6 +164,9 @@ jobs:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
 
+      - name: Adjust mvnw permissions
+        run: chmod 755 ./prepare-release-workspace/mvnw
+
       - name: Set up JDK 8
         uses: actions/setup-java@v1
         with:
@@ -219,7 +225,7 @@ jobs:
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/
         # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: mvn -Pci -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/

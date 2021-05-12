@@ -11,6 +11,11 @@ services:
   common: &common
     image: netty:default
     depends_on: [runtime-setup]
+    environment:
+      - GPG_KEYNAME
+      - GPG_PASSPHRASE
+      - GPG_PRIVATE_KEY
+      - MAVEN_OPTS
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
@@ -42,10 +47,6 @@ services:
 
   stage-release:
     <<: *common
-    environment:
-      - GPG_KEYNAME
-      - GPG_PASSPHRASE
-      - GPG_PRIVATE_KEY
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.m2:/root/.m2
