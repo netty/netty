@@ -19,10 +19,12 @@ import io.netty.util.ReferenceCounted;
 
 final class QuicheQuicConnection {
     private final ReferenceCounted refCnt;
+    private final QuicheQuicSslEngine engine;
     private long connection;
 
-    QuicheQuicConnection(long connection, ReferenceCounted refCnt) {
+    QuicheQuicConnection(long connection, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
         this.connection = connection;
+        this.engine = engine;
         this.refCnt = refCnt;
     }
 
@@ -37,6 +39,10 @@ final class QuicheQuicConnection {
                 connection = -1;
             }
         }
+    }
+
+    QuicheQuicSslEngine engine() {
+        return engine;
     }
 
     long address() {

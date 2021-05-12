@@ -169,7 +169,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
             return null;
         }
         // The connection will call nativeSslContext.release() once it is freed.
-        return new QuicheQuicConnection(connection, nativeSslContext);
+        return new QuicheQuicConnection(connection, engine, nativeSslContext);
     }
 
     @Override

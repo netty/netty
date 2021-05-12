@@ -42,6 +42,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLEngine;
 import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -50,9 +51,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
-import java.util.ArrayDeque;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -111,7 +110,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final TimeoutHandler timeoutHandler = new TimeoutHandler();
     private final InetSocketAddress remote;
 
-    private QuicheQuicConnection connection;
+    private volatile QuicheQuicConnection connection;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
@@ -177,6 +176,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
+    }
+
+    @Override
+    public SSLEngine sslEngine() {
+        QuicheQuicConnection connection = this.connection;
+        return connection == null ? null : connection.engine();
     }
 
     @Override

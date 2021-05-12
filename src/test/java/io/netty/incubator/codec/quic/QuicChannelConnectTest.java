@@ -285,6 +285,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
             clientLatch.await();
 
+            assertEquals(QuicTestUtils.PROTOS[0], quicChannel.sslEngine().getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();

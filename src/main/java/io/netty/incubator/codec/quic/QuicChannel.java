@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
+import javax.net.ssl.SSLEngine;
 import java.net.SocketAddress;
 
 /**
@@ -147,6 +148,13 @@ public interface QuicChannel extends Channel {
      */
     @Override
     QuicChannelConfig config();
+
+    /**
+     * Returns the used {@link SSLEngine} or {@code null} if none is used (yet).
+     *
+     * @return the engine.
+     */
+    SSLEngine sslEngine();
 
     /**
      * Returns the number of streams that can be created before stream creation will fail
