@@ -7,6 +7,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   verify:
     runs-on: ubuntu-18.04
@@ -24,7 +27,7 @@ jobs:
           restore-keys: |
             verify-cache-m2-repository-
       - name: Verify with Maven
-        run: mvn -Pci -B --file pom.xml verify -DskipTests=true -DskipH3Spec=true
+        run: ./mvnw -B --file pom.xml verify -DskipTests=true -DskipH3Spec=true
 
   build:
     runs-on: ubuntu-latest

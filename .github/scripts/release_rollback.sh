@@ -7,5 +7,5 @@ if [ "$#" -ne 1 ]; then
 fi
 
 TAG=$(grep scm.tag= "$1" | cut -d'=' -f2)
-mvn -B --file pom.xml release:rollback
+./mvnw -B --file pom.xml release:rollback
 git push origin :"$TAG"

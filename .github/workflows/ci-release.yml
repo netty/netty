@@ -4,6 +4,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -53,10 +56,10 @@ jobs:
             release-cache-m2-repository-
 
       - name: Prepare release with Maven
-        run:  mvn -Pci -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
+        run: ./mvnw -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
 
       - name: Perform release with Maven
-        run: mvn -Pci -B --file pom.xml release:perform -Drelease.gpg.keyname=${{ secrets.GPG_KEYNAME }} -Drelease.gpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
+        run: ./mvnw -B --file pom.xml release:perform -Drelease.gpg.keyname=${{ secrets.GPG_KEYNAME }} -Drelease.gpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
 
       - name: Rollback release on failure
         if: ${{ failure() }}
