@@ -73,7 +73,10 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - run: ./mvnw -Pci clean package -DskipTests=true -ntp -B
+    - name: Compile project
+      env:
+        MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+      run: ./mvnw clean package -DskipTests=true -ntp -B
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

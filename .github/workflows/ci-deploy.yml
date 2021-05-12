@@ -122,4 +122,6 @@ jobs:
             }]
 
       - name: Deploy local staged artifacts
-        run: mvn -B --file pom.xml -Pci org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        env:
+          MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
