@@ -10,5 +10,5 @@ TAG=$(grep scm.tag= "$1" | cut -d'=' -f2)
 git remote set-url origin git@github.com:"$2".git
 git fetch
 git checkout "$3"
-mvn -B --file pom.xml release:rollback
+./mvnw -B --file pom.xml release:rollback
 git push origin :"$TAG"

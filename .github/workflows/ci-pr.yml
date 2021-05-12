@@ -7,6 +7,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   build-linux-x86_64:
     runs-on: ubuntu-latest
@@ -132,7 +135,7 @@ jobs:
             pr-windows-x86_64-maven-cache-
 
       - name: Build project
-        run: mvn --file pom.xml -Pci clean package
+        run: mvn --file pom.xml clean package
 
       - name: Upload Test Results
         if: always()

@@ -10,6 +10,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   stage-snapshot-linux:
     runs-on: ubuntu-latest
@@ -120,7 +123,7 @@ jobs:
             }]
 
       - name: Stage snapshots to local staging directory
-        run: mvn --file pom.xml -Pci clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: mvn --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v2
@@ -187,4 +190,4 @@ jobs:
             }]
 
       - name: Deploy local staged artifacts
-        run: mvn -B --file pom.xml -Pci org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR

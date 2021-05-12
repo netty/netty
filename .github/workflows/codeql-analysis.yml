@@ -21,6 +21,9 @@ on:
   schedule:
     - cron: '33 2 * * 4'
 
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
 jobs:
   analyze:
     name: Analyze
@@ -75,7 +78,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
     - name: Build project
-      run: ./mvnw -Pci clean package -DskipTests=true
+      run: ./mvnw clean package -DskipTests=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
