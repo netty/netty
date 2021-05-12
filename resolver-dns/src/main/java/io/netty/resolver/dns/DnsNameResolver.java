@@ -696,17 +696,7 @@ public class DnsNameResolver extends InetNameResolver {
             return null;
         }
         InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-        if (address == null && PlatformDependent.isWindows() &&
-                (LOCALHOST.equalsIgnoreCase(hostname) ||
-                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)))) {
-            // If we tried to resolve localhost we need workaround that windows removed localhost from its
-            // hosts file in later versions.
-            // See https://github.com/netty/netty/issues/5386
-            // Need a workaround for resolving the host (computer) name in case it cannot be resolved from hosts file
-            // See https://github.com/netty/netty/issues/11142
-            return LOCALHOST_ADDRESS;
-        }
-        return address;
+        return address == null && isLocalWindowsHost(hostname) ? LOCALHOST_ADDRESS : address;
     }
 
     private List<InetAddress> resolveHostsFileEntries(String hostname) {
@@ -721,17 +711,21 @@ public class DnsNameResolver extends InetNameResolver {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
             addresses = address != null ? Collections.singletonList(address) : null;
         }
-        if (addresses == null && PlatformDependent.isWindows() &&
+        return addresses == null && isLocalWindowsHost(hostname) ?
+                Collections.singletonList(LOCALHOST_ADDRESS) : addresses;
+    }
+
+    /**
+     * Checks whether the given hostname is the localhost/host (computer) name on Windows OS.
+     * Windows OS removed the localhost/host (computer) name information from the hosts file in the later versions
+     * and such hostname cannot be resolved from hosts file.
+     * See https://github.com/netty/netty/issues/5386
+     * See https://github.com/netty/netty/issues/11142
+     */
+    private static boolean isLocalWindowsHost(String hostname) {
+        return PlatformDependent.isWindows() &&
                 (LOCALHOST.equalsIgnoreCase(hostname) ||
-                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)))) {
-            // If we tried to resolve localhost we need workaround that windows removed localhost from its
-            // hosts file in later versions.
-            // See https://github.com/netty/netty/issues/5386
-            // Need a workaround for resolving the host (computer) name in case it cannot be resolved from hosts file
-            // See https://github.com/netty/netty/issues/11142
-            return Collections.singletonList(LOCALHOST_ADDRESS);
-        }
-        return addresses;
+                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
     }
 
     /**
