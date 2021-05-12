@@ -68,7 +68,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
      *
      * @param inetHost the hostname to resolve
      * @param resolvedAddressTypes the address types to resolve
-     * @return all matching addresses
+     * @return all matching addresses or {@code null} in case the hostname cannot be resolved
      */
     public List<InetAddress> addresses(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
         String normalized = normalize(inetHost);
