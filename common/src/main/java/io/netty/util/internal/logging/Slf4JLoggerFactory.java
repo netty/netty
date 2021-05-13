@@ -39,7 +39,7 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
             throw new NoClassDefFoundError("NOPLoggerFactory not supported");
         }
     }
-    
+
     @Override
     public InternalLogger newInstance(String name) {
         return wrapLogger(LoggerFactory.getLogger(name));
