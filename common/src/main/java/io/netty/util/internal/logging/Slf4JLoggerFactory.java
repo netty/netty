@@ -35,15 +35,11 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
      */
     @Deprecated
     public Slf4JLoggerFactory() {
-    }
-
-    Slf4JLoggerFactory(boolean failIfNOP) {
-        assert failIfNOP; // Should be always called with true.
         if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
             throw new NoClassDefFoundError("NOPLoggerFactory not supported");
         }
     }
-
+    
     @Override
     public InternalLogger newInstance(String name) {
         return wrapLogger(LoggerFactory.getLogger(name));
