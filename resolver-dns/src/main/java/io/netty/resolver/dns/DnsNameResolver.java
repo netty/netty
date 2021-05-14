@@ -46,6 +46,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.TcpDnsQueryEncoder;
 import io.netty.handler.codec.dns.TcpDnsResponseDecoder;
+import io.netty.resolver.DefaultHostsFileEntriesResolver;
 import io.netty.resolver.HostsFileEntries;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
@@ -693,20 +694,38 @@ public class DnsNameResolver extends InetNameResolver {
     private InetAddress resolveHostsFileEntry(String hostname) {
         if (hostsFileEntriesResolver == null) {
             return null;
+        }
+        InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
+        return address == null && isLocalWindowsHost(hostname) ? LOCALHOST_ADDRESS : address;
+    }
+
+    private List<InetAddress> resolveHostsFileEntries(String hostname) {
+        if (hostsFileEntriesResolver == null) {
+            return null;
+        }
+        List<InetAddress> addresses;
+        if (hostsFileEntriesResolver instanceof DefaultHostsFileEntriesResolver) {
+            addresses = ((DefaultHostsFileEntriesResolver) hostsFileEntriesResolver)
+                    .addresses(hostname, resolvedAddressTypes);
         } else {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            if (address == null && PlatformDependent.isWindows() &&
-                    (LOCALHOST.equalsIgnoreCase(hostname) ||
-                            (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)))) {
-                // If we tried to resolve localhost we need workaround that windows removed localhost from its
-                // hostfile in later versions.
-                // See https://github.com/netty/netty/issues/5386
-                // Need a workaround for resolving the host (computer) name in case it cannot be resolved from hostfile
-                // See https://github.com/netty/netty/issues/11142
-                return LOCALHOST_ADDRESS;
-            }
-            return address;
+            addresses = address != null ? Collections.singletonList(address) : null;
         }
+        return addresses == null && isLocalWindowsHost(hostname) ?
+                Collections.singletonList(LOCALHOST_ADDRESS) : addresses;
+    }
+
+    /**
+     * Checks whether the given hostname is the localhost/host (computer) name on Windows OS.
+     * Windows OS removed the localhost/host (computer) name information from the hosts file in the later versions
+     * and such hostname cannot be resolved from hosts file.
+     * See https://github.com/netty/netty/issues/5386
+     * See https://github.com/netty/netty/issues/11142
+     */
+    private static boolean isLocalWindowsHost(String hostname) {
+        return PlatformDependent.isWindows() &&
+                (LOCALHOST.equalsIgnoreCase(hostname) ||
+                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
     }
 
     /**
@@ -840,24 +859,29 @@ public class DnsNameResolver extends InetNameResolver {
         final String hostname = question.name();
 
         if (type == DnsRecordType.A || type == DnsRecordType.AAAA) {
-            final InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
-            if (hostsFileEntry != null) {
-                ByteBuf content = null;
-                if (hostsFileEntry instanceof Inet4Address) {
-                    if (type == DnsRecordType.A) {
-                        content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+            final List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
+            if (hostsFileEntries != null) {
+                List<DnsRecord> result = new ArrayList<DnsRecord>();
+                for (InetAddress hostsFileEntry : hostsFileEntries) {
+                    ByteBuf content = null;
+                    if (hostsFileEntry instanceof Inet4Address) {
+                        if (type == DnsRecordType.A) {
+                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                        }
+                    } else if (hostsFileEntry instanceof Inet6Address) {
+                        if (type == DnsRecordType.AAAA) {
+                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                        }
                     }
-                } else if (hostsFileEntry instanceof Inet6Address) {
-                    if (type == DnsRecordType.AAAA) {
-                        content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                    if (content != null) {
+                        // Our current implementation does not support reloading the hosts file,
+                        // so use a fairly large TTL (1 day, i.e. 86400 seconds).
+                        result.add(new DefaultDnsRawRecord(hostname, type, 86400, content));
                     }
                 }
 
-                if (content != null) {
-                    // Our current implementation does not support reloading the hosts file,
-                    // so use a fairly large TTL (1 day, i.e. 86400 seconds).
-                    trySuccess(promise, Collections.<DnsRecord>singletonList(
-                            new DefaultDnsRawRecord(hostname, type, 86400, content)));
+                if (!result.isEmpty()) {
+                    trySuccess(promise, result);
                     return promise;
                 }
             }
@@ -1033,9 +1057,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         final String hostname = hostname(inetHost);
 
-        InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
-        if (hostsFileEntry != null) {
-            promise.setSuccess(Collections.singletonList(hostsFileEntry));
+        List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
+        if (hostsFileEntries != null) {
+            promise.setSuccess(hostsFileEntries);
             return;
         }
 
