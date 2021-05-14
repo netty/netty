@@ -437,6 +437,7 @@
     <module>handler</module>
     <module>handler-proxy</module>
     <module>example</module>
+    <!--
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
@@ -447,6 +448,7 @@
     <module>testsuite-native-image-client</module>
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
+    -->
     <module>microbench</module>
     <module>bom</module>
   </modules>
