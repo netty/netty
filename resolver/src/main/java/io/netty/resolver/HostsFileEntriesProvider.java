@@ -120,7 +120,7 @@ public final class HostsFileEntriesProvider {
      * @return a new {@link HostsFileEntriesProvider.Parser}
      */
     public static Parser parser() {
-        return new ParserImpl();
+        return ParserImpl.INSTANCE;
     }
 
     static final HostsFileEntriesProvider EMPTY =
@@ -163,6 +163,12 @@ public final class HostsFileEntriesProvider {
         private static final Pattern WHITESPACES = Pattern.compile("[ \t]+");
 
         private static final InternalLogger logger = InternalLoggerFactory.getInstance(Parser.class);
+
+        static final ParserImpl INSTANCE = new ParserImpl();
+
+        private ParserImpl() {
+            // singleton
+        }
 
         @Override
         public HostsFileEntriesProvider parse() throws IOException {
