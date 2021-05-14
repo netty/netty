@@ -30,7 +30,7 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
     @SuppressWarnings("deprecation")
     public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
 
-    public static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
+    static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
 
     /**
      * @deprecated Use {@link #INSTANCE} instead.
