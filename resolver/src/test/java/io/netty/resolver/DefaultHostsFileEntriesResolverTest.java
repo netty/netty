@@ -22,8 +22,15 @@ import org.junit.Test;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultHostsFileEntriesResolverTest {
 
@@ -32,53 +39,103 @@ public class DefaultHostsFileEntriesResolverTest {
      * HostsFileParser tries to resolve hostnames as case-sensitive
      */
     @Test
-    public void testCaseInsensitivity() throws Exception {
+    public void testCaseInsensitivity() {
         DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver();
         //normalized somehow
-        Assert.assertEquals(resolver.normalize("localhost"), resolver.normalize("LOCALHOST"));
+        assertEquals(resolver.normalize("localhost"), resolver.normalize("LOCALHOST"));
     }
 
     @Test
     public void shouldntFindWhenAddressTypeDoesntMatch() {
-        Map<String, Inet4Address> inet4Entries = new HashMap<String, Inet4Address>();
-        Map<String, Inet6Address> inet6Entries = new HashMap<String, Inet6Address>();
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
 
-        inet4Entries.put("localhost", NetUtil.LOCALHOST4);
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
 
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(new HostsFileEntries(inet4Entries, inet6Entries));
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV6_ONLY);
-        Assert.assertNull("Should pick an IPv6 address", address);
+        assertNull("Should pick an IPv6 address", address);
     }
 
     @Test
     public void shouldPickIpv4WhenBothAreDefinedButIpv4IsPreferred() {
-        Map<String, Inet4Address> inet4Entries = new HashMap<String, Inet4Address>();
-        Map<String, Inet6Address> inet6Entries = new HashMap<String, Inet6Address>();
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
 
-        inet4Entries.put("localhost", NetUtil.LOCALHOST4);
-        inet6Entries.put("localhost", NetUtil.LOCALHOST6);
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
+        inet6Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
 
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(new HostsFileEntries(inet4Entries, inet6Entries));
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
-        Assert.assertTrue("Should pick an IPv4 address", address instanceof Inet4Address);
+        assertTrue("Should pick an IPv4 address", address instanceof Inet4Address);
     }
 
     @Test
     public void shouldPickIpv6WhenBothAreDefinedButIpv6IsPreferred() {
-        Map<String, Inet4Address> inet4Entries = new HashMap<String, Inet4Address>();
-        Map<String, Inet6Address> inet6Entries = new HashMap<String, Inet6Address>();
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
 
-        inet4Entries.put("localhost", NetUtil.LOCALHOST4);
-        inet6Entries.put("localhost", NetUtil.LOCALHOST6);
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
+        inet6Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
 
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(new HostsFileEntries(inet4Entries, inet6Entries));
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
-        Assert.assertTrue("Should pick an IPv6 address", address instanceof Inet6Address);
+        assertTrue("Should pick an IPv6 address", address instanceof Inet6Address);
+    }
+
+    @Test
+    public void shouldntFindWhenAddressesTypeDoesntMatch() {
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
+
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
+
+        DefaultHostsFileEntriesResolver resolver =
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
+
+        List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV6_ONLY);
+        assertNull("Should pick an IPv6 address", addresses);
+    }
+
+    @Test
+    public void shouldPickIpv4FirstWhenBothAreDefinedButIpv4IsPreferred() {
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
+
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
+        inet6Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
+
+        DefaultHostsFileEntriesResolver resolver =
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
+
+        List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
+        assertNotNull(addresses);
+        assertEquals(2, addresses.size());
+        assertTrue("Should pick an IPv4 address", addresses.get(0) instanceof Inet4Address);
+        assertTrue("Should pick an IPv6 address", addresses.get(1) instanceof Inet6Address);
+    }
+
+    @Test
+    public void shouldPickIpv6FirstWhenBothAreDefinedButIpv6IsPreferred() {
+        Map<String, List<InetAddress>> inet4Entries = new HashMap<String, List<InetAddress>>();
+        Map<String, List<InetAddress>> inet6Entries = new HashMap<String, List<InetAddress>>();
+
+        inet4Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
+        inet6Entries.put("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
+
+        DefaultHostsFileEntriesResolver resolver =
+                new DefaultHostsFileEntriesResolver(new HostsFileEntriesProvider(inet4Entries, inet6Entries));
+
+        List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
+        assertNotNull(addresses);
+        assertEquals(2, addresses.size());
+        assertTrue("Should pick an IPv6 address", addresses.get(0) instanceof Inet6Address);
+        assertTrue("Should pick an IPv4 address", addresses.get(1) instanceof Inet4Address);
     }
 }
