@@ -30,11 +30,17 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
     @SuppressWarnings("deprecation")
     public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
 
+    public static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
+
     /**
      * @deprecated Use {@link #INSTANCE} instead.
      */
     @Deprecated
     public Slf4JLoggerFactory() {
+    }
+
+    Slf4JLoggerFactory(boolean failIfNOP) {
+        assert failIfNOP; // Should be always called with true.
         if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
             throw new NoClassDefFoundError("NOPLoggerFactory not supported");
         }
