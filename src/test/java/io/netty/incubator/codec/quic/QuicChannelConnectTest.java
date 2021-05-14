@@ -285,7 +285,10 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
             clientLatch.await();
 
-            assertEquals(QuicTestUtils.PROTOS[0], quicChannel.sslEngine().getApplicationProtocol());
+            assertEquals(QuicTestUtils.PROTOS[0],
+                    // Just do the cast as getApplicationProtocol() only exists in SSLEngine itself since Java9+ and
+                    // we may run on an earlier version
+                    ((QuicheQuicSslEngine) quicChannel.sslEngine()).getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
