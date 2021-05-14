@@ -22,7 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A container of hosts file entries
+ * A container of hosts file entries.
+ * The mappings contain only the first entry per hostname.
+ * Consider using {@link HostsFileEntriesProvider} when mappings with all entries per hostname are needed.
  */
 public final class HostsFileEntries {
 

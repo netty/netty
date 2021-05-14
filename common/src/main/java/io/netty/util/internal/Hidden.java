@@ -122,7 +122,7 @@ class Hidden {
                     "parseEtcResolverOptions");
 
             builder.allowBlockingCallsInside(
-                    "io.netty.resolver.HostsFileParser",
+                    "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
             builder.nonBlockingThreadPredicate(p -> thread ->
