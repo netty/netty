@@ -21,6 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.concurrent.PromiseCombiner;
@@ -29,6 +31,7 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
@@ -189,6 +192,10 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.ZLIB);
+        }
+        if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), new BrotliEncoder());
         }
         // 'identity' or unsupported
         return null;
