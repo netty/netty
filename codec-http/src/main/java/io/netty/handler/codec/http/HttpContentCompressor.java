@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.ObjectUtil;
@@ -131,28 +133,78 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        ZlibWrapper wrapper = determineWrapper(acceptEncoding);
-        if (wrapper == null) {
+        String targetContentEncoding = determineEncoding(acceptEncoding);
+        if (targetContentEncoding == null) {
             return null;
         }
 
-        String targetContentEncoding;
-        switch (wrapper) {
-        case GZIP:
-            targetContentEncoding = "gzip";
-            break;
-        case ZLIB:
-            targetContentEncoding = "deflate";
-            break;
-        default:
+        if (targetContentEncoding.equals("gzip")) {
+            return new Result(targetContentEncoding,
+                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                            ZlibWrapper.GZIP, compressionLevel, windowBits, memLevel)));
+        } else if (targetContentEncoding.equals("deflate")) {
+            return new Result(targetContentEncoding,
+                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                            ZlibWrapper.ZLIB, compressionLevel, windowBits, memLevel)));
+        } else if (targetContentEncoding.equals("br")) {
+            return new Result(targetContentEncoding,
+                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                            ctx.channel().config(), new BrotliEncoder()));
+        } else {
             throw new Error();
         }
+    }
 
-        return new Result(
-                targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                        wrapper, compressionLevel, windowBits, memLevel)));
+    @SuppressWarnings("FloatingPointEquality")
+    protected String determineEncoding(String acceptEncoding) {
+        float starQ = -1.0f;
+        float brQ = -1.0f;
+        float gzipQ = -1.0f;
+        float deflateQ = -1.0f;
+        for (String encoding : acceptEncoding.split(",")) {
+            float q = 1.0f;
+            int equalsPos = encoding.indexOf('=');
+            if (equalsPos != -1) {
+                try {
+                    q = Float.parseFloat(encoding.substring(equalsPos + 1));
+                } catch (NumberFormatException e) {
+                    // Ignore encoding
+                    q = 0.0f;
+                }
+            }
+            if (encoding.contains("*")) {
+                starQ = q;
+            } else if (encoding.contains("br") && q > brQ) {
+                brQ = q;
+            } else if (encoding.contains("gzip") && q > gzipQ) {
+                gzipQ = q;
+            } else if (encoding.contains("deflate") && q > deflateQ) {
+                deflateQ = q;
+            }
+        }
+        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ != -1.0f && brQ >= gzipQ) {
+                return Brotli.isAvailable() ? "br" : null;
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
+                return "gzip";
+            } else if (deflateQ != -1.0f) {
+                return "deflate";
+            }
+        }
+        if (starQ > 0.0f) {
+            if (brQ == -1.0f) {
+                return Brotli.isAvailable() ? "br" : null;
+            }
+            if (gzipQ == -1.0f) {
+                return "gzip";
+            }
+            if (deflateQ == -1.0f) {
+                return "deflate";
+            }
+        }
+        return null;
     }
 
     @SuppressWarnings("FloatingPointEquality")
