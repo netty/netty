@@ -120,7 +120,7 @@ final class DnsCodecUtil {
 
     /**
      * Decompress pointer data.
-     * @param compression comporession data
+     * @param compression compressed data
      * @return decompressed data
      */
     static ByteBuf decompressDomainName(ByteBuf compression) {
