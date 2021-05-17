@@ -23,6 +23,6 @@ public class EpollKQueueIovArrayTest extends IovArrayTest {
 
     @BeforeClass
     public static void loadNative() {
-        Assume.assumeTrue(Epoll.isAvailable());
+        Epoll.ensureAvailability();
     }
 }

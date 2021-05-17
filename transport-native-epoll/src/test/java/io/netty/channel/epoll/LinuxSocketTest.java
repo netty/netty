@@ -22,12 +22,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import static org.junit.Assume.assumeTrue;
-
 public class LinuxSocketTest {
     @BeforeClass
     public static void loadJNI() {
-        assumeTrue(Epoll.isAvailable());
+        Epoll.ensureAvailability();
     }
 
     @Test(expected = IOException.class)
