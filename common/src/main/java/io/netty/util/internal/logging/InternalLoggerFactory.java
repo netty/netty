@@ -59,7 +59,7 @@ public abstract class InternalLoggerFactory {
 
     private static InternalLoggerFactory useSlf4JLoggerFactory(String name) {
         try {
-            InternalLoggerFactory f = new Slf4JLoggerFactory(true);
+            InternalLoggerFactory f = Slf4JLoggerFactory.INSTANCE_WITH_NOP_CHECK;
             f.newInstance(name).debug("Using SLF4J as the default logging framework");
             return f;
         } catch (LinkageError ignore) {
