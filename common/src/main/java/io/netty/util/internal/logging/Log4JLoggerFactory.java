@@ -15,7 +15,8 @@
  */
 package io.netty.util.internal.logging;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Logger factory which creates an
@@ -35,6 +36,6 @@ public class Log4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        return new Log4JLogger(Logger.getLogger(name));
+        return new Log4JLogger(LogManager.getLogger(name));
     }
 }
