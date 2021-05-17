@@ -82,7 +82,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     }
 
     private static void loadNativeLibrary() {
-        if (PlatformDependent.isOsx()) {
+        if (!PlatformDependent.isOsx()) {
             throw new IllegalStateException("Only supported on MacOS/OSX");
         }
         String staticLibName = "netty_resolver_dns_native_macos";
