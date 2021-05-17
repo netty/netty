@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,7 +39,7 @@ final class Quiche {
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
         // NETTY_JNI_UTIL_FIND_CLASS.
-        tryLoadClasses(Quiche.class,
+        ClassInitializerUtil.tryLoadClasses(Quiche.class,
                 // netty_quic_boringssl
                 byte[].class, String.class, BoringSSLCertificateCallback.class,
                 BoringSSLCertificateVerifyCallback.class, BoringSSLHandshakeCompleteCallback.class,
@@ -59,24 +60,6 @@ final class Quiche {
         // Let's enable debug logging for quiche if its enabled in our logger.
         if (DEBUG_LOGGING_ENABLED) {
             quiche_enable_debug_logging(new QuicheLogger(logger));
-        }
-    }
-
-    private static void tryLoadClasses(Class<?> loadingClass, Class<?>... classes) {
-        ClassLoader loader = PlatformDependent.getClassLoader(loadingClass);
-        for (Class<?> clazz: classes) {
-            tryLoadClass(loader, clazz.getName());
-        }
-    }
-
-    private static void tryLoadClass(ClassLoader classLoader, String className) {
-        try {
-            // Load the class and also ensure we init it which means its linked etc.
-            Class.forName(className, true, classLoader);
-        } catch (ClassNotFoundException ignore) {
-            // Ignore
-        } catch (SecurityException ignore) {
-            // Ignore
         }
     }
 
