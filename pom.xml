@@ -68,6 +68,102 @@
   </developers>
 
   <profiles>
+    <profile>
+      <id>aggregate</id>
+      <properties>
+        <checkstyle.skip>true</checkstyle.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.2.0</version>
+            <executions>
+              <execution>
+                <id>aggregate</id>
+                <goals>
+                  <goal>aggregate</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <sourceFileExcludes>
+                <exclude>**/com/sun/**/*.java</exclude>
+                <exclude>**/example/**/*.java</exclude>
+                <exclude>**/testsuite/**/*.java</exclude>
+                <exclude>**/microbench/**/*.java</exclude>
+                <exclude>**/microbenchmark/**/*.java</exclude>
+                <exclude>**/generated/**/*.java</exclude>
+              </sourceFileExcludes>
+              <docfilessubdirs>true</docfilessubdirs>
+              <outputDirectory>${project.build.directory}/api</outputDirectory>
+              <overview>${project.basedir}/src/javadoc/overview.html</overview>
+              <doctitle>Netty API Reference (${project.version})</doctitle>
+              <windowtitle>Netty API Reference (${project.version})</windowtitle>
+              <detectJavaApiLink>false</detectJavaApiLink>
+              <links>
+                <link>https://docs.oracle.com/javase/8/docs/api/</link>
+                <link>https://developers.google.com/protocol-buffers/docs/reference/java/</link>
+                <link>https://www.slf4j.org/apidocs/</link>
+              </links>
+              <groups>
+                <group>
+                  <title>Low-level data representation</title>
+                  <packages>io.netty.buffer*</packages>
+                </group>
+                <group>
+                  <title>Central interface for all I/O operations</title>
+                  <packages>io.netty.channel*</packages>
+                </group>
+                <group>
+                  <title>Client &amp; Server bootstrapping utilities</title>
+                  <packages>io.netty.bootstrap*</packages>
+                </group>
+                <group>
+                  <title>Reusable I/O event interceptors</title>
+                  <packages>io.netty.handler*</packages>
+                </group>
+                <group>
+                  <title>DNS / Host resolvers</title>
+                  <packages>io.netty.resolver*</packages>
+                </group>
+                <group>
+                  <title>Utils</title>
+                  <packages>io.netty.util*</packages>
+                </group>
+              </groups>
+              <locale>en_US</locale>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>aggregate</id>
+                <goals>
+                  <goal>aggregate</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <linkJavadoc>true</linkJavadoc>
+              <destDir>${project.build.directory}/site/xref</destDir>
+              <javadocDir>${project.build.directory}/site/apidocs</javadocDir>
+              <docTitle>Netty Source Xref (${project.version})</docTitle>
+              <windowTitle>Netty Source Xref (${project.version})</windowTitle>
+              <excludes>
+                <exclude>**/com/sun/**/*.java</exclude>
+                <exclude>**/example/**/*.java</exclude>
+                <exclude>**/microbench/**/*.java</exclude>
+                <exclude>**/microbenchmark/**/*.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
     <profile>
       <id>graal</id>
@@ -1395,9 +1491,8 @@
           <version>2.6</version>
         </plugin>
         <plugin>
-          <!-- Do NOT upgrade -->
           <artifactId>maven-jxr-plugin</artifactId>
-          <version>2.2</version>
+          <version>3.1.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
