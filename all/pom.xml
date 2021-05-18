@@ -66,24 +66,28 @@
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
@@ -98,24 +102,28 @@
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
@@ -138,17 +146,20 @@
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
@@ -170,6 +181,7 @@
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -177,12 +189,14 @@
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
@@ -202,17 +216,20 @@
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
@@ -232,250 +249,395 @@
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <scope>compile</scope>
+          <optional>true</optional>
         </dependency>
       </dependencies>
-    </profile>
-
-    <profile>
-      <id>full</id>
-      <!-- Only include in full profile as this will not work on Java9 yet -->
-      <!-- https://issues.apache.org/jira/browse/JXR-133 -->
-      <build>
-        <plugins>
-          <!-- Generate Xref -->
-          <plugin>
-            <artifactId>maven-jxr-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>generate-xref</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>jxr</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <linkJavadoc>true</linkJavadoc>
-              <destDir>${project.build.directory}/xref</destDir>
-              <javadocDir>${project.build.directory}/api</javadocDir>
-              <docTitle>Netty Source Xref (${project.version})</docTitle>
-              <windowTitle>Netty Source Xref (${project.version})</windowTitle>
-            </configuration>
-            <dependencies>
-              <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>netty-build-common</artifactId>
-                <version>${netty.build.version}</version>
-              </dependency>
-            </dependencies>
-          </plugin>
-
-          <!-- Generate Javadoc -->
-          <plugin>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <skip>${quickbuild}</skip>
-              <excludePackageNames>*.internal,*.example</excludePackageNames>
-              <docfilessubdirs>true</docfilessubdirs>
-              <outputDirectory>${project.build.directory}/api</outputDirectory>
-              <overview>${project.basedir}/src/javadoc/overview.html</overview>
-              <doctitle>Netty API Reference (${project.version})</doctitle>
-              <windowtitle>Netty API Reference (${project.version})</windowtitle>
-              <detectJavaApiLink>false</detectJavaApiLink>
-              <additionalparam>
-                -link https://docs.oracle.com/javase/7/docs/api/
-                -link https://developers.google.com/protocol-buffers/docs/reference/java/
-                -link https://docs.oracle.com/javaee/6/api/
-                -link https://www.slf4j.org/apidocs/
-                -link https://commons.apache.org/proper/commons-logging/apidocs/
-                -link https://logging.apache.org/log4j/1.2/apidocs/
-
-                -group "Low-level data representation" io.netty.buffer*
-                -group "Central interface for all I/O operations" io.netty.channel*
-                -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
-                -group "Reusable I/O event interceptors" io.netty.handler*
-                -group "Miscellaneous" io.netty.util*
-              </additionalparam>
-              <locale>en_US</locale>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>coverage</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>jacoco-merge</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>merge</goal>
-                </goals>
-                <configuration>
-                  <fileSets>
-                    <fileSet>
-                      <directory>${project.parent.build.directory}/..</directory>
-                      <includes>
-                        <include>**/target/jacoco.exec</include>
-                      </includes>
-                    </fileSet>
-                  </fileSets>
-                </configuration>
-              </execution>
-              <execution>
-                <id>jacoco-report</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>report</goal>
-                </goals>
-                <configuration>
-                  <outputDirectory>${project.build.directory}/jacoco-report</outputDirectory>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 
   <dependencies>
-
     <!-- All release modules -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-buffer</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-dns</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-haproxy</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http2</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-memcache</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-mqtt</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-redis</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-smtp</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-socks</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-stomp</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-xml</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler-proxy</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-resolver</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-resolver-dns</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-rxtx</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-sctp</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-udt</artifactId>
       <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>clean-first</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <!-- Populate the properties whose key is groupId:artifactId:type
+                                   and whose value is the path to the artifact -->
+          <execution>
+            <id>locate-dependencies</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>properties</goal>
+            </goals>
+          </execution>
+
+          <!-- Unpack all source files -->
+          <execution>
+            <id>unpack-sources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <classifier>sources</classifier>
+              <includes>io/netty/**</includes>
+              <includeScope>runtime</includeScope>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
+              <outputDirectory>${generatedSourceDir}</outputDirectory>
+            </configuration>
+          </execution>
+
+          <!-- Unpack all class files -->
+          <execution>
+            <id>unpack-jars</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <excludes>io/netty/internal/tcnative/**,io/netty/example/**,META-INF/native/libnetty_tcnative*,META-INF/native/include/**,META-INF/native/**/*.a</excludes>
+              <includes>io/netty/**,META-INF/native/**,META-INF/native-image/**</includes>
+              <includeScope>runtime</includeScope>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Instead of generating a new version property file, merge others' version property files into one. -->
+          <execution>
+            <id>write-version-properties</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>merge-version-properties</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+                <propertyselector property="versions" match="^(${project.groupId}:(?!netty-example)[^:]+:jar(?::[^:]+)?)$" select="\1" />
+                <for list="${versions}" param="x">
+                  <sequential>
+                    <unzip src="${@{x}}" dest="${dependencyVersionsDir}">
+                      <patternset>
+                        <include name="META-INF/${project.groupId}.versions.properties" />
+                      </patternset>
+                    </unzip>
+                    <concat destfile="${project.build.outputDirectory}/META-INF/${project.groupId}.versions.properties" append="true">
+                      <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties" />
+                    </concat>
+                  </sequential>
+                </for>
+                <delete dir="${dependencyVersionsDir}" quiet="true" />
+              </target>
+            </configuration>
+          </execution>
+
+          <!-- Clean everything once finished so that IDE doesn't find the unpacked files. -->
+          <execution>
+            <id>clean-source-directory</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <delete dir="${generatedSourceDir}" quiet="true" />
+                <delete dir="${dependencyVersionsDir}" quiet="true" />
+                <delete dir="${project.build.outputDirectory}" quiet="true" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Include the directory where the source files were unpacked -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${generatedSourceDir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Disable OSGi bundle manifest generation -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Override the default JAR configuration -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>all-in-one-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>io.netty.all</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Disable animal sniffer -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Disable checkstyle -->
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-style</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Disable all plugin executions configured by jar packaging -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-resources</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>default-testResources</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>default-testCompile</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
 
