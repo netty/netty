@@ -1321,6 +1321,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test(expected = SSLException.class)
     public void testNoKeyFound() throws Exception {
+        checkShouldUseKeyManagerFactory();
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
