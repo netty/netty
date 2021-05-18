@@ -392,6 +392,7 @@ public class NettyBlockHoundIntegrationTest {
     private static void testTrustManagerVerify(SslProvider provider, String tlsVersion) throws Exception {
         final SslContext sslClientCtx =
                 SslContextBuilder.forClient()
+                                 .sslProvider(provider)
                                  .protocols(tlsVersion)
                                  .trustManager(ResourcesUtil.getFile(
                                          NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
@@ -403,6 +404,7 @@ public class NettyBlockHoundIntegrationTest {
                                             ResourcesUtil.getFile(
                                                     NettyBlockHoundIntegrationTest.class, "localhost_server.key"),
                                             null)
+                                 .sslProvider(provider)
                                  .protocols(tlsVersion)
                                  .build();
 
