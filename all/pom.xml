@@ -466,11 +466,6 @@
       <artifactId>netty-transport-sctp</artifactId>
       <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-example</artifactId>
-      <scope>compile</scope>
-    </dependency>
   </dependencies>
 </project>
 
