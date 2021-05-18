@@ -938,15 +938,20 @@
   </dependencies>
 
   <build>
-    <extensions>
-      <extension>
+    <plugins>
+      <plugin>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
         <version>${osmaven.version}</version>
-      </extension>
-    </extensions>
-
-    <plugins>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>detect</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
