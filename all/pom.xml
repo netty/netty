@@ -476,11 +476,6 @@
       <artifactId>netty-transport-udt</artifactId>
       <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-example</artifactId>
-      <scope>compile</scope>
-    </dependency>
   </dependencies>
 </project>
 
