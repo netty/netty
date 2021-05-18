@@ -33,7 +33,7 @@ public class OpenSslKeyMaterialManagerTest {
 
     @Test
     public void testChooseClientAliasReturnsNull() throws SSLException {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
 
         X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
             @Override

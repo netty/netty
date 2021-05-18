@@ -21,13 +21,11 @@ import org.junit.BeforeClass;
 import javax.net.ssl.SSLException;
 import java.io.File;
 
-import static org.junit.Assume.assumeTrue;
-
 public class OpenSslClientContextTest extends SslContextTest  {
 
     @BeforeClass
     public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     @Override
