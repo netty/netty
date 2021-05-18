@@ -18,24 +18,21 @@ package io.netty.resolver.dns.macos;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-public class MacOSDnsServerAddressStreamProviderTest {
-
-    @BeforeClass
-    public static void assume() {
-        Assume.assumeTrue(MacOSDnsServerAddressStreamProvider.isAvailable());
-    }
+@EnabledOnOs(OS.MAC)
+class MacOSDnsServerAddressStreamProviderTest {
 
     @Test
-    public void testStream() {
+    void testStream() {
+        MacOSDnsServerAddressStreamProvider.ensureAvailability();
         DnsServerAddressStreamProvider provider = new MacOSDnsServerAddressStreamProvider();
         DnsServerAddressStream stream = provider.nameServerAddressStream("netty.io");
         assertNotNull(stream);
@@ -47,9 +44,10 @@ public class MacOSDnsServerAddressStreamProviderTest {
     }
 
     @Test
-    public void testDefaultUseCorrectInstance() {
+    @EnabledOnOs(OS.MAC)
+    void testDefaultUseCorrectInstance() {
+        MacOSDnsServerAddressStreamProvider.ensureAvailability();
         assertThat(DnsServerAddressStreamProviders.platformDefault(),
                 instanceOf(MacOSDnsServerAddressStreamProvider.class));
     }
-
 }
