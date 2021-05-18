@@ -27,11 +27,11 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-public class MacOSDnsServerAddressStreamProviderTest {
+@EnabledOnOs(OS.MAC)
+class MacOSDnsServerAddressStreamProviderTest {
 
     @Test
-    @EnabledOnOs(OS.MAC)
-    public void testStream() {
+    void testStream() {
         MacOSDnsServerAddressStreamProvider.ensureAvailability();
         DnsServerAddressStreamProvider provider = new MacOSDnsServerAddressStreamProvider();
         DnsServerAddressStream stream = provider.nameServerAddressStream("netty.io");
@@ -45,10 +45,9 @@ public class MacOSDnsServerAddressStreamProviderTest {
 
     @Test
     @EnabledOnOs(OS.MAC)
-    public void testDefaultUseCorrectInstance() {
+    void testDefaultUseCorrectInstance() {
         MacOSDnsServerAddressStreamProvider.ensureAvailability();
         assertThat(DnsServerAddressStreamProviders.platformDefault(),
                 instanceOf(MacOSDnsServerAddressStreamProvider.class));
     }
-
 }
