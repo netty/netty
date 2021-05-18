@@ -260,6 +260,37 @@
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>auto-clean</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>clean-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+                <configuration>
+                  <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                  <filesets>
+                    <fileset>
+                      <directory>${project.build.directory}</directory>
+                      <includes>
+                        <include>${jarName}</include>
+                        <include>original-${jarName}</include>
+                      </includes>
+                    </fileset>
+                  </filesets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
       </build>
     </profile>
@@ -400,6 +431,37 @@
                 <goals>
                   <goal>integration-test</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>auto-clean</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>clean-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+                <configuration>
+                  <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                  <filesets>
+                    <fileset>
+                      <directory>${project.build.directory}</directory>
+                      <includes>
+                        <include>${jarName}</include>
+                        <include>original-${jarName}</include>
+                      </includes>
+                    </fileset>
+                  </filesets>
+                </configuration>
               </execution>
             </executions>
           </plugin>
