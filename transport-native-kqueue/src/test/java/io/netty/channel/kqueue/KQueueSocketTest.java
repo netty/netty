@@ -25,12 +25,11 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 public class KQueueSocketTest extends SocketTest<BsdSocket> {
     @BeforeClass
     public static void loadJNI() {
-        assumeTrue(KQueue.isAvailable());
+        KQueue.ensureAvailability();
     }
 
     @Test
