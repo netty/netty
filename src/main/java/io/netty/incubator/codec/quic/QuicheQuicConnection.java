@@ -17,6 +17,8 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.util.ReferenceCounted;
 
+import java.util.function.Supplier;
+
 final class QuicheQuicConnection {
     private final ReferenceCounted refCnt;
     private final QuicheQuicSslEngine engine;
@@ -28,17 +30,40 @@ final class QuicheQuicConnection {
         this.refCnt = refCnt;
     }
 
-    // This should not need to be synchronized as it will either be called from the EventLoop thread or
-    // the finalizer (in which case there can't be concurrent access here).
     void free() {
-        if (connection != -1) {
-            try {
-                Quiche.quiche_conn_free(connection);
-                refCnt.release();
-            } finally {
-                connection = -1;
+        boolean release = false;
+        synchronized (this) {
+            if (connection != -1) {
+                try {
+                    Quiche.quiche_conn_free(connection);
+                    release = true;
+                } finally {
+                    connection = -1;
+                }
             }
         }
+        if (release) {
+            refCnt.release();
+        }
+    }
+
+    QuicConnectionAddress sourceId() {
+        return connectionId(() -> Quiche.quiche_conn_source_id(connection));
+    }
+
+    QuicConnectionAddress destinationId() {
+        return connectionId(() -> Quiche.quiche_conn_destination_id(connection));
+    }
+
+    QuicConnectionAddress connectionId(Supplier<byte[]> idSupplier) {
+        final byte[] id;
+        synchronized (this) {
+            if (connection == -1) {
+                return null;
+            }
+            id = idSupplier.get();
+        }
+        return id == null ? null : new QuicConnectionAddress(id);
     }
 
     QuicheQuicSslEngine engine() {

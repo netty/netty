@@ -276,6 +276,9 @@ final class Quiche {
      */
     static native byte[] quiche_conn_trace_id(long connAddr);
 
+    static native byte[] quiche_conn_source_id(long connAddr);
+
+    static native byte[] quiche_conn_destination_id(long connAddr);
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
      */

@@ -50,25 +50,15 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
 
     @Test
     public void testDatagramFlushInChannelRead() throws Throwable {
-        testDatagram(false, false);
+        testDatagram(false);
     }
 
     @Test
     public void testDatagramFlushInChannelReadComplete() throws Throwable {
-        testDatagram(true, false);
+        testDatagram(true);
     }
 
-    @Test
-    public void testDatagramFlushInChannelReadWriteDatagramPacket() throws Throwable {
-        testDatagram(false, true);
-    }
-
-    @Test
-    public void testDatagramFlushInChannelReadCompleteWriteDatagramPacket() throws Throwable {
-        testDatagram(true, true);
-    }
-
-    private void testDatagram(boolean flushInReadComplete, boolean writeDatagramPacket) throws Throwable {
+    private void testDatagram(boolean flushInReadComplete) throws Throwable {
         AtomicReference<QuicDatagramExtensionEvent> serverEventRef = new AtomicReference<>();
 
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
@@ -79,16 +69,10 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof ByteBuf) {
                     final ChannelFuture future;
-                    final Object message;
-                    if (writeDatagramPacket) {
-                        message = new DatagramPacket((ByteBuf) msg, (InetSocketAddress) ctx.channel().remoteAddress());
-                    } else {
-                        message = msg;
-                    }
                     if (!flushInReadComplete) {
-                        future = ctx.writeAndFlush(message);
+                        future = ctx.writeAndFlush(msg);
                     } else {
-                        future = ctx.write(message);
+                        future = ctx.write(msg);
                     }
                     future.addListener(ChannelFutureListener.CLOSE);
                 } else {

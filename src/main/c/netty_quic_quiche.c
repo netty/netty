@@ -190,20 +190,40 @@ static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong sci
     return (jlong) conn;
 }
 
+static jbyteArray to_byte_array(JNIEnv* env, const uint8_t* bytes, size_t len) {
+    if (bytes == NULL || len == 0) {
+        return NULL;
+    }
+     jbyteArray array = (*env)->NewByteArray(env, len);
+     if (array == NULL) {
+        return NULL;
+     }
+     (*env)->SetByteArrayRegion(env,array, 0, len, (jbyte*) bytes);
+     return array;
+}
+
 static jbyteArray netty_quiche_conn_trace_id(JNIEnv* env, jclass clazz, jlong conn) {
     const uint8_t *trace_id = NULL;
     size_t trace_id_len = 0;
 
     quiche_conn_trace_id((quiche_conn *) conn, &trace_id, &trace_id_len);
-    if (trace_id == NULL || trace_id_len == 0) {
-        return NULL;
-    }
-     jbyteArray array = (*env)->NewByteArray(env, trace_id_len);
-     if (array == NULL) {
-        return NULL;
-     }
-     (*env)->SetByteArrayRegion(env,array, 0, trace_id_len, (jbyte*) trace_id);
-     return array;
+    return to_byte_array(env, trace_id, trace_id_len);
+}
+
+static jbyteArray netty_quiche_conn_source_id(JNIEnv* env, jclass clazz, jlong conn) {
+    const uint8_t *id = NULL;
+    size_t len = 0;
+
+    quiche_conn_source_id((quiche_conn *) conn, &id, &len);
+    return to_byte_array(env, id, len);
+}
+
+static jbyteArray netty_quiche_conn_destination_id(JNIEnv* env, jclass clazz, jlong conn) {
+    const uint8_t *id = NULL;
+    size_t len = 0;
+
+    quiche_conn_destination_id((quiche_conn *) conn, &id, &len);
+    return to_byte_array(env, id, len);
 }
 
 static jint netty_quiche_conn_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
@@ -488,6 +508,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_retry", "(JIJIJIJIIJI)I", (void *) netty_quiche_retry },
   { "quiche_conn_set_qlog_path", "(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z", (void *) netty_quiche_conn_set_qlog_path },
   { "quiche_conn_trace_id", "(J)[B", (void *) netty_quiche_conn_trace_id },
+  { "quiche_conn_source_id", "(J)[B", (void *) netty_quiche_conn_source_id },
+  { "quiche_conn_destination_id", "(J)[B", (void *) netty_quiche_conn_destination_id },
   { "quiche_conn_new_with_tls", "(JIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
   { "quiche_conn_recv", "(JJI)I", (void *) netty_quiche_conn_recv },
   { "quiche_conn_send", "(JJI)I", (void *) netty_quiche_conn_send },

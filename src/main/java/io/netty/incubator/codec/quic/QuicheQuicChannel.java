@@ -424,12 +424,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        return parent().localAddress();
+        QuicheQuicConnection connection = this.connection;
+        return connection == null ? null : connection.sourceId();
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return remote;
+        QuicheQuicConnection connection = this.connection;
+        return connection == null ? null : connection.destinationId();
     }
 
     @Override
@@ -491,24 +493,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (msg instanceof ByteBuf) {
             return msg;
         }
-        if (msg instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) msg;
-            if (remote == null) {
-                if (packet.recipient() == null) {
-                    return extractBuffer(packet);
-                }
-            } else if (remote.equals(packet.recipient())) {
-                return extractBuffer(packet);
-            }
-            throw new UnsupportedOperationException("DatagramPacket recipient is not valid");
-        }
         throw new UnsupportedOperationException("Unsupported message type: " + StringUtil.simpleClassName(msg));
-    }
-
-    private static ByteBuf extractBuffer(DatagramPacket packet) {
-        ByteBuf content = packet.content().retain();
-        packet.release();
-        return content;
     }
 
     @Override

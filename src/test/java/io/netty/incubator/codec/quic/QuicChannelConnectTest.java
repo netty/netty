@@ -280,6 +280,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect()
                     .get();
+            QuicConnectionAddress localAddress = (QuicConnectionAddress) quicChannel.localAddress();
+            QuicConnectionAddress remoteAddress = (QuicConnectionAddress) quicChannel.remoteAddress();
+
             QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new BytesCountingHandler(clientLatch, numBytes)).get();
             stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
@@ -294,6 +297,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
+
+            assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
+            assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
         } finally {
             serverLatch.await();
             serverQuicChannelHandler.assertState();
@@ -582,6 +588,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     private static final class ChannelActiveVerifyHandler extends ChannelInboundHandlerAdapter {
         private final BlockingQueue<Integer> states = new LinkedBlockingQueue<>();
+        private volatile QuicConnectionAddress localAddress;
+        private volatile QuicConnectionAddress remoteAddress;
+
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
             ctx.fireChannelRegistered();
@@ -596,6 +605,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
+            localAddress = (QuicConnectionAddress) ctx.channel().localAddress();
+            remoteAddress = (QuicConnectionAddress) ctx.channel().remoteAddress();
             ctx.fireChannelActive();
             states.add(1);
         }
@@ -612,6 +623,14 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 assertEquals(i, (int) states.take());
             }
             assertNull(states.poll());
+        }
+
+        QuicConnectionAddress localAddress() {
+            return localAddress;
+        }
+
+        QuicConnectionAddress remoteAddress() {
+            return remoteAddress;
         }
     }
 
