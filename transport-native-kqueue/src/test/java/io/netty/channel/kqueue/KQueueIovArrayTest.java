@@ -16,13 +16,12 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.tests.IovArrayTest;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 
 public class KQueueIovArrayTest extends IovArrayTest {
 
     @BeforeClass
     public static void loadNative() {
-        Assume.assumeTrue(KQueue.isAvailable());
+        KQueue.ensureAvailability();
     }
 }
