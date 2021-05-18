@@ -43,7 +43,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 
 /**
- * <a href="http://logging.apache.org/log4j/2.x/index.html">Apache Log4J</a>
+ * <a href="https://logging.apache.org/log4j/2.x/index.html">Apache Log4J</a>
  * logger.
  */
 class Log4JLogger extends AbstractInternalLogger {
