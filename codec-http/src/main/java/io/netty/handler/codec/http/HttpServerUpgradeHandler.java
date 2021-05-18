@@ -224,13 +224,24 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out)
             throws Exception {
-        // Determine if we're already handling an upgrade request or just starting a new one.
-        handlingUpgrade |= isUpgradeRequest(msg);
+
         if (!handlingUpgrade) {
-            // Not handling an upgrade request, just pass it to the next handler.
-            ReferenceCountUtil.retain(msg);
-            out.add(msg);
-            return;
+            // Not handling an upgrade request yet. Check if we received a new upgrade request.
+            if (msg instanceof HttpRequest) {
+                HttpRequest req = (HttpRequest) msg;
+                if (req.headers().contains(HttpHeaderNames.UPGRADE) &&
+                    shouldHandleUpgradeRequest(req)) {
+                    handlingUpgrade = true;
+                } else {
+                    ReferenceCountUtil.retain(msg);
+                    ctx.fireChannelRead(msg);
+                    return;
+                }
+            } else {
+                ReferenceCountUtil.retain(msg);
+                ctx.fireChannelRead(msg);
+                return;
+            }
         }
 
         FullHttpRequest fullRequest;
@@ -264,10 +275,20 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     }
 
     /**
-     * Determines whether or not the message is an HTTP upgrade request.
+     * Determines whether the specified upgrade {@link HttpRequest} should be handled by this handler or not.
+     * This method will be invoked only when the request contains an {@code Upgrade} header.
+     * It always returns {@code true} by default, which means any request with an {@code Upgrade} header
+     * will be handled. You can override this method to ignore certain {@code Upgrade} headers, for example:
+     * <pre>{@code
+     * @Override
+     * protected boolean isUpgradeRequest(HttpRequest req) {
+     *   // Do not handle WebSocket upgrades.
+     *   return !req.headers().contains(HttpHeaderNames.UPGRADE, "websocket", false);
+     * }
+     * }</pre>
      */
-    private static boolean isUpgradeRequest(HttpObject msg) {
-        return msg instanceof HttpRequest && ((HttpRequest) msg).headers().get(HttpHeaderNames.UPGRADE) != null;
+    protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
+        return true;
     }
 
     /**

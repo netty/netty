@@ -141,4 +141,48 @@ public class HttpServerUpgradeHandlerTest {
         assertTrue(upgradeMessage.release());
         assertFalse(channel.finishAndReleaseAll());
     }
+
+    @Test
+    public void skippedUpgrade() {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                fail("Should never be invoked");
+                return null;
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory) {
+            @Override
+            protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
+                return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false);
+            }
+        };
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                               "Host: example.com\r\n" +
+                               "Connection: Upgrade\r\n" +
+                               "Upgrade: do-not-upgrade\r\n\r\n";
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+
+        // The upgrade request should not be passed to the next handler without any processing.
+        assertTrue(channel.writeInbound(upgrade));
+        assertNotNull(channel.pipeline().get(HttpServerCodec.class));
+        assertNull(channel.pipeline().get("marker"));
+
+        HttpRequest req = channel.readInbound();
+        assertFalse(req instanceof FullHttpRequest); // Should not be aggregated.
+        assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
+        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
+        assertTrue(channel.readInbound() instanceof LastHttpContent);
+        assertNull(channel.readInbound());
+
+        // No response should be written because we're just passing through.
+        channel.flushOutbound();
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finishAndReleaseAll());
+    }
 }
