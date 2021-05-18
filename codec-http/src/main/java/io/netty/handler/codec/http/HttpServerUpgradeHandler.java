@@ -275,7 +275,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     }
 
     /**
-     * Determines whether the specified {@link HttpRequest} is an HTTP upgrade request or not.
+     * Determines whether the specified upgrade {@link HttpRequest} should be handled by this handler or not.
      * This method will be invoked only when the request contains an {@code Upgrade} header.
      * It always returns {@code true} by default, which means any request with an {@code Upgrade} header
      * will be handled. You can override this method to ignore certain {@code Upgrade} headers, for example:
