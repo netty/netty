@@ -155,7 +155,7 @@ public class HttpServerUpgradeHandlerTest {
 
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory) {
             @Override
-            protected boolean isUpgradeRequest(HttpRequest req) {
+            protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
                 return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false);
             }
         };

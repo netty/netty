@@ -230,7 +230,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             if (msg instanceof HttpRequest) {
                 HttpRequest req = (HttpRequest) msg;
                 if (req.headers().contains(HttpHeaderNames.UPGRADE) &&
-                    isUpgradeRequest(req)) {
+                    shouldHandleUpgradeRequest(req)) {
                     handlingUpgrade = true;
                 } else {
                     ReferenceCountUtil.retain(msg);
@@ -287,7 +287,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * }
      * }</pre>
      */
-    protected boolean isUpgradeRequest(HttpRequest req) {
+    protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
         return true;
     }
 
