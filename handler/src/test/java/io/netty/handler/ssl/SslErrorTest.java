@@ -127,7 +127,7 @@ public class SslErrorTest {
     public void testCorrectAlert() throws Exception {
         // As this only works correctly at the moment when OpenSslEngine is used on the server-side there is
         // no need to run it if there is no openssl is available at all.
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 

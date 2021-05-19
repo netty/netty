@@ -45,7 +45,7 @@ public class PemEncodedTest {
     }
 
     private static void testPemEncoded(SslProvider provider) throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.useKeyManagerFactory());
         PemPrivateKey pemKey;
         PemX509Certificate pemCert;

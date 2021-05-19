@@ -30,7 +30,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
 
     @BeforeClass
     public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     @Override
