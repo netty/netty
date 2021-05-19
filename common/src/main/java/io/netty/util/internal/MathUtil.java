@@ -57,11 +57,11 @@ public final class MathUtil {
      * @param index The starting index.
      * @param length The length which will be utilized (starting from {@code index}).
      * @param capacity The capacity that {@code index + length} is allowed to be within.
-     * @return {@code true} if the requested {@code index} and {@code length} will fit within {@code capacity}.
-     * {@code false} if this would result in an index out of bounds exception.
+     * @return {@code false} if the requested {@code index} and {@code length} will fit within {@code capacity}.
+     * {@code true} if this would result in an index out of bounds exception.
      */
     public static boolean isOutOfBounds(int index, int length, int capacity) {
-        return (index | length | (index + length) | (capacity - (index + length))) < 0;
+        return (index | length | capacity | (index + length) | (capacity - (index + length))) < 0;
     }
 
     /**
