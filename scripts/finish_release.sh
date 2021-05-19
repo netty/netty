@@ -15,13 +15,20 @@ fi
 
 BRANCH=$(git branch --show-current)
 
+if git tag | grep -q "$2" ; then
+    echo "Tag $2 already existed locally, deleting it"
+    git tag -d "$2"
+fi
+
 git fetch
 git checkout "$2"
 
 export JAVA_HOME="$JAVA8_HOME"
 
-./mvnw -Psonatype-oss-release -pl resolver-dns-native-macos,transport-native-unix-common,transport-native-kqueue clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
+./mvnw -Psonatype-oss-release -am -pl resolver-dns-native-macos,transport-native-unix-common,transport-native-kqueue clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
 
 ./mvnw -Psonatype-oss-release,full,uber-staging -pl all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
+
+./mvnw org.sonatype.plugins:nexus-staging-maven-plugin:rc-close org.sonatype.plugins:nexus-staging-maven-plugin:rc-release -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true -DstagingProgressTimeoutMinutes=10
 
 git checkout "$BRANCH"
