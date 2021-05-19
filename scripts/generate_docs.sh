@@ -46,3 +46,5 @@ rm -rf "$WEBSITE_XREF_DIR"/*
 echo "Copy javadocs and xref files"
 cp -r "$API_DIR"/* "$WEBSITE_API_DIR"
 cp -r "$XREF_DIR"/* "$WEBSITE_XREF_DIR"
+
+git checkout "$BRANCH"
