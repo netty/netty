@@ -32,6 +32,7 @@ jobs:
           - setup: linux-x86_64-java11
           - setup: linux-x86_64-java16
           - setup: linux-x86_64-java11-boringssl
+          - setuo: windows-x86_64-java11-boringssl
     steps:
       - name: Download Artifacts
         uses: dawidd6/action-download-artifact@v2.11.0
