@@ -36,6 +36,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
+import javax.net.ssl.SSLEngine;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
@@ -62,6 +63,11 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     EmbeddedQuicChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                         ChannelHandler... handlers) {
         super(parent, channelId, register, hasDisconnect, handlers);
+    }
+
+    @Override
+    public SSLEngine sslEngine() {
+        return null;
     }
 
     @Override
