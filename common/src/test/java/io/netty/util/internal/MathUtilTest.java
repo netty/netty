@@ -68,5 +68,8 @@ public class MathUtilTest {
         assertTrue(isOutOfBounds(Integer.MAX_VALUE - 1, 1, Integer.MAX_VALUE - 1));
         assertTrue(isOutOfBounds(Integer.MAX_VALUE - 1, 2, Integer.MAX_VALUE));
         assertTrue(isOutOfBounds(1, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertTrue(isOutOfBounds(0, 1, Integer.MIN_VALUE));
+        assertTrue(isOutOfBounds(0, 1, -1));
+        assertTrue(isOutOfBounds(0, Integer.MAX_VALUE, 0));
     }
 }
