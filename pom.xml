@@ -95,6 +95,9 @@
                 <exclude>**/microbench/**/*.java</exclude>
                 <exclude>**/microbenchmark/**/*.java</exclude>
                 <exclude>**/generated/**/*.java</exclude>
+                <exclude>**/*Benchmark.java</exclude>
+                <exclude>**/*Bench.java</exclude>
+                <exclude>**/*Test.java</exclude>
               </sourceFileExcludes>
               <docfilessubdirs>true</docfilessubdirs>
               <outputDirectory>${project.build.directory}/api</outputDirectory>
