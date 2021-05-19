@@ -365,7 +365,7 @@ public class SslHandlerTest {
 
     @Test
     public void testReleaseSslEngine() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
 
         SelfSignedCertificate cert = new SelfSignedCertificate();
         try {
@@ -1111,7 +1111,7 @@ public class SslHandlerTest {
     }
 
     private static void testSessionTickets(SslProvider provider, String protocol, boolean withKey) throws Throwable {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(provider)
@@ -1390,13 +1390,13 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeFailureCipherMissmatchTLSv12OpenSsl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, false);
     }
 
     @Test
     public void testHandshakeFailureCipherMissmatchTLSv13OpenSsl() throws Exception {
-         Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         Assume.assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
         Assume.assumeFalse("BoringSSL does not support setting ciphers for TLSv1.3 explicit", OpenSsl.isBoringSSL());
         testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, true);
@@ -1509,7 +1509,7 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeEventsTls12Openssl() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2);
     }
 
@@ -1521,7 +1521,7 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeEventsTls13Openssl() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
         testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3);
     }

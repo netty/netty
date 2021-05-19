@@ -57,7 +57,7 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
 
     @BeforeClass
     public static void checkOpenssl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     @Override

@@ -48,7 +48,7 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @Override
     protected void cleanupClientSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(unwrapEngine(engine));
     }
 
     @Override
@@ -58,7 +58,7 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @Override
     protected void cleanupServerSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(unwrapEngine(engine));
     }
 
     @Test(expected = NullPointerException.class)

@@ -46,7 +46,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testClientContextFromFileOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testClientContextFromFile(SslProvider.OPENSSL);
     }
 
@@ -57,7 +57,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testClientContextOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testClientContext(SslProvider.OPENSSL);
     }
 
@@ -68,7 +68,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testKeyStoreTypeOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testKeyStoreType(SslProvider.OPENSSL);
     }
 
@@ -79,7 +79,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testServerContextFromFileOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testServerContextFromFile(SslProvider.OPENSSL);
     }
 
@@ -90,7 +90,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testServerContextOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testServerContext(SslProvider.OPENSSL);
     }
 
@@ -101,7 +101,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testContextFromManagersOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         Assume.assumeTrue(OpenSsl.supportsKeyManagerFactory());
         testContextFromManagers(SslProvider.OPENSSL);
     }
@@ -154,13 +154,13 @@ public class SslContextBuilderTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidCipherJdk() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testInvalidCipher(SslProvider.JDK);
     }
 
     @Test
     public void testInvalidCipherOpenSSL() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         try {
             // This may fail or not depending on the OpenSSL version used
             // See https://github.com/openssl/openssl/issues/7196

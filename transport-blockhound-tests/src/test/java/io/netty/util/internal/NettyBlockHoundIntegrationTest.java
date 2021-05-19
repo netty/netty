@@ -240,14 +240,25 @@ public class NettyBlockHoundIntegrationTest {
     }
 
     @Test
-    public void testTrustManagerVerify() throws Exception {
-        testTrustManagerVerify("TLSv1.2");
+    public void testTrustManagerVerifyJDK() throws Exception {
+        testTrustManagerVerify(SslProvider.JDK, "TLSv1.2");
     }
 
     @Test
-    public void testTrustManagerVerifyTLSv13() throws Exception {
+    public void testTrustManagerVerifyTLSv13JDK() throws Exception {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
-        testTrustManagerVerify("TLSv1.3");
+        testTrustManagerVerify(SslProvider.JDK, "TLSv1.3");
+    }
+
+    @Test
+    public void testTrustManagerVerifyOpenSSL() throws Exception {
+        testTrustManagerVerify(SslProvider.OPENSSL, "TLSv1.2");
+    }
+
+    @Test
+    public void testTrustManagerVerifyTLSv13OpenSSL() throws Exception {
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        testTrustManagerVerify(SslProvider.OPENSSL, "TLSv1.3");
     }
 
     @Test
@@ -378,9 +389,10 @@ public class NettyBlockHoundIntegrationTest {
         }
     }
 
-    private static void testTrustManagerVerify(String tlsVersion) throws Exception {
+    private static void testTrustManagerVerify(SslProvider provider, String tlsVersion) throws Exception {
         final SslContext sslClientCtx =
                 SslContextBuilder.forClient()
+                                 .sslProvider(provider)
                                  .protocols(tlsVersion)
                                  .trustManager(ResourcesUtil.getFile(
                                          NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
@@ -392,6 +404,7 @@ public class NettyBlockHoundIntegrationTest {
                                             ResourcesUtil.getFile(
                                                     NettyBlockHoundIntegrationTest.class, "localhost_server.key"),
                                             null)
+                                 .sslProvider(provider)
                                  .protocols(tlsVersion)
                                  .build();
 

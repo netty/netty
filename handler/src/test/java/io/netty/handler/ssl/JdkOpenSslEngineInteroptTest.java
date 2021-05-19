@@ -63,7 +63,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @BeforeClass
     public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     @Override

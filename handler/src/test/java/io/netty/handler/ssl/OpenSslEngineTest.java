@@ -111,7 +111,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @BeforeClass
     public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+       OpenSsl.ensureAvailability();
     }
 
     @Override
@@ -1320,6 +1320,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test(expected = SSLException.class)
     public void testNoKeyFound() throws Exception {
+        checkShouldUseKeyManagerFactory();
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)

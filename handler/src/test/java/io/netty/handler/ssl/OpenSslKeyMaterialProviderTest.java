@@ -42,7 +42,7 @@ public class OpenSslKeyMaterialProviderTest {
 
     @BeforeClass
     public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     protected KeyManagerFactory newKeyManagerFactory() throws Exception {
