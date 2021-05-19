@@ -16,8 +16,8 @@ fi
 BRANCH=$(git branch --show-current)
 
 if git tag | grep -q "$2" ; then
-    echo "Tag $2 already exists"
-    exit 1
+    echo "Tag $2 already existed locally, deleting it"
+    git tag -d "$2"
 fi
 
 git fetch
