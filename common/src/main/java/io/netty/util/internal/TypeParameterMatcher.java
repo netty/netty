@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -119,18 +119,17 @@ public abstract class TypeParameterMatcher {
                 if (actualTypeParam instanceof TypeVariable) {
                     // Resolved type parameter points to another type parameter.
                     TypeVariable<?> v = (TypeVariable<?>) actualTypeParam;
-                    currentClass = thisClass;
                     if (!(v.getGenericDeclaration() instanceof Class)) {
                         return Object.class;
                     }
 
+                    currentClass = thisClass;
                     parametrizedSuperclass = (Class<?>) v.getGenericDeclaration();
                     typeParamName = v.getName();
                     if (parametrizedSuperclass.isAssignableFrom(thisClass)) {
                         continue;
-                    } else {
-                        return Object.class;
                     }
+                    return Object.class;
                 }
 
                 return fail(thisClass, typeParamName);
