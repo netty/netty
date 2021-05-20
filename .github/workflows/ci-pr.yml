@@ -111,6 +111,10 @@ jobs:
   build-pr-windows:
     runs-on: windows-2016
     name: windows-x86_64 build
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
       - uses: actions/checkout@v2
 

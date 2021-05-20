@@ -168,6 +168,10 @@ jobs:
     runs-on: windows-2016
     name: stage-release-windows-x86_64
     needs: prepare-release
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
       - name: Download release-workspace
         uses: actions/download-artifact@v2
