@@ -22,6 +22,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public abstract class AbtractHttp3ConnectionHandlerTest {
 
@@ -49,7 +50,7 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
         handler.channelUnregistered(ctx);
         handler.handlerRemoved(ctx);
 
-        localControlStream.finishAndReleaseAll();
+        assertTrue(localControlStream.finishAndReleaseAll());
     }
 
     @Test
@@ -75,7 +76,7 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
         handler.channelUnregistered(ctx);
         handler.handlerRemoved(ctx);
 
-        localControlStream.finishAndReleaseAll();
+        assertTrue(localControlStream.finishAndReleaseAll());
     }
 
     @Test
@@ -101,6 +102,6 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
         handler.channelUnregistered(ctx);
         handler.handlerRemoved(ctx);
 
-        localControlStream.finishAndReleaseAll();
+        assertTrue(localControlStream.finishAndReleaseAll());
     }
 }

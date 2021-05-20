@@ -41,7 +41,7 @@ public class QpackEncoderDecoderTest {
         final Http3Headers decHeaders = new DefaultHttp3Headers();
 
         encoder.encodeHeaders(out, encHeaders);
-        decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false));
+        decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false, false));
 
         assertEquals(5, decHeaders.size());
         assertEquals(new AsciiString("netty.quic"), decHeaders.authority());
@@ -70,7 +70,7 @@ public class QpackEncoderDecoderTest {
         out.writeByte(0);
 
         try {
-            decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false));
+            decoder.decode(out, new Http3HeadersSink(decHeaders, 1024, false, false));
             fail();
         } catch (QpackException exception) {
             // expected

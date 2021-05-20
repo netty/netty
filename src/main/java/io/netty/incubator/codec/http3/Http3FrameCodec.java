@@ -56,6 +56,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private final QpackEncoder qpackEncoder;
 
     private boolean firstFrame = true;
+    private boolean headersReceived;
     private boolean error;
     private long type = -1;
     private int payLoadLength = -1;
@@ -193,7 +194,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength))) {
+                if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength), headersReceived)) {
+                    headersReceived = true;
                     out.add(headersFrame);
                 }
                 return payLoadLength;
@@ -235,7 +237,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                         readVariableLengthInteger(in, pushPromiseIdLen));
                 if (decodeHeaders(ctx, pushPromiseFrame.headers(),
-                        in.readSlice(payLoadLength - pushPromiseIdLen))) {
+                        in.readSlice(payLoadLength - pushPromiseIdLen), false)) {
                     out.add(pushPromiseFrame);
                 }
                 return payLoadLength;
@@ -317,9 +319,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
      * <p>
      * This method assumes the entire header block is contained in {@code in}.
      */
-    private boolean decodeHeaders(ChannelHandlerContext ctx, Http3Headers headers, ByteBuf in) {
+    private boolean decodeHeaders(ChannelHandlerContext ctx, Http3Headers headers, ByteBuf in, boolean trailer) {
         try {
-            Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true);
+            Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true, trailer);
             qpackDecoder.decode(in, sink);
             // Throws exception if detected any problem so far
             sink.finish();

@@ -15,10 +15,8 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 
-import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
 
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.getPseudoHeader;
@@ -32,6 +30,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     private final Http3Headers headers;
     private final long maxHeaderListSize;
     private final boolean validate;
+    private final boolean trailer;
     private long headersLength;
     private boolean exceededMaxLength;
     private Http3HeadersValidationException validationException;
@@ -39,10 +38,11 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     private boolean request;
     private int pseudoHeadersCount;
 
-    Http3HeadersSink(Http3Headers headers, long maxHeaderListSize, boolean validate) {
+    Http3HeadersSink(Http3Headers headers, long maxHeaderListSize, boolean validate, boolean trailer) {
         this.headers = headers;
         this.maxHeaderListSize = maxHeaderListSize;
         this.validate = validate;
+        this.trailer = trailer;
     }
 
     /**
@@ -57,6 +57,14 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
             throw validationException;
         }
         if (validate) {
+            if (trailer) {
+                if (pseudoHeadersCount != 0) {
+                    // Trailers must not have pseudo headers.
+                    throw new Http3HeadersValidationException("Pseudo-header(s) included in trailers.");
+                }
+                return;
+            }
+
             // Validate that all mandatory pseudo-headers are included.
             if (request) {
                 CharSequence method = headers.method();
