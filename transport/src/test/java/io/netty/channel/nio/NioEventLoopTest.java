@@ -21,6 +21,7 @@ import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
+import io.netty.channel.EventLoopTasksLatencyMonitorFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
@@ -32,6 +33,8 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
+import io.netty.util.internal.telemetry.CycleBufferQueueEliminationStrategy;
+import io.netty.util.internal.telemetry.EliminationHookQueue;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,6 +43,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -333,6 +337,42 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 }
             }).syncUninterruptibly();
             assertTrue(called.get());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testLatenciesQueue() {
+        final EventLoopTasksLatencyMonitorFactory taskQueueFactory = new EventLoopTasksLatencyMonitorFactory(100);
+        NioEventLoopGroup group = new NioEventLoopGroup(
+                1,
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(NioEventLoopGroup.class)),
+                DefaultEventExecutorChooserFactory.INSTANCE,
+                SelectorProvider.provider(),
+                DefaultSelectStrategyFactory.INSTANCE,
+                RejectedExecutionHandlers.reject(),
+                taskQueueFactory);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+
+        try {
+            loop.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+            }).syncUninterruptibly();
+            final Collection<EliminationHookQueue<Runnable>> instances = taskQueueFactory.getInstances();
+            final EliminationHookQueue<Runnable> taskQueue = instances.iterator().next();
+            final CycleBufferQueueEliminationStrategy eliminationStrategy =
+                    (CycleBufferQueueEliminationStrategy) taskQueue.getEliminationStrategy();
+            final long[] latencies = eliminationStrategy.getLatencies();
+            assertEquals(1, latencies.length);
+            assertTrue(latencies[0] >= 50 * 1000);
         } finally {
             group.shutdownGracefully();
         }
