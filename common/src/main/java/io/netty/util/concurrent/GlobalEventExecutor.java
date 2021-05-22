@@ -125,9 +125,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     /**
      * Return the number of tasks that are pending for processing.
-     *
-     * <strong>Be aware that this operation may be expensive as it depends on the internal implementation of the
-     * SingleThreadEventExecutor. So use it was care!</strong>
      */
     public int pendingTasks() {
         return taskQueue.size();
