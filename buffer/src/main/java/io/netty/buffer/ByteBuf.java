@@ -1129,7 +1129,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * the number of the transferred bytes while
      * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * the source buffer (i.e. {@code this}).
+     * this buffer (i.e. {@code this}).
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1146,7 +1146,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * the number of the transferred bytes while
      * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * the source buffer (i.e. {@code this}).
+     * this buffer (i.e. {@code this}).
      *
      * @param length the number of bytes to transfer
      *
