@@ -53,10 +53,11 @@ public class HttpContentDecompressorTest {
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json;charset=UTF-8");
         response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-        Assert.assertTrue(channel.writeInbound(response));
+        Assert.assertFalse(channel.writeInbound(response));
 
+        channel.read();
         // we triggered read explicitly
-        Assert.assertEquals(1, readCalled.get());
+        Assert.assertEquals(2, readCalled.get());
 
         Assert.assertTrue(channel.readInbound() instanceof HttpResponse);
 

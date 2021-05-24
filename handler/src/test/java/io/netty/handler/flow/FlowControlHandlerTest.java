@@ -465,7 +465,7 @@ public class FlowControlHandlerTest {
         channel.register();
 
         // Reset read timeout by some message
-        assertTrue(channel.writeInbound(Unpooled.EMPTY_BUFFER));
+        assertFalse(channel.writeInbound(Unpooled.EMPTY_BUFFER));
         channel.flushInbound();
         assertEquals(Unpooled.EMPTY_BUFFER, channel.readInbound());
 

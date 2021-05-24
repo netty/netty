@@ -78,9 +78,10 @@ public class MessageAggregatorTest {
 
         assertFalse(embedded.writeInbound(first));
         assertFalse(embedded.writeInbound(chunk));
-        assertTrue(embedded.writeInbound(last));
+        assertFalse(embedded.writeInbound(last));
 
-        assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
+        embedded.read();
+        assertEquals(2, counter.value); // 2 reads issued from MockMessageAggregator
                                         // 1 read issued from EmbeddedChannel constructor
 
         ByteBufHolder all = new DefaultByteBufHolder(Unpooled.wrappedBuffer(

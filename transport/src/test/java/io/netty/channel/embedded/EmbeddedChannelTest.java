@@ -15,24 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -51,6 +33,28 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.hamcrest.Matchers;
+import org.junit.Test;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class EmbeddedChannelTest {
 
@@ -603,6 +607,91 @@ public class EmbeddedChannelTest {
         channel.pipeline().fireExceptionCaught(new IllegalStateException());
 
         assertTrue(inactive.get());
+    }
+
+    @Test
+    public void testCloseAutoRead() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setAutoRead(false);
+
+        Queue<Object> inboundMessages = channel.inboundMessages();
+
+        // write three element to this channel.
+        channel.writeInbound(1L, 2L, 3L);
+        assertEquals(0, inboundMessages.size());
+
+        // call `channel.read()` to fire `channelRead` event.
+        channel.read();
+        assertEquals(3, inboundMessages.size());
+        inboundMessages.clear();
+
+        // test `writeOneInbound`
+        channel.writeOneInbound(1L);
+        channel.flushInbound();
+
+        // since `autoRead` was still false, this will not fire `channel.read()`.
+        assertEquals(0, inboundMessages.size());
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testChannelPromiseWithAutoReadClosed() {
+        final List<Long> inboundMsgs = new ArrayList<Long>();
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                inboundMsgs.add((Long) msg);
+            }
+        });
+        channel.config().setAutoRead(false);
+
+        // no msg since close autoRead.
+        assertEquals(0, inboundMsgs.size());
+
+        // channelFuture will not be completed since autoRead was closed.
+        ChannelFuture channelFuture = channel.writeOneInbound(1L, channel.newPromise());
+        assertFalse(channelFuture.isDone());
+
+        // open channel autoRead.
+        channel.config().setAutoRead(true);
+        assertEquals(1, inboundMsgs.size());
+        assertTrue(channelFuture.isDone());
+        assertTrue(channelFuture.isSuccess());
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testCloseChannelWithUnhandledMsg() {
+        final List<Long> inboundMsgs = new ArrayList<Long>();
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                inboundMsgs.add((Long) msg);
+            }
+        });
+        channel.config().setAutoRead(false);
+
+        ChannelFuture channelFuture = channel.writeOneInbound(1L, channel.newPromise());
+
+        // no msg since close autoRead.
+        assertEquals(0, inboundMsgs.size());
+
+        Queue<Object> inboundMessages = channel.inboundMessages();
+        assertEquals(inboundMessages.size(), 0);
+        assertFalse(channel.finish());
+
+        try {
+            channelFuture.get();
+            fail();
+        } catch (InterruptedException e) {
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), Matchers.instanceOf(ClosedChannelException.class));
+        }
     }
 
     private static void release(ByteBuf... buffers) {

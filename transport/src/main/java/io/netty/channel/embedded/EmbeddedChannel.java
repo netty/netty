@@ -15,11 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -43,6 +38,12 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.AbstractMap;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
@@ -75,6 +76,11 @@ public class EmbeddedChannel extends AbstractChannel {
     private Queue<Object> outboundMessages;
     private Throwable lastException;
     private State state;
+
+    /**
+     * Used to simulate socket buffers. When autoRead is false, all inbound information will be temporarily stored here.
+     */
+    private Queue<AbstractMap.SimpleEntry<Object, ChannelPromise>> tempInboundMessages;
 
     /**
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
@@ -275,6 +281,13 @@ public class EmbeddedChannel extends AbstractChannel {
         return inboundMessages;
     }
 
+    private Queue<AbstractMap.SimpleEntry<Object, ChannelPromise>> tempInboundMessages() {
+        if (tempInboundMessages == null) {
+            tempInboundMessages = new ArrayDeque<AbstractMap.SimpleEntry<Object, ChannelPromise>>();
+        }
+        return tempInboundMessages;
+    }
+
     /**
      * @deprecated use {@link #inboundMessages()}
      */
@@ -338,6 +351,14 @@ public class EmbeddedChannel extends AbstractChannel {
             return isNotEmpty(inboundMessages);
         }
 
+        if (!config().isAutoRead()) {
+            Queue<AbstractMap.SimpleEntry<Object, ChannelPromise>> tempInboundMessages = tempInboundMessages();
+            for (Object msg : msgs) {
+                tempInboundMessages.add(new AbstractMap.SimpleEntry<Object, ChannelPromise>(msg, null));
+            }
+            return false;
+        }
+
         ChannelPipeline p = pipeline();
         for (Object m: msgs) {
             p.fireChannelRead(m);
@@ -365,7 +386,13 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public ChannelFuture writeOneInbound(Object msg, ChannelPromise promise) {
         if (checkOpen(true)) {
-            pipeline().fireChannelRead(msg);
+            if (!config().isAutoRead()) {
+                Queue<AbstractMap.SimpleEntry<Object, ChannelPromise>> tempInboundMessages = tempInboundMessages();
+                tempInboundMessages.add(new AbstractMap.SimpleEntry<Object, ChannelPromise>(msg, promise));
+                return promise;
+            } else {
+                pipeline().fireChannelRead(msg);
+            }
         }
         return checkException(promise);
     }
@@ -579,11 +606,15 @@ public class EmbeddedChannel extends AbstractChannel {
         return future;
     }
 
-    private static boolean isNotEmpty(Queue<Object> queue) {
+    private static boolean isNotEmpty(Queue<?> queue) {
         return queue != null && !queue.isEmpty();
     }
 
-    private static Object poll(Queue<Object> queue) {
+    private static boolean isEmpty(Queue<?> queue) {
+        return !isNotEmpty(queue);
+    }
+
+    private static Object poll(Queue<?> queue) {
         return queue != null ? queue.poll() : null;
     }
 
@@ -719,11 +750,52 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected void doClose() throws Exception {
         state = State.CLOSED;
+        if (isNotEmpty(tempInboundMessages)) {
+            ClosedChannelException exception = null;
+            for (;;) {
+                AbstractMap.SimpleEntry<Object, ChannelPromise> entry = tempInboundMessages.poll();
+                if (entry == null) {
+                    break;
+                }
+                Object value = entry.getKey();
+                if (value != null) {
+                    ReferenceCountUtil.release(value);
+                }
+                ChannelPromise promise = entry.getValue();
+                if (promise != null) {
+                    if (exception == null) {
+                        exception = new ClosedChannelException();
+                    }
+                    promise.tryFailure(exception);
+                }
+            }
+        }
     }
 
     @Override
     protected void doBeginRead() throws Exception {
-        // NOOP
+        // read from tempInboundMessages and fire channelRead.
+        if (isNotEmpty(tempInboundMessages)) {
+            for (;;) {
+                AbstractMap.SimpleEntry<Object, ChannelPromise> pair = tempInboundMessages.poll();
+                if (pair == null) {
+                    break;
+                }
+
+                Object msg = pair.getKey();
+                if (msg != null) {
+                    pipeline().fireChannelRead(msg);
+                }
+
+                ChannelPromise promise = pair.getValue();
+                if (promise != null) {
+                    checkException(promise);
+                }
+            }
+
+            // fire channelReadComplete.
+            flushInbound(false, voidPromise());
+        }
     }
 
     @Override

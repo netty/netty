@@ -454,27 +454,33 @@ public class ByteToMessageDecoderTest {
 
         // 0 complete frames, 1 partial frame: SHOULD trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 0, 1 }));
-        assertEquals(1, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(2, interceptor.readsTriggered);
 
         // 2 complete frames, 0 partial frames: should NOT trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 2 }), wrappedBuffer(new byte[] { 3, 4, 5 }));
-        assertEquals(1, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(3, interceptor.readsTriggered);
 
         // 1 complete frame, 1 partial frame: should NOT trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 6, 7, 8 }), wrappedBuffer(new byte[] { 9 }));
-        assertEquals(1, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(4, interceptor.readsTriggered);
 
         // 1 complete frame, 1 partial frame: should NOT trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 10, 11 }), wrappedBuffer(new byte[] { 12 }));
-        assertEquals(1, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(5, interceptor.readsTriggered);
 
         // 0 complete frames, 1 partial frame: SHOULD trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 13 }));
-        assertEquals(2, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(7, interceptor.readsTriggered);
 
         // 1 complete frame, 0 partial frames: should NOT trigger a read
         channel.writeInbound(wrappedBuffer(new byte[] { 14 }));
-        assertEquals(2, interceptor.readsTriggered);
+        channel.read();
+        assertEquals(8, interceptor.readsTriggered);
 
         for (int i = 0; i < 5; i++) {
             ByteBuf read = channel.readInbound();
