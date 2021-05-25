@@ -29,13 +29,19 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
-import org.junit.Before;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.concurrent.CompletionException;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocketHandshakeHandOverTest {
 
@@ -66,7 +72,7 @@ public class WebSocketHandshakeHandOverTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         serverReceivedHandshake = false;
         serverHandshakeComplete = null;
@@ -124,7 +130,7 @@ public class WebSocketHandshakeHandOverTest {
         assertTrue(clientReceivedMessage);
     }
 
-    @Test(expected = WebSocketHandshakeException.class)
+    @Test
     public void testClientHandshakeTimeout() throws Throwable {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<Object>() {
             @Override
@@ -178,9 +184,9 @@ public class WebSocketHandshakeHandOverTest {
         assertFalse(clientReceivedMessage);
         // Should throw WebSocketHandshakeException
         try {
-            handshakeHandler.getHandshakeFuture().syncUninterruptibly();
-        } catch (CompletionException e) {
-            throw e.getCause();
+            assertTrue(assertThrows(CompletionException.class,
+                () -> handshakeHandler.getHandshakeFuture().syncUninterruptibly())
+                    .getCause() instanceof WebSocketHandshakeException);
         } finally {
             serverChannel.finishAndReleaseAll();
         }
@@ -220,7 +226,8 @@ public class WebSocketHandshakeHandOverTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testClientHandshakerForceClose() throws Exception {
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 new URI("ws://localhost:1234/test"), WebSocketVersion.V13, null, true,

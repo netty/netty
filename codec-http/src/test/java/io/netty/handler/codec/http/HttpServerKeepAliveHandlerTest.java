@@ -37,9 +37,9 @@ import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import static io.netty.handler.codec.http.HttpUtil.setTransferEncodingChunked;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(Parameterized.class)
 public class HttpServerKeepAliveHandlerTest {
@@ -111,8 +111,8 @@ public class HttpServerKeepAliveHandlerTest {
         channel.writeAndFlush(response);
         HttpResponse writtenResponse = channel.readOutbound();
 
-        assertEquals("channel.isOpen", isKeepAliveResponseExpected, channel.isOpen());
-        assertEquals("response keep-alive", isKeepAliveResponseExpected, isKeepAlive(writtenResponse));
+        assertEquals(isKeepAliveResponseExpected, channel.isOpen(), "channel.isOpen");
+        assertEquals(isKeepAliveResponseExpected, isKeepAlive(writtenResponse), "response keep-alive");
         ReferenceCountUtil.release(writtenResponse);
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -167,8 +167,8 @@ public class HttpServerKeepAliveHandlerTest {
 
         channel.writeAndFlush(response.retainedDuplicate());
         HttpResponse firstResponse = channel.readOutbound();
-        assertTrue("channel.isOpen", channel.isOpen());
-        assertTrue("response keep-alive", isKeepAlive(firstResponse));
+        assertTrue(channel.isOpen(), "channel.isOpen");
+        assertTrue(isKeepAlive(firstResponse), "response keep-alive");
         ReferenceCountUtil.release(firstResponse);
 
         requestForwarded = channel.readInbound();
@@ -177,8 +177,8 @@ public class HttpServerKeepAliveHandlerTest {
 
         channel.writeAndFlush(informationalResp);
         HttpResponse writtenInfoResp = channel.readOutbound();
-        assertTrue("channel.isOpen", channel.isOpen());
-        assertTrue("response keep-alive", isKeepAlive(writtenInfoResp));
+        assertTrue(channel.isOpen(), "channel.isOpen");
+        assertTrue(isKeepAlive(writtenInfoResp), "response keep-alive");
         ReferenceCountUtil.release(writtenInfoResp);
 
         if (!StringUtil.isNullOrEmpty(setResponseConnection)) {
@@ -189,8 +189,8 @@ public class HttpServerKeepAliveHandlerTest {
         setupMessageLength(response);
         channel.writeAndFlush(response.retainedDuplicate());
         HttpResponse secondResponse = channel.readOutbound();
-        assertEquals("channel.isOpen", isKeepAliveResponseExpected, channel.isOpen());
-        assertEquals("response keep-alive", isKeepAliveResponseExpected, isKeepAlive(secondResponse));
+        assertEquals(isKeepAliveResponseExpected, channel.isOpen(), "channel.isOpen");
+        assertEquals(isKeepAliveResponseExpected, isKeepAlive(secondResponse), "response keep-alive");
         ReferenceCountUtil.release(secondResponse);
 
         requestForwarded = channel.readInbound();
@@ -200,8 +200,8 @@ public class HttpServerKeepAliveHandlerTest {
         if (isKeepAliveResponseExpected) {
             channel.writeAndFlush(response);
             HttpResponse finalResponse = channel.readOutbound();
-            assertFalse("channel.isOpen", channel.isOpen());
-            assertFalse("response keep-alive", isKeepAlive(finalResponse));
+            assertFalse(channel.isOpen(), "channel.isOpen");
+            assertFalse(isKeepAlive(finalResponse), "response keep-alive");
         }
         ReferenceCountUtil.release(response);
         assertFalse(channel.finishAndReleaseAll());

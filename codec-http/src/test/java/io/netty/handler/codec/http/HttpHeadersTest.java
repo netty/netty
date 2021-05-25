@@ -16,16 +16,17 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpHeadersTest {
 
@@ -61,22 +62,22 @@ public class HttpHeadersTest {
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetNullHeaderValueValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(true);
-        headers.set(of("test"), (CharSequence) null);
+        assertThrows(NullPointerException.class, () -> headers.set(of("test"), (CharSequence) null));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetNullHeaderValueNotValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.set(of("test"), (CharSequence) null);
+        assertThrows(NullPointerException.class, () -> headers.set(of("test"), (CharSequence) null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testAddSelf() {
         HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.add(headers);
+        assertThrows(IllegalArgumentException.class, () -> headers.add(headers));
     }
 
     @Test

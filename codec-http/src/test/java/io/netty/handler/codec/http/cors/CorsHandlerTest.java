@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.hamcrest.core.IsEqual;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;

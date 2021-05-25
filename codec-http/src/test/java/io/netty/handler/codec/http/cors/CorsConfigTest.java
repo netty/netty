@@ -19,7 +19,7 @@ import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.cors.CorsConfigBuilder.forAnyOrigin;
@@ -30,6 +30,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CorsConfigTest {
 
@@ -125,9 +126,10 @@ public class CorsConfigTest {
         assertThat(cors.preflightResponseHeaders(), equalTo((HttpHeaders) EmptyHttpHeaders.INSTANCE));
     }
 
-    @Test (expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowIfValueIsNull() {
-        forOrigin("*").preflightResponseHeader("HeaderName", new Object[]{null}).build();
+        assertThrows(IllegalArgumentException.class,
+            () -> forOrigin("*").preflightResponseHeader("HeaderName", new Object[]{null}).build());
     }
 
     @Test
