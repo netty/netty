@@ -17,15 +17,15 @@ package io.netty.buffer;
 
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class BigEndianUnsafeDirectByteBufTest extends BigEndianDirectByteBufTest {
 
-    @Before
+    @BeforeEach
     @Override
     public void init() {
-        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        Assumptions.assumeTrue(PlatformDependent.hasUnsafe(), "sun.misc.Unsafe not found, skip tests");
         super.init();
     }
 

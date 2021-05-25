@@ -16,22 +16,22 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBufferBufTest {
 
     /**
      * Needs unsafe to run
      */
-    @BeforeClass
+    @BeforeAll
     public static void assumeConditions() {
-        assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        assumeTrue(PlatformDependent.hasUnsafe(), "sun.misc.Unsafe not found, skip tests");
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBuf
     public void testMemoryAddress() {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
         try {
-            Assert.assertTrue(buf.hasMemoryAddress());
+            assertTrue(buf.hasMemoryAddress());
             buf.memoryAddress();
         } finally {
             buf.release();

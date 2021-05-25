@@ -16,10 +16,10 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests buffer consolidation

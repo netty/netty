@@ -16,15 +16,15 @@
 package io.netty.buffer;
 
 import io.netty.util.ResourceLeakTracker;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     private final Class<? extends ByteBuf> clazz = leakClass();
@@ -46,14 +46,14 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
         return new SimpleLeakAwareByteBuf(buffer, tracker);
     }
 
-    @Before
+    @BeforeEach
     @Override
     public void init() {
         super.init();
         trackers.clear();
     }
 
-    @After
+    @AfterEach
     @Override
     public void dispose() {
         super.dispose();

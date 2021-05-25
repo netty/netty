@@ -15,9 +15,10 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests big-endian heap channel buffers
@@ -31,13 +32,14 @@ public class BigEndianHeapByteBufTest extends AbstractByteBufTest {
         return buffer;
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullInConstructor1() {
-        new UnpooledHeapByteBuf(null, new byte[1], 0);
+        assertThrows(NullPointerException.class, () -> new UnpooledHeapByteBuf(null, new byte[1], 0));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullInConstructor2() {
-        new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, null, 0);
+        assertThrows(NullPointerException.class,
+            () -> new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, null, 0));
     }
 }
