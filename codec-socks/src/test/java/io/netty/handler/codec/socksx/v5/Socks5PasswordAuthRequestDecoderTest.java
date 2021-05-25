@@ -16,9 +16,10 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class Socks5PasswordAuthRequestDecoderTest {
 
