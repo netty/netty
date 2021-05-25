@@ -18,13 +18,15 @@ package io.netty.channel;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SimpleUserEventChannelHandlerTest {
 
@@ -32,7 +34,7 @@ public class SimpleUserEventChannelHandlerTest {
     private AllEventCatcher allEventCatcher;
     private EmbeddedChannel channel;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         fooEventCatcher = new FooEventCatcher();
         allEventCatcher = new AllEventCatcher();

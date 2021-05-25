@@ -22,9 +22,10 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Iterator;
@@ -34,10 +35,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ChannelInitializerTest {
     private static final int TIMEOUT_MILLIS = 1000;
@@ -47,7 +48,7 @@ public class ChannelInitializerTest {
     private Bootstrap client;
     private InspectableHandler testHandler;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         server = new ServerBootstrap()
@@ -61,7 +62,7 @@ public class ChannelInitializerTest {
         testHandler = new InspectableHandler();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
@@ -180,7 +181,8 @@ public class ChannelInitializerTest {
         }
     }
 
-    @Test(timeout = TIMEOUT_MILLIS)
+    @Test
+    @Timeout(value = TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
     public void firstHandlerInPipelineShouldReceiveChannelRegisteredEvent() {
         testChannelRegisteredEventPropagation(new ChannelInitializer<LocalChannel>() {
             @Override
@@ -190,7 +192,8 @@ public class ChannelInitializerTest {
         });
     }
 
-    @Test(timeout = TIMEOUT_MILLIS)
+    @Test
+    @Timeout(value = TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
     public void lastHandlerInPipelineShouldReceiveChannelRegisteredEvent() {
         testChannelRegisteredEventPropagation(new ChannelInitializer<LocalChannel>() {
             @Override

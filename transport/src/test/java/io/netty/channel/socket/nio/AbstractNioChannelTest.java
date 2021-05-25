@@ -24,7 +24,7 @@ import io.netty.channel.nio.NioHandler;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -33,7 +33,11 @@ import java.nio.channels.NetworkChannel;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 

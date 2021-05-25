@@ -16,7 +16,7 @@
 package io.netty.channel.socket;
 
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 

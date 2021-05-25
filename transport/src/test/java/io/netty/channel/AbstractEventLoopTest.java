@@ -18,15 +18,17 @@ package io.netty.channel;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.concurrent.Future;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractEventLoopTest {
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownGracefullyNoQuietPeriod() throws Exception {
         EventLoopGroup loop = newEventLoopGroup();
         ServerBootstrap b = new ServerBootstrap();

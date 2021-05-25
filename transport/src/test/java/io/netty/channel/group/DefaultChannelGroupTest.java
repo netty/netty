@@ -24,7 +24,7 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class DefaultChannelGroupTest {
 

@@ -21,9 +21,10 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class AbstractChannelTest {

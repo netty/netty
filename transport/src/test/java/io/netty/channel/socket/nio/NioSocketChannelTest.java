@@ -35,7 +35,8 @@ import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -53,10 +54,10 @@ import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
 
 
 public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChannel> {
@@ -158,7 +159,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     }
 
     // Test for https://github.com/netty/netty/issues/4805
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
         final EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
         final CountDownLatch latch = new CountDownLatch(1);
@@ -223,7 +225,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownOutputAndClose() throws IOException {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         ServerSocket socket = new ServerSocket();

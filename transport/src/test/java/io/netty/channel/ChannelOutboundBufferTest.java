@@ -19,8 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -29,7 +28,10 @@ import java.util.concurrent.Executors;
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelOutboundBufferTest {
 
@@ -57,11 +59,11 @@ public class ChannelOutboundBufferTest {
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
         ByteBuffer nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
         buffer.addMessage(buf, buf.readableBytes(), channel.voidPromise());
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertNotNull(buffers);
-        assertEquals("Should still be 0 as not flushed yet", 1, buffer.nioBufferCount());
+        assertEquals(1, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             if (i == 0) {
                 assertEquals(buffers[i], nioBuf);
@@ -82,7 +84,7 @@ public class ChannelOutboundBufferTest {
         for (int i = 0; i < 64; i++) {
             buffer.addMessage(buf.copy(), buf.readableBytes(), channel.voidPromise());
         }
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(64, buffer.nioBufferCount());
@@ -106,7 +108,7 @@ public class ChannelOutboundBufferTest {
         }
         buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
 
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(65, buffer.nioBufferCount());
@@ -134,11 +136,11 @@ public class ChannelOutboundBufferTest {
         }
         assertEquals(65, comp.nioBufferCount());
         buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         final int maxCount = 10;    // less than comp.nioBufferCount()
         ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
-        assertTrue("Should not be greater than maxCount", buffer.nioBufferCount() <= maxCount);
+        assertTrue(buffer.nioBufferCount() <= maxCount, "Should not be greater than maxCount");
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
         }

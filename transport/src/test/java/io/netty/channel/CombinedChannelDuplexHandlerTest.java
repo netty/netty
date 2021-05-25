@@ -16,14 +16,20 @@
 package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CombinedChannelDuplexHandlerTest {
 
@@ -53,49 +59,51 @@ public class CombinedChannelDuplexHandlerTest {
         DISCONNECT
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testInboundRemoveBeforeAdded() {
         CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler> handler =
                 new CombinedChannelDuplexHandler<>(
                         new ChannelHandler() { }, new ChannelHandler() { });
-        handler.removeInboundHandler();
+        assertThrows(IllegalStateException.class, handler::removeInboundHandler);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testOutboundRemoveBeforeAdded() {
         CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler> handler =
                 new CombinedChannelDuplexHandler<>(
                         new ChannelHandler() { }, new ChannelHandler() { });
-        handler.removeOutboundHandler();
+        assertThrows(IllegalStateException.class, handler::removeOutboundHandler);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInboundHandlerImplementsOutboundHandler() {
-        new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
-                new ChannelHandler() {
-                    @Override
-                    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-                        promise.setFailure(new UnsupportedOperationException());
-                    }
-                }, new ChannelHandler() { });
+        assertThrows(IllegalArgumentException.class,
+            () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
+                  new ChannelHandler() {
+                      @Override
+                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                          promise.setFailure(new UnsupportedOperationException());
+                      }
+                  }, new ChannelHandler() { }));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOutboundHandlerImplementsInboundHandler() {
-        new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
-                new ChannelHandler() { }, new ChannelHandler() {
-            @Override
-            public void channelActive(ChannelHandlerContext ctx) {
-                // NOOP
-            }
-        });
+        assertThrows(IllegalArgumentException.class,
+              () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
+                    new ChannelHandler() { }, new ChannelHandler() {
+                      @Override
+                      public void channelActive(ChannelHandlerContext ctx) {
+                          // NOOP
+                      }
+                  }));
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testInitNotCalledBeforeAdded() throws Exception {
         CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>() { };
-        handler.handlerAdded(null);
+        assertThrows(IllegalStateException.class, () -> handler.handlerAdded(null));
     }
 
     @Test
@@ -323,7 +331,8 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().deregister();
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testPromisesPassed() {
         ChannelHandler outboundHandler = new ChannelHandler() {
             @Override
@@ -390,13 +399,14 @@ public class CombinedChannelDuplexHandlerTest {
         ch.finish();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testNotSharable() {
-        new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>() {
-            @Override
-            public boolean isSharable() {
-                return true;
-            }
-        };
+        assertThrows(IllegalStateException.class,
+            () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>() {
+                @Override
+                public boolean isSharable() {
+                    return true;
+                }
+            });
     }
 }

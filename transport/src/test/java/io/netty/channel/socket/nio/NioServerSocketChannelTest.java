@@ -19,8 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -28,6 +27,9 @@ import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServerSocketChannel> {
 
@@ -40,8 +42,8 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
         try {
             serverSocketChannel.register().syncUninterruptibly();
             serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly();
-            Assert.assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
-            Assert.assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
+            assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
+            assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
             serverSocketChannel.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();
@@ -55,11 +57,11 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
         try {
             serverSocketChannel.register().syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
-            Assert.assertTrue(channel.isActive());
-            Assert.assertTrue(channel.isOpen());
+            assertTrue(channel.isActive());
+            assertTrue(channel.isOpen());
             channel.close().syncUninterruptibly();
-            Assert.assertFalse(channel.isOpen());
-            Assert.assertFalse(channel.isActive());
+            assertFalse(channel.isOpen());
+            assertFalse(channel.isActive());
         } finally {
             group.shutdownGracefully();
         }
