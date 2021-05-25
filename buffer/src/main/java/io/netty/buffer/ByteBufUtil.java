@@ -299,6 +299,9 @@ public final class ByteBufUtil {
      * This method is useful when implementing a new buffer type.
      */
     public static boolean equals(ByteBuf bufferA, ByteBuf bufferB) {
+        if (bufferA == bufferB) {
+            return true;
+        }
         final int aLen = bufferA.readableBytes();
         if (aLen != bufferB.readableBytes()) {
             return false;
@@ -311,6 +314,9 @@ public final class ByteBufUtil {
      * This method is useful when implementing a new buffer type.
      */
     public static int compare(ByteBuf bufferA, ByteBuf bufferB) {
+        if (bufferA == bufferB) {
+            return 0;
+        }
         final int aLen = bufferA.readableBytes();
         final int bLen = bufferB.readableBytes();
         final int minLength = Math.min(aLen, bLen);
