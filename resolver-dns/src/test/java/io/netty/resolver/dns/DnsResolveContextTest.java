@@ -16,11 +16,11 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.UnknownHostException;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DnsResolveContextTest {
 

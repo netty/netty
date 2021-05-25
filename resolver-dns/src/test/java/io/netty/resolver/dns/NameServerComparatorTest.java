@@ -15,8 +15,8 @@
  */
 package io.netty.resolver.dns;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -28,8 +28,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class NameServerComparatorTest {
 
@@ -44,7 +43,7 @@ public class NameServerComparatorTest {
     private static InetSocketAddress UNRESOLVED2;
     private static InetSocketAddress UNRESOLVED3;
 
-    @BeforeClass
+    @BeforeAll
     public static void before() throws UnknownHostException {
         IPV4ADDRESS1 = new InetSocketAddress(InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         IPV4ADDRESS2 = new InetSocketAddress(InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);

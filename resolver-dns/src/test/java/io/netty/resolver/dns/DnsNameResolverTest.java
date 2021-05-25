@@ -66,11 +66,9 @@ import org.apache.directory.server.dns.store.DnsAttribute;
 import org.apache.directory.server.dns.store.RecordStore;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,6 +106,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Timeout;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -123,14 +122,15 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DnsNameResolverTest {
 
@@ -347,9 +347,6 @@ public class DnsNameResolverTest {
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
     private static final EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
         return newResolver(decodeToUnicode, null);
     }
@@ -389,12 +386,12 @@ public class DnsNameResolverTest {
                 .resolvedAddressTypes(resolvedAddressTypes);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         dnsServer.start();
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         dnsServer.stop();
         group.shutdownGracefully();
@@ -462,11 +459,11 @@ public class DnsNameResolverTest {
                         continue;
                     }
                     if (overriddenHostnames.contains(resolvedEntry.getKey())) {
-                        assertEquals("failed to resolve " + resolvedEntry.getKey(),
-                                overriddenIP, resolvedEntry.getValue().getHostAddress());
+                        assertEquals(overriddenIP, resolvedEntry.getValue().getHostAddress(),
+                                "failed to resolve " + resolvedEntry.getKey());
                     } else {
-                        assertNotEquals("failed to resolve " + resolvedEntry.getKey(),
-                                overriddenIP, resolvedEntry.getValue().getHostAddress());
+                        assertNotEquals(overriddenIP, resolvedEntry.getValue().getHostAddress(),
+                                "failed to resolve " + resolvedEntry.getKey());
                     }
                 }
             } finally {
@@ -525,12 +522,14 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void testNonCachedResolveEmptyHostName() throws Exception {
         testNonCachedResolveEmptyHostName("");
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void testNonCachedResolveNullHostName() throws Exception {
         testNonCachedResolveEmptyHostName(null);
     }
@@ -545,12 +544,14 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void testNonCachedResolveAllEmptyHostName() throws Exception {
         testNonCachedResolveAllEmptyHostName("");
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void testNonCachedResolveAllNullHostName() throws Exception {
         testNonCachedResolveAllEmptyHostName(null);
     }
@@ -721,8 +722,8 @@ public class DnsNameResolverTest {
             if (observer != null) {
                 Object o = observer.events.poll();
                 if (o instanceof QueryCancelledEvent) {
-                    assertTrue("unexpected type: " + observer.question,
-                            observer.question.type() == CNAME || observer.question.type() == AAAA);
+                    assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
+                        "unexpected type: " + observer.question);
                 } else if (o instanceof QueryWrittenEvent) {
                     QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
                 } else if (!(o instanceof QueryFailedEvent)) {
@@ -1141,12 +1142,14 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerNotStarted() throws IOException {
         secondDnsServerShouldBeUsedBeforeCNAME(false);
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerFailResolve() throws IOException {
         secondDnsServerShouldBeUsedBeforeCNAME(true);
     }
@@ -1205,7 +1208,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
+    @Test
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
     public void aAndAAAAQueryShouldTryFirstDnsServerBeforeSecond() throws IOException {
         final String knownHostName = "netty.io";
         final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("notnetty.com"));
@@ -2146,7 +2150,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testTimeoutNotCached() {
         DnsCache cache = new DnsCache() {
             @Override
@@ -2256,7 +2261,6 @@ public class DnsNameResolverTest {
 
     @Test
     public void testFollowCNAMELoop() throws Throwable {
-        expectedException.expect(UnknownHostException.class);
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
             Set<ResourceRecord> records = new LinkedHashSet<>(4);
 
@@ -2278,7 +2282,7 @@ public class DnsNameResolverTest {
             return records;
         });
         dnsServer2.start();
-        DnsNameResolver resolver = null;
+        DnsNameResolver[] resolver = new DnsNameResolver[1];
         try {
             DnsNameResolverBuilder builder = newResolver()
                     .recursionDesired(false)
@@ -2286,22 +2290,23 @@ public class DnsNameResolverTest {
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
-            resolver = builder.build();
-            resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            resolver[0] = builder.build();
+            final CompletionException completion = assertThrows(CompletionException.class,
+                () -> resolver[0].resolveAll("somehost.netty.io").syncUninterruptibly().getNow());
+            assertTrue(completion.getCause() instanceof UnknownHostException);
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
             dnsServer2.stop();
-            if (resolver != null) {
-                resolver.close();
+            if (resolver[0] != null) {
+                resolver[0].close();
             }
         }
     }
 
     @Test
     public void testCNAMELoopInCache() throws Throwable {
-        expectedException.expect(UnknownHostException.class);
-        DnsNameResolver resolver = null;
+        DnsNameResolver[] resolver = new DnsNameResolver[1];
         try {
             DnsNameResolverBuilder builder = newResolver()
                     .recursionDesired(false)
@@ -2309,33 +2314,33 @@ public class DnsNameResolverTest {
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
 
-            resolver = builder.build();
+            resolver[0] = builder.build();
             // Add a CNAME loop into the cache
             String name = "somehost.netty.io.";
             String name2 = "cname.netty.io.";
 
-            resolver.cnameCache().cache(name, name2, Long.MAX_VALUE, resolver.executor());
-            resolver.cnameCache().cache(name2, name, Long.MAX_VALUE, resolver.executor());
-            resolver.resolve(name).syncUninterruptibly().getNow();
-        } catch (CompletionException e) {
-            throw e.getCause();
+            resolver[0].cnameCache().cache(name, name2, Long.MAX_VALUE, resolver[0].executor());
+            resolver[0].cnameCache().cache(name2, name, Long.MAX_VALUE, resolver[0].executor());
+            final CompletionException completion = assertThrows(CompletionException.class,
+                () -> resolver[0].resolve(name).syncUninterruptibly().getNow());
+            assertTrue(completion.getCause() instanceof UnknownHostException);
         } finally {
-            if (resolver != null) {
-                resolver.close();
+            if (resolver[0] != null) {
+                resolver[0].close();
             }
         }
     }
 
     @Test
     public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() throws Throwable {
-        expectedException.expect(UnknownHostException.class);
-        testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY);
+        assertThrows(UnknownHostException.class,
+            () -> testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY));
     }
 
     @Test
     public void testSearchDomainQueryFailureForMultipleAddressTypeCompletes() throws Throwable {
-        expectedException.expect(UnknownHostException.class);
-        testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_PREFERRED);
+        assertThrows(UnknownHostException.class,
+            () -> testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_PREFERRED));
     }
 
     private void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) throws Throwable {
@@ -2352,7 +2357,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 2000L)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testCachesClearedOnClose() throws Exception {
         final CountDownLatch resolveLatch = new CountDownLatch(1);
         final CountDownLatch authoritativeLatch = new CountDownLatch(1);
@@ -2524,13 +2530,13 @@ public class DnsNameResolverTest {
                     .cnameCache(new DnsCnameCache() {
                         @Override
                         public String get(String hostname) {
-                            assertTrue(hostname, hostname.endsWith("."));
+                            assertTrue(hostname.endsWith("."), hostname);
                             return cache.get(hostname);
                         }
 
                         @Override
                         public void cache(String hostname, String cname, long originalTtl, EventLoop loop) {
-                            assertTrue(hostname, hostname.endsWith("."));
+                            assertTrue(hostname.endsWith("."), hostname);
                             cache.put(hostname, cname);
                         }
 
@@ -2787,7 +2793,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDropAAAAResolveFast() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
@@ -2812,7 +2819,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDropAAAAResolveAllFast() throws IOException {
         final String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
@@ -2855,17 +2863,20 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTruncatedWithoutTcpFallback() throws IOException {
         testTruncated0(false, false);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTruncatedWithTcpFallback() throws IOException {
         testTruncated0(true, false);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTruncatedWithTcpFallbackBecauseOfMtu() throws IOException {
         testTruncated0(true, true);
     }
@@ -3205,7 +3216,8 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testSrvWithCnameNotCached() throws Exception {
         final AtomicBoolean alias = new AtomicBoolean();
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {

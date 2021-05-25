@@ -20,9 +20,9 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -38,9 +38,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SearchDomainTest {
 
@@ -57,12 +57,12 @@ public class SearchDomainTest {
     private EventLoopGroup group;
     private DnsNameResolver resolver;
 
-    @Before
+    @BeforeEach
     public void before() {
         group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
     }
 
-    @After
+    @AfterEach
     public void destroy() {
         if (dnsServer != null) {
             dnsServer.stop();
