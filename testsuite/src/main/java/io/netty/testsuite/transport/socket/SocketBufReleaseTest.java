@@ -28,12 +28,13 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SocketBufReleaseTest extends AbstractSocketTest {
 
@@ -41,8 +42,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             new DefaultEventExecutorGroup(1, new DefaultThreadFactory(SocketBufReleaseTest.class, true)).next();
 
     @Test
-    public void testBufRelease() throws Throwable {
-        run();
+    public void testBufRelease(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testBufRelease);
     }
 
     public void testBufRelease(ServerBootstrap sb, Bootstrap cb) throws Throwable {

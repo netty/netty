@@ -17,7 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.channel.socket.InternetProtocolFamily;
 import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 import java.net.StandardProtocolFamily;
@@ -26,7 +26,7 @@ import java.nio.channels.spi.SelectorProvider;
 
 public class DatagramUnicastIPv6Test extends DatagramUnicastTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void assumeIpv6Supported() {
         try {
             Channel channel = SelectorProvider.provider().openDatagramChannel(StandardProtocolFamily.INET6);

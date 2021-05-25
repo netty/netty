@@ -20,22 +20,22 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Random;
 
 import static io.netty.channel.kqueue.BsdSocket.BSD_SND_LOW_AT_MAX;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNoException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class KQueueSocketChannelConfigTest {
 
@@ -43,18 +43,18 @@ public class KQueueSocketChannelConfigTest {
     private static KQueueSocketChannel ch;
     private static Random rand;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         rand = new Random();
         group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         group.shutdownGracefully();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Bootstrap bootstrap = new Bootstrap();
         ch = (KQueueSocketChannel) bootstrap.group(group)
@@ -63,7 +63,7 @@ public class KQueueSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         ch.close().syncUninterruptibly();
     }
@@ -76,8 +76,7 @@ public class KQueueSocketChannelConfigTest {
             ch.config().setSndLowAt(expected);
             actual = ch.config().getSndLowAt();
         } catch (RuntimeException e) {
-            assumeNoException(e);
-            return; // Needed to prevent compile error for final variables to be used below
+            throw new TestAbortedException("assumeNoException", e);
         }
         assertEquals(expected, actual);
     }
@@ -89,7 +88,7 @@ public class KQueueSocketChannelConfigTest {
         } catch (ChannelException e) {
             return;
         } catch (RuntimeException e) {
-            assumeNoException(e);
+            throw new TestAbortedException("assumeNoException", e);
         }
         fail();
     }

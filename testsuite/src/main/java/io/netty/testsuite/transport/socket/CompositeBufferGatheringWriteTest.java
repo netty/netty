@@ -28,21 +28,25 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
     private static final int EXPECTED_BYTES = 20;
 
-    @Test(timeout = 10000)
-    public void testSingleCompositeBufferWrite() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testSingleCompositeBufferWrite(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSingleCompositeBufferWrite);
     }
 
     public void testSingleCompositeBufferWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -136,9 +140,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         }
     }
 
-    @Test(timeout = 10000)
-    public void testCompositeBufferPartialWriteDoesNotCorruptData() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCompositeBufferPartialWriteDoesNotCorruptData(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testCompositeBufferPartialWriteDoesNotCorruptData);
     }
 
     protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ChannelConfig config,

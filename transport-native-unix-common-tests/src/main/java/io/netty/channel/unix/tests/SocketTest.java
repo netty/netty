@@ -16,27 +16,27 @@
 package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Socket;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
 
     protected abstract T newSocket();
 
-    @Before
+    @BeforeEach
     public void setup() {
         socket = newSocket();
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         socket.close();
     }

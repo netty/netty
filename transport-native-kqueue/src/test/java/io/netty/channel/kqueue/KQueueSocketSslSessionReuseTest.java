@@ -24,11 +24,6 @@ import io.netty.testsuite.transport.socket.SocketSslSessionReuseTest;
 import java.util.List;
 
 public class KQueueSocketSslSessionReuseTest extends SocketSslSessionReuseTest {
-
-    public KQueueSocketSslSessionReuseTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return KQueueSocketTestPermutation.INSTANCE.socket();

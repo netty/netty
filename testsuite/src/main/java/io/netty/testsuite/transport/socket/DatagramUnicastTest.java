@@ -29,7 +29,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -42,7 +43,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DatagramUnicastTest extends AbstractDatagramTest {
 
@@ -52,8 +58,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testBindWithPortOnly() throws Throwable {
-        run();
+    public void testBindWithPortOnly(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testBindWithPortOnly);
     }
 
     public void testBindWithPortOnly(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -67,8 +73,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendDirectByteBuf() throws Throwable {
-        run();
+    public void testSimpleSendDirectByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendDirectByteBuf);
     }
 
     public void testSimpleSendDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -77,8 +83,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendHeapByteBuf() throws Throwable {
-        run();
+    public void testSimpleSendHeapByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendHeapByteBuf);
     }
 
     public void testSimpleSendHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -87,8 +93,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendCompositeDirectByteBuf() throws Throwable {
-        run();
+    public void testSimpleSendCompositeDirectByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendCompositeDirectByteBuf);
     }
 
     public void testSimpleSendCompositeDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -104,8 +110,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendCompositeHeapByteBuf() throws Throwable {
-        run();
+    public void testSimpleSendCompositeHeapByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendCompositeHeapByteBuf);
     }
 
     public void testSimpleSendCompositeHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -121,8 +127,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendCompositeMixedByteBuf() throws Throwable {
-        run();
+    public void testSimpleSendCompositeMixedByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendCompositeMixedByteBuf);
     }
 
     public void testSimpleSendCompositeMixedByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -138,8 +144,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendWithoutBind() throws Throwable {
-        run();
+    public void testSimpleSendWithoutBind(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendWithoutBind);
     }
 
     public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -156,8 +162,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
-    public void testSimpleSendWithConnect() throws Throwable {
-        run();
+    public void testSimpleSendWithConnect(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleSendWithConnect);
     }
 
     public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -325,8 +331,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
             ChannelFuture future = cc.writeAndFlush(
                     buf.retain().duplicate()).awaitUninterruptibly();
-            assertTrue("NotYetConnectedException expected, got: " + future.cause(),
-                    future.cause() instanceof NotYetConnectedException);
+            assertTrue(future.cause() instanceof NotYetConnectedException,
+                "NotYetConnectedException expected, got: " + future.cause());
         } finally {
             // release as we used buf.retain() before
             buf.release();

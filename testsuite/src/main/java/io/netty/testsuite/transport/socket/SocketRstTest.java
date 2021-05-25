@@ -22,27 +22,31 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketRstTest extends AbstractSocketTest {
     protected void assertRstOnCloseException(IOException cause, Channel clientChannel) {
         if (Locale.getDefault() == Locale.US || Locale.getDefault() == Locale.UK) {
-            assertTrue("actual message: " + cause.getMessage(),
-                       cause.getMessage().contains("reset") || cause.getMessage().contains("closed"));
+            assertTrue(cause.getMessage().contains("reset") || cause.getMessage().contains("closed"),
+                "actual message: " + cause.getMessage());
         }
     }
 
-    @Test(timeout = 3000)
-    public void testSoLingerZeroCausesOnlyRstOnClose() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testSoLingerZeroCausesOnlyRstOnClose(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSoLingerZeroCausesOnlyRstOnClose);
     }
 
     public void testSoLingerZeroCausesOnlyRstOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -89,15 +93,16 @@ public class SocketRstTest extends AbstractSocketTest {
 
         // Verify the client received a RST.
         Throwable cause = throwableRef.get();
-        assertTrue("actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]",
-                cause instanceof IOException);
+        assertTrue(cause instanceof IOException,
+            "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]");
 
         assertRstOnCloseException((IOException) cause, cc);
     }
 
-    @Test(timeout = 3000)
-    public void testNoRstIfSoLingerOnClose() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testNoRstIfSoLingerOnClose(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testNoRstIfSoLingerOnClose);
     }
 
     public void testNoRstIfSoLingerOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {

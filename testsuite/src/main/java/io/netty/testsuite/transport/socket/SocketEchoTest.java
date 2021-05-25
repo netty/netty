@@ -24,13 +24,17 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SocketEchoTest extends AbstractSocketTest {
 
@@ -41,18 +45,20 @@ public class SocketEchoTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Test(timeout = 30000)
-    public void testSimpleEcho() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSimpleEcho(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEcho);
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testSimpleEcho0(sb, cb, false, true);
     }
 
-    @Test(timeout = 30000)
-    public void testSimpleEchoNotAutoRead() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSimpleEchoNotAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEchoNotAutoRead);
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -60,8 +66,8 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @Test//(timeout = 30000)
-    public void testSimpleEchoWithVoidPromise() throws Throwable {
-        run();
+    public void testSimpleEchoWithVoidPromise(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEchoWithVoidPromise);
     }
 
     public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -69,8 +75,8 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @Test//(timeout = 30000)
-    public void testSimpleEchoWithVoidPromiseNotAutoRead() throws Throwable {
-        run();
+    public void testSimpleEchoWithVoidPromiseNotAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEchoWithVoidPromiseNotAutoRead);
     }
 
     public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {

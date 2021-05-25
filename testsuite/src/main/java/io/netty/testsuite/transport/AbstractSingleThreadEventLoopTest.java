@@ -15,28 +15,28 @@
  */
 package io.netty.testsuite.transport;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
-import org.junit.Test;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class AbstractSingleThreadEventLoopTest {
 
@@ -56,7 +56,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
     }
 
     // Copied from AbstractEventLoopTest
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownGracefullyNoQuietPeriod() throws Exception {
         EventLoopGroup loop = new MultithreadEventLoopGroup(newIoHandlerFactory());
         ServerBootstrap b = new ServerBootstrap();

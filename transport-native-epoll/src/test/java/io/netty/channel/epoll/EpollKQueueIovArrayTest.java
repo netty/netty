@@ -16,12 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.unix.tests.IovArrayTest;
-import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 public class EpollKQueueIovArrayTest extends IovArrayTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void loadNative() {
         Epoll.ensureAvailability();
     }

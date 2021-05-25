@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.rules.TestName;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
@@ -98,6 +99,17 @@ public final class TestUtils {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Returns the method name of the current test.
+     */
+    public static String testMethodName(TestInfo testInfo) {
+        String testMethodName = testInfo.getTestMethod().map(Method::getName).orElse("[unknown method]");
+        if (testMethodName.contains("[")) {
+            testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
+        }
+        return testMethodName;
     }
 
     /**

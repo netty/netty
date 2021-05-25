@@ -28,10 +28,6 @@ import java.util.List;
 
 public abstract class AbstractServerSocketTest extends AbstractTestsuiteTest<ServerBootstrap> {
 
-    protected AbstractServerSocketTest() {
-        super(ServerBootstrap.class);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<ServerBootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.serverSocket();

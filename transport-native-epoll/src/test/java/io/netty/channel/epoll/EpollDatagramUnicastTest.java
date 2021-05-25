@@ -28,8 +28,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastTest;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -37,8 +37,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     @Override
@@ -54,8 +55,8 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     }
 
     @Test
-    public void testSendSegmentedDatagramPacket() throws Throwable {
-        run();
+    public void testSendSegmentedDatagramPacket(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSendSegmentedDatagramPacket);
     }
 
     public void testSendSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -63,8 +64,8 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     }
 
     @Test
-    public void testSendSegmentedDatagramPacketComposite() throws Throwable {
-        run();
+    public void testSendSegmentedDatagramPacketComposite(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSendSegmentedDatagramPacketComposite);
     }
 
     public void testSendSegmentedDatagramPacketComposite(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -72,8 +73,8 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     }
 
     @Test
-    public void testSendAndReceiveSegmentedDatagramPacket() throws Throwable {
-        run();
+    public void testSendAndReceiveSegmentedDatagramPacket(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSendAndReceiveSegmentedDatagramPacket);
     }
 
     public void testSendAndReceiveSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -81,8 +82,8 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     }
 
     @Test
-    public void testSendAndReceiveSegmentedDatagramPacketComposite() throws Throwable {
-        run();
+    public void testSendAndReceiveSegmentedDatagramPacketComposite(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSendAndReceiveSegmentedDatagramPacketComposite);
     }
 
     public void testSendAndReceiveSegmentedDatagramPacketComposite(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -99,7 +100,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
             // Only supported for the native epoll transport.
             return;
         }
-        Assume.assumeTrue(EpollDatagramChannel.isSegmentedDatagramPacketSupported());
+        assumeTrue(EpollDatagramChannel.isSegmentedDatagramPacketSupported());
         Channel sc = null;
         Channel cc = null;
 

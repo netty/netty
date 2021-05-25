@@ -25,8 +25,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.internal.SocketUtils;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -39,19 +39,23 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Test
-    public void testMulticast() throws Throwable {
-        run();
+    public void testMulticast(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testMulticast);
     }
 
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         NetworkInterface iface = multicastNetworkInterface();
-        Assume.assumeNotNull("No NetworkInterface found that supports multicast and " +
-                             socketInternetProtocalFamily(), iface);
+        assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
+                             socketInternetProtocalFamily());
 
         MulticastTestHandler mhandler = new MulticastTestHandler();
 

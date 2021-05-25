@@ -25,13 +25,14 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
@@ -43,13 +44,13 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testFixedLengthEcho() throws Throwable {
-        run();
+    public void testFixedLengthEcho(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testFixedLengthEcho);
     }
 
     @Test
-    public void testFixedLengthEchoNotAutoRead() throws Throwable {
-        run();
+    public void testFixedLengthEchoNotAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testFixedLengthEchoNotAutoRead);
     }
 
     public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {

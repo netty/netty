@@ -28,25 +28,29 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class DetectPeerCloseWithoutReadTest {
     protected abstract EventLoopGroup newGroup();
     protected abstract Class<? extends ServerChannel> serverChannel();
     protected abstract Class<? extends Channel> clientChannel();
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void clientCloseWithoutServerReadIsDetectedNoExtraReadRequested() throws InterruptedException {
         clientCloseWithoutServerReadIsDetected0(false);
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void clientCloseWithoutServerReadIsDetectedExtraReadRequested() throws InterruptedException {
         clientCloseWithoutServerReadIsDetected0(true);
     }
@@ -103,12 +107,14 @@ public abstract class DetectPeerCloseWithoutReadTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void serverCloseWithoutClientReadIsDetectedNoExtraReadRequested() throws InterruptedException {
         serverCloseWithoutClientReadIsDetected0(false);
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void serverCloseWithoutClientReadIsDetectedExtraReadRequested() throws InterruptedException {
         serverCloseWithoutClientReadIsDetected0(true);
     }
