@@ -15,13 +15,20 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.EOFException;
 import java.nio.charset.Charset;
 
 import static io.netty.util.internal.EmptyArrays.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests channel buffer streams
@@ -279,7 +286,7 @@ public class ByteBufStreamTest {
         in2.close();
     }
 
-    @Test(expected = EOFException.class)
+    @Test
     public void testReadByteLengthRespected() throws Exception {
         // case1
         ByteBuf buf = Unpooled.buffer(16);
@@ -287,7 +294,7 @@ public class ByteBufStreamTest {
 
         ByteBufInputStream in = new ByteBufInputStream(buf, 0);
         try {
-            in.readByte();
+            assertThrows(EOFException.class, in::readByte);
         } finally {
             buf.release();
             in.close();

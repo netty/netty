@@ -15,7 +15,9 @@
  */
 package io.netty.buffer.search;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BitapSearchProcessorFactoryTest {
 
@@ -24,9 +26,9 @@ public class BitapSearchProcessorFactoryTest {
         new BitapSearchProcessorFactory(new byte[64]);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testRejectTooLongNeedle() {
-        new BitapSearchProcessorFactory(new byte[65]);
+        assertThrows(IllegalArgumentException.class, () -> new BitapSearchProcessorFactory(new byte[65]));
     }
 
 }

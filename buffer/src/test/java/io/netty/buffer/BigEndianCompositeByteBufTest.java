@@ -15,8 +15,7 @@
  */
 package io.netty.buffer;
 
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests big-endian composite channel buffers
@@ -27,9 +26,9 @@ public class BigEndianCompositeByteBufTest extends AbstractCompositeByteBufTest 
     }
 
     @Override
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testInternalNioBufferAfterRelease() {
-        super.testInternalNioBufferAfterRelease();
+        testInternalNioBufferAfterRelease0(UnsupportedOperationException.class);
     }
 
 }

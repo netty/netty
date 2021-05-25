@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RetainedSlicedByteBufTest extends SlicedByteBufTest {
 
@@ -25,7 +24,7 @@ public class RetainedSlicedByteBufTest extends SlicedByteBufTest {
     protected ByteBuf newSlice(ByteBuf buffer, int offset, int length) {
         ByteBuf slice = buffer.retainedSlice(offset, length);
         buffer.release();
-        Assert.assertEquals(buffer.refCnt(), slice.refCnt());
+        assertEquals(buffer.refCnt(), slice.refCnt());
         return slice;
     }
 }

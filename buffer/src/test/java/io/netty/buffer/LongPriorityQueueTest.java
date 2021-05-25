@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,12 +29,7 @@ class LongPriorityQueueTest {
     @Test
     public void mustThrowWhenAddingNoValue() {
         final LongPriorityQueue pq = new LongPriorityQueue();
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                pq.offer(LongPriorityQueue.NO_VALUE);
-            }
-        });
+        assertThrows(IllegalArgumentException.class, () -> pq.offer(LongPriorityQueue.NO_VALUE));
     }
 
     @Test
