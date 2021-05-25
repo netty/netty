@@ -1027,9 +1027,6 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
         if (obj instanceof ByteBuf) {
             return ByteBufUtil.equals(this, (ByteBuf) obj);
         }
