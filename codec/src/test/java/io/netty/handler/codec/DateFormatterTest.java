@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
 import java.util.Date;
 
-import static org.junit.Assert.*;
 import static io.netty.handler.codec.DateFormatter.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DateFormatterTest {
     /**

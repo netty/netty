@@ -22,9 +22,13 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JsonObjectDecoderTest {
     @Test
@@ -248,19 +252,18 @@ public class JsonObjectDecoderTest {
         assertFalse(ch.finish());
     }
 
-    @Test(expected = CorruptedFrameException.class)
+    @Test
     public void testNonJsonContent1() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         try {
-            ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8));
+            assertThrows(CorruptedFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8)));
         } finally {
             assertFalse(ch.finish());
         }
-
-        fail();
     }
 
-    @Test(expected = CorruptedFrameException.class)
+    @Test
     public void testNonJsonContent2() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("  [1,2,3]  ", CharsetUtil.UTF_8));
@@ -270,24 +273,22 @@ public class JsonObjectDecoderTest {
         res.release();
 
         try {
-            ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8));
+            assertThrows(CorruptedFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8)));
         } finally {
             assertFalse(ch.finish());
         }
-
-        fail();
     }
 
-    @Test (expected = TooLongFrameException.class)
+    @Test
     public void testMaxObjectLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(6));
         try {
-            ch.writeInbound(Unpooled.copiedBuffer("[2,4,5]", CharsetUtil.UTF_8));
+            assertThrows(TooLongFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer("[2,4,5]", CharsetUtil.UTF_8)));
         } finally {
             assertFalse(ch.finish());
         }
-
-        fail();
     }
 
     @Test

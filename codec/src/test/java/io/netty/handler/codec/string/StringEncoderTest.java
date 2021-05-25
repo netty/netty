@@ -18,8 +18,8 @@ package io.netty.handler.codec.string;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringEncoderTest {
 
@@ -27,13 +27,13 @@ public class StringEncoderTest {
     public void testEncode() {
         String msg = "Test";
         EmbeddedChannel channel = new EmbeddedChannel(new StringEncoder());
-        Assert.assertTrue(channel.writeOutbound(msg));
-        Assert.assertTrue(channel.finish());
+        Assertions.assertTrue(channel.writeOutbound(msg));
+        Assertions.assertTrue(channel.finish());
         ByteBuf buf = channel.readOutbound();
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
-        Assert.assertArrayEquals(msg.getBytes(CharsetUtil.UTF_8), data);
-        Assert.assertNull(channel.readOutbound());
+        Assertions.assertArrayEquals(msg.getBytes(CharsetUtil.UTF_8), data);
+        Assertions.assertNull(channel.readOutbound());
         buf.release();
     }
 }

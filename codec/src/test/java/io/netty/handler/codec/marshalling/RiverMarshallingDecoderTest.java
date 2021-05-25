@@ -22,7 +22,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class RiverMarshallingDecoderTest extends RiverCompatibleMarshallingDecoderTest {
 

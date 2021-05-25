@@ -19,20 +19,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.experimental.theories.DataPoints;
-import org.junit.experimental.theories.FromDataPoints;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Theories.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractDecoderTest extends AbstractCompressionTest {
 
     protected static final ByteBuf WRAPPED_BYTES_SMALL;
@@ -43,13 +39,10 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         WRAPPED_BYTES_LARGE = Unpooled.wrappedBuffer(BYTES_LARGE);
     }
 
-    @Rule
-    public final ExpectedException expected = ExpectedException.none();
-
     protected EmbeddedChannel channel;
 
-    protected static byte[] compressedBytesSmall;
-    protected static byte[] compressedBytesLarge;
+    protected byte[] compressedBytesSmall;
+    protected byte[] compressedBytesLarge;
 
     protected AbstractDecoderTest() throws Exception {
         compressedBytesSmall = compress(BYTES_SMALL);
@@ -61,10 +54,14 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
      */
     protected abstract byte[] compress(byte[] data) throws Exception;
 
-    @Before
-    public abstract void initChannel();
+    @BeforeEach
+    public final void initChannel() {
+        channel = createChannel();
+    }
 
-    @After
+    protected abstract EmbeddedChannel createChannel();
+
+    @AfterEach
     public void destroyChannel() {
         if (channel != null) {
             channel.finishAndReleaseAll();
@@ -72,34 +69,35 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         }
     }
 
-    @DataPoints("smallData")
-    public static ByteBuf[] smallData() {
+    public ByteBuf[] smallData() {
         ByteBuf heap = Unpooled.wrappedBuffer(compressedBytesSmall);
         ByteBuf direct = Unpooled.directBuffer(compressedBytesSmall.length);
         direct.writeBytes(compressedBytesSmall);
         return new ByteBuf[] {heap, direct};
     }
 
-    @DataPoints("largeData")
-    public static ByteBuf[] largeData() {
+    public ByteBuf[] largeData() {
         ByteBuf heap = Unpooled.wrappedBuffer(compressedBytesLarge);
         ByteBuf direct = Unpooled.directBuffer(compressedBytesLarge.length);
         direct.writeBytes(compressedBytesLarge);
         return new ByteBuf[] {heap, direct};
     }
 
-    @Theory
-    public void testDecompressionOfSmallChunkOfData(@FromDataPoints("smallData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("smallData")
+    public void testDecompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
         testDecompression(WRAPPED_BYTES_SMALL, data);
     }
 
-    @Theory
-    public void testDecompressionOfLargeChunkOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testDecompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
         testDecompression(WRAPPED_BYTES_LARGE, data);
     }
 
-    @Theory
-    public void testDecompressionOfBatchedFlowOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testDecompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
         testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
     }
 

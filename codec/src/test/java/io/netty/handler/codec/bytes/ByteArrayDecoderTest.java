@@ -17,8 +17,8 @@ package io.netty.handler.codec.bytes;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
@@ -30,7 +30,7 @@ public class ByteArrayDecoderTest {
 
     private EmbeddedChannel ch;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         ch = new EmbeddedChannel(new ByteArrayDecoder());
     }
