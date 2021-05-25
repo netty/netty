@@ -19,8 +19,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.SocketUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -28,6 +27,8 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
 
@@ -61,9 +62,9 @@ public class DnsQueryTest {
             embedder.writeOutbound(query);
 
             DatagramPacket packet = embedder.readOutbound();
-            Assert.assertTrue(packet.content().isReadable());
+            assertTrue(packet.content().isReadable());
             packet.release();
-            Assert.assertNull(embedder.readOutbound());
+            assertNull(embedder.readOutbound());
         }
     }
 }
