@@ -15,10 +15,9 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,12 +30,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultFutureCompletionStageTest {
 
@@ -47,13 +47,13 @@ public class DefaultFutureCompletionStageTest {
     private static final Boolean INITIAL_BOOLEAN = Boolean.TRUE;
     private static final Boolean EXPECTED_BOOLEAN = Boolean.FALSE;
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() {
         group = new MultithreadEventExecutorGroup(1, Executors.defaultThreadFactory());
         asyncExecutorGroup = new MultithreadEventExecutorGroup(1, Executors.defaultThreadFactory());
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         group.shutdownGracefully();
         asyncExecutorGroup.shutdownGracefully();
@@ -84,12 +84,12 @@ public class DefaultFutureCompletionStageTest {
         assertSame(promise, stage.future());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testThrowsUnsupportedOperationException() {
         EventExecutor executor = executor();
         Promise<Boolean> promise = executor.newPromise();
         FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise);
-        stage.toCompletableFuture();
+        assertThrows(UnsupportedOperationException.class, () -> stage.toCompletableFuture());
     }
 
     @Test

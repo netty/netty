@@ -15,18 +15,18 @@
  */
 package io.netty.util.internal;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.security.Permission;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependent0Test {
 
-    @BeforeClass
+    @BeforeAll
     public static void assumeUnsafe() {
         assumeTrue(PlatformDependent0.hasUnsafe());
         assumeTrue(PlatformDependent0.hasDirectBufferNoCleanerConstructor());
