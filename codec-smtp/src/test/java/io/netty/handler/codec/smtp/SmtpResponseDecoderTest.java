@@ -20,11 +20,15 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SmtpResponseDecoderTest {
 
@@ -106,22 +110,22 @@ public class SmtpResponseDecoderTest {
         assertNull(channel.readInbound());
     }
 
-    @Test(expected = DecoderException.class)
+    @Test
     public void testDecodeInvalidSeparator() {
         EmbeddedChannel channel = newChannel();
-        assertTrue(channel.writeInbound(newBuffer("200:Ok\r\n")));
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("200:Ok\r\n")));
     }
 
-    @Test(expected = DecoderException.class)
+    @Test
     public void testDecodeInvalidCode() {
         EmbeddedChannel channel = newChannel();
-        assertTrue(channel.writeInbound(newBuffer("xyz Ok\r\n")));
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("xyz Ok\r\n")));
     }
 
-    @Test(expected = DecoderException.class)
+    @Test
     public void testDecodeInvalidLine() {
         EmbeddedChannel channel = newChannel();
-        assertTrue(channel.writeInbound(newBuffer("Ok\r\n")));
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("Ok\r\n")));
     }
 
     private static EmbeddedChannel newChannel() {
