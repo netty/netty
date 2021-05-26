@@ -20,11 +20,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SmtpRequestEncoderTest {
 
@@ -106,12 +108,17 @@ public class SmtpRequestEncoderTest {
         assertEquals("DATA\r\nSubject: Test\r\n\r\nTest\r\n.\r\n", getWrittenString(channel));
     }
 
-    @Test(expected = EncoderException.class)
+    @Test
     public void testThrowsIfContentExpected() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
+        final EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         try {
             assertTrue(channel.writeOutbound(SmtpRequests.data()));
-            channel.writeOutbound(SmtpRequests.noop());
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    channel.writeOutbound(SmtpRequests.noop());
+                }
+            });
         } finally {
             channel.finishAndReleaseAll();
         }
