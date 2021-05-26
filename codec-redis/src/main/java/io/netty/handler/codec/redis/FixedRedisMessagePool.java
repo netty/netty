@@ -81,8 +81,10 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
 
     // internal caches.
     private final Map<ByteBuf, SimpleStringRedisMessage> byteBufToSimpleStrings;
+    private final Map<String, SimpleStringRedisMessage> stringToSimpleStrings;
     private final Map<RedisReplyKey, SimpleStringRedisMessage> keyToSimpleStrings;
     private final Map<ByteBuf, ErrorRedisMessage> byteBufToErrors;
+    private final Map<String, ErrorRedisMessage> stringToErrors;
     private final Map<RedisErrorKey, ErrorRedisMessage> keyToErrors;
     private final Map<ByteBuf, IntegerRedisMessage> byteBufToIntegers;
     private final LongObjectMap<IntegerRedisMessage> longToIntegers;
@@ -93,23 +95,27 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
      */
     private FixedRedisMessagePool() {
         keyToSimpleStrings = new HashMap<RedisReplyKey, SimpleStringRedisMessage>(RedisReplyKey.values().length, 1.0f);
+        stringToSimpleStrings = new HashMap<String, SimpleStringRedisMessage>(RedisReplyKey.values().length, 1.0f);
         byteBufToSimpleStrings = new HashMap<ByteBuf, SimpleStringRedisMessage>(RedisReplyKey.values().length, 1.0f);
         for (RedisReplyKey value : RedisReplyKey.values()) {
             ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
                 value.name().getBytes(CharsetUtil.UTF_8))).asReadOnly();
             SimpleStringRedisMessage message = new SimpleStringRedisMessage(new String(
                 Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(value.name().getBytes(CharsetUtil.UTF_8))).array()));
+            stringToSimpleStrings.put(value.name(), message);
             keyToSimpleStrings.put(value, message);
             byteBufToSimpleStrings.put(key, message);
         }
 
         keyToErrors = new HashMap<RedisErrorKey, ErrorRedisMessage>(RedisErrorKey.values().length, 1.0f);
+        stringToErrors = new HashMap<String, ErrorRedisMessage>(RedisErrorKey.values().length, 1.0f);
         byteBufToErrors = new HashMap<ByteBuf, ErrorRedisMessage>(RedisErrorKey.values().length, 1.0f);
         for (RedisErrorKey value : RedisErrorKey.values()) {
             ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
                 value.toString().getBytes(CharsetUtil.UTF_8))).asReadOnly();
             ErrorRedisMessage message = new ErrorRedisMessage(new String(
                 Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(value.toString().getBytes(CharsetUtil.UTF_8))).array()));
+            stringToErrors.put(value.toString(), message);
             keyToErrors.put(value, message);
             byteBufToErrors.put(key, message);
         }
@@ -128,6 +134,11 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     }
 
     @Override
+    public SimpleStringRedisMessage getSimpleString(String content) {
+        return stringToSimpleStrings.get(content);
+    }
+
+    @Override
     public SimpleStringRedisMessage getSimpleString(RedisReplyKey key) {
         return keyToSimpleStrings.get(key);
     }
@@ -135,6 +146,11 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     @Override
     public SimpleStringRedisMessage getSimpleString(ByteBuf content) {
         return byteBufToSimpleStrings.get(content);
+    }
+
+    @Override
+    public ErrorRedisMessage getError(String content) {
+        return stringToErrors.get(content);
     }
 
     @Override
