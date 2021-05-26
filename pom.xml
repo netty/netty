@@ -361,6 +361,15 @@
 
     <profile>
       <id>boringssl</id>
+      <activation>
+        <!--
+          Automatically active on windows as we only release static boringssl version of
+          netty-tcnative for windows.
+        -->
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
         <tcnative.classifier />
