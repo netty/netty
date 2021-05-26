@@ -23,8 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class LzfEncoderTest extends AbstractEncoderTest {
 
     @Override
-    public void initChannel() {
-        channel = new EmbeddedChannel(new LzfEncoder());
+    protected EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(new LzfEncoder());
     }
 
     @Override

@@ -24,13 +24,13 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import java.io.InputStream;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Bzip2EncoderTest extends AbstractEncoderTest {
 
     @Override
-    public void initChannel() {
-        channel = new EmbeddedChannel(new Bzip2Encoder(MIN_BLOCK_SIZE));
+    protected EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(new Bzip2Encoder(MIN_BLOCK_SIZE));
     }
 
     @Override

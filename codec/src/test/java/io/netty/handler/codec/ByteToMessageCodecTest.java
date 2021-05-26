@@ -20,20 +20,23 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ByteToMessageCodecTest {
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSharable() {
-        new InvalidByteToMessageCodec();
+        assertThrows(IllegalStateException.class, InvalidByteToMessageCodec::new);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSharable2() {
-        new InvalidByteToMessageCodec2();
+        assertThrows(IllegalStateException.class, InvalidByteToMessageCodec2::new);
     }
 
     @Test

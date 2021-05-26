@@ -20,18 +20,20 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
-
 
 public class MessageToMessageEncoderTest {
 
     /**
      * Test-case for https://github.com/netty/netty/issues/1656
      */
-    @Test(expected = EncoderException.class)
+    @Test
     public void testException() {
         EmbeddedChannel channel = new EmbeddedChannel(new MessageToMessageEncoder<Object>() {
             @Override
@@ -39,7 +41,7 @@ public class MessageToMessageEncoderTest {
                 throw new Exception();
             }
         });
-        channel.writeOutbound(new Object());
+        assertThrows(EncoderException.class, () -> channel.writeOutbound(new Object()));
     }
 
     @Test

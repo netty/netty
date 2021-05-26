@@ -22,7 +22,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class FastLzIntegrationTest extends AbstractIntegrationTest {
 
