@@ -18,12 +18,14 @@ package io.netty.handler.codec.socksx.v5;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Socks5CommandResponseDecoderTest {
 
@@ -75,9 +77,14 @@ public class Socks5CommandResponseDecoderTest {
     /**
      * Verifies that invalid bound host will fail with IllegalArgumentException during encoding.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidAddress() {
-        test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80);
+            }
+        });
     }
 
     /**

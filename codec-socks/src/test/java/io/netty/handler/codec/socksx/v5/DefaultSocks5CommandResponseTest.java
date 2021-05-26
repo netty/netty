@@ -16,9 +16,14 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultSocks5CommandResponseTest {
     @Test
@@ -113,17 +118,22 @@ public class DefaultSocks5CommandResponseTest {
     /**
      * Verifies that Response cannot be constructed with invalid IP.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidBoundAddress() {
-        new DefaultSocks5CommandResponse(
-                Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "127.0.0", 1000);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultSocks5CommandResponse(
+                        Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "127.0.0", 1000);
+            }
+        });
     }
 
     private static void assertByteBufEquals(byte[] expected, ByteBuf actual) {
         byte[] actualBytes = new byte[actual.readableBytes()];
         actual.readBytes(actualBytes);
-        assertEquals("Generated response has incorrect length", expected.length, actualBytes.length);
-        assertArrayEquals("Generated response differs from expected", expected, actualBytes);
+        assertEquals(expected.length, actualBytes.length, "Generated response has incorrect length");
+        assertArrayEquals(expected, actualBytes, "Generated response differs from expected");
     }
 
     @Test

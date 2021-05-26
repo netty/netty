@@ -18,9 +18,13 @@ package io.netty.handler.codec.socks;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
@@ -60,9 +64,15 @@ public class SocksCmdResponseDecoderTest {
     /**
      * Verifies that invalid bound host will fail with IllegalArgumentException during encoding.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidAddress() {
-        testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "1", 80);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                testSocksCmdResponseDecoderWithDifferentParams(
+                        SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "1", 80);
+            }
+        });
     }
 
     /**
