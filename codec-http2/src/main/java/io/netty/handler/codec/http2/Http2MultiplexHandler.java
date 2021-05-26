@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
@@ -298,6 +297,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
+        if (goAwayFrame.lastStreamId() == Integer.MAX_VALUE) {
+            // None of the streams can have an id greater than Integer.MAX_VALUE
+            return;
+        }
+        // Notify which streams were not processed by the remote peer and are safe to retry on another connection:
         try {
             final boolean server = isServer(ctx);
             forEachActiveStream(new Http2FrameStreamVisitor() {
