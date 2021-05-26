@@ -28,7 +28,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -43,7 +44,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
 
@@ -128,7 +132,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
         final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
         EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);

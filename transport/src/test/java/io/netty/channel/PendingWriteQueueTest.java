@@ -20,8 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +30,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class PendingWriteQueueTest {
 
@@ -39,7 +45,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWrite();
                 future.addListener((ChannelFutureListener) future1 -> assertQueueEmpty(queue));
@@ -53,7 +59,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWriteAll();
                 future.addListener((ChannelFutureListener) future1 -> assertQueueEmpty(queue));
@@ -287,7 +293,7 @@ public class PendingWriteQueueTest {
         assertEquals(2L, (long) channel.readOutbound());
     }
 
-    @Ignore("Need to verify and think about if the assumptions made by this test are valid at all.")
+    @Disabled("Need to verify and think about if the assumptions made by this test are valid at all.")
     @Test
     public void testRemoveAndFailAllReentrantWrite() {
         final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<>());
@@ -374,7 +380,7 @@ public class PendingWriteQueueTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();
             assertQueueEmpty(queue);
-            assertTrue("Should be writable", ctx.channel().isWritable());
+            assertTrue(ctx.channel().isWritable(), "Should be writable");
         }
 
         @Override

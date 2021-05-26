@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class DelegatingChannelPromiseNotifierTest {

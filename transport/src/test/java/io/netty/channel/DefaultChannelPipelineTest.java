@@ -39,9 +39,10 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -60,14 +61,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultChannelPipelineTest {
 
@@ -76,7 +78,7 @@ public class DefaultChannelPipelineTest {
     private Channel self;
     private Channel peer;
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() throws Exception {
         group.shutdownGracefully().sync();
     }
@@ -114,7 +116,7 @@ public class DefaultChannelPipelineTest {
         bindFuture.channel().close().sync();
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (peer != null) {
             peer.close();
@@ -264,14 +266,14 @@ public class DefaultChannelPipelineTest {
         assertNotNull(pipeline.get("handler1"));
     }
 
-    @Test(expected = NoSuchElementException.class)
+    @Test
     public void testRemoveThrowNoSuchElementException() {
         DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
 
-        pipeline.remove("handlerXXX");
+        assertThrows(NoSuchElementException.class, () -> pipeline.remove("handlerXXX"));
     }
 
     @Test
@@ -299,7 +301,7 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler2"), newHandler2);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testReplaceHandlerChecksDuplicateNames() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
 
@@ -309,7 +311,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast("handler2", handler2);
 
         ChannelHandler newHandler1 = newHandler();
-        pipeline.replace("handler1", "handler2", newHandler1);
+        assertThrows(IllegalArgumentException.class, () -> pipeline.replace("handler1", "handler2", newHandler1));
     }
 
     @Test
@@ -368,7 +370,8 @@ public class DefaultChannelPipelineTest {
         verifyContextNumber(pipeline, HANDLER_ARRAY_LEN * 2);
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testThrowInExceptionCaught() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicInteger counter = new AtomicInteger();
@@ -406,7 +409,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testThrowInOtherHandlerAfterInvokedFromExceptionCaught() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicInteger counter = new AtomicInteger();
@@ -527,7 +531,8 @@ public class DefaultChannelPipelineTest {
         verifyContextNumber(pipeline, 8);
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testLifeCycleAwareness() throws Exception {
         setUp();
 
@@ -570,7 +575,8 @@ public class DefaultChannelPipelineTest {
         removeLatch.await();
     }
 
-    @Test(timeout = 100000)
+    @Test
+    @Timeout(value = 100000, unit = TimeUnit.MILLISECONDS)
     public void testRemoveAndForwardInbound() throws Exception {
         final BufferedTestHandler handler1 = new BufferedTestHandler();
         final BufferedTestHandler handler2 = new BufferedTestHandler();
@@ -588,7 +594,8 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRemoveAndForwardOutbound() throws Exception {
         final BufferedTestHandler handler1 = new BufferedTestHandler();
         final BufferedTestHandler handler2 = new BufferedTestHandler();
@@ -606,7 +613,8 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testReplaceAndForwardOutbound() throws Exception {
         final BufferedTestHandler handler1 = new BufferedTestHandler();
         final BufferedTestHandler handler2 = new BufferedTestHandler();
@@ -623,7 +631,8 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testReplaceAndForwardInboundAndOutbound() throws Exception {
         final BufferedTestHandler handler1 = new BufferedTestHandler();
         final BufferedTestHandler handler2 = new BufferedTestHandler();
@@ -646,7 +655,8 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRemoveAndForwardInboundOutbound() throws Exception {
         final BufferedTestHandler handler1 = new BufferedTestHandler();
         final BufferedTestHandler handler2 = new BufferedTestHandler();
@@ -716,7 +726,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(future.isCancelled());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testWrongPromiseChannel() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
@@ -726,34 +736,34 @@ public class DefaultChannelPipelineTest {
 
         try {
             ChannelPromise promise2 = pipeline2.channel().newPromise();
-            pipeline.close(promise2);
+            assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise2));
         } finally {
             pipeline.close();
             pipeline2.close();
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnexpectedVoidChannelPromise() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
         try {
             ChannelPromise promise = new VoidChannelPromise(pipeline.channel(), false);
-            pipeline.close(promise);
+            assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise));
         } finally {
             pipeline.close();
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
         try {
             ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
-            pipeline.close(promise);
+            assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise));
         } finally {
             pipeline.close();
         }
@@ -822,7 +832,8 @@ public class DefaultChannelPipelineTest {
         assertNull(pipeline.last());
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelInitializerException() throws Exception {
         final IllegalStateException exception = new IllegalStateException();
         final AtomicReference<Throwable> error = new AtomicReference<>();
@@ -845,7 +856,8 @@ public class DefaultChannelPipelineTest {
         assertSame(exception, error.get());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddHandlerBeforeRegisteredThenRemove() {
         final EventLoop loop = group.next();
 
@@ -860,7 +872,8 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().close().syncUninterruptibly();
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddHandlerBeforeRegisteredThenReplace() throws Exception {
         final EventLoop loop = group.next();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -882,7 +895,8 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().close().syncUninterruptibly();
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testAddRemoveHandlerCalled() throws Throwable {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
 
@@ -936,7 +950,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testOperationsFailWhenRemoved() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         try {
@@ -953,7 +968,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testOperationsFailWhenReplaced() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         try {
@@ -1040,7 +1056,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddReplaceHandlerCalled() throws Throwable {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         CallbackCheckHandler handler = new CallbackCheckHandler();
@@ -1071,7 +1088,8 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().close().syncUninterruptibly();
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddBefore() throws Throwable {
         EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
         try {
@@ -1097,7 +1115,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerNio() throws Throwable {
         EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         try {
@@ -1107,7 +1126,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerLocal() throws Throwable {
         testAddInListener(newLocalChannel());
     }
@@ -1163,7 +1183,8 @@ public class DefaultChannelPipelineTest {
         pipeline.addBefore("test", null, newHandler());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testVoidPromiseNotify() throws Throwable {
         EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         EventLoop eventLoop1 = defaultGroup.next();
@@ -1507,7 +1528,7 @@ public class DefaultChannelPipelineTest {
             }
 
             private void assertCalled(String methodName, int mask) {
-                assertTrue(methodName + " was not called", (executionMask & mask) != 0);
+                assertTrue((executionMask & mask) != 0, methodName + " was not called");
             }
         }
 
@@ -1597,7 +1618,7 @@ public class DefaultChannelPipelineTest {
             }
 
             private void assertCalled(String methodName, int mask) {
-                assertTrue(methodName + " was not called", (executionMask & mask) != 0);
+                assertTrue((executionMask & mask) != 0, methodName + " was not called");
             }
         }
 
@@ -1684,12 +1705,14 @@ public class DefaultChannelPipelineTest {
         channel2.close().syncUninterruptibly();
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void handlerAddedStateUpdatedBeforeHandlerAddedDoneForceEventLoop() throws InterruptedException {
         handlerAddedStateUpdatedBeforeHandlerAddedDone(true);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void handlerAddedStateUpdatedBeforeHandlerAddedDoneOnCallingThread() throws InterruptedException {
         handlerAddedStateUpdatedBeforeHandlerAddedDone(false);
     }
@@ -2004,8 +2027,8 @@ public class DefaultChannelPipelineTest {
         }
 
         public void validate(boolean afterAdd, boolean afterRemove) {
-            assertEquals(name, afterAdd, this.afterAdd);
-            assertEquals(name, afterRemove, this.afterRemove);
+            assertEquals(afterAdd, this.afterAdd, name);
+            assertEquals(afterRemove, this.afterRemove, name);
         }
 
         @Override

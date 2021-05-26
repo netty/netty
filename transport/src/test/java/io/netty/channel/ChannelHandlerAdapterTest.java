@@ -15,9 +15,10 @@
  */
 package io.netty.channel;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.channel.ChannelHandler.Sharable;
 
@@ -30,18 +31,18 @@ public class ChannelHandlerAdapterTest {
     @Test
     public void testSharable() {
         ChannelHandlerAdapter handler = new SharableChannelHandlerAdapter();
-        assertEquals(true, handler.isSharable());
+        assertTrue(handler.isSharable());
     }
 
     @Test
     public void testInnerClassSharable() {
         ChannelHandlerAdapter handler = new @Sharable ChannelHandlerAdapter() { };
-        assertEquals(true, handler.isSharable());
+        assertTrue(handler.isSharable());
     }
 
     @Test
     public void testWithoutSharable() {
         ChannelHandlerAdapter handler = new ChannelHandlerAdapter() { };
-        assertEquals(false, handler.isSharable());
+        assertFalse(handler.isSharable());
     }
 }

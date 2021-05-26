@@ -21,12 +21,13 @@ import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReentrantChannelTest extends BaseChannelTest {
 

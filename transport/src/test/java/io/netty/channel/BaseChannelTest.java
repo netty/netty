@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -24,7 +23,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BaseChannelTest {
 
