@@ -23,7 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.haproxy.HAProxyTLV.Type;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,7 +32,11 @@ import java.util.List;
 
 import static io.netty.handler.codec.haproxy.HAProxyConstants.*;
 import static io.netty.handler.codec.haproxy.HAProxyMessageEncoder.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HaProxyMessageEncoderTest {
 
@@ -356,49 +361,79 @@ public class HaProxyMessageEncoderTest {
         assertFalse(ch.finish());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidIpV4Address() {
-        String invalidIpv4Address = "192.168.0.1234";
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
-                invalidIpv4Address, "192.168.0.11", 56324, 443);
+        final String invalidIpv4Address = "192.168.0.1234";
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
+                        invalidIpv4Address, "192.168.0.11", 56324, 443);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidIpV6Address() {
-        String invalidIpv6Address = "2001:0db8:85a3:0000:0000:8a2e:0370:73345";
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP6,
-                invalidIpv6Address, "1050:0:0:0:5:600:300c:326b", 56324, 443);
+        final String invalidIpv6Address = "2001:0db8:85a3:0000:0000:8a2e:0370:73345";
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP6,
+                        invalidIpv6Address, "1050:0:0:0:5:600:300c:326b", 56324, 443);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidUnixAddress() {
-        String invalidUnixAddress = new String(new byte[UNIX_ADDRESS_BYTES_LENGTH + 1]);
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
-                invalidUnixAddress, "/var/run/dst.sock", 0, 0);
+        final String invalidUnixAddress = new String(new byte[UNIX_ADDRESS_BYTES_LENGTH + 1]);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        invalidUnixAddress, "/var/run/dst.sock", 0, 0);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullUnixAddress() {
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
-                null, null, 0, 0);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        null, null, 0, 0);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testLongUnixAddress() {
-        String longUnixAddress = new String(new char[109]).replace("\0", "a");
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
-                "source", longUnixAddress, 0, 0);
+        final String longUnixAddress = new String(new char[109]).replace("\0", "a");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        "source", longUnixAddress, 0, 0);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidUnixPort() {
-        new HAProxyMessage(
-                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
-                "/var/run/src.sock", "/var/run/dst.sock", 80, 443);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        "/var/run/src.sock", "/var/run/dst.sock", 80, 443);
+            }
+        });
     }
 }
