@@ -15,11 +15,13 @@
 package io.netty.handler.codec;
 
 import io.netty.util.AsciiString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CharSequenceValueConverterTest {
 
@@ -36,9 +38,14 @@ public class CharSequenceValueConverterTest {
         assertEquals(127, converter.convertToByte(AsciiString.of("127")));
     }
 
-    @Test(expected = NumberFormatException.class)
+    @Test
     public void testByteFromEmptyAsciiString() {
-        converter.convertToByte(AsciiString.EMPTY_STRING);
+        assertThrows(NumberFormatException.class, new Executable() {
+            @Override
+            public void execute() {
+                converter.convertToByte(AsciiString.EMPTY_STRING);
+            }
+        });
     }
 
     @Test

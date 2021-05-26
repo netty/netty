@@ -20,34 +20,48 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ByteToMessageCodecTest {
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSharable() {
-        new InvalidByteToMessageCodec();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                new InvalidByteToMessageCodec();
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSharable2() {
-        new InvalidByteToMessageCodec2();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                new InvalidByteToMessageCodec2();
+            }
+        });
     }
 
     @Test
     public void testForwardPendingData() {
         ByteToMessageCodec<Integer> codec = new ByteToMessageCodec<Integer>() {
             @Override
-            protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception {
+            protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) {
                 out.writeInt(msg);
             }
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 if (in.readableBytes() >= 4) {
                     out.add(in.readInt());
                 }

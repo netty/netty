@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 

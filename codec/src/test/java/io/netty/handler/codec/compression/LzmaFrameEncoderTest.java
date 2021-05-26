@@ -22,26 +22,27 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
-import org.junit.experimental.theories.FromDataPoints;
-import org.junit.experimental.theories.Theory;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
     @Override
-    public void initChannel() {
-        channel = new EmbeddedChannel(new LzmaFrameEncoder());
+    protected EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(new LzmaFrameEncoder());
     }
 
-    @Theory
+    @ParameterizedTest
+    @MethodSource("smallData")
     @Override
-    public void testCompressionOfBatchedFlowOfData(@FromDataPoints("smallData") ByteBuf data) throws Exception {
+    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
         testCompressionOfBatchedFlow(data);
     }
 

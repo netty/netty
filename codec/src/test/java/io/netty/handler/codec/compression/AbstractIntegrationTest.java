@@ -22,16 +22,18 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Random;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class AbstractIntegrationTest {
 
@@ -43,13 +45,13 @@ public abstract class AbstractIntegrationTest {
     protected abstract EmbeddedChannel createEncoder();
     protected abstract EmbeddedChannel createDecoder();
 
-    @Before
+    @BeforeEach
     public void initChannels() throws Exception {
         encoder = createEncoder();
         decoder = createDecoder();
     }
 
-    @After
+    @AfterEach
     public void closeChannels() throws Exception {
         encoder.close();
         for (;;) {

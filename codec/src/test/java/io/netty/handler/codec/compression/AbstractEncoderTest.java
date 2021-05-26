@@ -19,18 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.experimental.theories.DataPoints;
-import org.junit.experimental.theories.FromDataPoints;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Theories.class)
 public abstract class AbstractEncoderTest extends AbstractCompressionTest {
 
     protected EmbeddedChannel channel;
@@ -40,10 +36,14 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
      */
     protected abstract ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception;
 
-    @Before
-    public abstract void initChannel();
+    @BeforeEach
+    public final void initChannel() {
+        channel = createChannel();
+    }
 
-    @After
+    protected abstract EmbeddedChannel createChannel();
+
+    @AfterEach
     public void destroyChannel() {
         if (channel != null) {
             channel.finishAndReleaseAll();
@@ -51,7 +51,6 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         }
     }
 
-    @DataPoints("smallData")
     public static ByteBuf[] smallData() {
         ByteBuf heap = Unpooled.wrappedBuffer(BYTES_SMALL);
         ByteBuf direct = Unpooled.directBuffer(BYTES_SMALL.length);
@@ -59,7 +58,6 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         return new ByteBuf[] {heap, direct};
     }
 
-    @DataPoints("largeData")
     public static ByteBuf[] largeData() {
         ByteBuf heap = Unpooled.wrappedBuffer(BYTES_LARGE);
         ByteBuf direct = Unpooled.directBuffer(BYTES_LARGE.length);
@@ -67,18 +65,21 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         return new ByteBuf[] {heap, direct};
     }
 
-    @Theory
-    public void testCompressionOfSmallChunkOfData(@FromDataPoints("smallData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("smallData")
+    public void testCompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
         testCompression(data);
     }
 
-    @Theory
-    public void testCompressionOfLargeChunkOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testCompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
         testCompression(data);
     }
 
-    @Theory
-    public void testCompressionOfBatchedFlowOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
         testCompressionOfBatchedFlow(data);
     }
 

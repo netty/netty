@@ -19,15 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SnappyFrameEncoderTest {
     private EmbeddedChannel channel;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         channel = new EmbeddedChannel(new SnappyFrameEncoder());
     }
