@@ -27,7 +27,9 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.net.PortUnreachableException;
@@ -46,6 +48,9 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
     }
 
     public void testConnectNotExists(Bootstrap cb) throws Throwable {
+        // Currently not works on windows
+        // See https://github.com/netty/netty/issues/11285
+        Assume.assumeFalse(PlatformDependent.isWindows());
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
