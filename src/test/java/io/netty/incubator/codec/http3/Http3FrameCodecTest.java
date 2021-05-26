@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +42,7 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAM
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
+import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -380,15 +382,23 @@ public class Http3FrameCodecTest {
         assertTrue(codecChannel.writeOutbound(retainAndDuplicate(frame)));
         ByteBuf buffer = codecChannel.readOutbound();
         if (fragmented) {
-            do {
-                ByteBuf slice = buffer.readRetainedSlice(
-                        ThreadLocalRandom.current().nextInt(buffer.readableBytes() + 1));
-                boolean producedData = codecChannel.writeInbound(slice);
-                if (!isDataFrame) {
-                    assertEquals(!buffer.isReadable(), producedData);
+            try {
+                do {
+                    ByteBuf slice = buffer.readRetainedSlice(
+                            ThreadLocalRandom.current().nextInt(buffer.readableBytes() + 1));
+                    boolean producedData = codecChannel.writeInbound(slice);
+                    if (!isDataFrame) {
+                        assertEquals(!buffer.isReadable(), producedData);
+                    }
+                } while (buffer.isReadable());
+            } catch (Exception e) {
+                if (isDataFrame) {
+                    ReferenceCountUtil.release(frame);
                 }
-            } while (buffer.isReadable());
-            buffer.release();
+                throw e;
+            } finally {
+                buffer.release();
+            }
         } else {
             assertTrue(codecChannel.writeInbound(buffer));
         }
