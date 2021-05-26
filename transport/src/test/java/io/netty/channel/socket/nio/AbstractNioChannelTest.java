@@ -17,14 +17,17 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.AbstractNioChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 

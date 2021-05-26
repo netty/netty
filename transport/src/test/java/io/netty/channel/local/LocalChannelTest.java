@@ -38,9 +38,11 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
@@ -53,11 +55,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class LocalChannelTest {
 
@@ -69,14 +72,14 @@ public class LocalChannelTest {
     private static EventLoopGroup group2;
     private static EventLoopGroup sharedGroup;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         group1 = new DefaultEventLoopGroup(2);
         group2 = new DefaultEventLoopGroup(2);
         sharedGroup = new DefaultEventLoopGroup(1);
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() throws InterruptedException {
         Future<?> group1Future = group1.shutdownGracefully(0, 0, SECONDS);
         Future<?> group2Future = group2.shutdownGracefully(0, 0, SECONDS);
@@ -130,9 +133,9 @@ public class LocalChannelTest {
                 closeChannel(sc);
                 sc.closeFuture().sync();
 
-                assertNull(String.format(
+                assertNull(LocalChannelRegistry.get(TEST_ADDRESS), String.format(
                         "Expected null, got channel '%s' for local address '%s'",
-                        LocalChannelRegistry.get(TEST_ADDRESS), TEST_ADDRESS), LocalChannelRegistry.get(TEST_ADDRESS));
+                        LocalChannelRegistry.get(TEST_ADDRESS), TEST_ADDRESS));
             } finally {
                 closeChannel(cc);
                 closeChannel(sc);
@@ -283,7 +286,7 @@ public class LocalChannelTest {
                         }
                     });
             ChannelFuture future = bootstrap.connect(sc.localAddress());
-            assertTrue("Connection should finish, not time out", future.await(200));
+            assertTrue(future.await(2000), "Connection should finish, not time out");
             cc = future.channel();
         } finally {
             closeChannel(cc);
@@ -803,7 +806,8 @@ public class LocalChannelTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testConnectFutureBeforeChannelActive() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -854,13 +858,18 @@ public class LocalChannelTest {
         }
     }
 
-    @Test(expected = ConnectException.class)
+    @Test
     public void testConnectionRefused() {
-        Bootstrap sb = new Bootstrap();
+        final Bootstrap sb = new Bootstrap();
         sb.group(group1)
         .channel(LocalChannel.class)
-        .handler(new TestHandler())
-        .connect(LocalAddress.ANY).syncUninterruptibly();
+        .handler(new TestHandler());
+        assertThrows(ConnectException.class, new Executable() {
+            @Override
+            public void execute() {
+                sb.connect(LocalAddress.ANY).syncUninterruptibly();
+            }
+        });
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {
@@ -960,12 +969,14 @@ public class LocalChannelTest {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testAutoReadDisabledSharedGroup() throws Exception {
         testAutoReadDisabled(sharedGroup, sharedGroup);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testAutoReadDisabledDifferentGroup() throws Exception {
         testAutoReadDisabled(group1, group2);
     }
@@ -1023,22 +1034,26 @@ public class LocalChannelTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testMaxMessagesPerReadRespectedWithAutoReadSharedGroup() throws Exception {
         testMaxMessagesPerReadRespected(sharedGroup, sharedGroup, true);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testMaxMessagesPerReadRespectedWithoutAutoReadSharedGroup() throws Exception {
         testMaxMessagesPerReadRespected(sharedGroup, sharedGroup, false);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testMaxMessagesPerReadRespectedWithAutoReadDifferentGroup() throws Exception {
         testMaxMessagesPerReadRespected(group1, group2, true);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testMaxMessagesPerReadRespectedWithoutAutoReadDifferentGroup() throws Exception {
         testMaxMessagesPerReadRespected(group1, group2, false);
     }
@@ -1080,22 +1095,26 @@ public class LocalChannelTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testServerMaxMessagesPerReadRespectedWithAutoReadSharedGroup() throws Exception {
         testServerMaxMessagesPerReadRespected(sharedGroup, sharedGroup, true);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testServerMaxMessagesPerReadRespectedWithoutAutoReadSharedGroup() throws Exception {
         testServerMaxMessagesPerReadRespected(sharedGroup, sharedGroup, false);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testServerMaxMessagesPerReadRespectedWithAutoReadDifferentGroup() throws Exception {
         testServerMaxMessagesPerReadRespected(group1, group2, true);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testServerMaxMessagesPerReadRespectedWithoutAutoReadDifferentGroup() throws Exception {
         testServerMaxMessagesPerReadRespected(group1, group2, false);
     }

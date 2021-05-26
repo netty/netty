@@ -22,18 +22,23 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelOutboundBufferTest {
 
@@ -61,11 +66,11 @@ public class ChannelOutboundBufferTest {
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
         ByteBuffer nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
         buffer.addMessage(buf, buf.readableBytes(), channel.voidPromise());
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertNotNull(buffers);
-        assertEquals("Should still be 0 as not flushed yet", 1, buffer.nioBufferCount());
+        assertEquals(1, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             if (i == 0) {
                 assertEquals(buffers[i], nioBuf);
@@ -86,7 +91,7 @@ public class ChannelOutboundBufferTest {
         for (int i = 0; i < 64; i++) {
             buffer.addMessage(buf.copy(), buf.readableBytes(), channel.voidPromise());
         }
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(64, buffer.nioBufferCount());
@@ -110,7 +115,7 @@ public class ChannelOutboundBufferTest {
         }
         buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
 
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(65, buffer.nioBufferCount());
@@ -138,11 +143,11 @@ public class ChannelOutboundBufferTest {
         }
         assertEquals(65, comp.nioBufferCount());
         buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
-        assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         final int maxCount = 10;    // less than comp.nioBufferCount()
         ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
-        assertTrue("Should not be greater than maxCount", buffer.nioBufferCount() <= maxCount);
+        assertTrue(buffer.nioBufferCount() <= maxCount, "Should not be greater than maxCount");
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
         }
@@ -187,27 +192,27 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) throws Exception {
+        protected void doBind(SocketAddress localAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doDisconnect() throws Exception {
+        protected void doDisconnect() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doClose() throws Exception {
+        protected void doClose() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doBeginRead() throws Exception {
+        protected void doBeginRead() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        protected void doWrite(ChannelOutboundBuffer in) {
             throw new UnsupportedOperationException();
         }
 
@@ -244,7 +249,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -279,7 +284,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -313,7 +318,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -353,7 +358,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -387,7 +392,8 @@ public class ChannelOutboundBufferTest {
         safeClose(ch);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testWriteTaskRejected() throws Exception {
         final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
                 null, new DefaultThreadFactory("executorPool"),
@@ -413,7 +419,7 @@ public class ChannelOutboundBufferTest {
         EmbeddedChannel ch = new EmbeddedChannel();
         ch.pipeline().addLast(executor, "handler", new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 promise.setFailure(new AssertionError("Should not be called"));
             }
 

@@ -17,22 +17,40 @@ package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultChannelPromiseTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullChannel() {
-        new DefaultChannelPromise(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultChannelPromise(null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testChannelWithNullExecutor() {
-        new DefaultChannelPromise(new EmbeddedChannel(), null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultChannelPromise(new EmbeddedChannel(), null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullChannelWithExecutor() {
-        new DefaultChannelPromise(null, ImmediateEventExecutor.INSTANCE);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultChannelPromise(null, ImmediateEventExecutor.INSTANCE);
+            }
+        });
     }
 }

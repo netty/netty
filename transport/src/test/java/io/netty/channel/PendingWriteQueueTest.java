@@ -20,7 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +30,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class PendingWriteQueueTest {
 
@@ -38,12 +45,12 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWrite();
                 future.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertQueueEmpty(queue);
                     }
                 });
@@ -57,12 +64,12 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWriteAll();
                 future.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertQueueEmpty(queue);
                     }
                 });
@@ -102,13 +109,13 @@ public class PendingWriteQueueTest {
 
         final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 ctxRef.set(ctx);
                 queueRef.set(new PendingWriteQueue(ctx));
             }
 
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 final PendingWriteQueue queue = queueRef.get();
 
                 final ByteBuf msg = (ByteBuf) queue.current();
@@ -212,7 +219,7 @@ public class PendingWriteQueueTest {
         ChannelPromise promise = channel.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 queue.removeAndFailAll(new IllegalStateException());
             }
         });
@@ -299,13 +306,13 @@ public class PendingWriteQueueTest {
         final ChannelPromise promise3 = channel.newPromise();
         promise3.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 failOrder.add(3);
             }
         });
         promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 failOrder.add(1);
                 queue.add(3L, promise3);
             }
@@ -315,7 +322,7 @@ public class PendingWriteQueueTest {
         ChannelPromise promise2 = channel.newPromise();
         promise2.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 failOrder.add(2);
             }
         });
@@ -341,7 +348,7 @@ public class PendingWriteQueueTest {
         ChannelPromise promise = channel.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 queue.removeAndWriteAll();
             }
         });
@@ -385,7 +392,7 @@ public class PendingWriteQueueTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
             assertQueueEmpty(queue);
-            assertTrue("Should be writable", ctx.channel().isWritable());
+            assertTrue(ctx.channel().isWritable(), "Should be writable");
         }
 
         @Override

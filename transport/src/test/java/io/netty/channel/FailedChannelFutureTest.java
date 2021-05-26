@@ -15,10 +15,13 @@
  */
 package io.netty.channel;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FailedChannelFutureTest {
     @Test
@@ -31,8 +34,13 @@ public class FailedChannelFutureTest {
         assertSame(e, future.cause());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldDisallowNullException() {
-        new FailedChannelFuture(Mockito.mock(Channel.class), null, null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new FailedChannelFuture(Mockito.mock(Channel.class), null, null);
+            }
+        });
     }
 }

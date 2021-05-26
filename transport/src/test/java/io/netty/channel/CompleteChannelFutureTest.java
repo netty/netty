@@ -15,22 +15,30 @@
  */
 package io.netty.channel;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CompleteChannelFutureTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldDisallowNullChannel() {
-        new CompleteChannelFutureImpl(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new CompleteChannelFutureImpl(null);
+            }
+        });
     }
 
     @Test
-    public void shouldNotDoAnythingOnRemove() throws Exception {
+    public void shouldNotDoAnythingOnRemove() {
         Channel channel = Mockito.mock(Channel.class);
         CompleteChannelFuture future = new CompleteChannelFutureImpl(channel);
         ChannelFutureListener l = Mockito.mock(ChannelFutureListener.class);

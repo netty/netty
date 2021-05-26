@@ -19,14 +19,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link CoalescingBufferQueue}.
@@ -46,7 +46,7 @@ public class CoalescingBufferQueueTest {
     private EmbeddedChannel channel;
     private CoalescingBufferQueue writeQueue;
 
-    @Before
+    @BeforeEach
     public void setup() {
         mouseDone = false;
         mouseSuccess = false;
@@ -67,7 +67,7 @@ public class CoalescingBufferQueueTest {
         mouse = Unpooled.wrappedBuffer("mouse".getBytes(CharsetUtil.US_ASCII));
     }
 
-    @After
+    @AfterEach
     public void finish() {
         assertFalse(channel.finish());
     }

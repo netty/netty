@@ -22,11 +22,12 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractEventLoopTest {
 
@@ -43,11 +44,11 @@ public abstract class AbstractEventLoopTest {
         ChannelFuture future = bootstrap.channel(newChannel()).group(group)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
+                    public void initChannel(SocketChannel ch) {
                     }
                 }).handler(new ChannelInitializer<ServerSocketChannel>() {
                     @Override
-                    public void initChannel(ServerSocketChannel ch) throws Exception {
+                    public void initChannel(ServerSocketChannel ch) {
                         ch.pipeline().addLast(new TestChannelHandler());
                         ch.pipeline().addLast(eventExecutorGroup, new TestChannelHandler2());
                     }
@@ -63,7 +64,8 @@ public abstract class AbstractEventLoopTest {
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownGracefullyNoQuietPeriod() throws Exception {
         EventLoopGroup loop = newEventLoopGroup();
         ServerBootstrap b = new ServerBootstrap();
