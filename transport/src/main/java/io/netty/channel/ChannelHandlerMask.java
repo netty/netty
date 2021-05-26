@@ -179,7 +179,7 @@ final class ChannelHandlerMask {
                     }
                     return false;
                 }
-                return m != null && m.isAnnotationPresent(Skip.class);
+                return m.isAnnotationPresent(Skip.class);
             }
         });
     }
