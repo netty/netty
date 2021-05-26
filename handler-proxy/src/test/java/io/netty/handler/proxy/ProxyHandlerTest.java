@@ -47,13 +47,11 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -69,9 +67,8 @@ import java.util.Random;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@RunWith(Parameterized.class)
 public class ProxyHandlerTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandlerTest.class);
@@ -136,7 +133,6 @@ public class ProxyHandlerTest {
     // look for "Seed used: *" debug message in test logs
     private static final long reproducibleSeed = 0L;
 
-    @Parameters(name = "{index}: {0}")
     public static List<Object[]> testItems() {
 
         List<TestItem> items = Arrays.asList(
@@ -423,32 +419,27 @@ public class ProxyHandlerTest {
         return params;
     }
 
-    @AfterClass
+    @AfterAll
     public static void stopServers() {
         for (ProxyServer p: allProxies) {
             p.stop();
         }
     }
 
-    private final TestItem testItem;
-
-    public ProxyHandlerTest(TestItem testItem) {
-        this.testItem = testItem;
-    }
-
-    @Before
+    @BeforeEach
     public void clearServerExceptions() throws Exception {
         for (ProxyServer p: allProxies) {
             p.clearExceptions();
         }
     }
 
-    @Test
-    public void test() throws Exception {
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("testItems")
+    public void test(TestItem testItem) throws Exception {
         testItem.test();
     }
 
-    @After
+    @AfterEach
     public void checkServerExceptions() throws Exception {
         for (ProxyServer p: allProxies) {
             p.checkExceptions();
