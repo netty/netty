@@ -21,22 +21,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.experimental.theories.DataPoints;
-import org.junit.experimental.theories.FromDataPoints;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Theories.class)
 public class BrotliDecoderTest {
 
     private static final Random RANDOM;
@@ -78,12 +74,12 @@ public class BrotliDecoderTest {
 
     private EmbeddedChannel channel;
 
-    @Before
+    @BeforeEach
     public void initChannel() {
         channel = new EmbeddedChannel(new BrotliDecoder());
     }
 
-    @After
+    @AfterEach
     public void destroyChannel() {
         if (channel != null) {
             channel.finishAndReleaseAll();
@@ -91,7 +87,6 @@ public class BrotliDecoderTest {
         }
     }
 
-    @DataPoints("smallData")
     public static ByteBuf[] smallData() {
         ByteBuf heap = Unpooled.wrappedBuffer(COMPRESSED_BYTES_SMALL);
         ByteBuf direct = Unpooled.directBuffer(COMPRESSED_BYTES_SMALL.length);
@@ -99,7 +94,6 @@ public class BrotliDecoderTest {
         return new ByteBuf[]{heap, direct};
     }
 
-    @DataPoints("largeData")
     public static ByteBuf[] largeData() {
         ByteBuf heap = Unpooled.wrappedBuffer(COMPRESSED_BYTES_LARGE);
         ByteBuf direct = Unpooled.directBuffer(COMPRESSED_BYTES_LARGE.length);
@@ -107,18 +101,21 @@ public class BrotliDecoderTest {
         return new ByteBuf[]{heap, direct};
     }
 
-    @Theory
-    public void testDecompressionOfSmallChunkOfData(@FromDataPoints("smallData") ByteBuf data) {
+    @ParameterizedTest
+    @MethodSource("smallData")
+    public void testDecompressionOfSmallChunkOfData(ByteBuf data) {
         testDecompression(WRAPPED_BYTES_SMALL, data);
     }
 
-    @Theory
-    public void testDecompressionOfLargeChunkOfData(@FromDataPoints("largeData") ByteBuf data) {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testDecompressionOfLargeChunkOfData(ByteBuf data) {
         testDecompression(WRAPPED_BYTES_LARGE, data);
     }
 
-    @Theory
-    public void testDecompressionOfBatchedFlowOfData(@FromDataPoints("largeData") ByteBuf data) {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testDecompressionOfBatchedFlowOfData(ByteBuf data) {
         testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
     }
 

@@ -17,19 +17,20 @@ package io.netty.handler.codec.protobuf;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ProtobufVarint32LengthFieldPrependerTest {
 
     private EmbeddedChannel ch;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         ch = new EmbeddedChannel(new ProtobufVarint32LengthFieldPrepender());
     }

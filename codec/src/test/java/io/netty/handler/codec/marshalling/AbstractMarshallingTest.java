@@ -18,14 +18,14 @@ package io.netty.handler.codec.marshalling;
 import io.netty.util.internal.PlatformDependent;
 import org.jboss.marshalling.Marshalling;
 import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 public abstract class AbstractMarshallingTest {
 
     static final String SERIAL_FACTORY = "serial";
     static final String RIVER_FACTORY = "river";
 
-    @BeforeClass
+    @BeforeAll
     public static void checkSupported() throws Throwable {
         Throwable error = null;
         try {
@@ -37,6 +37,6 @@ public abstract class AbstractMarshallingTest {
             }
             error = cause;
         }
-        Assume.assumeNoException(error);
+        Assume.assumeNoException(error); // todo: no replacement in junit 5
     }
 }

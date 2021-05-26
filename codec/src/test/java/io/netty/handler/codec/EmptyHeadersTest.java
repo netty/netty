@@ -14,149 +14,150 @@
  */
 package io.netty.handler.codec;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EmptyHeadersTest {
 
     private static final TestEmptyHeaders HEADERS = new TestEmptyHeaders();
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddStringValue() {
-        HEADERS.add("name", "value");
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.add("name", "value"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddStringValues() {
-        HEADERS.add("name", "value1", "value2");
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.add("name", "value1", "value2"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddStringValuesIterable() {
-        HEADERS.add("name", Arrays.asList("value1", "value2"));
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.add("name", Arrays.asList("value1", "value2")));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddBoolean() {
-        HEADERS.addBoolean("name", true);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addBoolean("name", true));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddByte() {
-        HEADERS.addByte("name", (byte) 1);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addByte("name", (byte) 1));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddChar() {
-        HEADERS.addChar("name", 'a');
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addChar("name", 'a'));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddDouble() {
-        HEADERS.addDouble("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addDouble("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddFloat() {
-        HEADERS.addFloat("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addFloat("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddInt() {
-        HEADERS.addInt("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addInt("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddLong() {
-        HEADERS.addLong("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addLong("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddShort() {
-        HEADERS.addShort("name", (short) 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addShort("name", (short) 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testAddTimeMillis() {
-        HEADERS.addTimeMillis("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.addTimeMillis("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetStringValue() {
-        HEADERS.set("name", "value");
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.set("name", "value"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetStringValues() {
-        HEADERS.set("name", "value1", "value2");
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.set("name", "value1", "value2"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetStringValuesIterable() {
-        HEADERS.set("name", Arrays.asList("value1", "value2"));
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.set("name", Arrays.asList("value1", "value2")));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetBoolean() {
-        HEADERS.setBoolean("name", true);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setBoolean("name", true));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetByte() {
-        HEADERS.setByte("name", (byte) 1);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setByte("name", (byte) 1));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetChar() {
-        HEADERS.setChar("name", 'a');
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setChar("name", 'a'));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetDouble() {
-        HEADERS.setDouble("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setDouble("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetFloat() {
-        HEADERS.setFloat("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setFloat("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetInt() {
-        HEADERS.setInt("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setInt("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetLong() {
-        HEADERS.setLong("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setLong("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetShort() {
-        HEADERS.setShort("name", (short) 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setShort("name", (short) 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetTimeMillis() {
-        HEADERS.setTimeMillis("name", 0);
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setTimeMillis("name", 0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSetAll() {
-        HEADERS.setAll(new TestEmptyHeaders());
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.setAll(new TestEmptyHeaders()));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testSet() {
-        HEADERS.set(new TestEmptyHeaders());
+        assertThrows(UnsupportedOperationException.class, () -> HEADERS.set(new TestEmptyHeaders()));
     }
 
     @Test

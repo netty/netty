@@ -18,9 +18,12 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -36,19 +39,19 @@ public class LengthFieldBasedFrameDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
         try {
             channel.writeInbound(buf);
-            Assert.fail();
+            fail();
         } catch (TooLongFrameException e) {
             // expected
         }
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
-        Assert.assertEquals(5, b.readableBytes());
-        Assert.assertEquals(1, b.readInt());
-        Assert.assertEquals('a', b.readByte());
+        assertEquals(5, b.readableBytes());
+        assertEquals(1, b.readInt());
+        assertEquals('a', b.readByte());
         b.release();
 
-        Assert.assertNull(channel.readInbound());
+        assertNull(channel.readInbound());
         channel.finish();
     }
 
@@ -64,21 +67,21 @@ public class LengthFieldBasedFrameDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
         try {
             channel.writeInbound(buf.readRetainedSlice(14));
-            Assert.fail();
+            fail();
         } catch (TooLongFrameException e) {
             // expected
         }
-        Assert.assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
+        assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
-        Assert.assertEquals(5, b.readableBytes());
-        Assert.assertEquals(1, b.readInt());
-        Assert.assertEquals('a', b.readByte());
+        assertEquals(5, b.readableBytes());
+        assertEquals(1, b.readInt());
+        assertEquals('a', b.readByte());
         b.release();
 
-        Assert.assertNull(channel.readInbound());
+        assertNull(channel.readInbound());
         channel.finish();
 
         buf.release();

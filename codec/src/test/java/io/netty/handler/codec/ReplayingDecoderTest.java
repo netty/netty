@@ -21,14 +21,17 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ReplayingDecoderTest {
 
@@ -119,7 +122,7 @@ public class ReplayingDecoderTest {
         buf.release();
         buf2.release();
 
-        assertNull("Must be null as it must only decode one frame", ch.readInbound());
+        assertNull(ch.readInbound(), "Must be null as it must only decode one frame");
 
         ch.read();
         ch.finish();
@@ -176,7 +179,7 @@ public class ReplayingDecoderTest {
         channel.writeInbound(buf.copy());
         ByteBuf b = channel.readInbound();
 
-        assertEquals("Expect to have still all bytes in the buffer", b, buf);
+        assertEquals(b, buf, "Expect to have still all bytes in the buffer");
         b.release();
         buf.release();
     }
@@ -309,7 +312,7 @@ public class ReplayingDecoderTest {
     }
 
     private static void assertCumulationReleased(ByteBuf byteBuf) {
-        assertTrue("unexpected value: " + byteBuf,
-                byteBuf == null || byteBuf == Unpooled.EMPTY_BUFFER || byteBuf.refCnt() == 0);
+        assertTrue(byteBuf == null || byteBuf == Unpooled.EMPTY_BUFFER || byteBuf.refCnt() == 0,
+                "unexpected value: " + byteBuf);
     }
 }
