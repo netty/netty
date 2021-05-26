@@ -20,42 +20,36 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.Arrays;
 import java.util.Collection;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.netty.util.CharsetUtil.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class StompCommandDecodeTest {
-
-    private final String rawCommand;
-    private final StompCommand expectedCommand;
-    private final Boolean valid;
 
     private EmbeddedChannel channel;
 
-    public StompCommandDecodeTest(String rawCommand, StompCommand expectedCommand, Boolean valid) {
-        this.rawCommand = rawCommand;
-        this.expectedCommand = expectedCommand;
-        this.valid = valid;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testDecodeCommand() {
+    @ParameterizedTest(name = "{index}: testDecodeCommand({0}) = {1}")
+    @MethodSource("stompCommands")
+    public void testDecodeCommand(String rawCommand, StompCommand expectedCommand, Boolean valid) {
         byte[] frameContent = String.format("%s\n\n\0", rawCommand).getBytes(UTF_8);
         ByteBuf incoming = Unpooled.wrappedBuffer(frameContent);
         assertTrue(channel.writeInbound(incoming));
@@ -77,7 +71,6 @@ public class StompCommandDecodeTest {
         }
     }
 
-    @Parameterized.Parameters(name = "{index}: testDecodeCommand({0}) = {1}")
     public static Collection<Object[]> stompCommands() {
         return Arrays.asList(new Object[][] {
                 { "STOMP", StompCommand.STOMP, true },
