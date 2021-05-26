@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -23,7 +23,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class DnsRecordTypeTest {
 
@@ -40,8 +43,8 @@ public class DnsRecordTypeTest {
 
     @Test
     public void testSanity() throws Exception {
-        assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet<DnsRecordType>(allTypes()).size());
+        assertEquals(allTypes().size(), new HashSet<DnsRecordType>(allTypes()).size(),
+                "More than one type has the same int value");
     }
 
     /**
@@ -77,7 +80,7 @@ public class DnsRecordTypeTest {
             DnsRecordType found = DnsRecordType.valueOf(t.intValue());
             assertSame(t, found);
             found = DnsRecordType.valueOf(t.name());
-            assertSame(t.name(), t, found);
+            assertSame(t, found, t.name());
         }
     }
 }
