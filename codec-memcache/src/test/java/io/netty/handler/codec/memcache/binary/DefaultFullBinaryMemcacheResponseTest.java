@@ -18,17 +18,17 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 public class DefaultFullBinaryMemcacheResponseTest {
 
     private DefaultFullBinaryMemcacheResponse response;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         response = new DefaultFullBinaryMemcacheResponse(
                 Unpooled.copiedBuffer("key", CharsetUtil.UTF_8),
