@@ -18,9 +18,10 @@ package io.netty.handler.codec.socksx.v5;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class Socks5PasswordAuthResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(

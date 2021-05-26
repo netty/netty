@@ -18,11 +18,13 @@ package io.netty.handler.codec.socksx.v4;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class Socks4ServerDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ServerDecoderTest.class);
