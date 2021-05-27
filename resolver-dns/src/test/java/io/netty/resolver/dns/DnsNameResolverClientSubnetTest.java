@@ -22,8 +22,8 @@ import io.netty.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.Future;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.util.Collections;
@@ -34,7 +34,7 @@ public class DnsNameResolverClientSubnetTest {
 
     // See https://www.gsic.uva.es/~jnisigl/dig-edns-client-subnet.html
     // Ignore as this needs to query real DNS servers.
-    @Ignore
+    @Disabled
     @Test
     public void testSubnetQuery() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup(1);

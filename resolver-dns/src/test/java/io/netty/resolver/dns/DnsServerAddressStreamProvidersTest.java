@@ -12,16 +12,18 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
  * under the License.
- */package io.netty.resolver.dns;
+ */
+package io.netty.resolver.dns;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class DnsServerAddressStreamProvidersTest {
 
     @Test
     public void testUseCorrectProvider() {
-        Assert.assertSame(DnsServerAddressStreamProviders.unixDefault(),
+        assertSame(DnsServerAddressStreamProviders.unixDefault(),
                 DnsServerAddressStreamProviders.platformDefault());
     }
 }
