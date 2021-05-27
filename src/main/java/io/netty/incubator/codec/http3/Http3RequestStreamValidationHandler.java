@@ -21,6 +21,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -31,7 +32,8 @@ import java.util.function.BooleanSupplier;
 final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidationHandler<Http3RequestStreamFrame> {
     private enum State {
         Initial,
-        Started,
+        Headers,
+        Data,
         End
     }
     private State readState = State.Initial;
@@ -41,7 +43,7 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     private final QpackAttributes qpackAttributes;
     private final QpackDecoder qpackDecoder;
 
-    private boolean head;
+    private boolean clientHeadRequest;
     private long expectedLength = -1;
     private long seenLength;
 
@@ -93,14 +95,35 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                         expectedLength = length;
                     }
                 } else if (!server) {
-                    head = HttpMethod.HEAD.asciiName().equals(headersFrame.headers().method());
+                    clientHeadRequest = HttpMethod.HEAD.asciiName().equals(headersFrame.headers().method());
                 }
-                return State.Started;
-            case Started:
+                return isInformationalResponse(inbound, headersFrame) ? State.Initial : State.Headers;
+            case Headers:
+                if (frame instanceof Http3DataFrame) {
+                    if (inbound) {
+                        verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
+                    }
+                    return State.Data;
+                }
+                if (frame instanceof Http3HeadersFrame) {
+                    if (isInformationalResponse(inbound, (Http3HeadersFrame) frame)) {
+                        // Information response after final response headers
+                        return null;
+                    }
+                    if (inbound) {
+                        verifyContentLength(0, true);
+                    }
+                    return State.End;
+                }
+            case Data:
                 if (inbound && frame instanceof Http3DataFrame) {
                     verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
                 }
                 if (frame instanceof Http3HeadersFrame) {
+                    if (isInformationalResponse(inbound, (Http3HeadersFrame) frame)) {
+                        // Information response after final response headers
+                        return null;
+                    }
                     if (inbound) {
                         verifyContentLength(0, true);
                     }
@@ -197,11 +220,17 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     // See https://tools.ietf.org/html/draft-ietf-quic-http-34#section-4.1.3
     private void verifyContentLength(int length, boolean end) throws Http3Exception {
         seenLength += length;
-        if (expectedLength != -1 && (seenLength > expectedLength || (!head && end && seenLength != expectedLength))) {
+        if (expectedLength != -1 && (seenLength > expectedLength ||
+                (!clientHeadRequest && end && seenLength != expectedLength))) {
             throw new Http3Exception(
                     Http3ErrorCode.H3_MESSAGE_ERROR, "Expected content-length " + expectedLength +
                     " != " + seenLength + ".");
         }
+    }
+
+    private boolean isInformationalResponse(boolean inbound, Http3HeadersFrame headersFrame) {
+        return ((server && !inbound) || (!server && inbound)) &&
+                HttpStatusClass.valueOf(headersFrame.headers().status()) == HttpStatusClass.INFORMATIONAL;
     }
 
     private void sendStreamAbandonedIfRequired(ChannelHandlerContext ctx) {
