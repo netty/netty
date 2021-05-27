@@ -17,19 +17,22 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
@@ -60,14 +63,16 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private boolean error;
     private long type = -1;
     private int payLoadLength = -1;
+    private QpackAttributes qpackAttributes;
+    private ReadResumptionListener readResumptionListener;
 
-    static Function<Http3FrameTypeValidator, Http3FrameCodec> newFactory(QpackDecoder qpackDecoder,
-                                                 long maxHeaderListSize, QpackEncoder qpackEncoder) {
+    static Http3FrameCodecFactory newFactory(QpackDecoder qpackDecoder,
+                                             long maxHeaderListSize, QpackEncoder qpackEncoder) {
         ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
         ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
 
         // QPACK decoder and encoder are shared between streams in a connection.
-        return v -> new Http3FrameCodec(v, qpackDecoder, maxHeaderListSize, qpackEncoder);
+        return validator -> new Http3FrameCodec(validator, qpackDecoder, maxHeaderListSize, qpackEncoder);
     }
 
     Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
@@ -76,6 +81,15 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
         this.maxHeaderListSize = ObjectUtil.checkPositive(maxHeaderListSize, "maxHeaderListSize");
         this.qpackEncoder = ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        qpackAttributes = Http3.getQpackAttributes(ctx.channel().parent());
+        assert qpackAttributes != null;
+
+        initReadResumptionListenerIfRequired(ctx);
+        super.handlerAdded(ctx);
     }
 
     @Override
@@ -89,6 +103,14 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             buffer = (ByteBuf) msg;
         }
         super.channelRead(ctx, buffer);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        assert readResumptionListener != null;
+        if (readResumptionListener.readCompleted()) {
+            super.channelReadComplete(ctx);
+        }
     }
 
     private void connectionError(ChannelHandlerContext ctx, Http3ErrorCode code, String msg, boolean fireException) {
@@ -185,6 +207,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             case HTTP3_HEADERS_FRAME_TYPE:
                 // HEADERS
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.2
+                assert qpackAttributes != null;
+                if (!qpackAttributes.dynamicTableDisabled() && !qpackAttributes.decoderStreamAvailable()) {
+                    assert readResumptionListener != null;
+                    readResumptionListener.suspended();
+                    return 0;
+                }
 
                 if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
                         // Let's use the maxHeaderListSize as a limit as this is this is the decompressed amounts of
@@ -194,11 +222,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                if (decodeHeaders(ctx, headersFrame.headers(), in.readSlice(payLoadLength), headersReceived)) {
+                if (decodeHeaders(ctx, headersFrame.headers(), in, payLoadLength, headersReceived)) {
                     headersReceived = true;
                     out.add(headersFrame);
+                    return payLoadLength;
                 }
-                return payLoadLength;
+                return -1;
             case HTTP3_CANCEL_PUSH_FRAME_TYPE:
                 // CANCEL_PUSH
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
@@ -226,6 +255,13 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             case HTTP3_PUSH_PROMISE_FRAME_TYPE:
                 // PUSH_PROMISE
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.5
+                assert qpackAttributes != null;
+                if (!qpackAttributes.dynamicTableDisabled() && !qpackAttributes.decoderStreamAvailable()) {
+                    assert readResumptionListener != null;
+                    readResumptionListener.suspended();
+                    return 0;
+                }
+
                 if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
                         // Let's use the maxHeaderListSize as a limit as this is this is the decompressed amounts of
                         // bytes which means the once we decompressed the headers we will be bigger then the actual
@@ -233,14 +269,16 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                         Math.max(maxHeaderListSize, maxHeaderListSize + 8), Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
+                int readerIdx = in.readerIndex();
                 int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
                 Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                         readVariableLengthInteger(in, pushPromiseIdLen));
-                if (decodeHeaders(ctx, pushPromiseFrame.headers(),
-                        in.readSlice(payLoadLength - pushPromiseIdLen), false)) {
+                if (decodeHeaders(ctx, pushPromiseFrame.headers(), in, payLoadLength - pushPromiseIdLen, false)) {
                     out.add(pushPromiseFrame);
+                    return payLoadLength;
                 }
-                return payLoadLength;
+                in.readerIndex(readerIdx);
+                return -1;
             case HTTP3_GO_AWAY_FRAME_TYPE:
                 // GO_AWAY
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
@@ -316,47 +354,91 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     /**
      * Decode the header block into header fields.
-     * <p>
-     * This method assumes the entire header block is contained in {@code in}.
+     *
+     * @param ctx {@link ChannelHandlerContext} for this handler.
+     * @param headers to be populated by decode.
+     * @param in {@link ByteBuf} containing the encode header block. It is assumed that the entire header block is
+     *           contained in this buffer.
+     * @param length Number of bytes in the passed buffer that represent the encoded header block.
+     * @param trailer {@code true} if this is a trailer section.
+     * @return {@code true} if the headers were decoded, {@code false} otherwise. A header block may not be decoded if
+     * it is awaiting QPACK dynamic table updates.
      */
-    private boolean decodeHeaders(ChannelHandlerContext ctx, Http3Headers headers, ByteBuf in, boolean trailer) {
+    private boolean decodeHeaders(ChannelHandlerContext ctx, Http3Headers headers, ByteBuf in, int length,
+                                  boolean trailer) {
         try {
             Http3HeadersSink sink = new Http3HeadersSink(headers, maxHeaderListSize, true, trailer);
-            qpackDecoder.decode(in, sink);
-            // Throws exception if detected any problem so far
-            sink.finish();
+            assert qpackAttributes != null;
+            assert readResumptionListener != null;
+            if (qpackDecoder.decode(qpackAttributes,
+                    ((QuicStreamChannel) ctx.channel()).streamId(), in, length, sink, readResumptionListener)) {
+                // Throws exception if detected any problem so far
+                sink.finish();
+                return true;
+            }
+            readResumptionListener.suspended();
         } catch (Http3Exception e) {
             connectionError(ctx, e.errorCode(), e.getMessage(), true);
-            return false;
         } catch (QpackException e) {
             // Must be treated as a connection error.
             connectionError(ctx, Http3ErrorCode.QPACK_DECOMPRESSION_FAILED,
                     "Decompression of header block failed.", true);
-            return false;
         } catch (Http3HeadersValidationException e) {
             error = true;
             ctx.fireExceptionCaught(e);
             // We should shutdown the stream with an error.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1.3
             Http3CodecUtils.streamError(ctx, Http3ErrorCode.H3_MESSAGE_ERROR);
-            return false;
         }
-        return true;
+        return false;
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        boolean release = true;
         try {
             if (msg instanceof Http3DataFrame) {
                 writeDataFrame(ctx, (Http3DataFrame) msg, promise);
             } else if (msg instanceof Http3HeadersFrame) {
-                writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
+                assert qpackAttributes != null;
+                if (!qpackAttributes.dynamicTableDisabled() && !qpackAttributes.encoderStreamAvailable()) {
+                    qpackAttributes.whenEncoderStreamAvailable(f -> {
+                        try {
+                            if (f.isSuccess()) {
+                                writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
+                            } else {
+                                promise.setFailure(f.cause());
+                            }
+                        } finally {
+                            ReferenceCountUtil.release(msg);
+                        }
+                    });
+                    release = false;
+                } else {
+                    writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
+                }
             } else if (msg instanceof Http3CancelPushFrame) {
                 writeCancelPushFrame(ctx, (Http3CancelPushFrame) msg, promise);
             } else if (msg instanceof Http3SettingsFrame) {
                 writeSettingsFrame(ctx, (Http3SettingsFrame) msg, promise);
             } else if (msg instanceof Http3PushPromiseFrame) {
-                writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
+                assert qpackAttributes != null;
+                if (!qpackAttributes.dynamicTableDisabled() && !qpackAttributes.encoderStreamAvailable()) {
+                    qpackAttributes.whenEncoderStreamAvailable(f -> {
+                        try {
+                            if (f.isSuccess()) {
+                                writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
+                            } else {
+                                promise.setFailure(f.cause());
+                            }
+                        } finally {
+                            ReferenceCountUtil.release(msg);
+                        }
+                    });
+                    release = false;
+                } else {
+                    writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
+                }
             } else if (msg instanceof Http3GoAwayFrame) {
                 writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, promise);
             } else if (msg instanceof Http3MaxPushIdFrame) {
@@ -367,7 +449,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 unsupported(promise);
             }
         } finally {
-            ReferenceCountUtil.release(msg);
+            if (release) {
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 
@@ -380,10 +464,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
     }
 
-    private void writeHeadersFrame(
-            ChannelHandlerContext ctx, Http3HeadersFrame frame, ChannelPromise promise) {
+    private void writeHeadersFrame(ChannelHandlerContext ctx, Http3HeadersFrame frame, ChannelPromise promise) {
+        assert qpackAttributes != null;
+        final QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
-            qpackEncoder.encodeHeaders(out, f.headers());
+            qpackEncoder.encodeHeaders(qpackAttributes, out, ctx.alloc(), channel.streamId(), f.headers());
             return true;
         }, promise);
     }
@@ -445,12 +530,13 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         }
     }
 
-    private void writePushPromiseFrame(
-            ChannelHandlerContext ctx, Http3PushPromiseFrame frame, ChannelPromise promise) {
+    private void writePushPromiseFrame(ChannelHandlerContext ctx, Http3PushPromiseFrame frame, ChannelPromise promise) {
+        assert qpackAttributes != null;
+        final QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
             long id = f.id();
             writeVariableLengthInteger(out, id);
-            qpackEncoder.encodeHeaders(out, f.headers());
+            qpackEncoder.encodeHeaders(qpackAttributes, out, ctx.alloc(), channel.streamId(), f.headers());
             return true;
         }, promise);
     }
@@ -497,6 +583,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
     }
 
+    private void initReadResumptionListenerIfRequired(ChannelHandlerContext ctx) {
+        if (readResumptionListener == null) {
+            readResumptionListener = new ReadResumptionListener(ctx, this);
+        }
+    }
+
     private static void unsupported(ChannelPromise promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
@@ -529,11 +621,112 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        ctx.read();
+        assert readResumptionListener != null;
+        if (readResumptionListener.readRequested()) {
+            ctx.read();
+        }
     }
 
     @Override
     public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
+    }
+
+    private static final class ReadResumptionListener
+            implements Runnable, GenericFutureListener<Future<? super QuicStreamChannel>> {
+        private static final int STATE_SUSPENDED = 0b1000_0000;
+        private static final int STATE_READ_PENDING = 0b0100_0000;
+        private static final int STATE_READ_COMPLETE_PENDING = 0b0010_0000;
+
+        private final ChannelHandlerContext ctx;
+        private final Http3FrameCodec codec;
+        private byte state;
+
+        ReadResumptionListener(ChannelHandlerContext ctx, Http3FrameCodec codec) {
+            this.ctx = ctx;
+            this.codec = codec;
+            assert codec.qpackAttributes != null;
+            if (!codec.qpackAttributes.dynamicTableDisabled() && !codec.qpackAttributes.decoderStreamAvailable()) {
+                codec.qpackAttributes.whenDecoderStreamAvailable(this);
+            }
+        }
+
+        void suspended() {
+            assert !codec.qpackAttributes.dynamicTableDisabled();
+            setState(STATE_SUSPENDED);
+        }
+
+        boolean readCompleted() {
+            if (hasState(STATE_SUSPENDED)) {
+                setState(STATE_READ_COMPLETE_PENDING);
+                return false;
+            }
+            return true;
+        }
+
+        boolean readRequested() {
+            if (hasState(STATE_SUSPENDED)) {
+                setState(STATE_READ_PENDING);
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public void operationComplete(Future<? super QuicStreamChannel> future) {
+            if (future.isSuccess()) {
+                resume();
+            } else {
+                ctx.fireExceptionCaught(future.cause());
+            }
+        }
+
+        @Override
+        public void run() {
+            resume();
+        }
+
+        private void resume() {
+            unsetState(STATE_SUSPENDED);
+            try {
+                codec.channelRead(ctx, Unpooled.EMPTY_BUFFER);
+                if (hasState(STATE_READ_COMPLETE_PENDING)) {
+                    unsetState(STATE_READ_COMPLETE_PENDING);
+                    codec.channelReadComplete(ctx);
+                }
+                if (hasState(STATE_READ_PENDING)) {
+                    unsetState(STATE_READ_PENDING);
+                    codec.read(ctx);
+                }
+            } catch (Exception e) {
+                ctx.fireExceptionCaught(e);
+            }
+        }
+
+        private void setState(int toSet) {
+            state |= toSet;
+        }
+
+        private boolean hasState(int toCheck) {
+            return (state & toCheck) == toCheck;
+        }
+
+        private void unsetState(int toUnset) {
+            state &= ~toUnset;
+        }
+    }
+
+    /**
+     * A factory for creating codec for HTTP3 frames.
+     */
+    @FunctionalInterface
+    interface Http3FrameCodecFactory {
+        /**
+         * Creates a new codec instance for the passed {@code streamType}.
+         *
+         * @param validator for the frames.
+         * @return new codec instance for the passed {@code streamType}..
+         */
+        ChannelHandler newCodec(Http3FrameTypeValidator validator);
     }
 }

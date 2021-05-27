@@ -17,7 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-final class QpackHeaderField {
+class QpackHeaderField {
 
     /**
      * Section 3.2.1 Dynamic Table Size

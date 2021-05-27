@@ -19,20 +19,31 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.AsciiString;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.connectionError;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR;
+import static io.netty.incubator.codec.http3.QpackUtil.MAX_UNSIGNED_INT;
+import static io.netty.incubator.codec.http3.QpackUtil.decodePrefixedIntegerAsInt;
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+
 final class QpackEncoderHandler extends ByteToMessageDecoder {
 
-    private final long maxTableCapacity;
+    private final QpackHuffmanDecoder huffmanDecoder;
+    private final QpackDecoder qpackDecoder;
     private boolean discard;
 
-    QpackEncoderHandler(Long maxTableCapacity) {
-        this.maxTableCapacity = maxTableCapacity == null ? 0 : maxTableCapacity;
+    QpackEncoderHandler(Long maxTableCapacity, QpackDecoder qpackDecoder) {
+        checkInRange(maxTableCapacity == null ? 0 : maxTableCapacity, 0, MAX_UNSIGNED_INT, "maxTableCapacity");
+        huffmanDecoder = new QpackHuffmanDecoder();
+        this.qpackDecoder = qpackDecoder;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> __) throws Exception {
         if (!in.isReadable()) {
             return;
         }
@@ -51,21 +62,27 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //+---+---+---+-------------------+
         if ((b & 0b1110_0000) == 0b0010_0000) {
             // new capacity
-            long length = QpackUtil.decodePrefixedInteger(in, 5);
-            if (length < 0) {
+            long capacity = QpackUtil.decodePrefixedInteger(in, 5);
+            if (capacity < 0) {
                 // Not enough readable bytes
                 return;
             }
 
-            if (length > maxTableCapacity) {
-                discard = true;
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR,
-                        "Dynamic table length '" + length + "' exceeds the configured maximal table capacity.", false);
+            try {
+                qpackDecoder.setDynamicTableCapacity(capacity);
+            } catch (QpackException e) {
+                handleDecodeFailure(ctx, e, "setDynamicTableCapacity failed.");
             }
-            // Do nothing for now
-            // TODO: Adjust dynamic table
             return;
         }
+
+        final QpackAttributes qpackAttributes = Http3.getQpackAttributes(ctx.channel().parent());
+        assert qpackAttributes != null;
+        if (!qpackAttributes.dynamicTableDisabled() && !qpackAttributes.decoderStreamAvailable()) {
+            // We need the decoder stream to update the decoder with these instructions.
+            return;
+        }
+        final QuicStreamChannel decoderStream = qpackAttributes.decoderStream();
 
         // 4.3.2. Insert With Name Reference
         //
@@ -79,28 +96,28 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //   +-------------------------------+
         if ((b & 0b1000_0000) == 0b1000_0000) {
             int readerIndex = in.readerIndex();
-            final long nameIdx = QpackUtil.decodePrefixedInteger(in, 6);
+            // T == 1 implies static table index.
+            // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-name-reference
+            final boolean isStaticTableIndex = QpackUtil.firstByteEquals(in, (byte) 0b1100_0000);
+            final int nameIdx = decodePrefixedIntegerAsInt(in, 6);
             if (nameIdx < 0) {
                 // Not enough readable bytes
                 return;
             }
 
-            long length = QpackUtil.decodePrefixedInteger(in, 7);
-            if (length < 0) {
+            CharSequence value = decodeLiteralValue(in);
+            if (value == null) {
                 // Reset readerIndex
                 in.readerIndex(readerIndex);
                 // Not enough readable bytes
                 return;
             }
-            int stringLength = (int) length;
-            if (in.readableBytes() < stringLength) {
-                // Reset readerIndex
-                in.readerIndex(readerIndex);
-                // Not enough readable bytes
-                return;
+            try {
+                qpackDecoder.insertWithNameReference(decoderStream, isStaticTableIndex, nameIdx,
+                        value);
+            } catch (QpackException e) {
+                handleDecodeFailure(ctx, e, "insertWithNameReference failed.");
             }
-            in.skipBytes(stringLength);
-            // TODO: Add to dynamic table
             return;
         }
         // 4.3.3. Insert With Literal Name
@@ -117,7 +134,8 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //   +-------------------------------+
         if ((b & 0b1100_0000) == 0b0100_0000) {
             int readerIndex = in.readerIndex();
-            long nameLength = QpackUtil.decodePrefixedInteger(in, 5);
+            final boolean nameHuffEncoded = QpackUtil.firstByteEquals(in, (byte) 0b0110_0000);
+            int nameLength = decodePrefixedIntegerAsInt(in, 5);
             if (nameLength < 0) {
                 // Reset readerIndex
                 in.readerIndex(readerIndex);
@@ -130,23 +148,20 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
                 // Not enough readable bytes
                 return;
             }
-            in.skipBytes((int) nameLength);
 
-            long valueLength = QpackUtil.decodePrefixedInteger(in, 7);
-            if (valueLength < 0) {
+            CharSequence name = decodeStringLiteral(in, nameHuffEncoded, nameLength);
+            CharSequence value = decodeLiteralValue(in);
+            if (value == null) {
                 // Reset readerIndex
                 in.readerIndex(readerIndex);
                 // Not enough readable bytes
                 return;
             }
-            if (in.readableBytes() < valueLength) {
-                // Reset readerIndex
-                in.readerIndex(readerIndex);
-                // Not enough readable bytes
-                return;
+            try {
+                qpackDecoder.insertLiteral(decoderStream, name, value);
+            } catch (QpackException e) {
+                handleDecodeFailure(ctx, e, "insertLiteral failed.");
             }
-            in.skipBytes((int) valueLength);
-            // TODO: Add to dynamic table
             return;
         }
         // 4.3.4. Duplicate
@@ -157,15 +172,18 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //   +---+---+---+-------------------+
         if ((b & 0b1110_0000) == 0b0000_0000) {
             int readerIndex = in.readerIndex();
-            long index = QpackUtil.decodePrefixedInteger(in, 5);
+            int index = decodePrefixedIntegerAsInt(in, 5);
             if (index < 0) {
                 // Reset readerIndex
                 in.readerIndex(readerIndex);
                 // Not enough readable bytes
                 return;
             }
-            // Just ignore the index
-            // TODO: Modify dynamic table.
+            try {
+                qpackDecoder.duplicate(decoderStream, index);
+            } catch (QpackException e) {
+                handleDecodeFailure(ctx, e, "duplicate failed.");
+            }
             return;
         }
 
@@ -197,5 +215,31 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
         Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
+    }
+
+    private void handleDecodeFailure(ChannelHandlerContext ctx, QpackException cause, String message) {
+        discard = true;
+        connectionError(ctx, new Http3Exception(QPACK_ENCODER_STREAM_ERROR, message, cause), true);
+    }
+
+    private CharSequence decodeLiteralValue(ByteBuf in) throws QpackException {
+        final boolean valueHuffEncoded = QpackUtil.firstByteEquals(in, (byte) 0b1000_0000);
+        int valueLength = decodePrefixedIntegerAsInt(in, 7);
+        if (valueLength < 0 || in.readableBytes() < valueLength) {
+            // Not enough readable bytes
+            return null;
+        }
+
+        return decodeStringLiteral(in, valueHuffEncoded, valueLength);
+    }
+
+    private CharSequence decodeStringLiteral(ByteBuf in, boolean huffmanEncoded, int length)
+            throws QpackException {
+        if (huffmanEncoded) {
+            return huffmanDecoder.decode(in, length);
+        }
+        byte[] buf = new byte[length];
+        in.readBytes(buf);
+        return new AsciiString(buf, false);
     }
 }

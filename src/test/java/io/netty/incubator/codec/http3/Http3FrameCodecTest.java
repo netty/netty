@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -42,9 +44,10 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAM
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
-import static io.netty.util.ReferenceCountUtil.release;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,91 +59,127 @@ import static org.mockito.Mockito.when;
 @RunWith(Parameterized.class)
 public class Http3FrameCodecTest {
     private static final int MAX_HEADER_SIZE = 1024;
+    private QpackEncoder encoder;
+    private QpackDecoder decoder;
+    private EmbeddedQuicStreamChannel encoderStream;
+    private EmbeddedQuicStreamChannel decoderStream;
+    private EmbeddedQuicChannel parent;
+    private QpackEncoderHandler qpackEncoderHandler;
+    private QpackDecoderHandler qpackDecoderHandler;
 
-    @Parameterized.Parameters(name = "{index}: fragmented = {0}")
-    public static Object[] parameters() {
-        return new Object[] { false, true };
+    @Parameterized.Parameters(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}")
+    public static Collection<Object[]> data() {
+        return asList(
+                new Object[]{true, 0},
+                new Object[]{true, 100},
+                new Object[]{false, 0},
+                new Object[]{false, 100}
+        );
     }
 
     private final boolean fragmented;
-    private EmbeddedQuicChannel parent;
     private EmbeddedQuicStreamChannel codecChannel;
+    private final int maxBlockedStreams;
 
-    public Http3FrameCodecTest(boolean fragmented) {
+    public Http3FrameCodecTest(boolean fragmented, int maxBlockedStreams) {
         this.fragmented = fragmented;
+        this.maxBlockedStreams = maxBlockedStreams;
     }
 
     @Before
     public void setUp() throws Exception {
         parent = new EmbeddedQuicChannel();
+        QpackAttributes qpackAttributes = new QpackAttributes(parent, false);
+        Http3.setQpackAttributes(parent, qpackAttributes);
+        final Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
+        final long maxTableCapacity = 1024L;
+        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
+        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
+        decoder = new QpackDecoder(settings);
+        decoder.setDynamicTableCapacity(1024);
+        qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
+        encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
+                new ChannelOutboundHandlerAdapter()).get();
+        qpackAttributes.encoderStream(encoderStream);
+        encoder = new QpackEncoder();
+        encoder.configureDynamicTable(qpackAttributes, maxTableCapacity, maxBlockedStreams);
+        final Object written = encoderStream.readOutbound();
+        assertNotNull(written);
+        ReferenceCountUtil.release(written);
+        qpackDecoderHandler = new QpackDecoderHandler(encoder);
+        decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
+                new ChannelOutboundHandlerAdapter()).get();
+        qpackAttributes.decoderStream(decoderStream);
         codecChannel = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, newCodec()).get();
     }
 
     @After
     public void tearDown() {
-        assertFalse(parent.finish());
         assertFalse(codecChannel.finish());
+        assertFalse(decoderStream.finish());
+        assertFalse(encoderStream.finish());
+        assertFalse(parent.finish());
     }
 
     @Test
-    public void testHttp3CancelPushFrame_63() {
+    public void testHttp3CancelPushFrame_63() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3CancelPushFrame(63));
     }
 
     @Test
-    public void testHttp3CancelPushFrame_16383() {
+    public void testHttp3CancelPushFrame_16383() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3CancelPushFrame(16383));
     }
 
     @Test
-    public void testHttp3CancelPushFrame_1073741823() {
+    public void testHttp3CancelPushFrame_1073741823() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3CancelPushFrame(1073741823));
     }
 
     @Test
-    public void testHttp3CancelPushFrame_4611686018427387903() {
+    public void testHttp3CancelPushFrame_4611686018427387903() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3CancelPushFrame(4611686018427387903L));
     }
 
     @Test
-    public void testHttp3DataFrame() {
+    public void testHttp3DataFrame() throws Exception {
         byte[] bytes = new byte[1024];
         ThreadLocalRandom.current().nextBytes(bytes);
         testFrameEncodedAndDecoded(new DefaultHttp3DataFrame(Unpooled.wrappedBuffer(bytes)));
     }
 
     @Test
-    public void testHttp3GoAwayFrame_63() {
+    public void testHttp3GoAwayFrame_63() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3GoAwayFrame(63));
     }
 
     @Test
-    public void testHttp3GoAwayFrame_16383() {
+    public void testHttp3GoAwayFrame_16383() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3GoAwayFrame(16383));
     }
 
     @Test
-    public void testHttp3GoAwayFrame_1073741823() {
+    public void testHttp3GoAwayFrame_1073741823() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3GoAwayFrame(1073741823));
     }
 
     @Test
-    public void testHttp3MaxPushIdFrame_63() {
+    public void testHttp3MaxPushIdFrame_63() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3MaxPushIdFrame(63));
     }
 
     @Test
-    public void testHttp3MaxPushIdFrame_16383() {
+    public void testHttp3MaxPushIdFrame_16383() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3MaxPushIdFrame(16383));
     }
 
     @Test
-    public void testHttp3MaxPushIdFrame_1073741823() {
+    public void testHttp3MaxPushIdFrame_1073741823() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3MaxPushIdFrame(1073741823));
     }
 
     @Test
-    public void testHttp3SettingsFrame() {
+    public void testHttp3SettingsFrame() throws Exception {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
@@ -154,23 +193,26 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testHttp3HeadersFrame() {
+    public void testHttp3HeadersFrame() throws Exception {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());
         testFrameEncodedAndDecoded(headersFrame);
     }
 
     @Test
-    public void testHttp3HeadersFrameWithTrailers() {
+    public void testHttp3HeadersFrameWithTrailers() throws Exception {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());
         testFrameEncodedAndDecoded(headersFrame);
 
-        testFrameEncodedAndDecoded(new DefaultHttp3HeadersFrame()); // trailers
+        final DefaultHttp3HeadersFrame trailers = new DefaultHttp3HeadersFrame();
+        // add an extra header to block decoding if dynamic table enabled.
+        trailers.headers().add("foo", "bar");
+        testFrameEncodedAndDecoded(trailers);
     }
 
     @Test
-    public void testHttp3HeadersFrameWithInvalidTrailers() {
+    public void testHttp3HeadersFrameWithInvalidTrailers() throws Exception {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());
         testFrameEncodedAndDecoded(headersFrame);
@@ -181,25 +223,27 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testHttp3PushPromiseFrame() {
+    public void testHttp3PushPromiseFrame() throws Exception {
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testFrameEncodedAndDecoded(pushPromiseFrame);
     }
 
     @Test
-    public void testMultipleHttp3PushPromiseFrame() {
+    public void testMultipleHttp3PushPromiseFrame() throws Exception {
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testFrameEncodedAndDecoded(pushPromiseFrame);
 
         Http3PushPromiseFrame pushPromiseFrame2 = new DefaultHttp3PushPromiseFrame(10);
         addRequestHeaders(pushPromiseFrame2.headers());
+        // add an extra header to block decoding if dynamic table enabled.
+        pushPromiseFrame2.headers().add("foo", "bar");
         testFrameEncodedAndDecoded(pushPromiseFrame2);
     }
 
     @Test
-    public void testMultipleHttp3PushPromiseFrameWithInvalidHeaders() {
+    public void testMultipleHttp3PushPromiseFrameWithInvalidHeaders() throws Exception {
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testFrameEncodedAndDecoded(pushPromiseFrame);
@@ -209,7 +253,7 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testHttp3UnknownFrame() {
+    public void testHttp3UnknownFrame() throws Exception {
         testFrameEncodedAndDecoded(new DefaultHttp3UnknownFrame(Http3CodecUtils.MIN_RESERVED_FRAME_TYPE,
                 Unpooled.buffer().writeLong(8)));
     }
@@ -377,7 +421,7 @@ public class Http3FrameCodecTest {
         headers.add("x-qpack-draft", "19");
     }
 
-    private void testFrameEncodedAndDecoded(Http3Frame frame) {
+    private void testFrameEncodedAndDecoded(Http3Frame frame) throws Exception {
         boolean isDataFrame = frame instanceof Http3DataFrame;
         assertTrue(codecChannel.writeOutbound(retainAndDuplicate(frame)));
         ByteBuf buffer = codecChannel.readOutbound();
@@ -388,7 +432,11 @@ public class Http3FrameCodecTest {
                             ThreadLocalRandom.current().nextInt(buffer.readableBytes() + 1));
                     boolean producedData = codecChannel.writeInbound(slice);
                     if (!isDataFrame) {
-                        assertEquals(!buffer.isReadable(), producedData);
+                        if (buffer.isReadable() || (frameContainsHeaders(frame) && maxBlockedStreams > 0)) {
+                            assertFalse(producedData);
+                        } else {
+                            assertTrue(producedData);
+                        }
                     }
                 } while (buffer.isReadable());
             } catch (Exception e) {
@@ -400,8 +448,14 @@ public class Http3FrameCodecTest {
                 buffer.release();
             }
         } else {
-            assertTrue(codecChannel.writeInbound(buffer));
+            if (maxBlockedStreams > 0 && frameContainsHeaders(frame)) {
+                assertFalse(codecChannel.writeInbound(buffer));
+            } else {
+                assertTrue(codecChannel.writeInbound(buffer));
+            }
         }
+
+        relayQPACKEncoderInstructions();
 
         final Http3Frame actualFrame;
         if (isDataFrame) {
@@ -428,7 +482,7 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testMultipleFramesEncodedAndDecodedInOneBufferHeaders() {
+    public void testMultipleFramesEncodedAndDecodedInOneBufferHeaders() throws Exception {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());
         testMultipleFramesEncodedAndDecodedInOneBuffer(headersFrame,
@@ -436,14 +490,14 @@ public class Http3FrameCodecTest {
     }
 
     @Test
-    public void testMultipleFramesEncodedAndDecodedInOneBufferPushPromise() {
+    public void testMultipleFramesEncodedAndDecodedInOneBufferPushPromise() throws Exception {
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testMultipleFramesEncodedAndDecodedInOneBuffer(pushPromiseFrame,
                 new DefaultHttp3DataFrame(Unpooled.buffer().writeLong(1)));
     }
 
-    private void testMultipleFramesEncodedAndDecodedInOneBuffer(Http3Frame first, Http3Frame second) {
+    private void testMultipleFramesEncodedAndDecodedInOneBuffer(Http3Frame first, Http3Frame second) throws Exception {
         assertTrue(codecChannel.writeOutbound(retainAndDuplicate(first)));
         assertTrue(codecChannel.writeOutbound(retainAndDuplicate(second)));
 
@@ -456,12 +510,20 @@ public class Http3FrameCodecTest {
             mergedBuffer.writeBytes(buffer);
             buffer.release();
         }
-        assertTrue(codecChannel.writeInbound(mergedBuffer));
+
+        if (maxBlockedStreams > 0 && (frameContainsHeaders(first) || frameContainsHeaders(second))) {
+            assertFalse(codecChannel.writeInbound(mergedBuffer));
+        } else {
+            assertTrue(codecChannel.writeInbound(mergedBuffer));
+        }
+        relayQPACKEncoderInstructions();
 
         Http3Frame readFrame = codecChannel.readInbound();
         Http3TestUtils.assertFrameEquals(first, readFrame);
         readFrame = codecChannel.readInbound();
         Http3TestUtils.assertFrameEquals(second, readFrame);
+
+        assertFalse(codecChannel.finish());
     }
 
     @Test
@@ -523,8 +585,22 @@ public class Http3FrameCodecTest {
         verifyClose(code, parent);
     }
 
-    private static Http3FrameCodec newCodec() {
-        return new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, new QpackDecoder(), MAX_HEADER_SIZE,
-                new QpackEncoder());
+    private void relayQPACKEncoderInstructions() throws Exception {
+        Object msg;
+        while ((msg = encoderStream.readOutbound()) != null) {
+            qpackEncoderHandler.channelRead(encoderStream.pipeline().firstContext(), msg);
+        }
+        while ((msg = decoderStream.readOutbound()) != null) {
+            qpackDecoderHandler.channelRead(decoderStream.pipeline().firstContext(), msg);
+        }
+    }
+
+    private Http3FrameCodec newCodec() {
+        return new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder, MAX_HEADER_SIZE,
+                encoder);
+    }
+
+    private static boolean frameContainsHeaders(Http3Frame frame) {
+        return frame instanceof Http3HeadersFrame || frame instanceof Http3PushPromiseFrame;
     }
 }

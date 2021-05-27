@@ -38,23 +38,31 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     private State writeState = State.Initial;
     private final boolean server;
     private final BooleanSupplier goAwayReceivedSupplier;
+    private final QpackAttributes qpackAttributes;
+    private final QpackDecoder qpackDecoder;
 
     private boolean head;
     private long expectedLength = -1;
     private long seenLength;
 
-    static Http3RequestStreamValidationHandler newServerValidator() {
-        return new Http3RequestStreamValidationHandler(true, () -> false);
+    static Http3RequestStreamValidationHandler newServerValidator(QpackAttributes qpackAttributes,
+                                                                  QpackDecoder decoder) {
+        return new Http3RequestStreamValidationHandler(true, () -> false, qpackAttributes, decoder);
     }
 
-    static Http3RequestStreamValidationHandler newClientValidator(BooleanSupplier goAwayReceivedSupplier) {
-        return new Http3RequestStreamValidationHandler(false, goAwayReceivedSupplier);
+    static Http3RequestStreamValidationHandler newClientValidator(BooleanSupplier goAwayReceivedSupplier,
+                                                                  QpackAttributes qpackAttributes,
+                                                                  QpackDecoder decoder) {
+        return new Http3RequestStreamValidationHandler(false, goAwayReceivedSupplier, qpackAttributes, decoder);
     }
 
-    private Http3RequestStreamValidationHandler(boolean server, BooleanSupplier goAwayReceivedSupplier) {
+    private Http3RequestStreamValidationHandler(boolean server, BooleanSupplier goAwayReceivedSupplier,
+                                                QpackAttributes qpackAttributes, QpackDecoder qpackDecoder) {
         super(Http3RequestStreamFrame.class);
         this.server = server;
         this.goAwayReceivedSupplier = goAwayReceivedSupplier;
+        this.qpackAttributes = qpackAttributes;
+        this.qpackDecoder = qpackDecoder;
     }
 
     private State checkState(boolean inbound, State state, Http3RequestStreamFrame frame) throws Http3Exception {
@@ -169,6 +177,7 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
             try {
+                sendStreamAbandonedIfRequired(ctx);
                 verifyContentLength(0, true);
             } catch (Http3Exception e) {
                 ctx.fireExceptionCaught(e);
@@ -192,6 +201,21 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
             throw new Http3Exception(
                     Http3ErrorCode.H3_MESSAGE_ERROR, "Expected content-length " + expectedLength +
                     " != " + seenLength + ".");
+        }
+    }
+
+    private void sendStreamAbandonedIfRequired(ChannelHandlerContext ctx) {
+        if (!qpackAttributes.dynamicTableDisabled() && readState != State.End) {
+            final long streamId = ((QuicStreamChannel) ctx.channel()).streamId();
+            if (qpackAttributes.decoderStreamAvailable()) {
+                qpackDecoder.streamAbandoned(qpackAttributes.decoderStream(), streamId);
+            } else {
+                qpackAttributes.whenDecoderStreamAvailable(future -> {
+                    if (future.isSuccess()) {
+                        qpackDecoder.streamAbandoned(qpackAttributes.decoderStream(), streamId);
+                    }
+                });
+            }
         }
     }
 }

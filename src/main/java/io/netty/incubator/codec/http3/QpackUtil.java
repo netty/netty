@@ -20,7 +20,60 @@ import io.netty.util.AsciiString;
 import io.netty.util.internal.ConstantTimeUtils;
 import io.netty.util.internal.PlatformDependent;
 
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+
 final class QpackUtil {
+    private static final QpackException PREFIXED_INTEGER_TOO_LONG =
+            QpackException.newStatic(QpackDecoder.class, "toIntOrThrow(...)",
+                    "QPACK - invalid prefixed integer");
+
+    /**
+     * Encode integer according to
+     * <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
+     */
+    static void encodePrefixedInteger(ByteBuf out, byte mask, int prefixLength, long toEncode) {
+        checkInRange(toEncode, 0, MAX_UNSIGNED_INT, "toEncode");
+        int nbits = (1 << prefixLength) - 1;
+        if (toEncode < nbits) {
+            out.writeByte((byte) (mask | toEncode));
+        } else {
+            out.writeByte((byte) (mask | nbits));
+            long remainder = toEncode - nbits;
+            while (remainder > 128) {
+                byte next = (byte) ((remainder % 128) | 0x80);
+                out.writeByte(next);
+                remainder = remainder / 128;
+            }
+            out.writeByte((byte) remainder);
+        }
+    }
+
+    /**
+     * Decode the integer or return {@code -1} if not enough bytes are readable.
+     * This method increases the readerIndex when the integer could be decoded.
+     *
+     * @param in the input {@link ByteBuf}
+     * @param prefixLength the prefix length
+     * @return the integer or {@code -1} if not enough readable bytes are in the {@link ByteBuf).
+     */
+    static int decodePrefixedIntegerAsInt(ByteBuf in, int prefixLength) throws QpackException {
+        return toIntOrThrow(decodePrefixedInteger(in, prefixLength));
+    }
+
+    /**
+     * Converts the passed {@code aLong} to an {@code int} if the value can fit an {@code int}, otherwise throws a
+     * {@link QpackException}.
+     *
+     * @param aLong to convert.
+     * @throws QpackException If the value does not fit an {@code int}.
+     */
+    static int toIntOrThrow(long aLong) throws QpackException {
+        if ((int) aLong != aLong) {
+            throw PREFIXED_INTEGER_TOO_LONG;
+        }
+        return (int) aLong;
+    }
+
     /**
      * Decode the integer or return {@code -1} if not enough bytes are readable.
      * This method increases the readerIndex when the integer could be decoded.
@@ -52,11 +105,15 @@ final class QpackUtil {
                 return -1;
             }
             next = in.getByte(idx++);
-            i += (next & 0x7f) << factor;
+            i += (next & 0x7fL) << factor;
             factor += 7;
         } while ((next & 0x80) == 0x80);
         in.readerIndex(idx);
         return i;
+    }
+
+    static boolean firstByteEquals(ByteBuf in, byte mask) {
+        return (in.getByte(in.readerIndex()) & mask) == mask;
     }
 
     /**
@@ -388,6 +445,10 @@ final class QpackUtil {
     };
 
     static final int HUFFMAN_EOS = 256;
+
+    static final long MIN_HEADER_TABLE_SIZE = 0;
+    static final long MAX_UNSIGNED_INT = 0xffffffffL;
+    static final long MAX_HEADER_TABLE_SIZE = MAX_UNSIGNED_INT;
 
     private QpackUtil() {
     }

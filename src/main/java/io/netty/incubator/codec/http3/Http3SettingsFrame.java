@@ -52,6 +52,18 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
     Long get(long key);
 
     /**
+     * Get a setting from the frame.
+     *
+     * @param key   the key of the setting.
+     * @param defaultValue If the setting does not exist.
+     * @return the value of the setting or {@code defaultValue} if none was found with the given key.
+     */
+    default Long getOrDefault(long key, long defaultValue) {
+        final Long val = get(key);
+        return val == null ? defaultValue : val;
+    }
+
+    /**
      * Put a setting in the frame.
      *
      * @param key       the key of the setting

@@ -37,7 +37,7 @@ public abstract class Http3RequestStreamInitializer extends ChannelInitializer<Q
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
         pipeline.addLast(connectionHandler.newCodec());
         // Add the handler that will validate what we write and receive on this stream.
-        pipeline.addLast(connectionHandler.newRequestStreamValidationHandler());
+        pipeline.addLast(connectionHandler.newRequestStreamValidationHandler(ch));
         initRequestStream(ch);
     }
 

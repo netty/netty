@@ -153,8 +153,10 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         }
 
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null),
-                outboundControlHandler, null);
+                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
+                new QpackEncoder()),
+                outboundControlHandler, null, ChannelInboundHandlerAdapter::new,
+                ChannelInboundHandlerAdapter::new);
         EmbeddedQuicStreamChannel channel =
                 (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
 
@@ -208,10 +210,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         assertFalse(channel.finish());
 
         channel = new EmbeddedChannel(channel.parent(), DefaultChannelId.newInstance(),
-                true, false, new Http3UnidirectionalStreamInboundHandler(
-                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null),
-                new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
-                        new CodecHandler()), null));
+                true, false, newUniStreamInboundHandler(null));
 
         // Try to create the stream a second time, this should fail
         buffer = Unpooled.buffer(8);
@@ -228,11 +227,20 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     private EmbeddedChannel newChannel(LongFunction<ChannelHandler> factory) throws Exception {
         EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null),
-                new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
-                        new CodecHandler()), factory);
+        Http3UnidirectionalStreamInboundHandler handler = newUniStreamInboundHandler(factory);
         return (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
+    }
+
+    private Http3UnidirectionalStreamInboundHandler newUniStreamInboundHandler(LongFunction<ChannelHandler> factory) {
+        final QpackEncoder qpackEncoder = new QpackEncoder();
+        final QpackDecoder qpackDecoder = new QpackDecoder(new DefaultHttp3SettingsFrame());
+        return new Http3UnidirectionalStreamInboundHandler(
+                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
+                qpackEncoder),
+                new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
+                        new CodecHandler()), factory,
+                () -> new QpackEncoderHandler((long) Integer.MAX_VALUE, qpackDecoder),
+                () -> new QpackDecoderHandler(qpackEncoder));
     }
 
     private static final class CodecHandler extends ChannelHandlerAdapter {  }

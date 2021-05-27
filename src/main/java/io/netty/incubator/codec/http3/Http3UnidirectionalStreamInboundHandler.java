@@ -21,12 +21,13 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.incubator.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.LongFunction;
+import java.util.function.Supplier;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CONTROL_STREAM_TYPE;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_STREAM_TYPE;
@@ -38,21 +39,29 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_QPACK_ENCODER
  */
 final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder {
     private static final AttributeKey<Boolean> REMOTE_CONTROL_STREAM = AttributeKey.valueOf("H3_REMOTE_CONTROL_STREAM");
-    private static final AttributeKey<Boolean> QPACK_DECODER_STREAM = AttributeKey.valueOf("H3_QPACK_DECODER_STREAM");
-    private static final AttributeKey<Boolean> QPACK_ENCODER_STREAM = AttributeKey.valueOf("H3_QPACK_ENCODER_STREAM");
+    private static final AttributeKey<Boolean> REMOTE_QPACK_DECODER_STREAM =
+            AttributeKey.valueOf("H3_REMOTE_QPACK_DECODER_STREAM");
+    private static final AttributeKey<Boolean> REMOTE_QPACK_ENCODER_STREAM =
+            AttributeKey.valueOf("H3_REMOTE_QPACK_ENCODER_STREAM");
 
-    private final Function<Http3FrameTypeValidator, ? extends ChannelHandler> codecFactory;
+    private final Http3FrameCodecFactory codecFactory;
     private final Http3ControlStreamInboundHandler localControlStreamHandler;
     private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
+    private final Supplier<ChannelHandler> qpackEncoderHandlerFactory;
+    private final Supplier<ChannelHandler> qpackDecoderHandlerFactory;
     private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
-    Http3UnidirectionalStreamInboundHandler(Function<Http3FrameTypeValidator, ? extends ChannelHandler> codecFactory,
+    Http3UnidirectionalStreamInboundHandler(Http3FrameCodecFactory codecFactory,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
                                             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
-                                            LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
+                                            LongFunction<ChannelHandler> unknownStreamHandlerFactory,
+                                            Supplier<ChannelHandler> qpackEncoderHandlerFactory,
+                                            Supplier<ChannelHandler> qpackDecoderHandlerFactory) {
         this.codecFactory = codecFactory;
         this.localControlStreamHandler = localControlStreamHandler;
         this.remoteControlStreamHandler = remoteControlStreamHandler;
+        this.qpackEncoderHandlerFactory = qpackEncoderHandlerFactory;
+        this.qpackDecoderHandlerFactory = qpackDecoderHandlerFactory;
         if (unknownStreamHandlerFactory == null) {
             // If the user did not specify an own factory just drop all bytes on the floor.
             unknownStreamHandlerFactory = type -> ReleaseHandler.INSTANCE;
@@ -105,7 +114,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
             ctx.pipeline().addLast(localControlStreamHandler);
             // Replace this handler with the codec now.
             ctx.pipeline().replace(this, null,
-                    codecFactory.apply(Http3ControlStreamFrameTypeValidator.INSTANCE));
+                    codecFactory.newCodec(Http3ControlStreamFrameTypeValidator.INSTANCE));
         } else {
             // Only one control stream is allowed.
             // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1
@@ -143,7 +152,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
 
                 // Replace this handler with the codec which also validates that only valid frames will be decoded.
                 ctx.pipeline().replace(this, null,
-                        codecFactory.apply(Http3PushStreamFrameTypeValidator.NO_VALIDATION));
+                        codecFactory.newCodec(Http3PushStreamFrameTypeValidator.NO_VALIDATION));
             }
         }
     }
@@ -154,11 +163,9 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      *     QPACK encoder stream</a>.
      */
     private void initQpackEncoderStream(ChannelHandlerContext ctx) {
-        if (ensureStreamNotExistsYet(ctx, QPACK_ENCODER_STREAM)) {
+        if (ensureStreamNotExistsYet(ctx, REMOTE_QPACK_ENCODER_STREAM)) {
             // Just drop stuff on the floor as we dont support dynamic table atm.
-            ctx.pipeline().replace(this, null,
-                    new QpackEncoderHandler(remoteControlStreamHandler.localSettings()
-                            .get(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY)));
+            ctx.pipeline().replace(this, null, qpackEncoderHandlerFactory.get());
         } else {
             // Only one stream is allowed.
             // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
@@ -172,9 +179,8 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      *     QPACK decoder stream</a>.
      */
     private void initQpackDecoderStream(ChannelHandlerContext ctx) {
-        if (ensureStreamNotExistsYet(ctx, QPACK_DECODER_STREAM)) {
-            // Just drop stuff on the floor as we dont support dynamic table atm.
-            ctx.pipeline().replace(this, null, new QpackDecoderHandler());
+        if (ensureStreamNotExistsYet(ctx, REMOTE_QPACK_DECODER_STREAM)) {
+            ctx.pipeline().replace(this, null, qpackDecoderHandlerFactory.get());
         } else {
             // Only one stream is allowed.
             // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2

@@ -45,6 +45,9 @@ public final class Http3 {
     private static final AttributeKey<QuicStreamChannel> HTTP3_CONTROL_STREAM_KEY =
             AttributeKey.valueOf(Http3.class, "HTTP3ControlStream");
 
+    private static final AttributeKey<QpackAttributes> QPACK_ATTRIBUTES_KEY =
+            AttributeKey.valueOf(Http3.class, "QpackAttributes");
+
     /**
      * Returns the local initiated control stream for the HTTP/3 connection.
      * @param channel   the channel for the HTTP/3 connection.
@@ -56,6 +59,14 @@ public final class Http3 {
 
     static void setLocalControlStream(Channel channel, QuicStreamChannel controlStreamChannel) {
         channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
+    }
+
+    static QpackAttributes getQpackAttributes(Channel channel) {
+        return channel.attr(QPACK_ATTRIBUTES_KEY).get();
+    }
+
+    static void setQpackAttributes(Channel channel, QpackAttributes attributes) {
+        channel.attr(QPACK_ATTRIBUTES_KEY).set(attributes);
     }
 
     /**

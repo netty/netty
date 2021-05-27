@@ -22,9 +22,18 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3CodecUtils.connectionError;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.QPACK_DECODER_STREAM_ERROR;
+import static io.netty.incubator.codec.http3.QpackUtil.decodePrefixedIntegerAsInt;
+
 final class QpackDecoderHandler extends ByteToMessageDecoder {
 
     private boolean discard;
+    private final QpackEncoder qpackEncoder;
+
+    QpackDecoderHandler(QpackEncoder qpackEncoder) {
+        this.qpackEncoder = qpackEncoder;
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -45,13 +54,17 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         // | 1 |      Stream ID (7+)       |
         // +---+---------------------------+
         if ((b & 0b1000_0000) == 0b1000_0000) {
-            // new capacity
             long streamId = QpackUtil.decodePrefixedInteger(in, 7);
             if (streamId < 0) {
                 // Not enough readable bytes
                 return;
             }
-            // Do nothing for now
+            try {
+                qpackEncoder.sectionAcknowledgment(streamId);
+            } catch (QpackException e) {
+                connectionError(ctx, new Http3Exception(QPACK_DECODER_STREAM_ERROR,
+                                "Section acknowledgment decode failed.", e), true);
+            }
             return;
         }
 
@@ -64,13 +77,18 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         if ((b & 0b1100_0000) == 0b0100_0000) {
             long streamId = QpackUtil.decodePrefixedInteger(in, 6);
             if (streamId < 0) {
-
                 // Not enough readable bytes
                 return;
             }
-            // Do nothing for now
+            try {
+                qpackEncoder.streamCancellation(streamId);
+            } catch (QpackException e) {
+                connectionError(ctx, new Http3Exception(QPACK_DECODER_STREAM_ERROR,
+                        "Stream cancellation decode failed.", e), true);
+            }
             return;
         }
+
         // 4.4.3. Insert Count Increment
         //
         //   0   1   2   3   4   5   6   7
@@ -78,26 +96,32 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         // | 0 | 0 |     Increment (6+)    |
         // +---+---+-----------------------+
         if ((b & 0b1100_0000) == 0b0000_0000) {
-            long increment = QpackUtil.decodePrefixedInteger(in, 6);
+            int increment = decodePrefixedIntegerAsInt(in, 6);
             if (increment == 0) {
                 discard = true;
                 // Zero is not allowed as an increment
                 // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment
                 // Increment is an unsigned integer, so only 0 is the invalid value.
                 // https://www.rfc-editor.org/rfc/rfc7541#section-5
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECODER_STREAM_ERROR,
+                connectionError(ctx, QPACK_DECODER_STREAM_ERROR,
                         "Invalid increment '" + increment + "'.",  false);
                 return;
             }
             if (increment < 0) {
+                // Not enough readable bytes
                 return;
             }
-            // Do nothing for now
+            try {
+                qpackEncoder.insertCountIncrement(increment);
+            } catch (QpackException e) {
+                connectionError(ctx, new Http3Exception(QPACK_DECODER_STREAM_ERROR,
+                        "Insert count increment decode failed.", e), true);
+            }
             return;
         }
         // unknown frame
         discard = true;
-        Http3CodecUtils.connectionError(ctx, Http3ErrorCode.QPACK_DECODER_STREAM_ERROR,
+        connectionError(ctx, QPACK_DECODER_STREAM_ERROR,
                 "Unknown decoder instruction '" + b + "'.",  false);
     }
 

@@ -27,7 +27,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
      * Create a new instance.
      */
     public Http3ClientConnectionHandler() {
-        this(null, null, null);
+        this(null, null, null, false);
     }
 
     /**
@@ -40,12 +40,14 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
      *                                              {@link ChannelHandler} for unknown inbound stream types or
      *                                              {@code null} if no special handling should be done.
      * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
-     *                                             remote peer or {@code null} if the default settings should be used.
+     *                                              remote peer or {@code null} if the default settings should be used.
+     * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
     public Http3ClientConnectionHandler(ChannelHandler inboundControlStreamHandler,
                                         LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                                        Http3SettingsFrame localSettings) {
-        super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings);
+                                        Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+        super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
+                disableQpackDynamicTable);
     }
 
     @Override

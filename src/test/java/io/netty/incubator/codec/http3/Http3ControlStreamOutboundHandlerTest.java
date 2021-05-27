@@ -16,8 +16,12 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
@@ -36,6 +40,10 @@ public class Http3ControlStreamOutboundHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3ControlStreamFrame> {
     private final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
 
+    public Http3ControlStreamOutboundHandlerTest() {
+        super(QuicStreamType.UNIDIRECTIONAL);
+    }
+
     @Override
     protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
         return new Http3ControlStreamOutboundHandler(false, settingsFrame, new ChannelInboundHandlerAdapter());
@@ -53,19 +61,17 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Test
-    public void testStreamClosedWhileParentStillActive() {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newChannel(parent, newHandler());
+    public void testStreamClosedWhileParentStillActive() throws Exception {
+        EmbeddedChannel channel = newStream(newHandler());
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
     }
 
     @Test
     public void testGoAwayIdDecreaseWorks() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
                 true, settingsFrame, new ChannelInboundHandlerAdapter()));
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(8)));
         ReferenceCountUtil.release(channel.readOutbound());
@@ -77,10 +83,9 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Test
     public void testGoAwayIdIncreaseFails() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
         parent.close().get();
-        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
                 true, settingsFrame, new ChannelInboundHandlerAdapter()));
         assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
         ReferenceCountUtil.release(channel.readOutbound());
@@ -96,10 +101,9 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Test
     public void testGoAwayIdUseInvalidId() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
         parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        EmbeddedChannel channel = newChannel(parent, new Http3ControlStreamOutboundHandler(
+        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
                 true, settingsFrame, new ChannelInboundHandlerAdapter()));
         try {
             channel.writeOutbound(new DefaultHttp3GoAwayFrame(2));
@@ -111,9 +115,15 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Override
-    protected EmbeddedChannel newChannel(EmbeddedQuicChannel parent,
-                                         Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler) {
-        EmbeddedChannel channel = super.newChannel(parent, handler);
+    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType,
+                                                  Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler)
+            throws Exception {
+        return newStream(handler);
+    }
+
+    private EmbeddedQuicStreamChannel newStream(Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler)
+            throws Exception {
+        EmbeddedQuicStreamChannel channel = super.newStream(QuicStreamType.UNIDIRECTIONAL, handler);
         ByteBuf buffer = channel.readOutbound();
         // Verify that we did write the control stream prefix
         int len = Http3CodecUtils.numBytesForVariableLengthInteger(buffer.getByte(0));

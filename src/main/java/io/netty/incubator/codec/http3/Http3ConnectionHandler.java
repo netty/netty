@@ -18,21 +18,26 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.incubator.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
-import java.util.function.Function;
 import java.util.function.LongFunction;
+
+import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
-    private final Function<Http3FrameTypeValidator, Http3FrameCodec> codecFactory;
+    private final Http3FrameCodecFactory codecFactory;
     private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
+    private final boolean disableQpackDynamicTable;
     private final Http3ControlStreamInboundHandler localControlStreamHandler;
     private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
+    private final QpackDecoder qpackDecoder;
+    private final QpackEncoder qpackEncoder;
     private boolean controlStreamCreationInProgress;
 
     /**
@@ -46,11 +51,13 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      *                                              {@code null} if no special handling should be done.
      * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
      *                                              remote peer or {@code null} if the default settings should be used.
+     * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
     Http3ConnectionHandler(boolean server, ChannelHandler inboundControlStreamHandler,
                            LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                           Http3SettingsFrame localSettings) {
+                           Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
         this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
+        this.disableQpackDynamicTable = disableQpackDynamicTable;
         if (localSettings == null) {
             localSettings = new DefaultHttp3SettingsFrame();
         } else {
@@ -61,19 +68,20 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             maxFieldSectionSize = Http3CodecUtils.DEFAULT_MAX_HEADER_LIST_SIZE;
             localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, maxFieldSectionSize);
         }
-        // As we not support the dynamic table at the moment lets override whatever the user specified and set
-        // the capacity to 0.
-        localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0L);
-        codecFactory = Http3FrameCodec.newFactory(new QpackDecoder(), maxFieldSectionSize, new QpackEncoder());
-        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler);
+        qpackDecoder = new QpackDecoder(localSettings);
+        qpackEncoder = new QpackEncoder();
+        codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
+        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
+                qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
-                codecFactory.apply(Http3FrameTypeValidator.NO_VALIDATION));
+                codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION));
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
         if (!controlStreamCreationInProgress && Http3.getLocalControlStream(ctx.channel()) == null) {
             controlStreamCreationInProgress = true;
             QuicChannel channel = (QuicChannel) ctx.channel();
+            Http3.setQpackAttributes(channel, new QpackAttributes(channel, disableQpackDynamicTable));
             // Once the channel became active we need to create an unidirectional stream and write the
             // Http3SettingsFrame to it. This needs to be the first frame on this stream.
             // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
@@ -104,14 +112,17 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @return a new codec.
      */
     public final ChannelHandler newCodec() {
-        return codecFactory.apply(Http3RequestStreamFrameTypeValidator.INSTANCE);
+        return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE);
     }
 
-    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler() {
+    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler(QuicStreamChannel forStream) {
+        final QpackAttributes qpackAttributes = Http3.getQpackAttributes(forStream.parent());
+        assert qpackAttributes != null;
         if (localControlStreamHandler.isServer()) {
-            return Http3RequestStreamValidationHandler.newServerValidator();
+            return Http3RequestStreamValidationHandler.newServerValidator(qpackAttributes, qpackDecoder);
         }
-        return Http3RequestStreamValidationHandler.newClientValidator(localControlStreamHandler::isGoAwayReceived);
+        return Http3RequestStreamValidationHandler.newClientValidator(localControlStreamHandler::isGoAwayReceived,
+                qpackAttributes, qpackDecoder);
     }
 
     @Override
@@ -137,10 +148,14 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                     initBidirectionalStream(ctx, channel);
                     break;
                 case UNIDIRECTIONAL:
+                    final Long maxTableCapacity = remoteControlStreamHandler.localSettings()
+                            .get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
                     channel.pipeline().addLast(
                             new Http3UnidirectionalStreamInboundHandler(codecFactory,
                                     localControlStreamHandler, remoteControlStreamHandler,
-                                    unknownInboundStreamHandlerFactory));
+                                    unknownInboundStreamHandlerFactory,
+                                    () -> new QpackEncoderHandler(maxTableCapacity, qpackDecoder),
+                                    () -> new QpackDecoderHandler(qpackEncoder)));
                     break;
                 default:
                     throw new Error();

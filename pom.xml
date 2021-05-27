@@ -306,7 +306,7 @@
         <version>0.0.5.Final</version>
         <configuration>
           <delay>1000</delay>
-          <mainClass>io.netty.incubator.codec.http3.example.Http3ServerExample</mainClass>
+          <mainClass>io.netty.incubator.codec.http3.Http3SpecTestServer</mainClass>
           <excludeSpecs>
             <!-- Let's only run the HTTP3 tests -->
             <excludeSpec>/QUIC</excludeSpec>

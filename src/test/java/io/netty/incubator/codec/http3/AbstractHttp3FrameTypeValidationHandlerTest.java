@@ -15,21 +15,32 @@
  */
 package io.netty.incubator.codec.http3;
 
-import io.netty.channel.DefaultChannelId;
-import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.buffer.ByteBuf;
+import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
 
+import static io.netty.incubator.codec.http3.Http3.getQpackAttributes;
+import static io.netty.incubator.codec.http3.Http3.setQpackAttributes;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http3Frame> {
+
+    private final QuicStreamType defaultStreamType;
+    protected EmbeddedQuicChannel parent;
+    protected QpackAttributes qpackAttributes;
 
     protected abstract Http3FrameTypeValidationHandler<T> newHandler();
 
@@ -37,23 +48,50 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     protected abstract List<Http3Frame> newInvalidFrames();
 
+    protected AbstractHttp3FrameTypeValidationHandlerTest(QuicStreamType defaultStreamType) {
+        this.defaultStreamType = defaultStreamType;
+    }
+
+    @Before
+    public void setUp() {
+        parent = new EmbeddedQuicChannel();
+        qpackAttributes = new QpackAttributes(parent, false);
+        setQpackAttributes(parent, qpackAttributes);
+    }
+
+    @After
+    public void tearDown() {
+        final QpackAttributes qpackAttributes = getQpackAttributes(parent);
+        if (qpackAttributes.decoderStreamAvailable()) {
+            assertFalse(((EmbeddedQuicStreamChannel) qpackAttributes.decoderStream()).finish());
+        }
+        if (qpackAttributes.encoderStreamAvailable()) {
+            assertFalse(((EmbeddedQuicStreamChannel) qpackAttributes.encoderStream()).finish());
+        }
+        assertFalse(parent.finish());
+    }
+
     @Test
-    public void testValidTypeInbound() {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newChannel(parent, newHandler());
+    public void testValidTypeInbound() throws Exception {
+        final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeInbound(valid));
             T read = channel.readInbound();
             assertFrameSame(valid, read);
+            if (valid instanceof Http3SettingsFrame) {
+                afterSettingsFrameRead((Http3SettingsFrame) valid);
+            }
         }
         assertFalse(channel.finish());
     }
 
+    protected void afterSettingsFrameRead(Http3SettingsFrame settingsFrame) {
+    }
+
     @Test
-    public void testValidTypeOutput() {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newChannel(parent, newHandler());
+    public void testValidTypeOutbound() throws Exception {
+        final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
             assertTrue(channel.writeOutbound(valid));
@@ -64,9 +102,8 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
     }
 
     @Test
-    public void testInvalidTypeInbound() {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newChannel(parent, newHandler());
+    public void testInvalidTypeInbound() throws Exception {
+        final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
 
         Http3ErrorCode errorCode = inboundErrorCodeInvalid();
         List<Http3Frame> invalidFrames = newInvalidFrames();
@@ -88,9 +125,8 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
     }
 
     @Test
-    public void testInvalidTypeOutput() {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newChannel(parent, newHandler());
+    public void testInvalidTypeOutbound() throws Exception {
+        final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
@@ -105,7 +141,24 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         assertFalse(channel.finish());
     }
 
-    protected EmbeddedChannel newChannel(EmbeddedQuicChannel parent, Http3FrameTypeValidationHandler<T> handler) {
-        return new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false, handler);
+    protected EmbeddedQuicStreamChannel qPACKEncoderStream() {
+        assertTrue(qpackAttributes.encoderStreamAvailable());
+        return (EmbeddedQuicStreamChannel) qpackAttributes.encoderStream();
+    }
+
+    protected EmbeddedQuicStreamChannel qPACKDecoderStream() {
+        assertTrue(qpackAttributes.decoderStreamAvailable());
+        return (EmbeddedQuicStreamChannel) qpackAttributes.decoderStream();
+    }
+
+    protected void readAndReleaseStreamHeader(EmbeddedQuicStreamChannel stream) {
+        ByteBuf streamType = stream.readOutbound();
+        assertEquals(streamType.readableBytes(), 1);
+        ReferenceCountUtil.release(streamType);
+    }
+
+    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType, Http3FrameTypeValidationHandler<T> handler)
+            throws Exception {
+        return (EmbeddedQuicStreamChannel) parent.createStream(streamType, handler).get();
     }
 }

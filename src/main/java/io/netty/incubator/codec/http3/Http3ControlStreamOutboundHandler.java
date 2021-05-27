@@ -16,13 +16,14 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+
+import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
 
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
@@ -69,8 +70,7 @@ final class Http3ControlStreamOutboundHandler
         // we did write the type via a ByteBuf.
         ctx.pipeline().addFirst(codec);
         // If writing of the local settings fails let's just teardown the connection.
-        ctx.writeAndFlush(DefaultHttp3SettingsFrame.copyOf(localSettings))
-                .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        closeOnFailure(ctx.writeAndFlush(DefaultHttp3SettingsFrame.copyOf(localSettings)));
 
         ctx.fireChannelActive();
     }

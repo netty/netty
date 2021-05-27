@@ -18,6 +18,8 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,9 +33,13 @@ import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
 
 @RunWith(Parameterized.class)
 public class Http3ControlStreamInboundHandlerTest extends
@@ -41,8 +47,10 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     private final boolean server;
     private final boolean forwardControlFrames;
+    private QpackEncoder qpackEncoder;
 
     public Http3ControlStreamInboundHandlerTest(boolean server, boolean forwardControlFrames) {
+        super(QuicStreamType.UNIDIRECTIONAL);
         this.server = server;
         this.forwardControlFrames = forwardControlFrames;
     }
@@ -58,9 +66,25 @@ public class Http3ControlStreamInboundHandlerTest extends
         return config;
     }
 
+    @Before
+    @Override
+    public void setUp() {
+        super.setUp();
+        qpackEncoder = new QpackEncoder();
+    }
+
+    @Override
+    protected void afterSettingsFrameRead(Http3SettingsFrame settingsFrame) {
+        if (!qpackAttributes.dynamicTableDisabled()) {
+            // settings frame initialize QPACK streams
+            readAndReleaseStreamHeader(qPACKEncoderStream());
+            readAndReleaseStreamHeader(qPACKDecoderStream());
+        }
+    }
+
     @Override
     protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
-        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter());
+        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter(), qpackEncoder);
     }
 
     @Override
@@ -95,11 +119,10 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     private void testInvalidFirstFrame(Http3Frame frame) throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        final EmbeddedQuicStreamChannel channel =
-                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+        final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
-                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null)).get();
+                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
+                                qpackEncoder));
 
         writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
         verifyClose(Http3ErrorCode.H3_MISSING_SETTINGS, parent);
@@ -109,8 +132,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testValidGoAwayFrame() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        EmbeddedChannel channel = newStream();
         writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
         writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
         assertFalse(channel.finish());
@@ -118,8 +140,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testSecondGoAwayFrameFailsWithHigherId() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        EmbeddedChannel channel = newStream();
         writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
         writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(4));
         verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
@@ -128,8 +149,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testGoAwayFrameIdNonRequestStream() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        EmbeddedChannel channel = newStream();
         if (server) {
             writeValidFrame(channel, new DefaultHttp3GoAwayFrame(3));
         } else {
@@ -141,8 +161,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testHttp3MaxPushIdFrames() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        EmbeddedChannel channel = newStream();
         if (server) {
             writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(0));
             writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(4));
@@ -155,22 +174,19 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testSecondHttp3MaxPushIdFrameFailsWithSmallerId() throws Exception {
-        if (!server) {
-            return;
-        }
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        assumeThat(server, is(true));
+        EmbeddedChannel channel = newStream();
         writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(4));
         writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3MaxPushIdFrame(0));
         verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
         assertFalse(channel.finish());
     }
 
-    private EmbeddedQuicStreamChannel newInitChannel(EmbeddedQuicChannel parent) throws Exception {
-        EmbeddedQuicStreamChannel channel =
-                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+    private EmbeddedQuicStreamChannel newStream() throws Exception {
+        EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.UNIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
-                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null)).get();
+                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
+                                qpackEncoder));
 
         // We always need to start with a settings frame.
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
@@ -180,6 +196,13 @@ public class Http3ControlStreamInboundHandlerTest extends
         } else {
             assertFrameReleased(settingsFrame);
         }
+        Object streamType = qPACKEncoderStream().readOutbound();
+        assertNotNull(streamType);
+        ReferenceCountUtil.release(streamType);
+
+        streamType = qPACKDecoderStream().readOutbound();
+        assertNotNull(streamType);
+        ReferenceCountUtil.release(streamType);
         return channel;
     }
 
@@ -208,8 +231,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
     @Test
     public void testSecondSettingsFrameFails() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedChannel channel = newInitChannel(parent);
+        EmbeddedChannel channel = newStream();
         writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3SettingsFrame());
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertFalse(channel.finish());
@@ -217,8 +239,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Test
     public void testControlStreamClosed() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        EmbeddedQuicStreamChannel channel = newInitChannel(parent);
+        EmbeddedQuicStreamChannel channel = newStream();
         channel.writeInboundFin();
         verifyClose(Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
         assertFalse(channel.finish());
