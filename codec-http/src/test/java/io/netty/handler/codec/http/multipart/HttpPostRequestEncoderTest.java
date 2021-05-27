@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -41,10 +41,10 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_DISPOSITION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
@@ -345,9 +345,9 @@ public class HttpPostRequestEncoderTest {
             HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
             ByteBuf content = httpContent.content();
             int refCnt = content.refCnt();
-            assertTrue("content: " + content + " content.unwrap(): " + content.unwrap() + " refCnt: " + refCnt,
-                    (content.unwrap() == content || content.unwrap() == null) && refCnt == 1 ||
-                    content.unwrap() != content && refCnt == 2);
+            assertTrue((content.unwrap() == content || content.unwrap() == null) && refCnt == 1 ||
+                    content.unwrap() != content && refCnt == 2,
+                    "content: " + content + " content.unwrap(): " + content.unwrap() + " refCnt: " + refCnt);
             httpContent.release();
         }
         encoder.cleanFiles();
@@ -401,10 +401,10 @@ public class HttpPostRequestEncoderTest {
         checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-        assertTrue("Expected LastHttpContent is not received", httpContent instanceof LastHttpContent);
+        assertTrue(httpContent instanceof LastHttpContent, "Expected LastHttpContent is not received");
         httpContent.release();
 
-           assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+           assertTrue(encoder.isEndOfInput(), "Expected end of input is not receive");
     }
 
     @Test
@@ -423,10 +423,10 @@ public class HttpPostRequestEncoderTest {
         checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-        assertTrue("Expected LastHttpContent is not received", httpContent instanceof LastHttpContent);
+        assertTrue(httpContent instanceof LastHttpContent, "Expected LastHttpContent is not received");
         httpContent.release();
 
-        assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+        assertTrue(encoder.isEndOfInput(), "Expected end of input is not receive");
     }
 
     private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int sizeWithoutDelimiter) throws Exception {
@@ -441,8 +441,8 @@ public class HttpPostRequestEncoderTest {
 
         int readable = httpContent.content().readableBytes();
         boolean expectedSize = readable >= expectedSizeMin && readable <= expectedSizeMax;
-        assertTrue("Chunk size is not in expected range (" + expectedSizeMin + " - " + expectedSizeMax + "), was: "
-                + readable, expectedSize);
+        assertTrue(expectedSize, "Chunk size is not in expected range (" + expectedSizeMin + " - "
+                + expectedSizeMax + "), was: " + readable);
         httpContent.release();
     }
 

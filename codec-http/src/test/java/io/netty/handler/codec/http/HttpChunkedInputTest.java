@@ -26,7 +26,7 @@ import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.handler.stream.ChunkedStream;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -34,7 +34,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpChunkedInputTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -139,7 +142,7 @@ public class HttpChunkedInputTest {
                 break;
             }
             if (lastHttpContent != null) {
-                assertTrue("Chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
+                assertTrue(lastHttpContent instanceof DefaultHttpContent, "Chunk must be DefaultHttpContent");
             }
 
             ByteBuf buffer = httpContent.content();
@@ -157,7 +160,7 @@ public class HttpChunkedInputTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertSame("Last chunk must be LastHttpContent.EMPTY_LAST_CONTENT",
-                LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
+        assertSame(LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent,
+                "Last chunk must be LastHttpContent.EMPTY_LAST_CONTENT");
     }
 }

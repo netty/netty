@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ClientCookieEncoderTest {
 
@@ -47,9 +48,10 @@ public class ClientCookieEncoderTest {
         ClientCookieEncoder.STRICT.encode(new DefaultCookie("myCookie", "\"foo\""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testRejectCookieValueWithSemicolon() {
-        ClientCookieEncoder.STRICT.encode(new DefaultCookie("myCookie", "foo;bar"));
+        assertThrows(IllegalArgumentException.class,
+            () -> ClientCookieEncoder.STRICT.encode(new DefaultCookie("myCookie", "foo;bar")));
     }
 
     @Test

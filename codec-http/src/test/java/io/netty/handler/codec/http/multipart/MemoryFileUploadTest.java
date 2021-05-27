@@ -15,8 +15,9 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MemoryFileUploadTest {
 
@@ -24,6 +25,6 @@ public class MemoryFileUploadTest {
     public final void testMemoryFileUploadEquals() {
         MemoryFileUpload f1 =
                 new MemoryFileUpload("m1", "m1", "application/json", null, null, 100);
-        Assert.assertEquals(f1, f1);
+        assertEquals(f1, f1);
     }
 }

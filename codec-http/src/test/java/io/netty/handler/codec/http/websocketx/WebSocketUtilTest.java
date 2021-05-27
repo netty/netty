@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocketUtilTest {
 

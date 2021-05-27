@@ -28,17 +28,17 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpPostMultiPartRequestDecoderTest {
 
@@ -173,22 +173,22 @@ public class HttpPostMultiPartRequestDecoderTest {
         assertEquals(inMemory, data.isInMemory());
         if (data.isInMemory()) {
             // To be done only if not inMemory: assertEquals(data.get().length, fileSize);
-            assertFalse("Capacity should be higher than 1M", data.getByteBuf().capacity()
-                    < 1024 * 1024);
+            assertFalse(data.getByteBuf().capacity() < 1024 * 1024,
+                    "Capacity should be higher than 1M");
         }
-        assertTrue("Capacity should be less than 1M", decoder.getCurrentAllocatedCapacity()
-                < 1024 * 1024);
+        assertTrue(decoder.getCurrentAllocatedCapacity() < 1024 * 1024,
+                "Capacity should be less than 1M");
         InterfaceHttpData[] httpDatas = decoder.getBodyHttpDatas().toArray(new InterfaceHttpData[0]);
         for (InterfaceHttpData httpData : httpDatas) {
-            assertEquals("Before cleanAllHttpData should be 1", 1, httpData.refCnt());
+            assertEquals(1, httpData.refCnt(), "Before cleanAllHttpData should be 1");
         }
         factory.cleanAllHttpData();
         for (InterfaceHttpData httpData : httpDatas) {
-            assertEquals("Before cleanAllHttpData should be 1 if in Memory", inMemory? 1 : 0, httpData.refCnt());
+            assertEquals(inMemory? 1 : 0, httpData.refCnt(), "Before cleanAllHttpData should be 1 if in Memory");
         }
         decoder.destroy();
         for (InterfaceHttpData httpData : httpDatas) {
-            assertEquals("RefCnt should be 0", 0, httpData.refCnt());
+            assertEquals(0, httpData.refCnt(), "RefCnt should be 0");
         }
     }
 
