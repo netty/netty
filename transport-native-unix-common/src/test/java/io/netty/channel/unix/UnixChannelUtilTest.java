@@ -21,16 +21,16 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty.channel.unix.UnixChannelUtil.isBufferCopyNeededForWrite;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UnixChannelUtilTest {
 
@@ -82,7 +82,7 @@ public class UnixChannelUtilTest {
             comp.addComponent(byteBuf);
         }
 
-        assertEquals(byteBufs.toString(), expected, isBufferCopyNeededForWrite(comp, IOV_MAX));
+        assertEquals(expected, isBufferCopyNeededForWrite(comp, IOV_MAX), byteBufs.toString());
         assertTrue(comp.release());
     }
 }
