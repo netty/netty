@@ -29,12 +29,12 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTest {
 
@@ -114,16 +114,16 @@ public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTe
         ch2.writeInbound(ch.readOutbound());
         HttpResponse res = ch2.readInbound();
 
-        Assert.assertEquals("ws://example.com/chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
+        assertEquals("ws://example.com/chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
 
         if (subProtocol) {
-            Assert.assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         LastHttpContent content = ch2.readInbound();
 
-        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
+        assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
         content.release();
         req.release();
     }

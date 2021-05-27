@@ -17,8 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocket00FrameEncoderTest {
 
@@ -26,19 +29,19 @@ public class WebSocket00FrameEncoderTest {
     @Test
     public void testMultipleWebSocketCloseFrames() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocket00FrameEncoder());
-        Assert.assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));
-        Assert.assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));
+        assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));
+        assertTrue(channel.finish());
         assertCloseWebSocketFrame(channel);
         assertCloseWebSocketFrame(channel);
-        Assert.assertNull(channel.readOutbound());
+        assertNull(channel.readOutbound());
     }
 
     private static void assertCloseWebSocketFrame(EmbeddedChannel channel) {
         ByteBuf buf = channel.readOutbound();
-        Assert.assertEquals(2, buf.readableBytes());
-        Assert.assertEquals((byte) 0xFF, buf.readByte());
-        Assert.assertEquals((byte) 0x00, buf.readByte());
+        assertEquals(2, buf.readableBytes());
+        assertEquals((byte) 0xFF, buf.readByte());
+        assertEquals((byte) 0x00, buf.readByte());
         buf.release();
     }
 }

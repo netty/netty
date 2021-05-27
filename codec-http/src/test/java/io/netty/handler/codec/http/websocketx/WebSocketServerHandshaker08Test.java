@@ -28,10 +28,11 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class WebSocketServerHandshaker08Test extends WebSocketServerHandshakerTest {
 
@@ -83,12 +84,12 @@ public class WebSocketServerHandshaker08Test extends WebSocketServerHandshakerTe
         ch2.writeInbound(resBuf);
         HttpResponse res = ch2.readInbound();
 
-        Assert.assertEquals(
+        assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
         if (subProtocol) {
-            Assert.assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         ReferenceCountUtil.release(res);
         req.release();

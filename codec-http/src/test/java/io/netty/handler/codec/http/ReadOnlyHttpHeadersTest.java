@@ -16,7 +16,8 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Iterator;
 import java.util.List;
@@ -30,10 +31,11 @@ import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZERO;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ReadOnlyHttpHeadersTest {
     @Test
@@ -113,22 +115,37 @@ public class ReadOnlyHttpHeadersTest {
         assertTrue(APPLICATION_OCTET_STREAM.contentEqualsIgnoreCase(names.get(1)));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void validateNamesFail() {
-        new ReadOnlyHttpHeaders(true,
-                ACCEPT, APPLICATION_JSON, AsciiString.cached(" "));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyHttpHeaders(true,
+                        ACCEPT, APPLICATION_JSON, AsciiString.cached(" "));
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void emptyHeaderName() {
-        new ReadOnlyHttpHeaders(true,
-                                ACCEPT, APPLICATION_JSON, AsciiString.cached(" "), ZERO);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyHttpHeaders(true,
+                        ACCEPT, APPLICATION_JSON, AsciiString.cached(" "), ZERO);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void headerWithoutValue() {
-        new ReadOnlyHttpHeaders(false,
-                                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyHttpHeaders(false,
+                        ACCEPT, APPLICATION_JSON, CONTENT_LENGTH);
+            }
+        });
     }
 
     private static void assert3ParisEquals(Iterator<Entry<String, String>> itr) {

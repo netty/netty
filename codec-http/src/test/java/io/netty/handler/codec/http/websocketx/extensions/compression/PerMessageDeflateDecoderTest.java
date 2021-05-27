@@ -28,14 +28,20 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
 import static io.netty.util.CharsetUtil.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PerMessageDeflateDecoderTest {
 
@@ -264,7 +270,7 @@ public class PerMessageDeflateDecoderTest {
         assertFalse(decoderChannel.finish());
     }
 
-    @Test(expected = DecoderException.class)
+    @Test
     public void testIllegalStateWhenDecompressionInProgress() {
         WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
             @Override
@@ -275,7 +281,7 @@ public class PerMessageDeflateDecoderTest {
 
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(
+        final EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
 
         byte[] firstPayload = new byte[200];
@@ -292,7 +298,7 @@ public class PerMessageDeflateDecoderTest {
 
         BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, WebSocketExtension.RSV1,
                                                                   compressedFirstPayload);
-        ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, WebSocketExtension.RSV1,
+        final ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, WebSocketExtension.RSV1,
                                                                               compressedFinalPayload);
         assertTrue(decoderChannel.writeInbound(firstPart));
 
@@ -304,7 +310,12 @@ public class PerMessageDeflateDecoderTest {
 
         //final part throwing exception
         try {
-            decoderChannel.writeInbound(finalPart);
+            assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    decoderChannel.writeInbound(finalPart);
+                }
+            });
         } finally {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());

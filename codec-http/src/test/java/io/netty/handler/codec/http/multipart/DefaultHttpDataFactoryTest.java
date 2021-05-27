@@ -18,21 +18,21 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpDataFactoryTest {
     // req1 equals req2
@@ -41,19 +41,19 @@ public class DefaultHttpDataFactoryTest {
 
     private DefaultHttpDataFactory factory;
 
-    @BeforeClass
+    @BeforeAll
     public static void assertReq1EqualsReq2() {
         // Before doing anything, assert that the requests are equal
         assertEquals(req1.hashCode(), req2.hashCode());
         assertTrue(req1.equals(req2));
     }
 
-    @Before
+    @BeforeEach
     public void setupFactory() {
         factory = new DefaultHttpDataFactory();
     }
 
-    @After
+    @AfterEach
     public void cleanupFactory() {
         factory.cleanAllHttpData();
     }

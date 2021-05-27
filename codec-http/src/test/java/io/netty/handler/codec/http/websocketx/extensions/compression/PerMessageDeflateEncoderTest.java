@@ -28,7 +28,8 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -36,7 +37,12 @@ import java.util.Random;
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
 import static io.netty.util.CharsetUtil.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PerMessageDeflateEncoderTest {
 
@@ -236,7 +242,7 @@ public class PerMessageDeflateEncoderTest {
         assertFalse(decoderChannel.finish());
     }
 
-    @Test(expected = EncoderException.class)
+    @Test
     public void testIllegalStateWhenCompressionInProgress() {
         WebSocketExtensionFilter selectivityCompressionFilter = new WebSocketExtensionFilter() {
             @Override
@@ -244,7 +250,7 @@ public class PerMessageDeflateEncoderTest {
                 return frame.content().readableBytes() < 100;
             }
         };
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+        final EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
 
         byte[] firstPayload = new byte[200];
@@ -254,7 +260,7 @@ public class PerMessageDeflateEncoderTest {
         random.nextBytes(finalPayload);
 
         BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(firstPayload));
-        ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, 0,
+        final ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, 0,
                                                                               Unpooled.wrappedBuffer(finalPayload));
         assertTrue(encoderChannel.writeOutbound(firstPart));
 
@@ -266,7 +272,12 @@ public class PerMessageDeflateEncoderTest {
 
         //final part throwing exception
         try {
-            encoderChannel.writeOutbound(finalPart);
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    encoderChannel.writeOutbound(finalPart);
+                }
+            });
         } finally {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());
@@ -290,14 +301,19 @@ public class PerMessageDeflateEncoderTest {
         assertFalse(encoderChannel.finish());
     }
 
-    @Test(expected = EncoderException.class)
+    @Test
     public void testCodecExceptionForNotFinEmptyFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
+        final EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
-        TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
+        final TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
 
         try {
-            encoderChannel.writeOutbound(emptyNotFinFrame);
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    encoderChannel.writeOutbound(emptyNotFinFrame);
+                }
+            });
         } finally {
             // EmptyByteBuf buffer
             assertFalse(emptyNotFinFrame.release());

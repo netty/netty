@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,8 +27,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * {@link AbstractDiskHttpData} test cases
@@ -57,8 +57,8 @@ public class AbstractDiskHttpDataTest {
             ByteBuf buf2 = test.getChunk(1024);
             assertEquals(buf2.readerIndex(), 0);
             assertEquals(buf2.writerIndex(), 1024);
-            assertFalse("Arrays should not be equal",
-                    Arrays.equals(ByteBufUtil.getBytes(buf1), ByteBufUtil.getBytes(buf2)));
+            assertFalse(Arrays.equals(ByteBufUtil.getBytes(buf1), ByteBufUtil.getBytes(buf2)),
+                    "Arrays should not be equal");
         } finally {
             test.delete();
         }

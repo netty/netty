@@ -16,11 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HttpResponseStatusTest {
     @Test
@@ -46,14 +48,24 @@ public class HttpResponseStatusTest {
         assertEquals("FOO", customStatus.reasonPhrase());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseLineStringMalformedCode() {
-        parseLine("200a");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine("200a");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseLineStringMalformedCodeWithPhrase() {
-        parseLine("200a foo");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine("200a foo");
+            }
+        });
     }
 
     @Test
@@ -79,13 +91,23 @@ public class HttpResponseStatusTest {
         assertEquals("FOO", customStatus.reasonPhrase());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseLineAsciiStringMalformedCode() {
-        parseLine(new AsciiString("200a"));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine(new AsciiString("200a"));
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseLineAsciiStringMalformedCodeWithPhrase() {
-        parseLine(new AsciiString("200a foo"));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine(new AsciiString("200a foo"));
+            }
+        });
     }
 }

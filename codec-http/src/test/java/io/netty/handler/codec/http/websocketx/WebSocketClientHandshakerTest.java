@@ -35,12 +35,15 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -256,12 +259,14 @@ public abstract class WebSocketClientHandshakerTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHttpResponseAndFrameInSameBuffer() {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHttpResponseAndFrameInSameBufferCodec() {
         testHttpResponseAndFrameInSameBuffer(true);
     }

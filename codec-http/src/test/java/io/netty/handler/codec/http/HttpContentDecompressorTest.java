@@ -20,10 +20,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpContentDecompressorTest {
 
@@ -53,18 +56,18 @@ public class HttpContentDecompressorTest {
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json;charset=UTF-8");
         response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-        Assert.assertTrue(channel.writeInbound(response));
+        assertTrue(channel.writeInbound(response));
 
         // we triggered read explicitly
-        Assert.assertEquals(1, readCalled.get());
+        assertEquals(1, readCalled.get());
 
-        Assert.assertTrue(channel.readInbound() instanceof HttpResponse);
+        assertTrue(channel.readInbound() instanceof HttpResponse);
 
-        Assert.assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
 
         // read was triggered by the HttpContentDecompressor itself as it did not produce any message to the next
         // inbound handler.
-        Assert.assertEquals(2, readCalled.get());
-        Assert.assertFalse(channel.finishAndReleaseAll());
+        assertEquals(2, readCalled.get());
+        assertFalse(channel.finishAndReleaseAll());
     }
 }

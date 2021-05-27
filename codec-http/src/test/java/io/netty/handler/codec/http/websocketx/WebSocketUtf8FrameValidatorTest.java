@@ -19,8 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class WebSocketUtf8FrameValidatorTest {
 
@@ -39,19 +45,19 @@ public class WebSocketUtf8FrameValidatorTest {
         TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
         try {
             channel.writeInbound(frame);
-            Assert.fail();
+            fail();
         } catch (CorruptedFrameException e) {
             // expected exception
         }
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.finish());
         ByteBuf buf = channel.readOutbound();
-        Assert.assertNotNull(buf);
+        assertNotNull(buf);
         try {
-            Assert.assertFalse(buf.isReadable());
+            assertFalse(buf.isReadable());
         } finally {
             buf.release();
         }
-        Assert.assertNull(channel.readOutbound());
-        Assert.assertEquals(0, frame.refCnt());
+        assertNull(channel.readOutbound());
+        assertEquals(0, frame.refCnt());
     }
 }
