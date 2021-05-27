@@ -119,18 +119,17 @@ public abstract class TypeParameterMatcher {
                 if (actualTypeParam instanceof TypeVariable) {
                     // Resolved type parameter points to another type parameter.
                     TypeVariable<?> v = (TypeVariable<?>) actualTypeParam;
-                    currentClass = thisClass;
                     if (!(v.getGenericDeclaration() instanceof Class)) {
                         return Object.class;
                     }
 
+                    currentClass = thisClass;
                     parametrizedSuperclass = (Class<?>) v.getGenericDeclaration();
                     typeParamName = v.getName();
                     if (parametrizedSuperclass.isAssignableFrom(thisClass)) {
                         continue;
-                    } else {
-                        return Object.class;
                     }
+                    return Object.class;
                 }
 
                 return fail(thisClass, typeParamName);
