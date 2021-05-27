@@ -19,10 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import org.junit.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollSocketChannelTest {
 
@@ -64,40 +67,40 @@ public class EpollSocketChannelTest {
     }
 
     private static void assertTcpInfo0(EpollTcpInfo info) throws Exception {
-        Assert.assertNotNull(info);
+        assertNotNull(info);
 
-        Assert.assertTrue(info.state() >= 0);
-        Assert.assertTrue(info.caState() >= 0);
-        Assert.assertTrue(info.retransmits() >= 0);
-        Assert.assertTrue(info.probes() >= 0);
-        Assert.assertTrue(info.backoff() >= 0);
-        Assert.assertTrue(info.options() >= 0);
-        Assert.assertTrue(info.sndWscale() >= 0);
-        Assert.assertTrue(info.rcvWscale() >= 0);
-        Assert.assertTrue(info.rto() >= 0);
-        Assert.assertTrue(info.ato() >= 0);
-        Assert.assertTrue(info.sndMss() >= 0);
-        Assert.assertTrue(info.rcvMss() >= 0);
-        Assert.assertTrue(info.unacked() >= 0);
-        Assert.assertTrue(info.sacked() >= 0);
-        Assert.assertTrue(info.lost() >= 0);
-        Assert.assertTrue(info.retrans() >= 0);
-        Assert.assertTrue(info.fackets() >= 0);
-        Assert.assertTrue(info.lastDataSent() >= 0);
-        Assert.assertTrue(info.lastAckSent() >= 0);
-        Assert.assertTrue(info.lastDataRecv() >= 0);
-        Assert.assertTrue(info.lastAckRecv() >= 0);
-        Assert.assertTrue(info.pmtu() >= 0);
-        Assert.assertTrue(info.rcvSsthresh() >= 0);
-        Assert.assertTrue(info.rtt() >= 0);
-        Assert.assertTrue(info.rttvar() >= 0);
-        Assert.assertTrue(info.sndSsthresh() >= 0);
-        Assert.assertTrue(info.sndCwnd() >= 0);
-        Assert.assertTrue(info.advmss() >= 0);
-        Assert.assertTrue(info.reordering() >= 0);
-        Assert.assertTrue(info.rcvRtt() >= 0);
-        Assert.assertTrue(info.rcvSpace() >= 0);
-        Assert.assertTrue(info.totalRetrans() >= 0);
+        assertTrue(info.state() >= 0);
+        assertTrue(info.caState() >= 0);
+        assertTrue(info.retransmits() >= 0);
+        assertTrue(info.probes() >= 0);
+        assertTrue(info.backoff() >= 0);
+        assertTrue(info.options() >= 0);
+        assertTrue(info.sndWscale() >= 0);
+        assertTrue(info.rcvWscale() >= 0);
+        assertTrue(info.rto() >= 0);
+        assertTrue(info.ato() >= 0);
+        assertTrue(info.sndMss() >= 0);
+        assertTrue(info.rcvMss() >= 0);
+        assertTrue(info.unacked() >= 0);
+        assertTrue(info.sacked() >= 0);
+        assertTrue(info.lost() >= 0);
+        assertTrue(info.retrans() >= 0);
+        assertTrue(info.fackets() >= 0);
+        assertTrue(info.lastDataSent() >= 0);
+        assertTrue(info.lastAckSent() >= 0);
+        assertTrue(info.lastDataRecv() >= 0);
+        assertTrue(info.lastAckRecv() >= 0);
+        assertTrue(info.pmtu() >= 0);
+        assertTrue(info.rcvSsthresh() >= 0);
+        assertTrue(info.rtt() >= 0);
+        assertTrue(info.rttvar() >= 0);
+        assertTrue(info.sndSsthresh() >= 0);
+        assertTrue(info.sndCwnd() >= 0);
+        assertTrue(info.advmss() >= 0);
+        assertTrue(info.reordering() >= 0);
+        assertTrue(info.rcvRtt() >= 0);
+        assertTrue(info.rcvSpace() >= 0);
+        assertTrue(info.totalRetrans() >= 0);
     }
 
     // See https://github.com/netty/netty/issues/7159

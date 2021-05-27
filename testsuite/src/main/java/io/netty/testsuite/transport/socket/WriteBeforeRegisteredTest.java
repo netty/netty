@@ -20,13 +20,23 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
 
-    @Test(timeout = 30000)
-    public void testWriteBeforeConnect() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteBeforeConnect(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testWriteBeforeConnect(bootstrap);
+            }
+        });
     }
 
     public void testWriteBeforeConnect(Bootstrap cb) throws Throwable {

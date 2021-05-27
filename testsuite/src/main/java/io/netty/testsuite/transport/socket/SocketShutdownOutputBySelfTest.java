@@ -26,8 +26,10 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -39,18 +41,24 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
-    @Test(timeout = 30000)
-    public void testShutdownOutput() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutput(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testShutdownOutput(bootstrap);
+            }
+        });
     }
 
     public void testShutdownOutput(Bootstrap cb) throws Throwable {
@@ -96,9 +104,15 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    @Test(timeout = 30000)
-    public void testShutdownOutputAfterClosed() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputAfterClosed(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testShutdownOutputAfterClosed(bootstrap);
+            }
+        });
     }
 
     public void testShutdownOutputAfterClosed(Bootstrap cb) throws Throwable {
@@ -132,10 +146,16 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    @Ignore
-    @Test(timeout = 30000)
-    public void testWriteAfterShutdownOutputNoWritabilityChange() throws Throwable {
-        run();
+    @Disabled
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteAfterShutdownOutputNoWritabilityChange(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testWriteAfterShutdownOutputNoWritabilityChange(bootstrap);
+            }
+        });
     }
 
     public void testWriteAfterShutdownOutputNoWritabilityChange(Bootstrap cb) throws Throwable {
@@ -196,18 +216,30 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    @Test(timeout = 30000)
-    public void testShutdownOutputSoLingerNoAssertError() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testShutdownOutputSoLingerNoAssertError(bootstrap);
+            }
+        });
     }
 
     public void testShutdownOutputSoLingerNoAssertError(Bootstrap cb) throws Throwable {
         testShutdownSoLingerNoAssertError0(cb, true);
     }
 
-    @Test(timeout = 30000)
-    public void testShutdownSoLingerNoAssertError() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testShutdownSoLingerNoAssertError(bootstrap);
+            }
+        });
     }
 
     public void testShutdownSoLingerNoAssertError(Bootstrap cb) throws Throwable {

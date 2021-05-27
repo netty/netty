@@ -28,10 +28,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyFrameCodec;
 import io.netty.handler.codec.spdy.SpdyVersion;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -143,9 +146,15 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         return frames;
     }
 
-    @Test(timeout = 15000)
-    public void testSpdyEcho() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 15000, unit = TimeUnit.MILLISECONDS)
+    public void testSpdyEcho(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testSpdyEcho(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -153,9 +162,15 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         testSpdyEcho(sb, cb, SpdyVersion.SPDY_3_1, true);
     }
 
-    @Test(timeout = 15000)
-    public void testSpdyEchoNotAutoRead() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 15000, unit = TimeUnit.MILLISECONDS)
+    public void testSpdyEchoNotAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testSpdyEchoNotAutoRead(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testSpdyEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {

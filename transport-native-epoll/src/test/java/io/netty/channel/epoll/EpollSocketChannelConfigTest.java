@@ -15,24 +15,27 @@
  */
 package io.netty.channel.epoll;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Random;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class EpollSocketChannelConfigTest {
 
@@ -40,18 +43,18 @@ public class EpollSocketChannelConfigTest {
     private static EpollSocketChannel ch;
     private static Random rand;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         rand = new Random();
         group = new EpollEventLoopGroup(1);
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         group.shutdownGracefully();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
@@ -60,7 +63,7 @@ public class EpollSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         ch.close().syncUninterruptibly();
     }
@@ -86,8 +89,7 @@ public class EpollSocketChannelConfigTest {
             ch.config().setTcpNotSentLowAt(expected);
             actual = ch.config().getTcpNotSentLowAt();
         } catch (RuntimeException e) {
-            assumeNoException(e);
-            return; // Needed to prevent compile error for final variables to be used below
+            throw new TestAbortedException("assumeNoException", e);
         }
         assertEquals(expected, actual);
     }
@@ -100,7 +102,7 @@ public class EpollSocketChannelConfigTest {
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
-            assumeNoException(e);
+            throw new TestAbortedException("assumeNoException", e);
         }
         fail();
     }
@@ -113,7 +115,7 @@ public class EpollSocketChannelConfigTest {
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
-            assumeNoException(e);
+            throw new TestAbortedException("assumeNoException", e);
         }
         fail();
     }

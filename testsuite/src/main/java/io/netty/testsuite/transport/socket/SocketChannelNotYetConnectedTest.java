@@ -18,17 +18,26 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
-    @Test(timeout = 30000)
-    public void testShutdownNotYetConnected() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownNotYetConnected(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testShutdownNotYetConnected(bootstrap);
+            }
+        });
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {

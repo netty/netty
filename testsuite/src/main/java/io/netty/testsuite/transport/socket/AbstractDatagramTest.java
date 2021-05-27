@@ -28,11 +28,6 @@ import java.net.SocketAddress;
 import java.util.List;
 
 public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bootstrap, Bootstrap> {
-
-    protected AbstractDatagramTest() {
-        super(Bootstrap.class, Bootstrap.class);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.datagram(socketInternetProtocalFamily());

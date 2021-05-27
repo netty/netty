@@ -21,21 +21,13 @@ import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.List;
 
 public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
-    private final Class<T> clazz;
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
     protected volatile T cb;
-
-    protected AbstractTestsuiteTest(Class<T> clazz) {
-        this.clazz = clazz;
-    }
 
     protected abstract List<TestsuitePermutation.BootstrapFactory<T>> newFactories();
 
@@ -43,11 +35,9 @@ public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
         return TestsuitePermutation.allocator();
     }
 
-    @Rule
-    public final TestName testName = new TestName();
-
-    protected void run() throws Throwable {
+    protected void run(TestInfo testInfo, Runner<T> runner) throws Throwable {
         List<TestsuitePermutation.BootstrapFactory<T>> combos = newFactories();
+        String methodName = TestUtils.testMethodName(testInfo);
         for (ByteBufAllocator allocator: newAllocators()) {
             int i = 0;
             for (TestsuitePermutation.BootstrapFactory<T> e: combos) {
@@ -55,17 +45,15 @@ public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
                 configure(cb, allocator);
                 logger.info(String.format(
                         "Running: %s %d of %d with %s",
-                        testName.getMethodName(), ++ i, combos.size(), StringUtil.simpleClassName(allocator)));
-                try {
-                    Method m = getClass().getMethod(
-                            TestUtils.testMethodName(testName), clazz);
-                    m.invoke(this, cb);
-                } catch (InvocationTargetException ex) {
-                    throw ex.getCause();
-                }
+                        methodName, ++ i, combos.size(), StringUtil.simpleClassName(allocator)));
+                runner.run(cb);
             }
         }
     }
 
     protected abstract void configure(T bootstrap, ByteBufAllocator allocator);
+
+    public interface Runner<CB extends AbstractBootstrap<?, ?>> {
+        void run(CB cb) throws Throwable;
+    }
 }

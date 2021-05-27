@@ -29,19 +29,25 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketAutoReadTest extends AbstractSocketTest {
     @Test
-    public void testAutoReadOffDuringReadOnlyReadsOneTime() throws Throwable {
-        run();
+    public void testAutoReadOffDuringReadOnlyReadsOneTime(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testAutoReadOffDuringReadOnlyReadsOneTime(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testAutoReadOffDuringReadOnlyReadsOneTime(ServerBootstrap sb, Bootstrap cb) throws Throwable {

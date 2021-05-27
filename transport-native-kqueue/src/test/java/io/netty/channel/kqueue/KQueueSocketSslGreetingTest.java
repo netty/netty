@@ -17,18 +17,12 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslGreetingTest;
 
 import java.util.List;
 
 public class KQueueSocketSslGreetingTest extends SocketSslGreetingTest {
-
-    public KQueueSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
-        super(serverCtx, clientCtx, delegate);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return KQueueSocketTestPermutation.INSTANCE.socket();

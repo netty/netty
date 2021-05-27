@@ -26,10 +26,6 @@ import java.util.List;
 
 public class KQueueDomainSocketStartTlsTest extends SocketStartTlsTest {
 
-    public KQueueDomainSocketStartTlsTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
-    }
-
     @Override
     protected SocketAddress newSocketAddress() {
         return KQueueSocketTestPermutation.newSocketAddress();

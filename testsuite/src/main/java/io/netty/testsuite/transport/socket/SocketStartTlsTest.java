@@ -40,12 +40,13 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import java.io.File;
@@ -54,12 +55,15 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class SocketStartTlsTest extends AbstractSocketTest {
+    private static final String PARAMETERIZED_NAME = "{index}: serverEngine = {0}, clientEngine = {1}";
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketStartTlsTest.class);
 
@@ -79,7 +83,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
-    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<SslContext>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
@@ -106,43 +109,54 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         return params;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void createExecutor() {
         executor = new DefaultEventExecutorGroup(2);
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdownExecutor() throws Exception {
         executor.shutdownGracefully().sync();
     }
 
-    private final SslContext serverCtx;
-    private final SslContext clientCtx;
-
-    public SocketStartTlsTest(SslContext serverCtx, SslContext clientCtx) {
-        this.serverCtx = serverCtx;
-        this.clientCtx = clientCtx;
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testStartTls(final SslContext serverCtx, final SslContext clientCtx, TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testStartTls(sb, cb, serverCtx, clientCtx);
+            }
+        });
     }
 
-    @Test(timeout = 30000)
-    public void testStartTls() throws Throwable {
-        run();
+    public void testStartTls(ServerBootstrap sb, Bootstrap cb,
+                             SslContext serverCtx, SslContext clientCtx) throws Throwable {
+        testStartTls(sb, cb, serverCtx, clientCtx, true);
     }
 
-    public void testStartTls(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testStartTls(sb, cb, true);
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testStartTlsNotAutoRead(final SslContext serverCtx, final SslContext clientCtx,
+                                        TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testStartTlsNotAutoRead(sb, cb, serverCtx, clientCtx);
+            }
+        });
     }
 
-    @Test(timeout = 30000)
-    public void testStartTlsNotAutoRead() throws Throwable {
-        run();
+    public void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb,
+                                        SslContext serverCtx, SslContext clientCtx) throws Throwable {
+        testStartTls(sb, cb, serverCtx, clientCtx, false);
     }
 
-    public void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testStartTls(sb, cb, false);
-    }
-
-    private void testStartTls(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+    private void testStartTls(ServerBootstrap sb, Bootstrap cb,
+                              SslContext serverCtx, SslContext clientCtx, boolean autoRead) throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 

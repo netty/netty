@@ -30,11 +30,14 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -45,9 +48,15 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
     @Override
     protected abstract List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories();
 
-    @Test(timeout = 60000)
-    public void testReuseFd() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
+    public void testReuseFd(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testReuseFd(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testReuseFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {

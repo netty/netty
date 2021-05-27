@@ -23,19 +23,28 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.channels.AlreadyConnectedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketMultipleConnectTest extends AbstractSocketTest {
 
-    @Test(timeout = 30000)
-    public void testMultipleConnect() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testMultipleConnect(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testMultipleConnect(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testMultipleConnect(ServerBootstrap sb, Bootstrap cb) throws Exception {

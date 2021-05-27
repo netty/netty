@@ -20,15 +20,16 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class KQueueChannelConfigTest {
-    @Before
+    @BeforeEach
     public void before() {
         KQueue.ensureAvailability();
     }

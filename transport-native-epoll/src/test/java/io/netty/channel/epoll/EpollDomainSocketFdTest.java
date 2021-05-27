@@ -26,14 +26,19 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollDomainSocketFdTest extends AbstractSocketTest {
     @Override
@@ -46,9 +51,15 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         return EpollSocketTestPermutation.INSTANCE.domainSocket();
     }
 
-    @Test(timeout = 30000)
-    public void testSendRecvFd() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSendRecvFd(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testSendRecvFd(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testSendRecvFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -94,10 +105,10 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
 
         if (received instanceof FileDescriptor) {
             FileDescriptor fd = (FileDescriptor) received;
-            Assert.assertTrue(fd.isOpen());
+            assertTrue(fd.isOpen());
             fd.close();
-            Assert.assertFalse(fd.isOpen());
-            Assert.assertNull(queue.poll());
+            assertFalse(fd.isOpen());
+            assertNull(queue.poll());
         } else {
             throw (Throwable) received;
         }

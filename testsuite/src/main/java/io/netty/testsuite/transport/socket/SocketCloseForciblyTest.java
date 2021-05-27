@@ -21,13 +21,19 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 public class SocketCloseForciblyTest extends AbstractSocketTest {
 
     @Test
-    public void testCloseForcibly() throws Throwable {
-        run();
+    public void testCloseForcibly(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testCloseForcibly(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {

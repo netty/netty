@@ -26,9 +26,9 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -38,16 +38,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
-    @BeforeClass
+    @BeforeAll
     public static void assumeRecvmmsgSupported() {
-        Assume.assumeTrue(Native.IS_SUPPORTING_RECVMMSG);
+        assumeTrue(Native.IS_SUPPORTING_RECVMMSG);
     }
 
     @Override
@@ -56,8 +57,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadPartial() throws Throwable {
-        run();
+    public void testScatteringReadPartial(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadPartial(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -65,8 +71,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringRead() throws Throwable {
-        run();
+    public void testScatteringRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringRead(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringRead(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -74,8 +85,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadConnectedPartial() throws Throwable {
-        run();
+    public void testScatteringReadConnectedPartial(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadConnectedPartial(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadConnectedPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -83,8 +99,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringConnectedRead() throws Throwable {
-        run();
+    public void testScatteringConnectedRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringConnectedRead(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringConnectedRead(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -186,8 +207,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadWithSmallBuffer() throws Throwable {
-        run();
+    public void testScatteringReadWithSmallBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadWithSmallBuffer(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadWithSmallBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -195,8 +221,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringConnectedReadWithSmallBuffer() throws Throwable {
-        run();
+    public void testScatteringConnectedReadWithSmallBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringConnectedReadWithSmallBuffer(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringConnectedReadWithSmallBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {

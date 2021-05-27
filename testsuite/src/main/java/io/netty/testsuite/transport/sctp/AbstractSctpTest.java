@@ -27,11 +27,6 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 public abstract class AbstractSctpTest extends AbstractComboTestsuiteTest<ServerBootstrap, Bootstrap> {
-
-    protected AbstractSctpTest() {
-        super(ServerBootstrap.class, Bootstrap.class);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return SctpTestPermutation.sctpChannel();

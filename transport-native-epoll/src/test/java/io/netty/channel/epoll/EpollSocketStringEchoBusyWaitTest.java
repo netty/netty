@@ -15,12 +15,6 @@
  */
 package io.netty.channel.epoll;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
@@ -32,12 +26,17 @@ import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketStringEchoTest;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     private static EventLoopGroup EPOLL_LOOP;
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         EPOLL_LOOP = new EpollEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
                 new SelectStrategyFactory() {
@@ -53,7 +52,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
                 });
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
         if (EPOLL_LOOP != null) {
             EPOLL_LOOP.shutdownGracefully();

@@ -34,10 +34,10 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
@@ -51,11 +51,11 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(Parameterized.class)
 public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketSslSessionReuseTest.class);
@@ -74,7 +74,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
-    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
         return Collections.singletonList(new Object[] {
             new JdkSslServerContext(CERT_FILE, KEY_FILE),
@@ -82,20 +81,21 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         });
     }
 
-    private final SslContext serverCtx;
-    private final SslContext clientCtx;
-
-    public SocketSslSessionReuseTest(SslContext serverCtx, SslContext clientCtx) {
-        this.serverCtx = serverCtx;
-        this.clientCtx = clientCtx;
+    @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}")
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSslSessionReuse(final SslContext serverCtx, final SslContext clientCtx, TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testSslSessionReuse(sb, cb, serverCtx, clientCtx);
+            }
+        });
     }
 
-    @Test(timeout = 30000)
-    public void testSslSessionReuse() throws Throwable {
-        run();
-    }
-
-    public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb,
+                                    final SslContext serverCtx, final SslContext clientCtx) throws Throwable {
         final ReadAndDiscardHandler sh = new ReadAndDiscardHandler(true, true);
         final ReadAndDiscardHandler ch = new ReadAndDiscardHandler(false, true);
         final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2" };
@@ -139,7 +139,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             cc = cb.connect(sc.localAddress()).sync().channel();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
-            assertEquals("Expected no new sessions", sessions, sessionIdSet(clientSessionCtx.getIds()));
+            assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
             rethrowHandlerExceptions(sh, ch);
         } finally {
             sc.close().awaitUninterruptibly();

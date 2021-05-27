@@ -26,14 +26,23 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class SocketConditionalWritabilityTest extends AbstractSocketTest {
-    @Test(timeout = 30000)
-    public void testConditionalWritability() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testConditionalWritability(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testConditionalWritability(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testConditionalWritability(ServerBootstrap sb, Bootstrap cb) throws Throwable {

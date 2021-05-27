@@ -22,15 +22,16 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 
@@ -38,9 +39,14 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
     private static final long TIMEOUT = 3000000000L;
 
     @Test
-    @Ignore("Need to investigate why it fails on osx")
-    public void testSuspendAndResumeAccept() throws Throwable {
-        run();
+    @Disabled("Need to investigate why it fails on osx")
+    public void testSuspendAndResumeAccept(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap) throws Throwable {
+                testSuspendAndResumeAccept(serverBootstrap);
+            }
+        });
     }
 
     public void testSuspendAndResumeAccept(ServerBootstrap sb) throws Throwable {

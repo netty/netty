@@ -18,7 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
+
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
 
@@ -26,7 +27,7 @@ public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         // Not works on windows atm.
         // See https://github.com/netty/netty/issues/11285
-        Assume.assumeFalse(PlatformDependent.isWindows());
+        assumeFalse(PlatformDependent.isWindows());
         super.testMulticast(sb, cb);
     }
 

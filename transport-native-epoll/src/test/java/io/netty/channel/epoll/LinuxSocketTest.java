@@ -15,36 +15,52 @@
  */
 package io.netty.channel.epoll;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LinuxSocketTest {
-    @BeforeClass
+    @BeforeAll
     public static void loadJNI() {
         Epoll.ensureAvailability();
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testBindNonIpv6SocketToInet6AddressThrows() throws Exception {
-        LinuxSocket socket = LinuxSocket.newSocketStream(false);
+        final LinuxSocket socket = LinuxSocket.newSocketStream(false);
         try {
-            socket.bind(new InetSocketAddress(InetAddress.getByAddress(
-                    new byte[]{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'}), 0));
+            assertThrows(IOException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    socket.bind(new InetSocketAddress(InetAddress.getByAddress(
+                            new byte[]{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'}),
+                            0));
+                }
+            });
         } finally {
             socket.close();
         }
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testConnectNonIpv6SocketToInet6AddressThrows() throws Exception {
-        LinuxSocket socket = LinuxSocket.newSocketStream(false);
+        final LinuxSocket socket = LinuxSocket.newSocketStream(false);
         try {
-            socket.connect(new InetSocketAddress(InetAddress.getByAddress(
-                    new byte[]{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'}), 1234));
+            assertThrows(IOException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            socket.connect(new InetSocketAddress(InetAddress.getByAddress(new byte[]{
+                                    '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'}),
+                                    1234));
+                        }
+                    });
         } finally {
             socket.close();
         }

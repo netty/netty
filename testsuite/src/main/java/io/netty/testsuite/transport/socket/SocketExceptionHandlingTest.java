@@ -25,19 +25,25 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.junit.jupiter.api.TestInfo;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketExceptionHandlingTest extends AbstractSocketTest {
     @Test
-    public void testReadPendingIsResetAfterEachRead() throws Throwable {
-        run();
+    public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testReadPendingIsResetAfterEachRead(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -59,9 +65,9 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
             assertTrue(serverInitializer.exceptionHandler.latch1.await(5, TimeUnit.SECONDS));
 
             // After we get the first exception, we should get no more, this is expected to timeout.
-            assertFalse("Encountered " + serverInitializer.exceptionHandler.count.get() +
-                            " exceptions when 1 was expected",
-                        serverInitializer.exceptionHandler.latch2.await(1, TimeUnit.SECONDS));
+            assertFalse(serverInitializer.exceptionHandler.latch2.await(1, TimeUnit.SECONDS),
+                "Encountered " + serverInitializer.exceptionHandler.count.get() +
+                                        " exceptions when 1 was expected");
         } finally {
             if (serverChannel != null) {
                 serverChannel.close().syncUninterruptibly();

@@ -18,19 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.SslContext;
 
 public class KQueueRcvAllocatorOverrideSocketSslEchoTest extends KQueueSocketSslEchoTest {
-    public KQueueRcvAllocatorOverrideSocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx, Renegotiation renegotiation,
-            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
-            boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
-
-        super(serverCtx, clientCtx, renegotiation,
-                serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
-                autoRead, useChunkedWriteHandler, useCompositeByteBuf);
-    }
-
     @Override
     protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
         super.configure(bootstrap, bootstrap2, allocator);

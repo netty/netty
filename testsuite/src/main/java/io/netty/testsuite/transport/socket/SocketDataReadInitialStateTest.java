@@ -23,19 +23,28 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.ChannelOption.AUTO_READ;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SocketDataReadInitialStateTest extends AbstractSocketTest {
-    @Test(timeout = 10000)
-    public void testAutoReadOffNoDataReadUntilReadCalled() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testAutoReadOffNoDataReadUntilReadCalled(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testAutoReadOffNoDataReadUntilReadCalled(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testAutoReadOffNoDataReadUntilReadCalled(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -127,9 +136,15 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
         }
     }
 
-    @Test(timeout = 10000)
-    public void testAutoReadOnDataReadImmediately() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testAutoReadOnDataReadImmediately(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testAutoReadOnDataReadImmediately(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testAutoReadOnDataReadImmediately(ServerBootstrap sb, Bootstrap cb) throws Throwable {

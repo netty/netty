@@ -35,11 +35,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
@@ -50,17 +50,18 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLHandshakeException;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@RunWith(Parameterized.class)
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             SocketSslClientRenegotiateTest.class);
     private static final File CERT_FILE;
@@ -77,7 +78,10 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
-    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}, delegate = {2}")
+    private static boolean openSslNotAvailable() {
+        return !OpenSsl.isAvailable();
+    }
+
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<SslContext>();
         List<SslContext> clientContexts = new ArrayList<SslContext>();
@@ -104,10 +108,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         return params;
     }
 
-    private final SslContext serverCtx;
-    private final SslContext clientCtx;
-    private final boolean delegate;
-
     private final AtomicReference<Throwable> clientException = new AtomicReference<Throwable>();
     private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
 
@@ -121,19 +121,21 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
     private final TestHandler serverHandler = new TestHandler(serverException);
 
-    public SocketSslClientRenegotiateTest(
-            SslContext serverCtx, SslContext clientCtx, boolean delegate) {
-        this.serverCtx = serverCtx;
-        this.clientCtx = clientCtx;
-        this.delegate = delegate;
-    }
-
-    @Test(timeout = 30000)
-    public void testSslRenegotiationRejected() throws Throwable {
+    @DisabledIf("openSslNotAvailable")
+    @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}, delegate = {2}")
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSslRenegotiationRejected(final SslContext serverCtx, final SslContext clientCtx,
+                                             final boolean delegate, TestInfo testInfo) throws Throwable {
         // BoringSSL does not support renegotiation intentionally.
-        Assume.assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        run();
+        assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
+        assumeTrue(OpenSsl.isAvailable());
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testSslRenegotiationRejected(sb, cb, serverCtx, clientCtx, delegate);
+            }
+        });
     }
 
     private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
@@ -144,7 +146,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
     }
 
-    public void testSslRenegotiationRejected(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testSslRenegotiationRejected(ServerBootstrap sb, Bootstrap cb, final SslContext serverCtx,
+                                             final SslContext clientCtx, boolean delegate) throws Throwable {
         reset();
 
         final ExecutorService executorService = delegate ? Executors.newCachedThreadPool() : null;
