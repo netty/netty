@@ -19,17 +19,17 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.tests.SocketTest;
 import io.netty.channel.unix.tests.UnixTestUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollSocketTest extends SocketTest<LinuxSocket> {
-    @BeforeClass
+    @BeforeAll
     public static void loadJNI() {
         Epoll.ensureAvailability();
     }

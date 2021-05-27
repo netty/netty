@@ -27,11 +27,6 @@ import java.net.SocketAddress;
 import java.util.List;
 
 public abstract class AbstractClientSocketTest extends AbstractTestsuiteTest<Bootstrap> {
-
-    protected AbstractClientSocketTest() {
-        super(Bootstrap.class);
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.clientSocket();

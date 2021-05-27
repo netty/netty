@@ -28,14 +28,15 @@ import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
 import io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler;
 import io.netty.testsuite.util.TestUtils;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.TestInfo;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SctpEchoTest extends AbstractSctpTest {
 
@@ -47,9 +48,9 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     @Test
-    public void testSimpleEcho() throws Throwable {
-        Assume.assumeTrue(TestUtils.isSctpSupported());
-        run();
+    public void testSimpleEcho(TestInfo testInfo) throws Throwable {
+        assumeTrue(TestUtils.isSctpSupported());
+        run(testInfo, this::testSimpleEcho);
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -57,9 +58,9 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     @Test
-    public void testSimpleEchoUnordered() throws Throwable {
-        Assume.assumeTrue(TestUtils.isSctpSupported());
-        run();
+    public void testSimpleEchoUnordered(TestInfo testInfo) throws Throwable {
+        assumeTrue(TestUtils.isSctpSupported());
+        run(testInfo, this::testSimpleEchoUnordered);
     }
 
     public void testSimpleEchoUnordered(ServerBootstrap sb, Bootstrap cb) throws Throwable {

@@ -20,21 +20,23 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollServerSocketChannelConfigTest {
 
     private static EventLoopGroup group;
     private static EpollServerSocketChannel ch;
 
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -44,7 +46,7 @@ public class EpollServerSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @AfterClass
+    @AfterAll
     public static void after() {
         try {
             ch.close().syncUninterruptibly();

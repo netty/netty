@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketStartTlsTest;
 
@@ -25,11 +24,6 @@ import java.net.SocketAddress;
 import java.util.List;
 
 public class EpollDomainSocketStartTlsTest extends SocketStartTlsTest {
-
-    public EpollDomainSocketStartTlsTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
-    }
-
     @Override
     protected SocketAddress newSocketAddress() {
         return EpollSocketTestPermutation.newSocketAddress();

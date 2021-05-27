@@ -25,13 +25,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SocketObjectEchoTest extends AbstractSocketTest {
 
@@ -51,8 +52,8 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testObjectEcho() throws Throwable {
-        run();
+    public void testObjectEcho(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testObjectEcho);
     }
 
     public void testObjectEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -60,8 +61,8 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testObjectEchoNotAutoRead() throws Throwable {
-        run();
+    public void testObjectEchoNotAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testObjectEchoNotAutoRead);
     }
 
     public void testObjectEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {

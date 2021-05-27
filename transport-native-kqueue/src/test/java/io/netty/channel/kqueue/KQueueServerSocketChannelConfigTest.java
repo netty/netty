@@ -19,24 +19,23 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class KQueueServerSocketChannelConfigTest {
 
     private static EventLoopGroup group;
     private static KQueueServerSocketChannel ch;
 
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -46,7 +45,7 @@ public class KQueueServerSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @AfterClass
+    @AfterAll
     public static void after() {
         try {
             ch.close().syncUninterruptibly();
@@ -67,7 +66,7 @@ public class KQueueServerSocketChannelConfigTest {
     public void testAcceptFilter() {
         AcceptFilter currentFilter = ch.config().getAcceptFilter();
         // Not all platforms support this option (e.g. MacOS doesn't) so test if we support the option first.
-        assumeThat(currentFilter, not(AcceptFilter.PLATFORM_UNSUPPORTED));
+        assumeTrue(currentFilter != AcceptFilter.PLATFORM_UNSUPPORTED);
 
         AcceptFilter af = new AcceptFilter("test", "foo");
         ch.config().setAcceptFilter(af);

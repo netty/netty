@@ -15,16 +15,10 @@
  */
 package io.netty.channel.epoll;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import io.netty.channel.MultithreadEventLoopGroup;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -33,18 +27,23 @@ import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketStringEchoTest;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     private static EventLoopGroup EPOLL_LOOP;
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
                 EpollHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
         if (EPOLL_LOOP != null) {
             EPOLL_LOOP.shutdownGracefully();

@@ -34,8 +34,9 @@ import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -43,14 +44,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
-    @Test(timeout = 10000)
-    public void testHalfClosureOnlyOneEventWhenAutoRead() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 10000, unit = MILLISECONDS)
+    public void testHalfClosureOnlyOneEventWhenAutoRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testHalfClosureOnlyOneEventWhenAutoRead);
     }
 
     public void testHalfClosureOnlyOneEventWhenAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -114,8 +117,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAllDataReadAfterHalfClosure() throws Throwable {
-        run();
+    public void testAllDataReadAfterHalfClosure(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testAllDataReadAfterHalfClosure);
     }
 
     public void testAllDataReadAfterHalfClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -207,8 +210,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             serverInitializedLatch.await();
             clientReadAllDataLatch.await();
             clientHalfClosedLatch.await();
-            assertTrue("too many read complete events: " + clientReadCompletes.get(),
-                    totalServerBytesWritten / numReadsPerReadLoop + 10 > clientReadCompletes.get());
+            assertTrue(totalServerBytesWritten / numReadsPerReadLoop + 10 > clientReadCompletes.get(),
+                "too many read complete events: " + clientReadCompletes.get());
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();
@@ -220,10 +223,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAutoCloseFalseDoesShutdownOutput() throws Throwable {
+    public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
         // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
-        Assume.assumeFalse(PlatformDependent.isWindows());
-        run();
+        assumeFalse(PlatformDependent.isWindows());
+        run(testInfo, this::testAutoCloseFalseDoesShutdownOutput);
     }
 
     public void testAutoCloseFalseDoesShutdownOutput(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -411,8 +414,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAllDataReadClosure() throws Throwable {
-        run();
+    public void testAllDataReadClosure(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testAllDataReadClosure);
     }
 
     public void testAllDataReadClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -512,8 +515,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             serverInitializedLatch.await();
             clientReadAllDataLatch.await();
             clientHalfClosedLatch.await();
-            assertTrue("too many read complete events: " + clientReadCompletes.get(),
-                    totalServerBytesWritten / numReadsPerReadLoop + 10 > clientReadCompletes.get());
+            assertTrue(totalServerBytesWritten / numReadsPerReadLoop + 10 > clientReadCompletes.get(),
+                "too many read complete events: " + clientReadCompletes.get());
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();

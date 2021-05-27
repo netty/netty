@@ -23,22 +23,28 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends AbstractServerSocketTest {
 
-    @Test(timeout = 30000)
-    public void testShutdownOutput() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutput(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testShutdownOutput);
     }
 
     public void testShutdownOutput(ServerBootstrap sb) throws Throwable {
@@ -78,9 +84,10 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
         }
     }
 
-    @Test(timeout = 30000)
-    public void testShutdownOutputWithoutOption() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputWithoutOption(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testShutdownOutputWithoutOption);
     }
 
     public void testShutdownOutputWithoutOption(ServerBootstrap sb) throws Throwable {
