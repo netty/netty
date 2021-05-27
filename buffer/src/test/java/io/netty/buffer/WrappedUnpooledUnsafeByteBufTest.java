@@ -16,134 +16,136 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteBufTest {
 
-    @Before
+    @BeforeEach
     @Override
     public void init() {
-        Assume.assumeTrue("PlatformDependent.useDirectBufferNoCleaner() returned false, skip tests",
-                PlatformDependent.useDirectBufferNoCleaner());
+        Assumptions.assumeTrue(PlatformDependent.useDirectBufferNoCleaner(),
+                "PlatformDependent.useDirectBufferNoCleaner() returned false, skip tests");
         super.init();
     }
 
     @Override
     protected ByteBuf newBuffer(int length, int maxCapacity) {
-        Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
+        Assumptions.assumeTrue(maxCapacity == Integer.MAX_VALUE);
 
         return new WrappedUnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT,
                 PlatformDependent.allocateMemory(length), length, true);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testInternalNioBuffer() {
-        super.testInternalNioBuffer();
+        assertThrows(IndexOutOfBoundsException.class, super::testInternalNioBuffer);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
-        super.testDuplicateReadGatheringByteChannelMultipleThreads();
+    public void testDuplicateReadGatheringByteChannelMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testDuplicateReadGatheringByteChannelMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
-        super.testSliceReadGatheringByteChannelMultipleThreads();
+    public void testSliceReadGatheringByteChannelMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testSliceReadGatheringByteChannelMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
-        super.testDuplicateReadOutputStreamMultipleThreads();
+    public void testDuplicateReadOutputStreamMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testDuplicateReadOutputStreamMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
-        super.testSliceReadOutputStreamMultipleThreads();
+    public void testSliceReadOutputStreamMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testSliceReadOutputStreamMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
-        super.testDuplicateBytesInArrayMultipleThreads();
+    public void testDuplicateBytesInArrayMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testDuplicateBytesInArrayMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceBytesInArrayMultipleThreads() throws Exception {
-        super.testSliceBytesInArrayMultipleThreads();
+    public void testSliceBytesInArrayMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, super::testSliceBytesInArrayMultipleThreads);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testNioBufferExposeOnlyRegion() {
-        super.testNioBufferExposeOnlyRegion();
+        assertThrows(IndexOutOfBoundsException.class, super::testNioBufferExposeOnlyRegion);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testGetReadOnlyDirectDst() {
-        super.testGetReadOnlyDirectDst();
+        assertThrows(IndexOutOfBoundsException.class, super::testGetReadOnlyDirectDst);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testGetReadOnlyHeapDst() {
-        super.testGetReadOnlyHeapDst();
+        assertThrows(IndexOutOfBoundsException.class, super::testGetReadOnlyHeapDst);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testReadBytes() {
-        super.testReadBytes();
+        assertThrows(IndexOutOfBoundsException.class, super::testReadBytes);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     @Override
     public void testDuplicateCapacityChange() {
-        super.testDuplicateCapacityChange();
+        assertThrows(IllegalArgumentException.class, super::testDuplicateCapacityChange);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     @Override
     public void testRetainedDuplicateCapacityChange() {
-        super.testRetainedDuplicateCapacityChange();
+        assertThrows(IllegalArgumentException.class, super::testRetainedDuplicateCapacityChange);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testLittleEndianWithExpand() {
-        super.testLittleEndianWithExpand();
+        assertThrows(IndexOutOfBoundsException.class, super::testLittleEndianWithExpand);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUsAsciiCharSequenceExpand() {
-        super.testWriteUsAsciiCharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, super::testWriteUsAsciiCharSequenceExpand);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUtf8CharSequenceExpand() {
-        super.testWriteUtf8CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, super::testWriteUtf8CharSequenceExpand);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteIso88591CharSequenceExpand() {
-        super.testWriteIso88591CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, super::testWriteIso88591CharSequenceExpand);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUtf16CharSequenceExpand() {
-        super.testWriteUtf16CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, super::testWriteUtf16CharSequenceExpand);
     }
 
     @Test
