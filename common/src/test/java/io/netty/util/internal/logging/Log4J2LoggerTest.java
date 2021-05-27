@@ -15,7 +15,7 @@
  */
 package io.netty.util.internal.logging;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -26,10 +26,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assume;
 
 import io.netty.util.internal.ReflectionUtil;
+import org.junit.jupiter.api.Assumptions;
 
 /**
  * {@linkplain Log4J2Logger} extends {@linkplain ExtendedLoggerWrapper} implements {@linkplain InternalLogger}.<br>
@@ -66,7 +65,7 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
 
         Method method = mockLog.getClass().getDeclaredMethod("setLevel", Level.class);
         if (!method.isAccessible()) {
-            Assume.assumeThat(ReflectionUtil.trySetAccessible(method, true), CoreMatchers.nullValue());
+            Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(method, true) == null);
         }
         method.invoke(mockLog, targetLevel);
     }

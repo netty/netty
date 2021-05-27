@@ -16,19 +16,20 @@
 
 package io.netty.util.concurrent;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.FutureTask;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ImmediateExecutorTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testExecuteNullRunnable() {
-        ImmediateExecutor.INSTANCE.execute(null);
+        assertThrows(NullPointerException.class, () -> ImmediateExecutor.INSTANCE.execute(null));
     }
 
     @Test

@@ -15,28 +15,29 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SystemPropertyUtilTest {
 
-    @Before
+    @BeforeEach
     public void clearSystemPropertyBeforeEach() {
         System.clearProperty("key");
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testGetWithKeyNull() {
-        SystemPropertyUtil.get(null, null);
+        assertThrows(NullPointerException.class, () -> SystemPropertyUtil.get(null, null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testGetWithKeyEmpty() {
-        SystemPropertyUtil.get("", null);
+        assertThrows(IllegalArgumentException.class, () -> SystemPropertyUtil.get("", null));
     }
 
     @Test

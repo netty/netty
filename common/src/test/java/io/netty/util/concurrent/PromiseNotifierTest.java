@@ -16,28 +16,22 @@
 
 package io.netty.util.concurrent;
 
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 
 public class PromiseNotifierTest {
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
     @Test
     public void testNullPromisesArray() {
-        expectedException.expect(NullPointerException.class);
-        new PromiseNotifier<>((Promise<Void>[]) null);
+        assertThrows(NullPointerException.class, () -> new PromiseNotifier<>((Promise<Void>[]) null));
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testNullPromiseInArray() {
-        expectedException.expect(IllegalArgumentException.class);
-        new PromiseNotifier<>((Promise<Void>) null);
+        assertThrows(IllegalArgumentException.class, () -> new PromiseNotifier<>((Promise<Void>) null));
     }
 
     @Test

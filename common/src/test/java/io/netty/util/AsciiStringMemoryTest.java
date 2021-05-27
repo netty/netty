@@ -15,15 +15,15 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the underlying memory methods for the {@link AsciiString} class.
@@ -38,7 +38,7 @@ public class AsciiStringMemoryTest {
     private AsciiString bAsciiString;
     private Random r = new Random();
 
-    @Before
+    @BeforeEach
     public void setup() {
         a = new byte[128];
         b = new byte[256];
@@ -85,7 +85,7 @@ public class AsciiStringMemoryTest {
             int i;
             @Override
             public boolean process(byte value) {
-                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(i++));
+                assertEquals(value, bAsciiString.byteAt(i++), "failed at index: " + i);
                 aCount.set(aCount.get() + 1);
                 return true;
             }
@@ -94,7 +94,7 @@ public class AsciiStringMemoryTest {
             int i;
             @Override
             public boolean process(byte value) {
-                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(i++));
+                assertEquals(value, aAsciiString.byteAt(i++), "failed at index: " + i);
                 bCount.set(bCount.get() + 1);
                 return true;
             }
@@ -123,7 +123,7 @@ public class AsciiStringMemoryTest {
             int i = 1;
             @Override
             public boolean process(byte value) {
-                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(bAsciiString.length() - (i++)));
+                assertEquals(value, bAsciiString.byteAt(bAsciiString.length() - (i++)), "failed at index: " + i);
                 aCount.set(aCount.get() + 1);
                 return true;
             }
@@ -132,7 +132,7 @@ public class AsciiStringMemoryTest {
             int i = 1;
             @Override
             public boolean process(byte value) {
-                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(aAsciiString.length() - (i++)));
+                assertEquals(value, aAsciiString.byteAt(aAsciiString.length() - (i++)), "failed at index: " + i);
                 bCount.set(bCount.get() + 1);
                 return true;
             }

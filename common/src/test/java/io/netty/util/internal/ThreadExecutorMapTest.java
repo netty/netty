@@ -17,25 +17,26 @@ package io.netty.util.internal;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ThreadExecutorMapTest {
 
     @Test
     public void testDecorateExecutor() {
         Executor executor = ThreadExecutorMap.apply(ImmediateExecutor.INSTANCE, ImmediateEventExecutor.INSTANCE);
-        executor.execute(() -> Assert.assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor()));
+        executor.execute(() -> assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor()));
     }
 
     @Test
     public void testDecorateRunnable() {
         ThreadExecutorMap.apply(() ->
-                Assert.assertSame(ImmediateEventExecutor.INSTANCE,
+                assertSame(ImmediateEventExecutor.INSTANCE,
                         ThreadExecutorMap.currentExecutor()), ImmediateEventExecutor.INSTANCE).run();
     }
 
@@ -43,7 +44,7 @@ public class ThreadExecutorMapTest {
     public void testDecorateThreadFactory() throws InterruptedException {
         ThreadFactory threadFactory =
                 ThreadExecutorMap.apply(Executors.defaultThreadFactory(), ImmediateEventExecutor.INSTANCE);
-        Thread thread = threadFactory.newThread(() -> Assert.assertSame(ImmediateEventExecutor.INSTANCE,
+        Thread thread = threadFactory.newThread(() -> assertSame(ImmediateEventExecutor.INSTANCE,
                 ThreadExecutorMap.currentExecutor()));
         thread.start();
         thread.join();
