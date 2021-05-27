@@ -15,7 +15,7 @@
  */
 package io.netty.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -24,10 +24,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HashedWheelTimerTest {
 
@@ -43,7 +43,7 @@ public class HashedWheelTimerTest {
             }
         }, 10, TimeUnit.SECONDS);
         assertFalse(barrier.await(3, TimeUnit.SECONDS));
-        assertFalse("timer should not expire", timeout.isExpired());
+        assertFalse(timeout.isExpired(), "timer should not expire");
         timer.stop();
     }
 
@@ -58,11 +58,12 @@ public class HashedWheelTimerTest {
             }
         }, 2, TimeUnit.SECONDS);
         assertTrue(barrier.await(3, TimeUnit.SECONDS));
-        assertTrue("timer should expire", timeout.isExpired());
+        assertTrue(timeout.isExpired(), "timer should expire");
         timer.stop();
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testStopTimer() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(3);
         final Timer timerProcessed = new HashedWheelTimer();
@@ -76,7 +77,7 @@ public class HashedWheelTimerTest {
         }
 
         latch.await();
-        assertEquals("Number of unprocessed timeouts should be 0", 0, timerProcessed.stop().size());
+        assertEquals(0, timerProcessed.stop().size(), "Number of unprocessed timeouts should be 0");
 
         final Timer timerUnprocessed = new HashedWheelTimer();
         for (int i = 0; i < 5; i ++) {
@@ -87,10 +88,11 @@ public class HashedWheelTimerTest {
             }, 5, TimeUnit.SECONDS);
         }
         Thread.sleep(1000L); // sleep for a second
-        assertFalse("Number of unprocessed timeouts should be greater than 0", timerUnprocessed.stop().isEmpty());
+        assertFalse(timerUnprocessed.stop().isEmpty(), "Number of unprocessed timeouts should be greater than 0");
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testTimerShouldThrowExceptionAfterShutdownForNewTimeouts() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(3);
         final Timer timer = new HashedWheelTimer();
@@ -114,7 +116,8 @@ public class HashedWheelTimerTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTimerOverflowWheelLength() throws InterruptedException {
         final HashedWheelTimer timer = new HashedWheelTimer(
             Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 32);
@@ -153,8 +156,8 @@ public class HashedWheelTimerTest {
 
         for (int i = 0; i < scheduledTasks; i++) {
             long delay = queue.take();
-            assertTrue("Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout,
-                delay >= timeout && delay < maxTimeout);
+            assertTrue(delay >= timeout && delay < maxTimeout,
+                "Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout);
         }
 
         timer.stop();
@@ -195,7 +198,8 @@ public class HashedWheelTimerTest {
         timer.stop();
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsExecuted()
         throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);

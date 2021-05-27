@@ -16,39 +16,47 @@
 
 package io.netty.util.concurrent;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class PromiseAggregatorTest {
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
     @Test
     public void testNullAggregatePromise() {
-        expectedException.expect(NullPointerException.class);
-        new PromiseAggregator<Void, Future<Void>>(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @SuppressWarnings("deprecation")
+            @Override
+            public void execute() {
+                new PromiseAggregator<Void, Future<Void>>(null);
+            }
+        });
     }
 
     @Test
     public void testAddNullFuture() {
         @SuppressWarnings("unchecked")
         Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void, Future<Void>> a =
+        @SuppressWarnings("deprecation")
+        final PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
-        expectedException.expect(NullPointerException.class);
-        a.add((Promise<Void>[]) null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                a.add((Promise<Void>[]) null);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testSuccessfulNoPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
+        @SuppressWarnings("deprecation")
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
 

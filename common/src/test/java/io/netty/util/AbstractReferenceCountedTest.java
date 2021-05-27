@@ -16,7 +16,9 @@
 package io.netty.util;
 
 import io.netty.util.internal.ThreadLocalRandom;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -24,35 +26,52 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class AbstractReferenceCountedTest {
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void testRetainOverflow() {
-        AbstractReferenceCounted referenceCounted = newReferenceCounted();
+        final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(Integer.MAX_VALUE);
         assertEquals(Integer.MAX_VALUE, referenceCounted.refCnt());
-        referenceCounted.retain();
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                referenceCounted.retain();
+            }
+        });
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void testRetainOverflow2() {
-        AbstractReferenceCounted referenceCounted = newReferenceCounted();
+        final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertEquals(1, referenceCounted.refCnt());
-        referenceCounted.retain(Integer.MAX_VALUE);
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                referenceCounted.retain(Integer.MAX_VALUE);
+            }
+        });
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void testReleaseOverflow() {
-        AbstractReferenceCounted referenceCounted = newReferenceCounted();
+        final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(0);
         assertEquals(0, referenceCounted.refCnt());
-        referenceCounted.release(Integer.MAX_VALUE);
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                referenceCounted.release(Integer.MAX_VALUE);
+            }
+        });
     }
 
     @Test
@@ -67,23 +86,34 @@ public class AbstractReferenceCountedTest {
         }
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void testRetainResurrect() {
-        AbstractReferenceCounted referenceCounted = newReferenceCounted();
+        final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
         assertEquals(0, referenceCounted.refCnt());
-        referenceCounted.retain();
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                referenceCounted.retain();
+            }
+        });
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void testRetainResurrect2() {
-        AbstractReferenceCounted referenceCounted = newReferenceCounted();
+        final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
         assertEquals(0, referenceCounted.refCnt());
-        referenceCounted.retain(2);
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                referenceCounted.retain(2);
+            }
+        });
     }
 
-    @Test(timeout = 30000)
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testRetainFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
         Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
@@ -131,7 +161,8 @@ public class AbstractReferenceCountedTest {
         }
     }
 
-    @Test(timeout = 30000)
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testReleaseFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
         Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);

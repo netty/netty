@@ -17,12 +17,13 @@ package io.netty.util.internal;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ThreadExecutorMapTest {
 
@@ -32,7 +33,7 @@ public class ThreadExecutorMapTest {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                Assert.assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor());
+                assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor());
             }
         });
     }
@@ -42,7 +43,8 @@ public class ThreadExecutorMapTest {
         ThreadExecutorMap.apply(new Runnable() {
             @Override
             public void run() {
-                Assert.assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor());
+                assertSame(ImmediateEventExecutor.INSTANCE,
+                        ThreadExecutorMap.currentExecutor());
             }
         }, ImmediateEventExecutor.INSTANCE).run();
     }
@@ -54,7 +56,7 @@ public class ThreadExecutorMapTest {
         Thread thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
-                Assert.assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor());
+                assertSame(ImmediateEventExecutor.INSTANCE, ThreadExecutorMap.currentExecutor());
             }
         });
         thread.start();

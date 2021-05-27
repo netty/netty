@@ -16,10 +16,11 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.NettyRuntime;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,22 +30,27 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class NonStickyEventExecutorGroupTest {
+    private static final String PARAMETERIZED_NAME = "{index}: maxTaskExecutePerRun = {0}";
 
-    private final int maxTaskExecutePerRun;
-
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidGroup() {
-        EventExecutorGroup group = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group = new DefaultEventExecutorGroup(1);
         try {
-            new NonStickyEventExecutorGroup(group);
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    new NonStickyEventExecutorGroup(group);
+                }
+            });
         } finally {
             group.shutdownGracefully();
         }
     }
 
-    @Parameterized.Parameters(name = "{index}: maxTaskExecutePerRun = {0}")
     public static Collection<Object[]> data() throws Exception {
         List<Object[]> params = new ArrayList<Object[]>();
         params.add(new Object[] {64});
@@ -54,12 +60,10 @@ public class NonStickyEventExecutorGroupTest {
         return params;
     }
 
-    public NonStickyEventExecutorGroupTest(int maxTaskExecutePerRun) {
-        this.maxTaskExecutePerRun = maxTaskExecutePerRun;
-    }
-
-    @Test(timeout = 10000)
-    public void testOrdering() throws Throwable {
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("data")
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testOrdering(int maxTaskExecutePerRun) throws Throwable {
         final int threads = NettyRuntime.availableProcessors() * 2;
         final EventExecutorGroup group = new UnorderedThreadPoolEventExecutor(threads);
         final NonStickyEventExecutorGroup nonStickyGroup = new NonStickyEventExecutorGroup(group, maxTaskExecutePerRun);
@@ -94,8 +98,9 @@ public class NonStickyEventExecutorGroupTest {
         }
     }
 
-    @Test
-    public void testRaceCondition() throws InterruptedException {
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("data")
+    public void testRaceCondition(int maxTaskExecutePerRun) throws InterruptedException {
         EventExecutorGroup group = new UnorderedThreadPoolEventExecutor(1);
         NonStickyEventExecutorGroup nonStickyGroup = new NonStickyEventExecutorGroup(group, maxTaskExecutePerRun);
 
@@ -113,10 +118,10 @@ public class NonStickyEventExecutorGroupTest {
                             latch.countDown();
                         }
                     });
-                    Assert.assertTrue(firstCompleted.await(1, TimeUnit.SECONDS));
+                    assertTrue(firstCompleted.await(1, TimeUnit.SECONDS));
                 }
 
-                Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+                assertTrue(latch.await(5, TimeUnit.SECONDS));
             }
         } finally {
             nonStickyGroup.shutdownGracefully();
@@ -125,7 +130,7 @@ public class NonStickyEventExecutorGroupTest {
 
     private static void execute(EventExecutorGroup group, CountDownLatch startLatch) throws Throwable {
         EventExecutor executor = group.next();
-        Assert.assertTrue(executor instanceof OrderedEventExecutor);
+        assertTrue(executor instanceof OrderedEventExecutor);
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicInteger last = new AtomicInteger();
         int tasks = 10000;

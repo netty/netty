@@ -16,8 +16,9 @@
 
 package io.netty.util.concurrent;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,13 +29,13 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GlobalEventExecutorTest {
 
     private static final GlobalEventExecutor e = GlobalEventExecutor.INSTANCE;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         // Wait until the global executor is stopped (just in case there is a task running due to previous test cases)
         for (;;) {
@@ -46,7 +47,8 @@ public class GlobalEventExecutorTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testAutomaticStartStop() throws Exception {
         final TestRunnable task = new TestRunnable(500);
         e.execute(task);
@@ -70,7 +72,8 @@ public class GlobalEventExecutorTest {
         assertThat(task.ran.get(), is(true));
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testScheduledTasks() throws Exception {
         TestRunnable task = new TestRunnable(0);
         ScheduledFuture<?> f = e.schedule(task, 1500, TimeUnit.MILLISECONDS);
@@ -87,7 +90,8 @@ public class GlobalEventExecutorTest {
 
     // ensure that when a task submission causes a new thread to be created, the thread inherits the thread group of the
     // submitting thread
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testThreadGroup() throws InterruptedException {
         final ThreadGroup group = new ThreadGroup("group");
         final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<ThreadGroup>();
@@ -108,7 +112,8 @@ public class GlobalEventExecutorTest {
         assertEquals(group, capturedGroup.get());
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTakeTask() throws Exception {
         //add task
         TestRunnable beforeTask = new TestRunnable(0);
@@ -129,7 +134,8 @@ public class GlobalEventExecutorTest {
         assertThat(afterTask.ran.get(), is(true));
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTakeTaskAlwaysHasTask() throws Exception {
         //for https://github.com/netty/netty/issues/1614
         //add scheduled task

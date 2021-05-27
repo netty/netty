@@ -15,15 +15,19 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
@@ -137,12 +141,12 @@ public class PlatformDependentTest {
                 bytes[j] = (byte) (bytesChar[j] & 0xff);
             }
             String string = new String(bytesChar);
-            assertEquals("length=" + i,
-                         hashCodeAsciiSafe(bytes, 0, bytes.length),
-                         hashCodeAscii(bytes, 0, bytes.length));
-            assertEquals("length=" + i,
-                    hashCodeAscii(bytes, 0, bytes.length),
-                    hashCodeAscii(string));
+            assertEquals(hashCodeAsciiSafe(bytes, 0, bytes.length),
+                         hashCodeAscii(bytes, 0, bytes.length),
+                        "length=" + i);
+            assertEquals(hashCodeAscii(bytes, 0, bytes.length),
+                        hashCodeAscii(string),
+                        "length=" + i);
         }
     }
 

@@ -15,23 +15,26 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ObjectCleanerTest {
 
     private Thread temporaryThread;
     private Object temporaryObject;
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testCleanup() throws Exception {
         final AtomicBoolean freeCalled = new AtomicBoolean();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -55,7 +58,7 @@ public class ObjectCleanerTest {
 
         latch.countDown();
         temporaryThread.join();
-        Assert.assertFalse(freeCalled.get());
+        assertFalse(freeCalled.get());
 
         // Null out the temporary object to ensure it is enqueued for GC.
         temporaryThread = null;
@@ -67,7 +70,8 @@ public class ObjectCleanerTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testCleanupContinuesDespiteThrowing() throws InterruptedException {
         final AtomicInteger freeCalledCount = new AtomicInteger();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -113,7 +117,8 @@ public class ObjectCleanerTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testCleanerThreadIsDaemon() throws Exception {
         temporaryObject = new Object();
         ObjectCleaner.register(temporaryObject, new Runnable() {

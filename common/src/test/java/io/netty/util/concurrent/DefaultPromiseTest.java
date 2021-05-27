@@ -19,8 +19,10 @@ package io.netty.util.concurrent;
 import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
 
 import java.util.HashMap;
@@ -40,14 +42,19 @@ import static java.lang.Math.max;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromiseTest.class);
     private static int stackOverflowDepth;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         try {
             findStackOverflowDepth();
@@ -101,24 +108,32 @@ public class DefaultPromiseTest {
         assertSame(cause, promise.cause());
     }
 
-    @Test(expected = CancellationException.class)
-    public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
+    @Test
+    public void testCancellationExceptionIsThrownWhenBlockingGet() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
-        promise.get();
-    }
-
-    @Test(expected = CancellationException.class)
-    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
-            ExecutionException, TimeoutException {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        assertTrue(promise.cancel(false));
-        promise.get(1, TimeUnit.SECONDS);
+        assertThrows(CancellationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                promise.get();
+            }
+        });
     }
 
     @Test
-    public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
-    ExecutionException, TimeoutException {
+    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        assertTrue(promise.cancel(false));
+        assertThrows(CancellationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                promise.get(1, TimeUnit.SECONDS);
+            }
+        });
+    }
+
+    @Test
+    public void testCancellationExceptionIsReturnedAsCause() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause(), instanceOf(CancellationException.class));
@@ -212,11 +227,11 @@ public class DefaultPromiseTest {
 
                 promise.addListener(listener1).addListener(listener2).addListener(listener3);
 
-                assertSame("Fail 1 during run " + i + " / " + runs, listener1, listeners.take());
-                assertSame("Fail 2 during run " + i + " / " + runs, listener2, listeners.take());
-                assertSame("Fail 3 during run " + i + " / " + runs, listener3, listeners.take());
-                assertSame("Fail 4 during run " + i + " / " + runs, listener4, listeners.take());
-                assertTrue("Fail during run " + i + " / " + runs, listeners.isEmpty());
+                assertSame(listener1, listeners.take(), "Fail 1 during run " + i + " / " + runs);
+                assertSame(listener2, listeners.take(), "Fail 2 during run " + i + " / " + runs);
+                assertSame(listener3, listeners.take(), "Fail 3 during run " + i + " / " + runs);
+                assertSame(listener4, listeners.take(), "Fail 4 during run " + i + " / " + runs);
+                assertTrue(listeners.isEmpty(), "Fail during run " + i + " / " + runs);
             }
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
@@ -232,22 +247,26 @@ public class DefaultPromiseTest {
         testListenerNotifyLater(2);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testPromiseListenerAddWhenCompleteFailure() throws Exception {
         testPromiseListenerAddWhenComplete(fakeException());
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testPromiseListenerAddWhenCompleteSuccess() throws Exception {
         testPromiseListenerAddWhenComplete(null);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testLateListenerIsOrderedCorrectlySuccess() throws InterruptedException {
         testLateListenerIsOrderedCorrectly(null);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testLateListenerIsOrderedCorrectlyFailure() throws InterruptedException {
         testLateListenerIsOrderedCorrectly(fakeException());
     }
@@ -336,7 +355,7 @@ public class DefaultPromiseTest {
 
         assertTrue(latch.await(2, TimeUnit.SECONDS));
         for (int i = 0; i < p.length; ++i) {
-            assertTrue("index " + i, p[i].isSuccess());
+            assertTrue(p[i].isSuccess(), "index " + i);
         }
     }
 
@@ -378,7 +397,7 @@ public class DefaultPromiseTest {
 
         assertTrue(latch.await(2, TimeUnit.SECONDS));
         for (int i = 0; i < p.length; ++i) {
-            assertTrue("index " + i, p[i].isSuccess());
+            assertTrue(p[i].isSuccess(), "index " + i);
         }
     }
 
@@ -534,8 +553,8 @@ public class DefaultPromiseTest {
             }
         });
 
-        assertTrue("Should have notified " + expectedCount + " listeners",
-                   latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS),
+            "Should have notified " + expectedCount + " listeners");
         executor.shutdownGracefully().sync();
     }
 

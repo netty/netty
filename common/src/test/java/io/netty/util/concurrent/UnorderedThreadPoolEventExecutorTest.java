@@ -15,12 +15,16 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UnorderedThreadPoolEventExecutorTest {
 
@@ -50,14 +54,15 @@ public class UnorderedThreadPoolEventExecutorTest {
             // Now just check if the queue stays empty multiple times. This is needed as the submit to execute(...)
             // by DefaultPromise may happen in an async fashion
             for (int i = 0; i < 10000; i++) {
-                Assert.assertTrue(executor.getQueue().isEmpty());
+                assertTrue(executor.getQueue().isEmpty());
             }
         } finally {
             executor.shutdownGracefully();
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void scheduledAtFixedRateMustRunTaskRepeatedly() throws InterruptedException {
         UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
         final CountDownLatch latch = new CountDownLatch(3);
@@ -87,7 +92,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             });
 
-            Assert.assertEquals(expected, f.get());
+            assertEquals(expected, f.get());
         } finally {
             executor.shutdownGracefully();
         }
@@ -105,7 +110,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             });
 
-            Assert.assertSame(cause, f.await().cause());
+            assertSame(cause, f.await().cause());
         } finally {
             executor.shutdownGracefully();
         }

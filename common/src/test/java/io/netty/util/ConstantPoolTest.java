@@ -15,7 +15,8 @@
  */
 package io.netty.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -24,6 +25,7 @@ import java.util.TreeSet;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ConstantPoolTest {
 
@@ -40,9 +42,14 @@ public class ConstantPoolTest {
         }
     };
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testCannotProvideNullName() {
-        pool.valueOf(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                pool.valueOf(null);
+            }
+        });
     }
 
     @Test

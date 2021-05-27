@@ -17,22 +17,24 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectCleaner;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FastThreadLocalTest {
-    @Before
+    @BeforeEach
     public void setUp() {
         FastThreadLocal.removeAll();
         assertThat(FastThreadLocal.size(), is(0));
@@ -55,7 +57,8 @@ public class FastThreadLocalTest {
         assertNull(threadLocal.getIfExists());
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRemoveAll() throws Exception {
         final AtomicBoolean removed = new AtomicBoolean();
         final FastThreadLocal<Boolean> var = new FastThreadLocal<Boolean>() {
@@ -75,7 +78,8 @@ public class FastThreadLocalTest {
         assertThat(FastThreadLocal.size(), is(0));
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRemoveAllFromFTLThread() throws Throwable {
         final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
         final Thread thread = new FastThreadLocalThread() {
@@ -157,24 +161,28 @@ public class FastThreadLocalTest {
         assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
     }
 
-    @Test(timeout = 4000)
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
         testOnRemoveCalled(true, true);
     }
 
-    @Ignore("onRemoval(...) not called with non FastThreadLocal")
-    @Test(timeout = 4000)
+    @Disabled("onRemoval(...) not called with non FastThreadLocal")
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
         testOnRemoveCalled(false, true);
     }
 
-    @Test(timeout = 4000)
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalSet() throws Exception {
         testOnRemoveCalled(true, false);
     }
 
-    @Ignore("onRemoval(...) not called with non FastThreadLocal")
-    @Test(timeout = 4000)
+    @Disabled("onRemoval(...) not called with non FastThreadLocal")
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
         testOnRemoveCalled(false, false);
     }

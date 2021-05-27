@@ -15,14 +15,16 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -54,7 +56,7 @@ public class PromiseCombinerTest {
     private Promise<Void> p3;
     private PromiseCombiner combiner;
 
-    @Before
+    @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
         combiner = new PromiseCombiner(ImmediateEventExecutor.INSTANCE);
@@ -64,7 +66,7 @@ public class PromiseCombinerTest {
     public void testNullArgument() {
         try {
             combiner.finish(null);
-            Assert.fail();
+            fail();
         } catch (NullPointerException expected) {
             // expected
         }
@@ -78,34 +80,59 @@ public class PromiseCombinerTest {
         verify(p1).trySuccess(null);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddNullPromise() {
-        combiner.add(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                combiner.add(null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddAllNullPromise() {
-        combiner.addAll(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                combiner.addAll(null);
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testAddAfterFinish() {
         combiner.finish(p1);
-        combiner.add(p2);
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                combiner.add(p2);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testAddAllAfterFinish() {
         combiner.finish(p1);
-        combiner.addAll(p2);
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                combiner.addAll(p2);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testFinishCalledTwiceThrows() {
         combiner.finish(p1);
-        combiner.finish(p1);
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                combiner.finish(p1);
+            }
+        });
     }
 
     @Test
@@ -172,14 +199,14 @@ public class PromiseCombinerTest {
 
         try {
             combiner.add(future);
-            Assert.fail();
+            fail();
         } catch (IllegalStateException expected) {
             // expected
         }
 
         try {
             combiner.addAll(future);
-            Assert.fail();
+            fail();
         } catch (IllegalStateException expected) {
             // expected
         }
@@ -188,7 +215,7 @@ public class PromiseCombinerTest {
         Promise<Void> promise = (Promise<Void>) mock(Promise.class);
         try {
             combiner.finish(promise);
-            Assert.fail();
+            fail();
         } catch (IllegalStateException expected) {
             // expected
         }

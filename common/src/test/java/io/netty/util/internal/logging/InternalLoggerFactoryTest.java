@@ -15,13 +15,15 @@
  */
 package io.netty.util.internal.logging;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class InternalLoggerFactoryTest {
@@ -29,7 +31,7 @@ public class InternalLoggerFactoryTest {
     private InternalLoggerFactory oldLoggerFactory;
     private InternalLogger mockLogger;
 
-    @Before
+    @BeforeEach
     public void init() {
         oldLoggerFactory = InternalLoggerFactory.getDefaultFactory();
 
@@ -39,15 +41,20 @@ public class InternalLoggerFactoryTest {
         InternalLoggerFactory.setDefaultFactory(mockFactory);
     }
 
-    @After
+    @AfterEach
     public void destroy() {
         reset(mockLogger);
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullDefaultFactory() {
-        InternalLoggerFactory.setDefaultFactory(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                InternalLoggerFactory.setDefaultFactory(null);
+            }
+        });
     }
 
     @Test

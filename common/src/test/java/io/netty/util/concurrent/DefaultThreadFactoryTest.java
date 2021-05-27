@@ -16,20 +16,23 @@
 
 package io.netty.util.concurrent;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.security.Permission;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultThreadFactoryTest {
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDescendantThreadGroups() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
@@ -117,7 +120,8 @@ public class DefaultThreadFactoryTest {
 
     // test that when DefaultThreadFactory is constructed with a sticky thread group, threads
     // created by it have the sticky thread group
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryStickyThreadGroupConstructor() throws InterruptedException {
         final ThreadGroup sticky = new ThreadGroup("sticky");
         runStickyThreadGroupTest(
@@ -132,7 +136,8 @@ public class DefaultThreadFactoryTest {
 
     // test that when a security manager is installed that provides a ThreadGroup, DefaultThreadFactory inherits from
     // the security manager
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryInheritsThreadGroupFromSecurityManager() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
@@ -196,7 +201,8 @@ public class DefaultThreadFactoryTest {
 
     // test that when DefaultThreadFactory is constructed without a sticky thread group, threads
     // created by it inherit the correct thread group
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryNonStickyThreadGroupConstructor() throws InterruptedException {
 
         final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
@@ -242,7 +248,8 @@ public class DefaultThreadFactoryTest {
 
     // test that when DefaultThreadFactory is constructed without a sticky thread group, threads
     // created by it inherit the correct thread group
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testCurrentThreadGroupIsUsed() throws InterruptedException {
         final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
         final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<ThreadGroup>();

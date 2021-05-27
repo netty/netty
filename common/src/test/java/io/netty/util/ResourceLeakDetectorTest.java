@@ -15,17 +15,20 @@
  */
 package io.netty.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ResourceLeakDetectorTest {
 
-    @Test(timeout = 60000)
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testConcurrentUsage() throws Throwable {
         final AtomicBoolean finished = new AtomicBoolean();
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();

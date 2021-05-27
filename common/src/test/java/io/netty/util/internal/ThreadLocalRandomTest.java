@@ -15,9 +15,9 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ThreadLocalRandomTest {
 
@@ -25,11 +25,11 @@ public class ThreadLocalRandomTest {
     public void getInitialSeedUniquifierPreservesInterrupt() {
         try {
             Thread.currentThread().interrupt();
-            assertTrue("Assert that thread is interrupted before invocation of getInitialSeedUniquifier()",
-                    Thread.currentThread().isInterrupted());
+            assertTrue(Thread.currentThread().isInterrupted(),
+                    "Assert that thread is interrupted before invocation of getInitialSeedUniquifier()");
             ThreadLocalRandom.getInitialSeedUniquifier();
-            assertTrue("Assert that thread is interrupted after invocation of getInitialSeedUniquifier()",
-                    Thread.currentThread().isInterrupted());
+            assertTrue(Thread.currentThread().isInterrupted(),
+                    "Assert that thread is interrupted after invocation of getInitialSeedUniquifier()");
         } finally {
             Thread.interrupted(); // clear interrupted status in order to not affect other tests
         }

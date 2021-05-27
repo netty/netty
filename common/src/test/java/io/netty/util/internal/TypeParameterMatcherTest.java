@@ -16,11 +16,14 @@
 
 package io.netty.util.internal;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Date;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TypeParameterMatcherTest {
 
@@ -38,9 +41,14 @@ public class TypeParameterMatcherTest {
         assertFalse(m.match(new CC()));
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testUnsolvedParameter() throws Exception {
-        TypeParameterMatcher.find(new TypeQ(), TypeX.class, "B");
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                TypeParameterMatcher.find(new TypeQ(), TypeX.class, "B");
+            }
+        });
     }
 
     @Test
@@ -135,10 +143,15 @@ public class TypeParameterMatcherTest {
         T t;
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testErasure() throws Exception {
-        TypeParameterMatcher m = TypeParameterMatcher.find(new X<String, Date>(), W.class, "E");
-        assertTrue(m.match(new Date()));
-        assertFalse(m.match(new Object()));
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                TypeParameterMatcher m = TypeParameterMatcher.find(new X<String, Date>(), W.class, "E");
+                assertTrue(m.match(new Date()));
+                assertFalse(m.match(new Object()));
+            }
+        });
     }
 }

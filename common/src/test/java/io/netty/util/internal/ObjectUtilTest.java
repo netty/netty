@@ -14,10 +14,11 @@
  */
 package io.netty.util.internal;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Testcases for io.netty.util.internal.ObjectUtil.
@@ -78,7 +79,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -86,8 +87,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -98,7 +99,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -106,8 +107,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -118,7 +119,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -126,8 +127,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -138,7 +139,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -146,8 +147,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -155,8 +156,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -167,7 +168,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -175,8 +176,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -184,8 +185,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -196,7 +197,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -204,8 +205,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -213,8 +214,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -225,7 +226,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -233,8 +234,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -242,8 +243,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -254,7 +255,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -262,7 +263,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -270,8 +271,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -282,7 +283,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -290,7 +291,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -298,8 +299,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -310,7 +311,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -318,7 +319,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -326,8 +327,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -338,7 +339,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -346,7 +347,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -354,8 +355,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -367,8 +368,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -376,7 +377,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -384,8 +385,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -397,8 +398,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -406,7 +407,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -414,8 +415,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -427,8 +428,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -436,7 +437,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -444,8 +445,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -456,8 +457,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -465,7 +466,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -473,8 +474,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 
     @Test
@@ -486,8 +487,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -495,7 +496,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -503,8 +504,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -512,7 +513,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
     }
 
     @Test
@@ -524,8 +525,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -533,7 +534,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -541,8 +542,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -550,7 +551,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
     }
 
     @Test
@@ -562,8 +563,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof NullPointerException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof NullPointerException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -571,7 +572,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNull(TEST_RESULT_NULLEX_NOK, actualEx);
+        assertNull(actualEx, TEST_RESULT_NULLEX_NOK);
 
         actualEx = null;
         try {
@@ -579,8 +580,8 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
 
         actualEx = null;
         try {
@@ -588,7 +589,7 @@ public class ObjectUtilTest {
         } catch (Exception e) {
             actualEx = e;
         }
-        assertNotNull(TEST_RESULT_NULLEX_OK, actualEx);
-        assertTrue(TEST_RESULT_EXTYPE_NOK, actualEx instanceof IllegalArgumentException);
+        assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
+        assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
     }
 }
