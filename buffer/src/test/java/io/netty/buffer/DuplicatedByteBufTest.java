@@ -15,9 +15,11 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests duplicated channel buffers
@@ -40,9 +42,14 @@ public class DuplicatedByteBufTest extends AbstractByteBufTest {
         buf.release();
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullInConstructor() {
-        new DuplicatedByteBuf(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DuplicatedByteBuf(null);
+            }
+        });
     }
 
     // See https://github.com/netty/netty/issues/1800

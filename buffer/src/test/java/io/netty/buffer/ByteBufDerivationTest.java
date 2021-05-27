@@ -16,7 +16,7 @@
 
 package io.netty.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteOrder;
 import java.util.Random;

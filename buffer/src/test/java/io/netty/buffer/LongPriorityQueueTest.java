@@ -32,7 +32,7 @@ class LongPriorityQueueTest {
         final LongPriorityQueue pq = new LongPriorityQueue();
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
-            public void execute() throws Throwable {
+            public void execute() {
                 pq.offer(LongPriorityQueue.NO_VALUE);
             }
         });

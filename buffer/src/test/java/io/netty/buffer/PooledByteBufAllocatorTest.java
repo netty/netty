@@ -20,8 +20,8 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,14 +32,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import org.junit.jupiter.api.Timeout;
 
 import static io.netty.buffer.PoolChunk.runOffset;
 import static io.netty.buffer.PoolChunk.runPages;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
 
@@ -144,13 +145,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testArenaMetricsNoCacheAlign() {
-        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true, 64), 100, 0, 100, 100);
     }
 
     @Test
     public void testArenaMetricsCacheAlign() {
-        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 
@@ -338,12 +339,14 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
     }
 
-    @Test (timeout = 4000)
+    @Test
+    @Timeout(value = 4000, unit = MILLISECONDS)
     public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
         testThreadCacheDestroyed(false);
     }
 
-    @Test (timeout = 4000)
+    @Test
+    @Timeout(value = 4000, unit = MILLISECONDS)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
         testThreadCacheDestroyed(true);
     }
@@ -403,7 +406,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertTrue(threadCachesCreated.get());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = MILLISECONDS)
     public void testNumThreadCachesWithNoDirectArenas() throws InterruptedException {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
@@ -422,7 +426,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertEquals(0, allocator.metric().numThreadLocalCaches());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = MILLISECONDS)
     public void testThreadCacheToArenaMappings() throws InterruptedException {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =

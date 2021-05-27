@@ -16,21 +16,23 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 
 import static io.netty.util.internal.PlatformDependent.directBufferAddress;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UnsafeByteBufUtilTest {
-    @Before
+    @BeforeEach
     public void checkHasUnsafe() {
-        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        Assumptions.assumeTrue(PlatformDependent.hasUnsafe(), "sun.misc.Unsafe not found, skip tests");
     }
 
     @Test
@@ -49,7 +51,7 @@ public class UnsafeByteBufUtilTest {
             byte[] check = new byte[length];
             targetBuffer.getBytes(0, check, 0, length);
 
-            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
         } finally {
             targetBuffer.release();
         }
@@ -82,7 +84,7 @@ public class UnsafeByteBufUtilTest {
             byte[] check = new byte[length];
             targetBuffer.getBytes(0, check, 0, length);
 
-            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
         } finally {
             targetBuffer.release();
             b1.release();
@@ -105,7 +107,7 @@ public class UnsafeByteBufUtilTest {
             final byte[] check = new byte[length];
             targetBuffer.getBytes(0, check, 0, length);
 
-            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
         } finally {
             targetBuffer.release();
         }
@@ -135,60 +137,100 @@ public class UnsafeByteBufUtilTest {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetBytesWithNullByteArray() {
 
         final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
         final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, 8, 8);
 
         try {
-            UnsafeByteBufUtil.setBytes(targetBuffer,
-                    directBufferAddress(targetBuffer.nioBuffer()), 0, (byte[]) null, 0, 8);
+            assertThrows(NullPointerException.class, new Executable() {
+                @Override
+                public void execute() {
+                    UnsafeByteBufUtil.setBytes(targetBuffer,
+                            directBufferAddress(targetBuffer.nioBuffer()), 0, (byte[]) null, 0, 8);
+                }
+            });
         } finally {
             targetBuffer.release();
         }
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds() {
-        // negative index
-        testSetBytesOutOfBounds0(4, 4, -1, 0, 4);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative index
+                testSetBytesOutOfBounds0(4, 4, -1, 0, 4);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds2() {
-        // negative length
-        testSetBytesOutOfBounds0(4, 4, 0, 0, -1);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative length
+                testSetBytesOutOfBounds0(4, 4, 0, 0, -1);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds3() {
-        // buffer length oversize
-        testSetBytesOutOfBounds0(4, 8, 0, 0, 5);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // buffer length oversize
+                testSetBytesOutOfBounds0(4, 8, 0, 0, 5);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds4() {
-        // buffer length oversize
-        testSetBytesOutOfBounds0(4, 4, 3, 0, 3);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // buffer length oversize
+                testSetBytesOutOfBounds0(4, 4, 3, 0, 3);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds5() {
-        // negative srcIndex
-        testSetBytesOutOfBounds0(4, 4, 0, -1, 4);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative srcIndex
+                testSetBytesOutOfBounds0(4, 4, 0, -1, 4);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds6() {
-        // src length oversize
-        testSetBytesOutOfBounds0(8, 4, 0, 0, 5);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // src length oversize
+                testSetBytesOutOfBounds0(8, 4, 0, 0, 5);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testSetBytesOutOfBounds7() {
-        // src length oversize
-        testSetBytesOutOfBounds0(4, 4, 0, 1, 4);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // src length oversize
+                testSetBytesOutOfBounds0(4, 4, 0, 1, 4);
+            }
+        });
     }
 
     private static void testSetBytesOutOfBounds0(int lengthOfBuffer,

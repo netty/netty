@@ -16,16 +16,18 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests sliced channel buffers
@@ -34,7 +36,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected final ByteBuf newBuffer(int length, int maxCapacity) {
-        Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
+        Assumptions.assumeTrue(maxCapacity == Integer.MAX_VALUE);
         int offset = length == 0 ? 0 : PlatformDependent.threadLocalRandom().nextInt(length);
         ByteBuf buffer = Unpooled.buffer(length * 2);
         ByteBuf slice = newSlice(buffer, offset, length);
@@ -54,69 +56,124 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         buf.release();
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullInConstructor() {
-        new SlicedByteBuf(null, 0, 0);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new SlicedByteBuf(null, 0, 0);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testInternalNioBuffer() {
-        super.testInternalNioBuffer();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testInternalNioBuffer();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
-        super.testDuplicateReadGatheringByteChannelMultipleThreads();
+    public void testDuplicateReadGatheringByteChannelMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testDuplicateReadGatheringByteChannelMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
-        super.testSliceReadGatheringByteChannelMultipleThreads();
+    public void testSliceReadGatheringByteChannelMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testSliceReadGatheringByteChannelMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
-        super.testDuplicateReadOutputStreamMultipleThreads();
+    public void testDuplicateReadOutputStreamMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testDuplicateReadOutputStreamMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
-        super.testSliceReadOutputStreamMultipleThreads();
+    public void testSliceReadOutputStreamMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testSliceReadOutputStreamMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
-        super.testDuplicateBytesInArrayMultipleThreads();
+    public void testDuplicateBytesInArrayMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testDuplicateBytesInArrayMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
-    public void testSliceBytesInArrayMultipleThreads() throws Exception {
-        super.testSliceBytesInArrayMultipleThreads();
+    public void testSliceBytesInArrayMultipleThreads() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                SlicedByteBufTest.super.testSliceBytesInArrayMultipleThreads();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testNioBufferExposeOnlyRegion() {
-        super.testNioBufferExposeOnlyRegion();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testNioBufferExposeOnlyRegion();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testGetReadOnlyDirectDst() {
-        super.testGetReadOnlyDirectDst();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testGetReadOnlyDirectDst();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testGetReadOnlyHeapDst() {
-        super.testGetReadOnlyHeapDst();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testGetReadOnlyHeapDst();
+            }
+        });
     }
 
     @Test
@@ -143,12 +200,12 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         // Ignore for SlicedByteBuf
     }
 
-    @Ignore("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
+    @Disabled("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
     @Override
     public void testDuplicateCapacityChange() {
     }
 
-    @Ignore("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
+    @Disabled("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
     @Override
     public void testRetainedDuplicateCapacityChange() {
     }
@@ -201,41 +258,66 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     }
 
     @Override
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testGetBytesByteBuffer() {
         byte[] bytes = {'a', 'b', 'c', 'd', 'e', 'f', 'g'};
         // Ensure destination buffer is bigger then what is wrapped in the ByteBuf.
-        ByteBuffer nioBuffer = ByteBuffer.allocate(bytes.length + 1);
-        ByteBuf wrappedBuffer = Unpooled.wrappedBuffer(bytes).slice(0, bytes.length - 1);
+        final ByteBuffer nioBuffer = ByteBuffer.allocate(bytes.length + 1);
+        final ByteBuf wrappedBuffer = Unpooled.wrappedBuffer(bytes).slice(0, bytes.length - 1);
         try {
-            wrappedBuffer.getBytes(wrappedBuffer.readerIndex(), nioBuffer);
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    wrappedBuffer.getBytes(wrappedBuffer.readerIndex(), nioBuffer);
+                }
+            });
         } finally {
             wrappedBuffer.release();
         }
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUsAsciiCharSequenceExpand() {
-        super.testWriteUsAsciiCharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testWriteUsAsciiCharSequenceExpand();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUtf8CharSequenceExpand() {
-        super.testWriteUtf8CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testWriteUtf8CharSequenceExpand();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteIso88591CharSequenceExpand() {
-        super.testWriteIso88591CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testWriteIso88591CharSequenceExpand();
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     @Override
     public void testWriteUtf16CharSequenceExpand() {
-        super.testWriteUtf16CharSequenceExpand();
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                SlicedByteBufTest.super.testWriteUtf16CharSequenceExpand();
+            }
+        });
     }
 
     @Test
@@ -254,14 +336,18 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         slice.release();
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void ensureWritableWithNotEnoughSpaceShouldThrow() {
-        ByteBuf slice = newBuffer(10);
+        final ByteBuf slice = newBuffer(10);
         ByteBuf unwrapped = slice.unwrap();
         unwrapped.writerIndex(unwrapped.writerIndex() + 5);
         try {
-            slice.ensureWritable(1);
-            fail();
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    slice.ensureWritable(1);
+                }
+            });
         } finally {
             slice.release();
         }

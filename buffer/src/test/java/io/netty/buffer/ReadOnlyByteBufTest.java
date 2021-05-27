@@ -15,7 +15,8 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,11 +32,11 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.unmodifiableBuffer;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,9 +45,14 @@ import static org.mockito.Mockito.when;
  */
 public class ReadOnlyByteBufTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAllowNullInConstructor() {
-        new ReadOnlyByteBuf(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyByteBuf(null);
+            }
+        });
     }
 
     @Test
@@ -127,59 +133,114 @@ public class ReadOnlyByteBufTest {
         assertEquals(27, roBuf.capacity());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectDiscardReadBytes() {
-        unmodifiableBuffer(EMPTY_BUFFER).discardReadBytes();
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).discardReadBytes();
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetByte() {
-        unmodifiableBuffer(EMPTY_BUFFER).setByte(0, (byte) 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setByte(0, (byte) 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetShort() {
-        unmodifiableBuffer(EMPTY_BUFFER).setShort(0, (short) 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setShort(0, (short) 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetMedium() {
-        unmodifiableBuffer(EMPTY_BUFFER).setMedium(0, 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setMedium(0, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetInt() {
-        unmodifiableBuffer(EMPTY_BUFFER).setInt(0, 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setInt(0, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetLong() {
-        unmodifiableBuffer(EMPTY_BUFFER).setLong(0, 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setLong(0, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
-    public void shouldRejectSetBytes1() throws IOException {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (InputStream) null, 0);
+    @Test
+    public void shouldRejectSetBytes1() {
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws IOException {
+                unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (InputStream) null, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
-    public void shouldRejectSetBytes2() throws IOException {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ScatteringByteChannel) null, 0);
+    @Test
+    public void shouldRejectSetBytes2() {
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws IOException {
+                unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ScatteringByteChannel) null, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetBytes3() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (byte[]) null, 0, 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws IOException {
+                unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (byte[]) null, 0, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetBytes4() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuf) null, 0, 0);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuf) null, 0, 0);
+            }
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void shouldRejectSetBytes5() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() {
+                unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
+            }
+        });
     }
 
     @Test
@@ -211,13 +272,17 @@ public class ReadOnlyByteBufTest {
         readOnly.release();
     }
 
-    @Test(expected = ReadOnlyBufferException.class)
+    @Test
     public void ensureWritableShouldThrow() {
         ByteBuf buf = buffer(1);
-        ByteBuf readOnly = buf.asReadOnly();
+        final ByteBuf readOnly = buf.asReadOnly();
         try {
-            readOnly.ensureWritable(1);
-            fail();
+            assertThrows(ReadOnlyBufferException.class, new Executable() {
+                @Override
+                public void execute() {
+                    readOnly.ensureWritable(1);
+                }
+            });
         } finally {
             buf.release();
         }

@@ -18,8 +18,9 @@ package io.netty.buffer;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -39,14 +40,15 @@ import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * An abstract test class for composite channel buffers
@@ -63,7 +65,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length, int maxCapacity) {
-        Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
+        Assumptions.assumeTrue(maxCapacity == Integer.MAX_VALUE);
 
         List<ByteBuf> buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length + 45; i += 45) {
@@ -1253,33 +1255,43 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         cbuf.release();
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void testIteratorConcurrentModificationAdd() {
         CompositeByteBuf cbuf = newCompositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
 
-        Iterator<ByteBuf> it = cbuf.iterator();
+        final Iterator<ByteBuf> it = cbuf.iterator();
         cbuf.addComponent(EMPTY_BUFFER);
 
         assertTrue(it.hasNext());
         try {
-            it.next();
+            assertThrows(ConcurrentModificationException.class, new Executable() {
+                @Override
+                public void execute() {
+                    it.next();
+                }
+            });
         } finally {
             cbuf.release();
         }
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void testIteratorConcurrentModificationRemove() {
         CompositeByteBuf cbuf = newCompositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
 
-        Iterator<ByteBuf> it = cbuf.iterator();
+        final Iterator<ByteBuf> it = cbuf.iterator();
         cbuf.removeComponent(0);
 
         assertTrue(it.hasNext());
         try {
-            it.next();
+            assertThrows(ConcurrentModificationException.class, new Executable() {
+                @Override
+                public void execute() {
+                    it.next();
+                }
+            });
         } finally {
             cbuf.release();
         }
@@ -1564,52 +1576,67 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertTrue(cbuf.release());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOverflowWhileAddingComponent() {
         int capacity = 1024 * 1024; // 1MB
-        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
-        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
 
         try {
-            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
-                ByteBuf duplicate = buffer.duplicate();
-                compositeByteBuf.addComponent(duplicate);
-                duplicate.retain();
-            }
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                        ByteBuf duplicate = buffer.duplicate();
+                        compositeByteBuf.addComponent(duplicate);
+                        duplicate.retain();
+                    }
+                }
+            });
         } finally {
             compositeByteBuf.release();
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOverflowWhileAddingComponentsViaVarargs() {
         int capacity = 1024 * 1024; // 1MB
-        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
-        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
 
         try {
-            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
-                ByteBuf duplicate = buffer.duplicate();
-                compositeByteBuf.addComponents(duplicate);
-                duplicate.retain();
-            }
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                        ByteBuf duplicate = buffer.duplicate();
+                        compositeByteBuf.addComponents(duplicate);
+                        duplicate.retain();
+                    }
+                }
+            });
         } finally {
             compositeByteBuf.release();
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOverflowWhileAddingComponentsViaIterable() {
         int capacity = 1024 * 1024; // 1MB
-        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
-        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
 
         try {
-            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
-                ByteBuf duplicate = buffer.duplicate();
-                compositeByteBuf.addComponents(Collections.singletonList(duplicate));
-                duplicate.retain();
-            }
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                        ByteBuf duplicate = buffer.duplicate();
+                        compositeByteBuf.addComponents(Collections.singletonList(duplicate));
+                        duplicate.retain();
+                    }
+                }
+            });
         } finally {
             compositeByteBuf.release();
         }
