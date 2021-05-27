@@ -29,8 +29,9 @@ import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -49,17 +50,19 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QuicChannelConnectTest extends AbstractQuicTest {
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndQLog() throws Throwable {
         Path path = Files.createTempFile("qlog", ".quic");
         assertTrue(path.toFile().delete());
@@ -75,7 +78,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndQLogDir() throws Throwable {
         Path path = Files.createTempDirectory("qlogdir-");
         testQLog(path, p -> {
@@ -406,7 +410,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testALPNProtocolMissmatch() throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);

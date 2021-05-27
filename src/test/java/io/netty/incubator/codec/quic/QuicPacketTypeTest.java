@@ -15,9 +15,10 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QuicPacketTypeTest extends AbstractQuicTest {
 
@@ -28,8 +29,8 @@ public class QuicPacketTypeTest extends AbstractQuicTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOfInvalidType() {
-        QuicPacketType.of((byte) -1);
+        assertThrows(IllegalArgumentException.class, () -> QuicPacketType.of((byte) -1));
     }
 }

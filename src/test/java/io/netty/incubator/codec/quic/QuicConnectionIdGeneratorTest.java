@@ -15,15 +15,16 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QuicConnectionIdGeneratorTest extends AbstractQuicTest {
 
@@ -51,15 +52,16 @@ public class QuicConnectionIdGeneratorTest extends AbstractQuicTest {
         assertNotEquals(id, id2);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testThrowsIfInputTooBig() {
         QuicConnectionIdGenerator idGenerator = QuicConnectionIdGenerator.randomGenerator();
-        idGenerator.newId(Integer.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, () -> idGenerator.newId(Integer.MAX_VALUE));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testThrowsIfInputTooBig2() {
         QuicConnectionIdGenerator idGenerator = QuicConnectionIdGenerator.randomGenerator();
-        idGenerator.newId(ByteBuffer.wrap(new byte[8]), Integer.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, () ->
+                idGenerator.newId(ByteBuffer.wrap(new byte[8]), Integer.MAX_VALUE));
     }
 }

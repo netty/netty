@@ -23,16 +23,18 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicWritableTest extends AbstractQuicTest {
 
@@ -148,7 +150,8 @@ public class QuicWritableTest extends AbstractQuicTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testBytesUntilUnwritable() throws Throwable  {
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();

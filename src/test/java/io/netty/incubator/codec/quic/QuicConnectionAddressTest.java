@@ -15,24 +15,25 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QuicConnectionAddressTest extends AbstractQuicTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullByteArray() {
-        new QuicConnectionAddress((byte[]) null);
+        assertThrows(NullPointerException.class, () -> new QuicConnectionAddress((byte[]) null));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullByteBuffer() {
-        new QuicConnectionAddress((ByteBuffer) null);
+        assertThrows(NullPointerException.class, () -> new QuicConnectionAddress((ByteBuffer) null));
     }
 
     @Test

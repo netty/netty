@@ -16,8 +16,8 @@
 package io.netty.incubator.codec.quic;
 
 import org.junit.Assume;
-import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.Timeout;
 
 public abstract class AbstractQuicTest {
@@ -28,7 +28,7 @@ public abstract class AbstractQuicTest {
     @Rule
     public final Timeout globalTimeout = Timeout.seconds(TEST_GLOBAL_TIMEOUT_VALUE);
 
-    @BeforeClass
+    @BeforeAll
     public static void assumeTrue() {
         Quic.ensureAvailability();
        Assume.assumeTrue(Quic.isAvailable());

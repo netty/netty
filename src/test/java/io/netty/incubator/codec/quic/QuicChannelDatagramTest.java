@@ -23,11 +23,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
@@ -35,9 +34,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicChannelDatagramTest extends AbstractQuicTest {
 
@@ -257,12 +256,12 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
                 // Let's add some sleep in between as this is UDP so we may loose some data otherwise.
                 Thread.sleep(50);
             }
-            assertTrue("Server received: " + serverReadCount.get() +
-                            ", Client received: " + clientReadCount.get(), serverPromise.await(3000));
+            assertTrue(serverPromise.await(3000), "Server received: " + serverReadCount.get() +
+                    ", Client received: " + clientReadCount.get());
             serverPromise.sync();
 
-            assertTrue("Server received: " + serverReadCount.get() +
-                            ", Client received: " + clientReadCount.get(), clientPromise.await(3000));
+            assertTrue(clientPromise.await(3000), "Server received: " + serverReadCount.get() +
+                    ", Client received: " + clientReadCount.get());
             ByteBuf buffer = clientPromise.get();
             ByteBuf expected = Unpooled.wrappedBuffer(data);
             assertEquals(expected, buffer);
