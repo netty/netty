@@ -16,8 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.socket.InternetProtocolFamily;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PreferredAddressTypeComparatorTest {
 
@@ -44,7 +45,7 @@ public class PreferredAddressTypeComparatorTest {
                 ipv6Address2, ipv4Address3, ipv6Address3);
         Collections.sort(addressList, ipv4);
 
-        Assert.assertEquals(Arrays.asList(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
+        assertEquals(Arrays.asList(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
                 ipv6Address2, ipv6Address3), addressList);
     }
 
@@ -64,7 +65,7 @@ public class PreferredAddressTypeComparatorTest {
                 ipv6Address2, ipv4Address3, ipv6Address3);
         Collections.sort(addressList, ipv4);
 
-        Assert.assertEquals(Arrays.asList(ipv6Address1,
+        assertEquals(Arrays.asList(ipv6Address1,
                 ipv6Address2, ipv6Address3, ipv4Address1, ipv4Address2, ipv4Address3), addressList);
     }
 }
