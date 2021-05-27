@@ -16,10 +16,11 @@
 package io.netty.testsuite.shading;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
-import org.junit.Assume;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class ShadingIT {
 
@@ -29,7 +30,7 @@ public class ShadingIT {
     @Test
     public void testShadingNativeTransport() throws Exception {
         // Skip on windows.
-        Assume.assumeFalse(PlatformDependent.isWindows());
+        assumeFalse(PlatformDependent.isWindows());
 
         String className = PlatformDependent.isOsx() ?
                 "io.netty.channel.kqueue.KQueue" : "io.netty.channel.epoll.Epoll";
@@ -40,7 +41,7 @@ public class ShadingIT {
     @Test
     public void testShadingTcnative() throws Exception {
         // Skip on windows.
-        Assume.assumeFalse(PlatformDependent.isWindows());
+        assumeFalse(PlatformDependent.isWindows());
 
         String className = "io.netty.handler.ssl.OpenSsl";
         testShading0(SHADING_PREFIX, className);
