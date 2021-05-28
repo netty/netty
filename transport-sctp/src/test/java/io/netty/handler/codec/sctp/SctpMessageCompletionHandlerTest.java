@@ -21,12 +21,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.sctp.SctpMessage;
-import org.junit.Test;
+import io.netty.util.SuppressForbidden;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SctpMessageCompletionHandlerTest {
 
@@ -46,6 +47,7 @@ public class SctpMessageCompletionHandlerTest {
         assertEquals(0, buffer2.refCnt());
     }
 
+    @SuppressForbidden(reason = "test-only")
     private final class TestMessageInfo extends MessageInfo {
 
         private final boolean complete;
