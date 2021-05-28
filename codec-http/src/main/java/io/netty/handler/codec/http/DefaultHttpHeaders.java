@@ -475,6 +475,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     throw new IllegalArgumentException("a header value contains a prohibited character '\\v': " + seq);
                 case '\f':
                     throw new IllegalArgumentException("a header value contains a prohibited character '\\f': " + seq);
+                default:
+                    break;
                 }
             }
 
@@ -486,6 +488,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
                             return 1;
                         case '\n':
                             return 2;
+                        default:
+                            break;
                     }
                     break;
                 case 1:
@@ -501,6 +505,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
                         default:
                             throw new IllegalArgumentException("only ' ' and '\\t' are allowed after '\\n': " + seq);
                     }
+                default:
+                    break;
             }
             return state;
         }
