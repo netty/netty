@@ -36,6 +36,12 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
     protected abstract B newCodecBuilder();
 
     @Test
+    public void testDefaultVersionIsV1() {
+        B builder = newCodecBuilder();
+        assertEquals(0x0000_0001, builder.version);
+    }
+
+    @Test
     public void testFlushStrategyUsedWithBytes() {
         testFlushStrategy(true);
     }
