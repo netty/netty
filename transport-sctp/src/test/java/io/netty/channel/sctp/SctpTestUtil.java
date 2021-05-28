@@ -31,7 +31,6 @@ final class SctpTestUtil {
         Channel channel = null;
         try {
             channel = SctpChannel.open();
-            supported = true;
         } catch (UnsupportedOperationException e) {
             supported = false;
         } catch (IOException e) {
