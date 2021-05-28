@@ -22,14 +22,28 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import org.junit.Test;
-import java.net.InetSocketAddress;
+import io.netty.util.SuppressForbidden;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SctpLimitStreamsTest {
 
-    @Test(timeout = 5000)
+    @BeforeAll
+    public static void checkSupported() {
+        assumeTrue(SctpTestUtil.isSctpSupported());
+    }
+
+    @SuppressForbidden(reason = "test-only")
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSctpInitMaxstreams() throws Exception {
         EventLoopGroup loop = newEventLoopGroup();
         try {
