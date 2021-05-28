@@ -65,6 +65,8 @@ public class DnsOpCode implements Comparable<DnsOpCode> {
             return NOTIFY;
         case 0x05:
             return UPDATE;
+        default:
+            break;
         }
 
         return new DnsOpCode(b);
