@@ -151,12 +151,7 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
     @Test
     @Override
     public void testGetBytesByteBuffer() {
-        assertThrows(IndexOutOfBoundsException.class, new Executable() {
-            @Override
-            public void execute() {
-                WrappedUnpooledUnsafeByteBufTest.super.testGetBytesByteBuffer();
-            }
-        });
+        assertThrows(IndexOutOfBoundsException.class, super::testGetBytesByteBuffer);
     }
 
     @Test
