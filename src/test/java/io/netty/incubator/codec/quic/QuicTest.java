@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
