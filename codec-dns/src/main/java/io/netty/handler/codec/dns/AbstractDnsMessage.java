@@ -427,6 +427,8 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
             return authorities;
         case 3:
             return additionals;
+        default:
+            break;
         }
 
         throw new Error(); // Should never reach here.
@@ -446,6 +448,8 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
         case 3:
             additionals = value;
             return;
+        default:
+            break;
         }
 
         throw new Error(); // Should never reach here.
