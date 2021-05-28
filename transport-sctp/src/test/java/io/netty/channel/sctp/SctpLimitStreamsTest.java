@@ -19,6 +19,7 @@ import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.SuppressForbidden;
@@ -43,7 +44,7 @@ public abstract class SctpLimitStreamsTest {
     @SuppressForbidden(reason = "test-only")
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testSctpInitMaxstreams() throws Exception {
+    public void testSctpInitMaxstreams() {
         EventLoopGroup loop = newEventLoopGroup();
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -53,14 +54,14 @@ public abstract class SctpLimitStreamsTest {
                     .option(SctpChannelOption.SCTP_INIT_MAXSTREAMS,
                             SctpStandardSocketOptions.InitMaxStreams.create(1, 1))
                     .localAddress(new InetSocketAddress(0))
-                    .childHandler(new ChannelInboundHandlerAdapter());
+                    .childHandler(new ChannelHandlerAdapter() { });
 
             Bootstrap clientBootstrap = new Bootstrap()
                     .group(loop)
                     .channel(clientClass())
                     .option(SctpChannelOption.SCTP_INIT_MAXSTREAMS,
                             SctpStandardSocketOptions.InitMaxStreams.create(112, 112))
-                    .handler(new ChannelInboundHandlerAdapter());
+                    .handler(new ChannelHandlerAdapter() { });
 
             Channel serverChannel = serverBootstrap.bind()
                     .syncUninterruptibly().channel();
