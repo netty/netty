@@ -31,11 +31,6 @@ public interface RedisMessagePool {
     SimpleStringRedisMessage getSimpleString(String content);
 
     /**
-     * Returns {@link SimpleStringRedisMessage} for given {@code RedisReplyKey}. Returns {@code null} it does not exist.
-     */
-    SimpleStringRedisMessage getSimpleString(FixedRedisMessagePool.RedisReplyKey key);
-
-    /**
      * Returns {@link SimpleStringRedisMessage} for given {@code content}. Returns {@code null} it does not exist.
      */
     SimpleStringRedisMessage getSimpleString(ByteBuf content);
@@ -44,11 +39,6 @@ public interface RedisMessagePool {
      * Returns {@link ErrorRedisMessage} for given {@code content}. Returns {@code null} it does not exist.
      */
     ErrorRedisMessage getError(String content);
-
-    /**
-     * Returns {@link ErrorRedisMessage} for given {@code RedisErrorKey}. Returns {@code null} it does not exist.
-     */
-    ErrorRedisMessage getError(FixedRedisMessagePool.RedisErrorKey key);
 
     /**
      * Returns {@link ErrorRedisMessage} for given {@code content}. Returns {@code null} it does not exist.

@@ -138,7 +138,6 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         return stringToSimpleStrings.get(content);
     }
 
-    @Override
     public SimpleStringRedisMessage getSimpleString(RedisReplyKey key) {
         return keyToSimpleStrings.get(key);
     }
@@ -153,7 +152,6 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         return stringToErrors.get(content);
     }
 
-    @Override
     public ErrorRedisMessage getError(RedisErrorKey key) {
         return keyToErrors.get(key);
     }
