@@ -111,6 +111,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final InetSocketAddress remote;
 
     private volatile QuicheQuicConnection connection;
+    private volatile QuicConnectionAddress remoteIdAddr;
+    private volatile QuicConnectionAddress localIdAdrr;
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
@@ -424,14 +426,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        QuicheQuicConnection connection = this.connection;
-        return connection == null ? null : connection.sourceId();
+        return localIdAdrr;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        QuicheQuicConnection connection = this.connection;
-        return connection == null ? null : connection.destinationId();
+        return remoteIdAddr;
     }
 
     @Override
@@ -1308,6 +1308,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
                     // We didn't notify before about channelActive... Update state and fire the event.
                     state = ACTIVE;
+                    initAddresses(connection);
+
                     pipeline().fireChannelActive();
                     fireDatagramExtensionEvent();
                 }
@@ -1315,6 +1317,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 ChannelPromise promise = connectPromise;
                 connectPromise = null;
                 state = ACTIVE;
+                initAddresses(connection);
 
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
@@ -1325,6 +1328,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             }
             return false;
+        }
+
+        private void initAddresses(QuicheQuicConnection connection) {
+            localIdAdrr = connection.sourceId();
+            remoteIdAddr = connection.destinationId();
         }
 
         private void fireDatagramExtensionEvent() {

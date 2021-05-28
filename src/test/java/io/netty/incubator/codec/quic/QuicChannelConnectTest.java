@@ -51,10 +51,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -286,6 +288,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .get();
             QuicConnectionAddress localAddress = (QuicConnectionAddress) quicChannel.localAddress();
             QuicConnectionAddress remoteAddress = (QuicConnectionAddress) quicChannel.remoteAddress();
+            assertNotNull(localAddress);
+            assertNotNull(remoteAddress);
 
             QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new BytesCountingHandler(clientLatch, numBytes)).get();
@@ -304,10 +308,58 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
             assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
+
+            // Check if we also can access these after the channel was closed.
+            assertNotNull(quicChannel.localAddress());
+            assertNotNull(quicChannel.remoteAddress());
         } finally {
             serverLatch.await();
             serverQuicChannelHandler.assertState();
 
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testConnectAndGetAddressesAfterClose() throws Throwable {
+        AtomicReference<QuicChannel> acceptedRef = new AtomicReference<>();
+        Channel server = QuicTestUtils.newServer(
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        acceptedRef.set((QuicChannel) ctx.channel());
+                        super.channelActive(ctx);
+                    }
+                },
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient();
+        try {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+
+            // Check if we also can access these after the channel was closed.
+            assertNotNull(quicChannel.localAddress());
+            assertNotNull(quicChannel.remoteAddress());
+
+            QuicChannel accepted;
+            while ((accepted = acceptedRef.get()) == null) {
+                Thread.sleep(50);
+            }
+            // Check if we also can access these after the channel was closed.
+            assertNotNull(accepted.localAddress());
+            assertNotNull(accepted.remoteAddress());
+        } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
