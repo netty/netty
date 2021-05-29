@@ -45,11 +45,12 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
     }
 
     private static void testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType type) throws Throwable {
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
                 InsecureQuicTokenHandler.INSTANCE,
-                null, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -64,22 +65,26 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
+
+        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof QuicStreamLimitChangedEvent) {
+                    if (latch.getCount() == 0) {
+                        latch2.countDown();
+                    } else {
+                        latch.countDown();
+                    }
+                }
+                super.userEventTriggered(ctx, evt);
+            }
+        };
         try {
-            CountDownLatch latch = new CountDownLatch(1);
-            CountDownLatch latch2 = new CountDownLatch(1);
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel).handler(
-                    new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                            if (evt instanceof QuicStreamLimitChangedEvent) {
-                                if (latch.getCount() == 0) {
-                                    latch2.countDown();
-                                } else {
-                                    latch.countDown();
-                                }
-                            }
-                        }
-                    }).streamHandler(new ChannelInboundHandlerAdapter())
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect().get();
             latch.await();
@@ -99,6 +104,9 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
 
             assertEquals(1, quicChannel.peerAllowedStreams(type));
             quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -119,35 +127,30 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
     private static void testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType type) throws Throwable {
         Promise<Void> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<Throwable> stream2Promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                QuicChannel channel = (QuicChannel) ctx.channel();
+                channel.createStream(type, new ChannelInboundHandlerAdapter())
+                        .addListener((Future<QuicStreamChannel> future) -> {
+                            if (future.isSuccess()) {
+                                QuicStreamChannel stream = future.getNow();
+                                streamPromise.setSuccess(null);
+                                channel.createStream(type, new ChannelInboundHandlerAdapter())
+                                        .addListener((Future<QuicStreamChannel> f) -> {
+                                            stream.close();
+                                            stream2Promise.setSuccess(f.cause());
+                                        });
+                            } else {
+                                streamPromise.setFailure(future.cause());
+                            }
+                        });
+            }
+        };
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(),
                 InsecureQuicTokenHandler.INSTANCE,
-                new ChannelInboundHandlerAdapter() {
-
-                    @Override
-                    public void channelActive(ChannelHandlerContext ctx) {
-                        QuicChannel channel = (QuicChannel) ctx.channel();
-                        channel.createStream(type, new ChannelInboundHandlerAdapter())
-                                .addListener((Future<QuicStreamChannel> future) -> {
-                                    if (future.isSuccess()) {
-                                        QuicStreamChannel stream = future.getNow();
-                                        streamPromise.setSuccess(null);
-                                        channel.createStream(type, new ChannelInboundHandlerAdapter())
-                                                .addListener((Future<QuicStreamChannel> f) -> {
-                                                    stream.close();
-                                                    stream2Promise.setSuccess(f.cause());
-                                                });
-                                    } else {
-                                        streamPromise.setFailure(future.cause());
-                                    }
-                                });
-                    }
-
-                    @Override
-                    public boolean isSharable() {
-                        return true;
-                    }
-                }, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -156,9 +159,11 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
                 .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1));
+
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect().get();
@@ -166,6 +171,9 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             // Second stream creation should fail.
             assertThat(stream2Promise.get(), CoreMatchers.instanceOf(IOException.class));
             quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.

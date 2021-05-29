@@ -41,27 +41,29 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         Channel channel = null;
         AtomicInteger counter = new AtomicInteger();
 
+        Promise<QuicConnectionStats> serverActiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<QuicConnectionStats> serverInactiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                collectStats(ctx, serverActiveStats);
+                ctx.fireChannelActive();
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) {
+                collectStats(ctx, serverInactiveStats);
+                ctx.fireChannelInactive();
+            }
+
+            private void collectStats(ChannelHandlerContext ctx, Promise<QuicConnectionStats> promise) {
+                QuicheQuicChannel channel = (QuicheQuicChannel) ctx.channel();
+                channel.collectStats(promise);
+            }
+        };
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            Promise<QuicConnectionStats> serverActiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
-            Promise<QuicConnectionStats> serverInactiveStats = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) {
-                    collectStats(ctx, serverActiveStats);
-                    ctx.fireChannelActive();
-                }
-
-                @Override
-                public void channelInactive(ChannelHandlerContext ctx) {
-                    collectStats(ctx, serverInactiveStats);
-                    ctx.fireChannelInactive();
-                }
-
-                private void collectStats(ChannelHandlerContext ctx, Promise<QuicConnectionStats> promise) {
-                    QuicheQuicChannel channel = (QuicheQuicChannel) ctx.channel();
-                    channel.collectStats(promise);
-                }
-            }, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter() {
 
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
@@ -82,7 +84,7 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
             channel = QuicTestUtils.newClient();
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
                     .connect().get();
@@ -116,6 +118,9 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
             assertNotNull(serverActiveStats.sync().getNow());
             assertStats(serverInactiveStats.sync().getNow());
             assertEquals(1, counter.get());
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);

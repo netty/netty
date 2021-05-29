@@ -35,12 +35,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QuicStreamTypeTest extends AbstractQuicTest {
 
     @Test
-    public void testUnidirectionalCreatedByClient() throws Exception {
+    public void testUnidirectionalCreatedByClient() throws Throwable {
         Channel server = null;
         Channel channel = null;
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
+
         try {
             Promise<Throwable> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(null, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
@@ -58,7 +61,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
 
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
                     .connect()
@@ -73,6 +76,9 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             streamChannel.close().sync();
             quicChannel.close().sync();
             assertThat(serverWritePromise.get(), instanceOf(UnsupportedOperationException.class));
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
@@ -80,31 +86,33 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
     }
 
     @Test
-    public void testUnidirectionalCreatedByServer() throws Exception {
+    public void testUnidirectionalCreatedByServer() throws Throwable {
         Channel server = null;
         Channel channel = null;
-        try {
-            Promise<Void> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            Promise<Throwable> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Throwable> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
 
-            server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) {
-                    QuicChannel channel = (QuicChannel) ctx.channel();
-                    channel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelActive(ChannelHandlerContext ctx) {
-                            // Do the write which should succeed
-                            ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                                    .addListener(new PromiseNotifier<>(serverWritePromise));
-                        }
-                    });
-                }
-            }, new ChannelInboundHandlerAdapter());
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                QuicChannel channel = (QuicChannel) ctx.channel();
+                channel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) {
+                        // Do the write which should succeed
+                        ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
+                                .addListener(new PromiseNotifier<>(serverWritePromise));
+                    }
+                });
+            }
+        };
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
+        try {
+            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter());
 
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
@@ -133,6 +141,9 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             quicChannel.closeFuture().sync();
             assertTrue(serverWritePromise.await().isSuccess());
             assertThat(clientWritePromise.get(), instanceOf(UnsupportedOperationException.class));
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);

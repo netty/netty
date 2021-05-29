@@ -41,5 +41,30 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int quiche_cc_reno();
     static native int quiche_cc_cubic();
 
+    static native int quicheRecvInfoOffsetofFrom();
+    static native int quicheRecvInfoOffsetofFromLen();
+    static native int sizeofQuicheRecvInfo();
+    static native int quicheSendInfoOffsetofTo();
+    static native int quicheSendInfoOffsetofToLen();
+    static native int sizeofQuicheSendInfo();
+
+    static native int afInet();
+    static native int afInet6();
+    static native int sizeofSockaddrIn();
+    static native int sizeofSockaddrIn6();
+    static native int sockaddrInOffsetofSinFamily();
+    static native int sockaddrInOffsetofSinPort();
+    static native int sockaddrInOffsetofSinAddr();
+    static native int inAddressOffsetofSAddr();
+    static native int sockaddrIn6OffsetofSin6Family();
+    static native int sockaddrIn6OffsetofSin6Port();
+    static native int sockaddrIn6OffsetofSin6Flowinfo();
+    static native int sockaddrIn6OffsetofSin6Addr();
+    static native int sockaddrIn6OffsetofSin6ScopeId();
+    static native int in6AddressOffsetofS6Addr();
+    static native int sizeofSockaddrStorage();
+    static native int sizeofSocklenT();
+    static native int sizeofSizeT();
+
     private QuicheNativeStaticallyReferencedJniMethods() { }
 }

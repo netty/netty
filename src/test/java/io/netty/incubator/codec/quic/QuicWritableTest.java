@@ -53,10 +53,11 @@ public class QuicWritableTest extends AbstractQuicTest {
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                null, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandlerAdapter() {
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -79,9 +80,11 @@ public class QuicWritableTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
                 .initialMaxStreamDataBidirectionalLocal(bufferSize / 4));
+
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect()
@@ -143,6 +146,9 @@ public class QuicWritableTest extends AbstractQuicTest {
 
             throwIfNotNull(serverErrorRef);
             throwIfNotNull(clientErrorRef);
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -160,10 +166,11 @@ public class QuicWritableTest extends AbstractQuicTest {
         int firstWriteNumBytes = 8;
         int maxData = 32 * 1024;
         final AtomicLong beforeWritableRef = new AtomicLong();
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                null, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandlerAdapter() {
 
                     private int numBytesRead;
                     @Override
@@ -210,9 +217,11 @@ public class QuicWritableTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
                 .initialMaxStreamDataBidirectionalLocal(maxData));
+
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect()
@@ -264,6 +273,9 @@ public class QuicWritableTest extends AbstractQuicTest {
 
             throwIfNotNull(serverErrorRef);
             throwIfNotNull(clientErrorRef);
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.

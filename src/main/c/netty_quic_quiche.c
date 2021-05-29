@@ -18,6 +18,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif // _WIN32
+
 #include <quiche.h>
 #include "netty_jni_util.h"
 #include "netty_quic_boringssl.h"
@@ -44,6 +54,97 @@ extern char* strdup(const char*);
 jint quic_get_java_env(JNIEnv **env)
 {
     return (*global_vm)->GetEnv(global_vm, (void **)env, NETTY_JNI_UTIL_JNI_VERSION);
+}
+
+static jint netty_quiche_afInet(JNIEnv* env, jclass clazz) {
+    return AF_INET;
+}
+
+static jint netty_quiche_afInet6(JNIEnv* env, jclass clazz) {
+    return AF_INET6;
+}
+
+static jint netty_quiche_sizeofSockaddrIn(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_in);
+}
+
+static jint netty_quiche_sizeofSockaddrIn6(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_in6);
+}
+
+static jint netty_quiche_sockaddrInOffsetofSinFamily(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_family);
+}
+
+static jint netty_quiche_sockaddrInOffsetofSinPort(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_port);
+}
+
+static jint netty_quiche_sockaddrInOffsetofSinAddr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in, sin_addr);
+}
+
+static jint netty_quiche_inAddressOffsetofSAddr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct in_addr, s_addr);
+}
+
+static jint netty_quiche_sockaddrIn6OffsetofSin6Family(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_family);
+}
+
+static jint netty_quiche_sockaddrIn6OffsetofSin6Port(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_port);
+}
+
+static jint netty_quiche_sockaddrIn6OffsetofSin6Flowinfo(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_flowinfo);
+}
+
+static jint netty_quiche_sockaddrIn6OffsetofSin6Addr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_addr);
+}
+
+static jint netty_quiche_sockaddrIn6OffsetofSin6ScopeId(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_in6, sin6_scope_id);
+}
+
+static jint netty_quiche_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
+    return offsetof(struct in6_addr, s6_addr);
+}
+
+static jint netty_quiche_sizeofSockaddrStorage(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_storage);
+}
+static jint netty_quiche_sizeofSizeT(JNIEnv* env, jclass clazz) {
+    return sizeof(size_t);
+}
+
+static jint netty_quiche_sizeofSocklenT(JNIEnv* env, jclass clazz) {
+    return sizeof(socklen_t);
+}
+
+static jint netty_quicheRecvInfoOffsetofFrom(JNIEnv* env, jclass clazz) {
+    return offsetof(quiche_recv_info, from);
+}
+
+static jint netty_quicheRecvInfoOffsetofFromLen(JNIEnv* env, jclass clazz) {
+    return offsetof(quiche_recv_info, from_len);
+}
+
+static jint netty_sizeofQuicheRecvInfo(JNIEnv* env, jclass clazz) {
+    return sizeof(quiche_recv_info);
+}
+
+static jint netty_quicheSendInfoOffsetofTo(JNIEnv* env, jclass clazz) {
+    return offsetof(quiche_send_info, to);
+}
+
+static jint netty_quicheSendInfoOffsetofToLen(JNIEnv* env, jclass clazz) {
+    return offsetof(quiche_send_info, to_len);
+}
+
+static jint netty_sizeofQuicheSendInfo(JNIEnv* env, jclass clazz) {
+    return sizeof(quiche_send_info);
 }
 
 static jint netty_quiche_max_conn_id_len(JNIEnv* env, jclass clazz) {
@@ -176,13 +277,15 @@ static jint netty_quiche_retry(JNIEnv* env, jclass clazz, jlong scid, jint scid_
                                (uint32_t) version, (uint8_t *) out, (size_t) out_len);
 }
 
-static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong odcid, jint odcid_len, jlong config, jlong ssl, jboolean isServer) {
+static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong odcid, jint odcid_len, jlong peer, jint peer_len, jlong config, jlong ssl, jboolean isServer) {
     const uint8_t * odcid_pointer = NULL;
     if (odcid_len != -1) {
         odcid_pointer = (const uint8_t *) odcid;
     }
+    const struct sockaddr *peer_pointer = (const struct sockaddr*) peer;
     quiche_conn *conn = quiche_conn_new_with_tls((const uint8_t *) scid, (size_t) scid_len,
                                  odcid_pointer, (size_t) odcid_len,
+                                 peer_pointer, (size_t) peer_len,
                                  (quiche_config *) config, (void*) ssl, isServer == JNI_TRUE ? true : false);
     if (conn == NULL) {
         return -1;
@@ -226,12 +329,12 @@ static jbyteArray netty_quiche_conn_destination_id(JNIEnv* env, jclass clazz, jl
     return to_byte_array(env, id, len);
 }
 
-static jint netty_quiche_conn_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len) {
-    return (jint) quiche_conn_recv((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
+static jint netty_quiche_conn_recv(JNIEnv* env, jclass clazz, jlong conn, jlong buf, jint buf_len, jlong info) {
+    return (jint) quiche_conn_recv((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len, (quiche_recv_info*) info);
 }
 
-static jint netty_quiche_conn_send(JNIEnv* env, jclass clazz, jlong conn, jlong out, jint out_len) {
-    return (jint) quiche_conn_send((quiche_conn *) conn, (uint8_t *) out, (size_t) out_len);
+static jint netty_quiche_conn_send(JNIEnv* env, jclass clazz, jlong conn, jlong out, jint out_len, jlong info) {
+    return (jint) quiche_conn_send((quiche_conn *) conn, (uint8_t *) out, (size_t) out_len, (quiche_send_info*) info);
 }
 
 static void netty_quiche_conn_free(JNIEnv* env, jclass clazz, jlong conn) {
@@ -472,10 +575,71 @@ static jlong netty_buffer_memory_address(JNIEnv* env, jclass clazz, jobject buff
     return (jlong) (*env)->GetDirectBufferAddress(env, buffer);
 }
 
+// Based on https://gist.github.com/kazuho/45eae4f92257daceb73e.
+static jint netty_sockaddr_cmp(JNIEnv* env, jclass clazz,  jlong addr1, jlong addr2) {
+    struct sockaddr* x = (struct sockaddr*) addr1;
+    struct sockaddr* y = (struct sockaddr*) addr2;
+
+    if (x == NULL && y == NULL) {
+        return 0;
+    }
+    if (x != NULL && y == NULL) {
+        return 1;
+    }
+    if (x == NULL && y != NULL) {
+        return -1;
+    }
+
+#define CMP(a, b) if (a != b) return a < b ? -1 : 1
+
+    CMP(x->sa_family, y->sa_family);
+
+    if (x->sa_family == AF_INET) {
+        struct sockaddr_in *xin = (void*)x, *yin = (void*)y;
+        CMP(ntohl(xin->sin_addr.s_addr), ntohl(yin->sin_addr.s_addr));
+        CMP(ntohs(xin->sin_port), ntohs(yin->sin_port));
+    } else if (x->sa_family == AF_INET6) {
+        struct sockaddr_in6 *xin6 = (void*)x, *yin6 = (void*)y;
+        int r = memcmp(xin6->sin6_addr.s6_addr, yin6->sin6_addr.s6_addr, sizeof(xin6->sin6_addr.s6_addr));
+        if (r != 0)
+            return r;
+        CMP(ntohs(xin6->sin6_port), ntohs(yin6->sin6_port));
+        CMP(xin6->sin6_flowinfo, yin6->sin6_flowinfo);
+        CMP(xin6->sin6_scope_id, yin6->sin6_scope_id);
+    }
+
+#undef CMP
+    return 0;
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
+  { "afInet", "()I", (void *) netty_quiche_afInet },
+  { "afInet6", "()I", (void *) netty_quiche_afInet6 },
+  { "sizeofSockaddrIn", "()I", (void *) netty_quiche_sizeofSockaddrIn },
+  { "sizeofSockaddrIn6", "()I", (void *) netty_quiche_sizeofSockaddrIn6 },
+  { "sockaddrInOffsetofSinFamily", "()I", (void *) netty_quiche_sockaddrInOffsetofSinFamily },
+  { "sockaddrInOffsetofSinPort", "()I", (void *) netty_quiche_sockaddrInOffsetofSinPort },
+  { "sockaddrInOffsetofSinAddr", "()I", (void *) netty_quiche_sockaddrInOffsetofSinAddr },
+  { "inAddressOffsetofSAddr", "()I", (void *) netty_quiche_inAddressOffsetofSAddr },
+  { "sockaddrIn6OffsetofSin6Family", "()I", (void *) netty_quiche_sockaddrIn6OffsetofSin6Family },
+  { "sockaddrIn6OffsetofSin6Port", "()I", (void *) netty_quiche_sockaddrIn6OffsetofSin6Port },
+  { "sockaddrIn6OffsetofSin6Flowinfo", "()I", (void *) netty_quiche_sockaddrIn6OffsetofSin6Flowinfo },
+  { "sockaddrIn6OffsetofSin6Addr", "()I", (void *) netty_quiche_sockaddrIn6OffsetofSin6Addr },
+  { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_quiche_sockaddrIn6OffsetofSin6ScopeId },
+  { "in6AddressOffsetofS6Addr", "()I", (void *) netty_quiche_in6AddressOffsetofS6Addr },
+  { "sizeofSockaddrStorage", "()I", (void *) netty_quiche_sizeofSockaddrStorage },
+  { "sizeofSizeT", "()I", (void *) netty_quiche_sizeofSizeT },
+  { "sizeofSocklenT", "()I", (void *) netty_quiche_sizeofSocklenT },
+  { "quicheRecvInfoOffsetofFrom", "()I", (void *) netty_quicheRecvInfoOffsetofFrom },
+  { "quicheRecvInfoOffsetofFromLen", "()I", (void *) netty_quicheRecvInfoOffsetofFromLen },
+  { "sizeofQuicheRecvInfo", "()I", (void *) netty_sizeofQuicheRecvInfo },
+  { "quicheSendInfoOffsetofTo", "()I", (void *) netty_quicheSendInfoOffsetofTo },
+  { "quicheSendInfoOffsetofToLen", "()I", (void *) netty_quicheSendInfoOffsetofToLen },
+  { "sizeofQuicheSendInfo", "()I", (void *) netty_sizeofQuicheSendInfo },
+
   { "quiche_protocol_version", "()I", (void *) netty_quiche_protocol_version },
   { "quiche_max_conn_id_len", "()I", (void *) netty_quiche_max_conn_id_len },
   { "quiche_shutdown_read", "()I", (void *) netty_quiche_shutdown_read },
@@ -510,9 +674,9 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_trace_id", "(J)[B", (void *) netty_quiche_conn_trace_id },
   { "quiche_conn_source_id", "(J)[B", (void *) netty_quiche_conn_source_id },
   { "quiche_conn_destination_id", "(J)[B", (void *) netty_quiche_conn_destination_id },
-  { "quiche_conn_new_with_tls", "(JIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
-  { "quiche_conn_recv", "(JJI)I", (void *) netty_quiche_conn_recv },
-  { "quiche_conn_send", "(JJI)I", (void *) netty_quiche_conn_send },
+  { "quiche_conn_new_with_tls", "(JIJIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
+  { "quiche_conn_recv", "(JJIJ)I", (void *) netty_quiche_conn_recv },
+  { "quiche_conn_send", "(JJIJ)I", (void *) netty_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quiche_conn_free },
   { "quiche_conn_peer_streams_left_bidi", "(J)J", (void *) netty_quiche_conn_peer_streams_left_bidi },
   { "quiche_conn_peer_streams_left_uni", "(J)J", (void *) netty_quiche_conn_peer_streams_left_uni },
@@ -555,7 +719,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_set_cc_algorithm", "(JI)V", (void *) netty_quiche_config_set_cc_algorithm },
   { "quiche_config_enable_hystart", "(JZ)V", (void *) netty_quiche_config_enable_hystart },
   { "quiche_config_free", "(J)V", (void *) netty_quiche_config_free },
-  { "buffer_memory_address", "(Ljava/nio/ByteBuffer;)J", (void *) netty_buffer_memory_address}
+  { "buffer_memory_address", "(Ljava/nio/ByteBuffer;)J", (void *) netty_buffer_memory_address},
+  { "sockaddr_cmp", "(JJ)I", (void *) netty_sockaddr_cmp}
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

@@ -54,7 +54,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
         final QuicheQuicChannel channel;
         try {
             channel = QuicheQuicChannel.handleConnect(sslEngineProvider, remoteAddress, config.nativeAddress(),
-                    localConnIdLength, config.isDatagramSupported());
+                    localConnIdLength, config.isDatagramSupported(), sockaddrMemory.memoryAddress());
         } catch (Exception e) {
             promise.setFailure(e);
             return;

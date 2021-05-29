@@ -32,6 +32,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 
+import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
+
 /**
  * Abstract base class for QUIC codecs.
  */
@@ -51,6 +53,8 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     protected final QuicheConfig config;
     protected final int localConnIdLength;
+    // This buffer is used to copy InetSocketAddress to sockaddr_storage and so pass it down the JNI layer.
+    protected ByteBuf sockaddrMemory;
 
     QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, FlushStrategy flushStrategy) {
         this.config = config;
@@ -69,13 +73,14 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        sockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         headerParser = new QuicHeaderParser(maxTokenLength, localConnIdLength);
         parserCallback = (sender, recipient, buffer, type, version, scid, dcid, token) -> {
             QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
                     type, version, scid,
                     dcid, token);
             if (channel != null) {
-                channel.recv(buffer);
+                channel.recv(sender, buffer);
                 if (channel.markInFireChannelReadCompleteQueue()) {
                     needsFireChannelReadComplete.add(channel);
                 }
@@ -97,6 +102,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             needsFireChannelReadComplete.clear();
         } finally {
             config.free();
+            if (sockaddrMemory != null) {
+                sockaddrMemory.release();
+            }
             if (headerParser != null) {
                 headerParser.close();
                 headerParser = null;

@@ -76,6 +76,44 @@ final class Quiche {
         }
     }
 
+    static final short AF_INET = (short) QuicheNativeStaticallyReferencedJniMethods.afInet();
+    static final short AF_INET6 = (short) QuicheNativeStaticallyReferencedJniMethods.afInet6();
+    static final int SIZEOF_SOCKADDR_STORAGE = QuicheNativeStaticallyReferencedJniMethods.sizeofSockaddrStorage();
+    static final int SIZEOF_SOCKADDR_IN = QuicheNativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
+    static final int SIZEOF_SOCKADDR_IN6 = QuicheNativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinFamily();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_PORT =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinPort();
+    static final int SOCKADDR_IN_OFFSETOF_SIN_ADDR =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrInOffsetofSinAddr();
+    static final int IN_ADDRESS_OFFSETOF_S_ADDR = QuicheNativeStaticallyReferencedJniMethods.inAddressOffsetofSAddr();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_FAMILY =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Family();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_PORT =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Port();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_FLOWINFO =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Flowinfo();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_ADDR =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6Addr();
+    static final int SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID =
+            QuicheNativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6ScopeId();
+    static final int IN6_ADDRESS_OFFSETOF_S6_ADDR =
+            QuicheNativeStaticallyReferencedJniMethods.in6AddressOffsetofS6Addr();
+    static final int SIZEOF_SOCKLEN_T = QuicheNativeStaticallyReferencedJniMethods.sizeofSocklenT();
+    static final int SIZEOF_SIZE_T = QuicheNativeStaticallyReferencedJniMethods.sizeofSizeT();
+
+    static final int QUICHE_RECV_INFO_OFFSETOF_FROM =
+            QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofFrom();
+    static final int QUICHE_RECV_INFO_OFFSETOF_FROM_LEN =
+            QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofFromLen();
+    static final int SIZEOF_QUICHE_RECV_INFO = QuicheNativeStaticallyReferencedJniMethods.sizeofQuicheRecvInfo();
+    static final int QUICHE_SEND_INFO_OFFSETOF_TO =
+            QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofTo();
+    static final int QUICHE_SEND_INFO_OFFSETOF_TO_LEN =
+            QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofToLen();
+    static final int SIZEOF_QUICHE_SEND_INFO = QuicheNativeStaticallyReferencedJniMethods.sizeofQuicheSendInfo();
+
     static final int QUICHE_PROTOCOL_VERSION = QuicheNativeStaticallyReferencedJniMethods.quiche_protocol_version();
     static final int QUICHE_MAX_CONN_ID_LEN = QuicheNativeStaticallyReferencedJniMethods.quiche_max_conn_id_len();
 
@@ -229,6 +267,7 @@ final class Quiche {
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L229">quiche_conn_new_with_tls</a>.
      */
     static native long quiche_conn_new_with_tls(long scidAddr, int scidLen, long odcidAddr, int odcidLen,
+                                                long peerAddr, int peerLen,
                                                 long configAddr, long ssl, boolean isServer);
 
     /**
@@ -240,12 +279,12 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L249">quiche_conn_recv</a>.
      */
-    static native int quiche_conn_recv(long connAddr, long bufAddr, int bufLen);
+    static native int quiche_conn_recv(long connAddr, long bufAddr, int bufLen, long infoAddr);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_send</a>.
      */
-    static native int quiche_conn_send(long connAddr, long outAddr, int outLen);
+    static native int quiche_conn_send(long connAddr, long outAddr, int outLen, long infoAddr);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L373">quiche_conn_free</a>.
@@ -543,6 +582,8 @@ final class Quiche {
     private static native void quiche_enable_debug_logging(QuicheLogger logger);
 
     private static native long buffer_memory_address(ByteBuffer buffer);
+
+    static native int sockaddr_cmp(long addr, long addr2);
 
     /**
      * Returns the memory address if the {@link ByteBuf}

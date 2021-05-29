@@ -217,7 +217,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
 
         final EchoHandler sh = new EchoHandler(true, autoRead, allocator);
         final EchoHandler ch = new EchoHandler(false, autoRead, allocator);
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel(), allocator);
@@ -233,28 +233,31 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
                     ctx.read();
                 }
             }
-        }, sh);
+        };
+
+        Channel server = QuicTestUtils.newServer(serverHandler, sh);
         setAllocator(server, allocator);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         QuicChannel quicChannel = null;
         try {
-            quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelActive(ChannelHandlerContext ctx) {
-                            if (!autoRead) {
-                                ctx.read();
-                            }
-                        }
+            QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) {
+                    if (!autoRead) {
+                        ctx.read();
+                    }
+                }
 
-                        @Override
-                        public void channelReadComplete(ChannelHandlerContext ctx) {
-                            if (!autoRead) {
-                                ctx.read();
-                            }
-                        }
-                    })
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    if (!autoRead) {
+                        ctx.read();
+                    }
+                }
+            };
+            quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientHandler)
                     .streamHandler(ch)
                     // Use the same allocator for the streams.
                     .streamOption(ChannelOption.ALLOCATOR, allocator)
@@ -292,6 +295,9 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             sh.channel.parent().close().sync();
             ch.channel.parent().close().sync();
             checkForException(ch, sh);
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().syncUninterruptibly();
             QuicTestUtils.closeIfNotNull(quicChannel);

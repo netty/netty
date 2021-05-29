@@ -32,24 +32,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QuicStreamFrameTest extends AbstractQuicTest {
 
     @Test
-    public void testCloseHalfClosureUnidirectional() throws Exception {
+    public void testCloseHalfClosureUnidirectional() throws Throwable {
         testCloseHalfClosure(QuicStreamType.UNIDIRECTIONAL);
     }
 
     @Test
-    public void testCloseHalfClosureBidirectional() throws Exception {
+    public void testCloseHalfClosureBidirectional() throws Throwable {
         testCloseHalfClosure(QuicStreamType.BIDIRECTIONAL);
     }
 
-    private static void testCloseHalfClosure(QuicStreamType type) throws Exception {
+    private static void testCloseHalfClosure(QuicStreamType type) throws Throwable {
         Channel server = null;
         Channel channel = null;
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        QuicChannelValidationHandler clientHandler = new StreamCreationHandler(type);
         try {
             StreamHandler handler = new StreamHandler();
-            server = QuicTestUtils.newServer(null, handler);
+            server = QuicTestUtils.newServer(serverHandler, handler);
             channel = QuicTestUtils.newClient();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new StreamCreationHandler(type))
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
                     .connect()
@@ -57,13 +59,16 @@ public class QuicStreamFrameTest extends AbstractQuicTest {
 
             handler.assertSequence();
             quicChannel.closeFuture().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
         }
     }
 
-    private static final class StreamCreationHandler extends ChannelInboundHandlerAdapter {
+    private static final class StreamCreationHandler extends QuicChannelValidationHandler {
         private final QuicStreamType type;
 
         StreamCreationHandler(QuicStreamType type) {

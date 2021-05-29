@@ -211,9 +211,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
 
         QuicheQuicSslEngine quicSslEngine = (QuicheQuicSslEngine) engine;
-        QuicheQuicConnection connection = quicSslEngine.createConnection(ssl ->
-                Quiche.quiche_conn_new_with_tls(scidAddr, scidLen, ocidAddr, ocidLen,
-                        config.nativeAddress(), ssl, true));
+        QuicheQuicConnection connection = quicSslEngine.createConnection(ssl -> {
+            long peerAddr = sockaddrMemory.memoryAddress();
+            int peerLen = SockaddrIn.write(peerAddr, sender);
+            return Quiche.quiche_conn_new_with_tls(scidAddr, scidLen, ocidAddr, ocidLen, peerAddr, peerLen,
+                    config.nativeAddress(), ssl, true);
+        });
         if (connection  == null) {
             channel.unsafe().closeForcibly();
             LOGGER.debug("quiche_accept failed");

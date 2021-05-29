@@ -41,10 +41,11 @@ public class QuicReadableTest extends AbstractQuicTest {
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
 
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                null, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandlerAdapter() {
                     private int counter;
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) {
@@ -80,9 +81,10 @@ public class QuicReadableTest extends AbstractQuicTest {
                     }
                 });
         Channel channel = QuicTestUtils.newClient();
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
                     .connect()
@@ -112,6 +114,9 @@ public class QuicReadableTest extends AbstractQuicTest {
 
             throwIfNotNull(serverErrorRef);
             throwIfNotNull(clientErrorRef);
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.

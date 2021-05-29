@@ -34,13 +34,16 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
 
     @Test
     public void testCreateStream() throws Throwable {
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(serverHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
+
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect()
@@ -59,6 +62,9 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
             latch.await();
             stream.close().sync();
             quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -68,13 +74,16 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
 
     @Test
     public void testCreateStreamViaBootstrap() throws Throwable {
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(serverHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
+
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
                     .connect()
@@ -96,6 +105,9 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
             latch.await();
             stream.close().sync();
             quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
         } finally {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.

@@ -101,14 +101,16 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         });
     }
 
-    private void testQLog(Path path, Consumer<Path> consumer) throws Exception {
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+    private void testQLog(Path path, Consumer<Path> consumer) throws Throwable {
+        QuicChannelValidationHandler serverValidationHandler = new QuicChannelValidationHandler();
+        QuicChannelValidationHandler clientValidationHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(serverValidationHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(clientValidationHandler)
                     .option(QuicChannelOption.QLOG,
                             new QLogConfiguration(path.toString(), "testTitle", "test"))
                     .streamHandler(new ChannelInboundHandlerAdapter())
@@ -123,6 +125,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             quicChannel.close().sync();
             quicChannel.closeFuture().sync();
             consumer.accept(path);
+
+            serverValidationHandler.assertState();
+            clientValidationHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -242,10 +247,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
-        } finally {
             serverQuicChannelHandler.assertState();
             serverQuicStreamHandler.assertState();
-
+        } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
@@ -304,7 +308,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
+
             clientQuicChannelHandler.assertState();
+            serverQuicChannelHandler.assertState();
 
             assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
             assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
@@ -314,7 +320,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             assertNotNull(quicChannel.remoteAddress());
         } finally {
             serverLatch.await();
-            serverQuicChannelHandler.assertState();
 
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -616,8 +621,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    private static final class ChannelStateVerifyHandler extends ChannelInboundHandlerAdapter {
-        private volatile Throwable cause;
+    private static final class ChannelStateVerifyHandler extends QuicChannelValidationHandler {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();
@@ -629,20 +633,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ctx.fireChannelInactive();
             fail();
         }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            this.cause = cause;
-        }
-
-        void assertState() throws Throwable {
-            if (cause != null) {
-                throw cause;
-            }
-        }
     }
 
-    private static final class ChannelActiveVerifyHandler extends ChannelInboundHandlerAdapter {
+    private static final class ChannelActiveVerifyHandler extends QuicChannelValidationHandler {
         private final BlockingQueue<Integer> states = new LinkedBlockingQueue<>();
         private volatile QuicConnectionAddress localAddress;
         private volatile QuicConnectionAddress remoteAddress;
@@ -679,6 +672,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 assertEquals(i, (int) states.take());
             }
             assertNull(states.poll());
+            super.assertState();
         }
 
         QuicConnectionAddress localAddress() {
