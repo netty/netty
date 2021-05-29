@@ -138,6 +138,9 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         return stringToSimpleStrings.get(content);
     }
 
+    /**
+     * Returns {@link SimpleStringRedisMessage} for given {@link RedisReplyKey}. Returns {@code null} it does not exist.
+     */
     public SimpleStringRedisMessage getSimpleString(RedisReplyKey key) {
         return keyToSimpleStrings.get(key);
     }
@@ -152,6 +155,9 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         return stringToErrors.get(content);
     }
 
+    /**
+     * Returns {@link ErrorRedisMessage} for given {@link RedisErrorKey}. Returns {@code null} it does not exist.
+     */
     public ErrorRedisMessage getError(RedisErrorKey key) {
         return keyToErrors.get(key);
     }
