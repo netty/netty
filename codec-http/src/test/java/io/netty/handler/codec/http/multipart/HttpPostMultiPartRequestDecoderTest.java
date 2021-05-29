@@ -95,6 +95,63 @@ public class HttpPostMultiPartRequestDecoderTest {
         }
     }
 
+    @Test
+    public void testDelimiterExceedLeftSpaceInCurrentBuffer() {
+        String delimiter = "--861fbeab-cd20-470c-9609-d40a0f704466";
+        String suffix = '\n' + delimiter + "--\n";
+        byte[] bsuffix = suffix.getBytes(CharsetUtil.UTF_8);
+        int partOfDelimiter = bsuffix.length / 2;
+        int bytesLastChunk = 355 - partOfDelimiter; // to try to have an out of bound since content is > delimiter
+        byte[] bsuffix1 = Arrays.copyOf(bsuffix, partOfDelimiter);
+        byte[] bsuffix2 = Arrays.copyOfRange(bsuffix, partOfDelimiter, bsuffix.length);
+        String prefix = delimiter + "\n" +
+                        "Content-Disposition: form-data; name=\"image\"; filename=\"guangzhou.jpeg\"\n" +
+                        "Content-Type: image/jpeg\n" +
+                        "Content-Length: " + bytesLastChunk + "\n\n";
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        request.headers().set("content-length", prefix.length() + bytesLastChunk + suffix.length());
+
+        // Factory using Memory mode
+        HttpDataFactory factory = new DefaultHttpDataFactory(false);
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
+        ByteBuf buf = Unpooled.wrappedBuffer(prefix.getBytes(CharsetUtil.UTF_8));
+        decoder.offer(new DefaultHttpContent(buf));
+        assertNotNull((HttpData) decoder.currentPartialHttpData());
+        buf.release();
+        // Chunk less than Delimiter size but containing part of delimiter
+        byte[] body = new byte[bytesLastChunk + bsuffix1.length];
+        Arrays.fill(body, (byte) 2);
+        for (int i = 0; i < bsuffix1.length; i++) {
+            body[bytesLastChunk + i] = bsuffix1[i];
+        }
+        ByteBuf content = Unpooled.wrappedBuffer(body);
+        decoder.offer(new DefaultHttpContent(content)); // Ouf of range before here
+        assertNotNull(((HttpData) decoder.currentPartialHttpData()).content());
+        content.release();
+        content = Unpooled.wrappedBuffer(bsuffix2);
+        decoder.offer(new DefaultHttpContent(content));
+        assertNull((HttpData) decoder.currentPartialHttpData());
+        content.release();
+        decoder.offer(new DefaultLastHttpContent());
+        FileUpload data = (FileUpload) decoder.getBodyHttpDatas().get(0);
+        assertEquals(data.length(), bytesLastChunk);
+        assertEquals(true, data.isInMemory());
+
+        InterfaceHttpData[] httpDatas = decoder.getBodyHttpDatas().toArray(new InterfaceHttpData[0]);
+        for (InterfaceHttpData httpData : httpDatas) {
+            assertEquals(1, httpData.refCnt(), "Before cleanAllHttpData should be 1");
+        }
+        factory.cleanAllHttpData();
+        for (InterfaceHttpData httpData : httpDatas) {
+            assertEquals(1, httpData.refCnt(), "After cleanAllHttpData should be 1 if in Memory");
+        }
+        decoder.destroy();
+        for (InterfaceHttpData httpData : httpDatas) {
+            assertEquals(0, httpData.refCnt(), "RefCnt should be 0");
+        }
+    }
+
     private void commonTestBigFileDelimiterInMiddleChunk(HttpDataFactory factory, boolean inMemory)
             throws IOException {
         int nbChunks = 100;
@@ -184,7 +241,7 @@ public class HttpPostMultiPartRequestDecoderTest {
         }
         factory.cleanAllHttpData();
         for (InterfaceHttpData httpData : httpDatas) {
-            assertEquals(inMemory? 1 : 0, httpData.refCnt(), "Before cleanAllHttpData should be 1 if in Memory");
+            assertEquals(inMemory? 1 : 0, httpData.refCnt(), "After cleanAllHttpData should be 1 if in Memory");
         }
         decoder.destroy();
         for (InterfaceHttpData httpData : httpDatas) {

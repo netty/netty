@@ -233,13 +233,15 @@ final class HttpPostBodyUtil {
             newOffset += posDelimiter;
             toRead -= posDelimiter;
             // Now check for delimiter
-            delimiterNotFound = false;
-            for (int i = 0; i < delimiterLength; i++) {
-                if (buffer.getByte(newOffset + i) != delimiter[i]) {
-                    newOffset++;
-                    toRead--;
-                    delimiterNotFound = true;
-                    break;
+            if (toRead >= delimiterLength) {
+                delimiterNotFound = false;
+                for (int i = 0; i < delimiterLength; i++) {
+                    if (buffer.getByte(newOffset + i) != delimiter[i]) {
+                        newOffset++;
+                        toRead--;
+                        delimiterNotFound = true;
+                        break;
+                    }
                 }
             }
             if (!delimiterNotFound) {
