@@ -97,19 +97,19 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().copy(idx(index), length);
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return super.slice(idx(index), length);
     }
 
     @Override
     public ByteBuf retainedSlice(int index, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return PooledSlicedByteBuf.newInstance0(unwrap(), this, idx(index), length);
     }
 
@@ -125,7 +125,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public byte getByte(int index) {
-        checkIndex0(index, 1);
+        checkReaderIndex0(index, 1);
         return unwrap().getByte(idx(index));
     }
 
@@ -136,7 +136,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public short getShort(int index) {
-        checkIndex0(index, 2);
+        checkReaderIndex0(index, 2);
         return unwrap().getShort(idx(index));
     }
 
@@ -147,7 +147,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        checkIndex0(index, 2);
+        checkReaderIndex0(index, 2);
         return unwrap().getShortLE(idx(index));
     }
 
@@ -158,7 +158,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndex0(index, 3);
+        checkReaderIndex0(index, 3);
         return unwrap().getUnsignedMedium(idx(index));
     }
 
@@ -169,7 +169,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        checkIndex0(index, 3);
+        checkReaderIndex0(index, 3);
         return unwrap().getUnsignedMediumLE(idx(index));
     }
 
@@ -180,7 +180,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int getInt(int index) {
-        checkIndex0(index, 4);
+        checkReaderIndex0(index, 4);
         return unwrap().getInt(idx(index));
     }
 
@@ -191,7 +191,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        checkIndex0(index, 4);
+        checkReaderIndex0(index, 4);
         return unwrap().getIntLE(idx(index));
     }
 
@@ -202,7 +202,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public long getLong(int index) {
-        checkIndex0(index, 8);
+        checkReaderIndex0(index, 8);
         return unwrap().getLong(idx(index));
     }
 
@@ -213,7 +213,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        checkIndex0(index, 8);
+        checkReaderIndex0(index, 8);
         return unwrap().getLongLE(idx(index));
     }
 
@@ -224,21 +224,21 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex0(index, dst.remaining());
+        checkReaderIndex0(index, dst.remaining());
         unwrap().getBytes(idx(index), dst);
         return this;
     }
@@ -375,7 +375,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), out, length);
         return this;
     }
@@ -383,14 +383,14 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().getBytes(idx(index), out, length);
     }
 
     @Override
     public int getBytes(int index, FileChannel out, long position, int length)
             throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().getBytes(idx(index), out, position, length);
     }
 
@@ -417,7 +417,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         int ret = unwrap().forEachByte(idx(index), length, processor);
         if (ret < adjustment) {
             return -1;
@@ -427,7 +427,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         int ret = unwrap().forEachByteDesc(idx(index), length, processor);
         if (ret < adjustment) {
             return -1;

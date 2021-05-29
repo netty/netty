@@ -352,7 +352,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public byte getByte(int index) {
-        checkIndex(index);
+        checkReaderIndex(index);
         return _getByte(index);
     }
 
@@ -370,7 +370,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public short getShort(int index) {
-        checkIndex(index, 2);
+        checkReaderIndex(index, 2);
         return _getShort(index);
     }
 
@@ -378,7 +378,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        checkIndex(index, 2);
+        checkReaderIndex(index, 2);
         return _getShortLE(index);
     }
 
@@ -396,7 +396,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+        checkReaderIndex(index, 3);
         return _getUnsignedMedium(index);
     }
 
@@ -404,7 +404,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        checkIndex(index, 3);
+        checkReaderIndex(index, 3);
         return _getUnsignedMediumLE(index);
     }
 
@@ -430,7 +430,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int getInt(int index) {
-        checkIndex(index, 4);
+        checkReaderIndex(index, 4);
         return _getInt(index);
     }
 
@@ -438,7 +438,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        checkIndex(index, 4);
+        checkReaderIndex(index, 4);
         return _getIntLE(index);
     }
 
@@ -456,7 +456,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public long getLong(int index) {
-        checkIndex(index, 8);
+        checkReaderIndex(index, 8);
         return _getLong(index);
     }
 
@@ -464,7 +464,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        checkIndex(index, 8);
+        checkReaderIndex(index, 8);
         return _getLongLE(index);
     }
 
@@ -1287,7 +1287,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         try {
             return forEachByteAsc0(index, index + length, processor);
         } catch (Exception e) {
@@ -1319,7 +1319,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         try {
             return forEachByteDesc0(index + length - 1, index, processor);
         } catch (Exception e) {
@@ -1375,6 +1375,21 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return buf.toString();
     }
 
+    protected final void checkReaderIndex(int index) {
+        checkReaderIndex(index, 1);
+    }
+
+    protected final void checkReaderIndex(int index, int fieldLength) {
+        ensureAccessible();
+        checkReaderIndex0(index, fieldLength);
+    }
+
+    final void checkReaderIndex0(int index, int fieldLength) {
+        if (checkBounds) {
+            checkRangeBounds("index", index, fieldLength, writerIndex());
+        }
+    }
+
     protected final void checkIndex(int index) {
         checkIndex(index, 1);
     }
@@ -1398,10 +1413,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    protected final void checkSrcIndex(int index, int length, int srcIndex, int srcCapacity) {
+    protected final void checkSrcIndex(int index, int length, int srcIndex, int srcMaxReadeable) {
         checkIndex(index, length);
         if (checkBounds) {
-            checkRangeBounds("srcIndex", srcIndex, length, srcCapacity);
+            checkRangeBounds("srcIndex", srcIndex, length, srcMaxReadeable);
         }
     }
 

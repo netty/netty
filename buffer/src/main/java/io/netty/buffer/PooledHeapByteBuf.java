@@ -117,14 +117,14 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public final ByteBuf getBytes(int index, ByteBuffer dst) {
         int length = dst.remaining();
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         dst.put(memory, idx(index), length);
         return this;
     }
 
     @Override
     public final ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         out.write(memory, idx(index), length);
         return this;
     }
@@ -176,7 +176,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public final ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
+        checkSrcIndex(index, length, srcIndex, src.writerIndex());
         if (src.hasMemoryAddress()) {
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, memory, idx(index), length);
         } else if (src.hasArray()) {
@@ -210,7 +210,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public final ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ByteBuf copy = alloc().heapBuffer(length, maxCapacity());
         return copy.writeBytes(memory, idx(index), length);
     }

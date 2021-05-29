@@ -432,7 +432,7 @@ final class UnsafeByteBufUtil {
     }
 
     static ByteBuf copy(AbstractByteBuf buf, long addr, int index, int length) {
-        buf.checkIndex(index, length);
+        buf.checkReaderIndex(index, length);
         ByteBuf copy = buf.alloc().directBuffer(length, buf.maxCapacity());
         if (length != 0) {
             if (copy.hasMemoryAddress()) {
@@ -462,7 +462,7 @@ final class UnsafeByteBufUtil {
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuf dst, int dstIndex, int length) {
-        buf.checkIndex(index, length);
+        buf.checkReaderIndex(index, length);
         checkNotNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.capacity())) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
@@ -478,7 +478,7 @@ final class UnsafeByteBufUtil {
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, byte[] dst, int dstIndex, int length) {
-        buf.checkIndex(index, length);
+        buf.checkReaderIndex(index, length);
         checkNotNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.length)) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
@@ -489,7 +489,7 @@ final class UnsafeByteBufUtil {
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuffer dst) {
-        buf.checkIndex(index, dst.remaining());
+        buf.checkReaderIndex(index, dst.remaining());
         if (dst.remaining() == 0) {
             return;
         }
@@ -588,7 +588,7 @@ final class UnsafeByteBufUtil {
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
-        buf.checkIndex(index, length);
+        buf.checkReaderIndex(index, length);
         if (length != 0) {
             int len = Math.min(length, ByteBufUtil.WRITE_CHUNK_SIZE);
             if (len <= ByteBufUtil.MAX_TL_ARRAY_LEN || !buf.alloc().isDirectBufferPooled()) {

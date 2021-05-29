@@ -326,7 +326,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     void getBytes(int index, ByteBuffer dst, boolean internal) {
-        checkIndex(index, dst.remaining());
+        checkReaderIndex(index, dst.remaining());
 
         ByteBuffer tmpBuf;
         if (internal) {
@@ -433,7 +433,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
+        checkSrcIndex(index, length, srcIndex, src.writerIndex());
         if (src.nioBufferCount() > 0) {
             for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
                 int bbLen = bb.remaining();

@@ -160,7 +160,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     private void getBytes(int index, OutputStream out, int length, boolean internal) throws IOException {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         if (length == 0) {
             return;
         }
@@ -228,7 +228,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
+        checkSrcIndex(index, length, srcIndex, src.writerIndex());
         if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else if (src.nioBufferCount() > 0) {
@@ -281,7 +281,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ByteBuf copy = alloc().directBuffer(length, maxCapacity());
         return copy.writeBytes(this, index, length);
     }

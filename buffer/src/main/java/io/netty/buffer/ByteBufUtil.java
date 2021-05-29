@@ -468,7 +468,7 @@ public final class ByteBufUtil {
             return -1;
         }
         final int length = toIndex - fromIndex;
-        buffer.checkIndex(fromIndex, length);
+        buffer.checkReaderIndex(fromIndex, length);
         if (!PlatformDependent.isUnaligned()) {
             return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
         }
@@ -602,7 +602,7 @@ public final class ByteBufUtil {
         if (fromIndex < 0 || capacity == 0) {
             return -1;
         }
-        buffer.checkIndex(toIndex, fromIndex - toIndex);
+        buffer.checkReaderIndex(toIndex, fromIndex - toIndex);
         for (int i = fromIndex - 1; i >= toIndex; i--) {
             if (buffer._getByte(i) == value) {
                 return i;

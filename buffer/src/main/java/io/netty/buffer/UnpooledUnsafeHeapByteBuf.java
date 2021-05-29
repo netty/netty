@@ -41,7 +41,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public byte getByte(int index) {
-        checkIndex(index);
+        checkReaderIndex(index);
         return _getByte(index);
     }
 
@@ -52,7 +52,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public short getShort(int index) {
-        checkIndex(index, 2);
+        checkReaderIndex(index, 2);
         return _getShort(index);
     }
 
@@ -63,7 +63,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        checkIndex(index, 2);
+        checkReaderIndex(index, 2);
         return _getShortLE(index);
     }
 
@@ -74,7 +74,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+        checkReaderIndex(index, 3);
         return _getUnsignedMedium(index);
     }
 
@@ -85,7 +85,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        checkIndex(index, 3);
+        checkReaderIndex(index, 3);
         return _getUnsignedMediumLE(index);
     }
 
@@ -96,7 +96,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public int getInt(int index) {
-        checkIndex(index, 4);
+        checkReaderIndex(index, 4);
         return _getInt(index);
     }
 
@@ -107,7 +107,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        checkIndex(index, 4);
+        checkReaderIndex(index, 4);
         return _getIntLE(index);
     }
 
@@ -118,7 +118,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public long getLong(int index) {
-        checkIndex(index, 8);
+        checkReaderIndex(index, 8);
         return _getLong(index);
     }
 
@@ -129,7 +129,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        checkIndex(index, 8);
+        checkReaderIndex(index, 8);
         return _getLongLE(index);
     }
 

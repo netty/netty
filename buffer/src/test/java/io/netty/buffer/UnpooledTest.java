@@ -768,4 +768,30 @@ public class UnpooledTest {
             wrappedBuffer.release();
         }
     }
+
+    @Test
+    public void testWrongAccessGetByteOverWriterIndex() {
+        final ByteBuf buffer = ByteBufAllocator.DEFAULT.directBuffer(100, 2048);
+        buffer.writeZero(100);
+        for (int i = 0; i < 100; i++) {
+            buffer.getByte(i);
+        }
+        try {
+            buffer.getByte(101);
+            fail("Should raized an exception");
+        } catch (IndexOutOfBoundsException e) {
+            // OK
+        }
+        final ByteBuf buffer2 = ByteBufAllocator.DEFAULT.directBuffer(1024, 2048);
+        buffer2.writeZero(100);
+        for (int i = 0; i < 100; i++) {
+            buffer2.getByte(i);
+        }
+        try {
+            buffer2.getByte(101);
+            fail("Should raized an exception");
+        } catch (IndexOutOfBoundsException e) {
+            // OK
+        }
+    }
 }

@@ -716,7 +716,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Same with {@link #slice(int, int)} except that this method returns a list.
      */
     public List<ByteBuf> decompose(int offset, int length) {
-        checkIndex(offset, length);
+        checkReaderIndex(offset, length);
         if (length == 0) {
             return Collections.emptyList();
         }
@@ -1071,7 +1071,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int limit = dst.limit();
         int length = dst.remaining();
 
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         if (length == 0) {
             return this;
         }
@@ -1149,7 +1149,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         if (length == 0) {
             return this;
         }
@@ -1368,7 +1368,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
+        checkSrcIndex(index, length, srcIndex, src.writerIndex());
         if (length == 0) {
             return this;
         }
@@ -1509,7 +1509,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ByteBuf dst = allocBuffer(length);
         if (length != 0) {
             copyTo(index, length, toComponentIndex0(index), dst);

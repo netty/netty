@@ -62,7 +62,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ObjectUtil.checkNotNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
@@ -80,7 +80,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ObjectUtil.checkNotNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException(String.format(
@@ -95,7 +95,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         ByteBuf copy = alloc().directBuffer(length, maxCapacity());
         if (length != 0) {
             if (copy.hasMemoryAddress()) {

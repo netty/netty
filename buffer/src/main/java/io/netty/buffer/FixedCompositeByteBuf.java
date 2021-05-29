@@ -395,7 +395,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int limit = dst.limit();
         int length = dst.remaining();
 
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         if (length == 0) {
             return this;
         }
@@ -486,7 +486,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         if (length == 0) {
             return this;
         }
@@ -511,7 +511,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         boolean release = true;
         ByteBuf buf = alloc().buffer(length);
         try {

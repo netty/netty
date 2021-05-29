@@ -244,7 +244,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
+        checkSrcIndex(index, length, srcIndex, src.writerIndex());
         if (src.hasMemoryAddress()) {
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
         } else  if (src.hasArray()) {
@@ -531,7 +531,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkReaderIndex(index, length);
         return alloc().heapBuffer(length, maxCapacity()).writeBytes(array, index, length);
     }
 

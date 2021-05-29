@@ -221,7 +221,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
+            checkReaderIndex(index, length);
             return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), index, length);
         }
 
@@ -304,7 +304,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
+            checkReaderIndex(index, length);
             return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(index), length);
         }
 

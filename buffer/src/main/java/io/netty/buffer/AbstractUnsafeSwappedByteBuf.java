@@ -37,7 +37,7 @@ abstract class AbstractUnsafeSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public final long getLong(int index) {
-        wrapped.checkIndex(index, 8);
+        wrapped.checkReaderIndex(index, 8);
         long v = _getLong(wrapped, index);
         return nativeByteOrder ? v : Long.reverseBytes(v);
     }
@@ -64,7 +64,7 @@ abstract class AbstractUnsafeSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public final int getInt(int index) {
-        wrapped.checkIndex(index, 4);
+        wrapped.checkReaderIndex(index, 4);
         int v = _getInt(wrapped, index);
         return nativeByteOrder ? v : Integer.reverseBytes(v);
     }
@@ -76,7 +76,7 @@ abstract class AbstractUnsafeSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public final short getShort(int index) {
-        wrapped.checkIndex(index, 2);
+        wrapped.checkReaderIndex(index, 2);
         short v = _getShort(wrapped, index);
         return nativeByteOrder ? v : Short.reverseBytes(v);
     }

@@ -116,7 +116,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public byte getByte(int index) {
-        checkIndex0(index, 1);
+        checkReaderIndex0(index, 1);
         return unwrap().getByte(idx(index));
     }
 
@@ -127,7 +127,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public short getShort(int index) {
-        checkIndex0(index, 2);
+        checkReaderIndex0(index, 2);
         return unwrap().getShort(idx(index));
     }
 
@@ -138,7 +138,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        checkIndex0(index, 2);
+        checkReaderIndex0(index, 2);
         return unwrap().getShortLE(idx(index));
     }
 
@@ -149,7 +149,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndex0(index, 3);
+        checkReaderIndex0(index, 3);
         return unwrap().getUnsignedMedium(idx(index));
     }
 
@@ -160,7 +160,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        checkIndex0(index, 3);
+        checkReaderIndex0(index, 3);
         return unwrap().getUnsignedMediumLE(idx(index));
     }
 
@@ -171,7 +171,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getInt(int index) {
-        checkIndex0(index, 4);
+        checkReaderIndex0(index, 4);
         return unwrap().getInt(idx(index));
     }
 
@@ -182,7 +182,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        checkIndex0(index, 4);
+        checkReaderIndex0(index, 4);
         return unwrap().getIntLE(idx(index));
     }
 
@@ -193,7 +193,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public long getLong(int index) {
-        checkIndex0(index, 8);
+        checkReaderIndex0(index, 8);
         return unwrap().getLong(idx(index));
     }
 
@@ -204,7 +204,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        checkIndex0(index, 8);
+        checkReaderIndex0(index, 8);
         return unwrap().getLongLE(idx(index));
     }
 
@@ -220,33 +220,33 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().copy(idx(index), length);
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().slice(idx(index), length);
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex0(index, dst.remaining());
+        checkReaderIndex0(index, dst.remaining());
         unwrap().getBytes(idx(index), dst);
         return this;
     }
@@ -260,7 +260,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public CharSequence getCharSequence(int index, int length, Charset charset) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().getCharSequence(idx(index), length, charset);
     }
 
@@ -388,20 +388,20 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         unwrap().getBytes(idx(index), out, length);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().getBytes(idx(index), out, length);
     }
 
     @Override
     public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         return unwrap().getBytes(idx(index), out, position, length);
     }
 
@@ -442,7 +442,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         int ret = unwrap().forEachByte(idx(index), length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
@@ -453,7 +453,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
-        checkIndex0(index, length);
+        checkReaderIndex0(index, length);
         int ret = unwrap().forEachByteDesc(idx(index), length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
