@@ -1,12 +1,29 @@
+/*
+ * Copyright 2016 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.netty.handler.codec.redis;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Verifies the correct functionality of the {@link FixedRedisMessagePool}.
+ */
 public class FixedRedisMessagePoolTest {
 
     @Test
@@ -17,17 +34,17 @@ public class FixedRedisMessagePoolTest {
         SimpleStringRedisMessage fromEnum = pool.getSimpleString(FixedRedisMessagePool.RedisReplyKey.OK);
         SimpleStringRedisMessage fromByteBuf = pool.getSimpleString(byteBufOf("OK"));
 
-        assertThat(fromStr.content(), is("OK"));
-        assertThat(fromStr, sameInstance(fromEnum));
-        assertThat(fromStr, sameInstance(fromByteBuf));
+        assertEquals(fromStr.content(), "OK");
+        assertEquals(fromStr, fromEnum);
+        assertEquals(fromStr, fromByteBuf);
 
         ErrorRedisMessage errorFromStr = pool.getError("NOAUTH Authentication required.");
         ErrorRedisMessage errorFromEnum = pool.getError(FixedRedisMessagePool.RedisErrorKey.NOT_AUTH);
         ErrorRedisMessage errorFromByteBuf = pool.getError(byteBufOf("NOAUTH Authentication required."));
 
-        assertThat(errorFromStr.content(), is("NOAUTH Authentication required."));
-        assertThat(errorFromStr, sameInstance(errorFromEnum));
-        assertThat(errorFromStr, sameInstance(errorFromByteBuf));
+        assertEquals(errorFromStr.content(), "NOAUTH Authentication required.");
+        assertEquals(errorFromStr, errorFromEnum);
+        assertEquals(errorFromStr, errorFromByteBuf);
     }
 
     @Test
@@ -37,14 +54,14 @@ public class FixedRedisMessagePoolTest {
         SimpleStringRedisMessage message1 = pool.getSimpleString("Not exist");
         SimpleStringRedisMessage message2 = pool.getSimpleString(byteBufOf("Not exist"));
 
-        assertThat(message1, is(nullValue()));
-        assertThat(message2, is(nullValue()));
+        assertNull(message1);
+        assertNull(message2);
 
         ErrorRedisMessage error1 = pool.getError("Not exist");
         ErrorRedisMessage error2 = pool.getError(byteBufOf("Not exist"));
 
-        assertThat(error1, is(nullValue()));
-        assertThat(error2, is(nullValue()));
+        assertNull(error1);
+        assertNull(error2);
     }
 
     @Test
@@ -54,7 +71,6 @@ public class FixedRedisMessagePoolTest {
         SimpleStringRedisMessage okMessage = pool.getSimpleString(FixedRedisMessagePool.RedisReplyKey.OK);
         SimpleStringRedisMessage pongMessage = pool.getSimpleString(FixedRedisMessagePool.RedisReplyKey.PONG);
 
-        assertThat(okMessage, is(not(pongMessage)));
+        assertNotEquals(okMessage, pongMessage);
     }
-
 }
