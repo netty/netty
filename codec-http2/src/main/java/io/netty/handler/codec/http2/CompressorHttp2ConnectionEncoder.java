@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import com.aayushatharva.brotli4j.encoder.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -51,6 +52,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
+    private final Encoder.Parameters parameters;
     private final Http2Connection.PropertyKey propertyKey;
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
@@ -59,10 +61,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
                                             int memLevel) {
+        this(delegate, compressionLevel, windowBits, memLevel, new Encoder.Parameters().setQuality(4));
+    }
+
+    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
+                                            int memLevel, Encoder.Parameters parameters) {
         super(delegate);
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
+        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
 
         propertyKey = connection().newKey();
         connection().addListener(new Http2ConnectionAdapter() {
@@ -195,7 +203,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new BrotliEncoder());
+                    ctx.channel().config(), new BrotliEncoder(parameters));
         }
         // 'identity' or unsupported
         return null;
