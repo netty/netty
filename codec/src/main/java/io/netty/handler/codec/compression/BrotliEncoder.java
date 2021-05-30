@@ -32,13 +32,6 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     private final Encoder.Parameters parameters;
 
     /**
-     * Create a new {@link BrotliEncoder} Instance with Quality set to 4.
-     */
-    public BrotliEncoder() {
-        parameters = new Encoder.Parameters().setQuality(4);
-    }
-
-    /**
      * Create a new {@link BrotliEncoder} Instance
      *
      * @param parameters {@link Encoder.Parameters} Instance
