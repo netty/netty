@@ -74,7 +74,7 @@
     <dependency>
       <groupId>com.aayushatharva.brotli4j</groupId>
       <artifactId>brotli4j</artifactId>
-      <scope>test</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.aayushatharva.brotli4j</groupId>

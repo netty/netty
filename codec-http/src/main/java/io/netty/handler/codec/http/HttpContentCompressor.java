@@ -30,11 +30,11 @@ import io.netty.util.internal.ObjectUtil;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
-    private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
-    private final int contentSizeThreshold;
-    private ChannelHandlerContext ctx;
+    protected final int compressionLevel;
+    protected final int windowBits;
+    protected final int memLevel;
+    protected final int contentSizeThreshold;
+    protected ChannelHandlerContext ctx;
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
