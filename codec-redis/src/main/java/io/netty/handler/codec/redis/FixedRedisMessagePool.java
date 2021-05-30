@@ -156,7 +156,7 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     }
 
     /**
-     * * Returns {@link ErrorRedisMessage} for the given {@link RedisErrorKey} or {@code null} if it does not exist.
+     * Returns {@link ErrorRedisMessage} for the given {@link RedisErrorKey} or {@code null} if it does not exist.
      */
     public ErrorRedisMessage getError(RedisErrorKey key) {
         return keyToErrors.get(key);
