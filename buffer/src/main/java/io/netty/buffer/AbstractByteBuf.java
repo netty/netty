@@ -285,7 +285,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         final int writerIndex = writerIndex();
         final int targetCapacity = writerIndex + minWritableBytes;
         // using non-short-circuit & to reduce branching - this is a hot path and targetCapacity should rarely overflow
-        if (targetCapacity >= 0 & targetCapacity <= capacity()) {
+        if (targetCapacity >= 0 && targetCapacity <= capacity()) {
             ensureAccessible();
             return;
         }
