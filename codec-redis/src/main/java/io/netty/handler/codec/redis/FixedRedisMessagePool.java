@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -100,8 +100,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         for (RedisReplyKey value : RedisReplyKey.values()) {
             ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
                 value.name().getBytes(CharsetUtil.UTF_8))).asReadOnly();
-            SimpleStringRedisMessage message = new SimpleStringRedisMessage(new String(
-                Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(value.name().getBytes(CharsetUtil.UTF_8))).array()));
+            SimpleStringRedisMessage message = new SimpleStringRedisMessage(new String(Unpooled.unreleasableBuffer(
+                Unpooled.wrappedBuffer(value.name().getBytes(CharsetUtil.UTF_8))).array()));
             stringToSimpleStrings.put(value.name(), message);
             keyToSimpleStrings.put(value, message);
             byteBufToSimpleStrings.put(key, message);
@@ -113,8 +113,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         for (RedisErrorKey value : RedisErrorKey.values()) {
             ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
                 value.toString().getBytes(CharsetUtil.UTF_8))).asReadOnly();
-            ErrorRedisMessage message = new ErrorRedisMessage(new String(
-                Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(value.toString().getBytes(CharsetUtil.UTF_8))).array()));
+            ErrorRedisMessage message = new ErrorRedisMessage(new String(Unpooled.unreleasableBuffer(
+                Unpooled.wrappedBuffer(value.toString().getBytes(CharsetUtil.UTF_8))).array()));
             stringToErrors.put(value.toString(), message);
             keyToErrors.put(value, message);
             byteBufToErrors.put(key, message);
@@ -139,7 +139,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     }
 
     /**
-     * Returns {@link SimpleStringRedisMessage} for the given {@link RedisReplyKey} or {@code null} if it does not exist.
+     * Returns {@link SimpleStringRedisMessage} for the given {@link RedisReplyKey}
+     * or {@code null} if it does not exist.
      */
     public SimpleStringRedisMessage getSimpleString(RedisReplyKey key) {
         return keyToSimpleStrings.get(key);
@@ -156,7 +157,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     }
 
     /**
-     * Returns {@link ErrorRedisMessage} for the given {@link RedisErrorKey} or {@code null} if it does not exist.
+     * Returns {@link ErrorRedisMessage} for the given {@link RedisErrorKey}
+     * or {@code null} if it does not exist.
      */
     public ErrorRedisMessage getError(RedisErrorKey key) {
         return keyToErrors.get(key);
