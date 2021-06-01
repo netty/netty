@@ -507,6 +507,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             switch (code) {
             case 204: case 304:
                 return true;
+            default:
+                break;
             }
         }
         return false;
