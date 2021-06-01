@@ -184,3 +184,4 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         return longToByteBufs.get(value);
     }
 }
+
