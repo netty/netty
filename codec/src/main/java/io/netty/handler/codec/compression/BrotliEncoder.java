@@ -37,6 +37,14 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Create a new {@link BrotliEncoder} Instance
+     * with {@link Encoder.Parameters#setQuality(int)} set to 4.
+     */
+    public BrotliEncoder() {
+        this(new Encoder.Parameters().setQuality(4));
+    }
+
+    /**
+     * Create a new {@link BrotliEncoder} Instance
      *
      * @param parameters {@link Encoder.Parameters} Instance
      */
@@ -51,7 +59,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     @Override
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) throws Exception {
-        // If ByteBuf is unreadable, then just ignore it.
+        // If ByteBuf is unreadable, then return EMPTY_BUFFER.
         if (!msg.isReadable()) {
             return Unpooled.EMPTY_BUFFER;
         }
