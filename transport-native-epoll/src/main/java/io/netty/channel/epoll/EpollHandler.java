@@ -375,7 +375,7 @@ public class EpollHandler implements IoHandler {
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
         for (AbstractEpollChannel ch: localChannels) {
-            ch.unsafe().close(ch.unsafe().voidPromise());
+            ch.unsafe().close(ch.newPromise());
         }
     }
 

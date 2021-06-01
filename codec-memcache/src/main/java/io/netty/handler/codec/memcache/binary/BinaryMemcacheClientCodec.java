@@ -291,10 +291,6 @@ public final class BinaryMemcacheClientCodec extends
                 public ChannelFuture newFailedFuture(Throwable cause) {
                     return ctx.newFailedFuture(cause);
                 }
-
-                public ChannelPromise voidPromise() {
-                    return ctx.voidPromise();
-                }
             };
         }
 

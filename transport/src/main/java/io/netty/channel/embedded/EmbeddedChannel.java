@@ -342,7 +342,7 @@ public class EmbeddedChannel extends AbstractChannel {
             p.fireChannelRead(m);
         }
 
-        flushInbound(false, voidPromise());
+        flushInbound(false, null);
         return isNotEmpty(inboundMessages);
     }
 
@@ -375,7 +375,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #flushOutbound()
      */
     public EmbeddedChannel flushInbound() {
-        flushInbound(true, voidPromise());
+        flushInbound(true, null);
         return this;
     }
 
@@ -462,7 +462,7 @@ public class EmbeddedChannel extends AbstractChannel {
         if (checkOpen(true)) {
             flushOutbound0();
         }
-        checkException(voidPromise());
+        checkException(null);
         return this;
     }
 
@@ -645,7 +645,7 @@ public class EmbeddedChannel extends AbstractChannel {
       if (t != null) {
         lastException = null;
 
-        if (promise.isVoid()) {
+        if (promise == null) {
             PlatformDependent.throwException(t);
         }
 
@@ -659,7 +659,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-      checkException(voidPromise());
+      checkException(null);
     }
 
     /**
@@ -846,11 +846,6 @@ public class EmbeddedChannel extends AbstractChannel {
             public void flush() {
                 EmbeddedUnsafe.this.flush();
                 mayRunPendingTasks();
-            }
-
-            @Override
-            public ChannelPromise voidPromise() {
-                return EmbeddedUnsafe.this.voidPromise();
             }
 
             @Override

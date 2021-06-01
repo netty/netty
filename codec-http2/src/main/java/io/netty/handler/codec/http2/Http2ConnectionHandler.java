@@ -203,7 +203,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
             // We need to remove all streams (not just the active ones).
             // See https://github.com/netty/netty/issues/4838.
-            connection().close(ctx.voidPromise());
+            connection().close(ctx.newPromise());
         }
 
         /**
@@ -457,7 +457,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             ctx.close(promise);
             return;
         }
-        promise = promise.unvoid();
         // Avoid NotYetConnectedException and avoid sending before connection preface
         if (!ctx.channel().isActive() || !prefaceSent()) {
             ctx.close(promise);
@@ -760,7 +759,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                      ChannelPromise promise) {
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
-            return resetUnknownStream(ctx, streamId, errorCode, promise.unvoid());
+            return resetUnknownStream(ctx, streamId, errorCode, promise);
         }
 
        return resetStream(ctx, stream, errorCode, promise);
@@ -768,7 +767,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private ChannelFuture resetStream(final ChannelHandlerContext ctx, final Http2Stream stream,
                                       long errorCode, ChannelPromise promise) {
-        promise = promise.unvoid();
         if (stream.isResetSent()) {
             // Don't write a RST_STREAM frame if we have already written one.
             return promise.setSuccess();
@@ -801,7 +799,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public ChannelFuture goAway(final ChannelHandlerContext ctx, final int lastStreamId, final long errorCode,
                                 final ByteBuf debugData, ChannelPromise promise) {
-        promise = promise.unvoid();
         final Http2Connection connection = connection();
         try {
             if (!connection.goAwaySent(lastStreamId, errorCode, debugData)) {

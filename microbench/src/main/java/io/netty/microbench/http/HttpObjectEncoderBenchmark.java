@@ -66,9 +66,6 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public boolean pooledAllocator;
 
-    @Param({ "true", "false" })
-    public boolean voidPromise;
-
     @Setup(Level.Trial)
     public void setup() {
         byte[] bytes = new byte[256];
@@ -121,6 +118,6 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private ChannelPromise newPromise() {
-        return voidPromise ? context.voidPromise() : context.newPromise();
+        return context.newPromise();
     }
 }

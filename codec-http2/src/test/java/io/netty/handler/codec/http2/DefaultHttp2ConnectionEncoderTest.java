@@ -48,7 +48,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -269,35 +268,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void dataFramesShouldMergeUseVoidPromise() throws Exception {
-        createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData().retain();
-
-        ChannelPromise promise1 = newVoidPromise(channel);
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise1);
-        ChannelPromise promise2 = newVoidPromise(channel);
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise2);
-
-        // Now merge the two payloads.
-        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
-        FlowControlled mergedPayload = capturedWrites.get(0);
-        mergedPayload.merge(ctx, capturedWrites.get(1));
-        assertEquals(16, mergedPayload.size());
-        assertFalse(promise1.isSuccess());
-        assertFalse(promise2.isSuccess());
-
-        // Write the merged payloads and verify it was written correctly.
-        mergedPayload.write(ctx, 16);
-        assertEquals(0, mergedPayload.size());
-        assertEquals("abcdefghabcdefgh", writtenData.get(0));
-        assertEquals(0, data.refCnt());
-
-        // The promises won't be set since there are no listeners.
-        assertFalse(promise1.isSuccess());
-        assertFalse(promise2.isSuccess());
-    }
-
-    @Test
     public void dataFramesDontMergeWithHeaders() throws Exception {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData().retain();
@@ -313,26 +283,6 @@ public class DefaultHttp2ConnectionEncoderTest {
         ByteBuf data = Unpooled.buffer(0);
         assertSplitPaddingOnEmptyBuffer(data);
         assertEquals(0, data.refCnt());
-    }
-
-    @Test
-    public void writeHeadersUsingVoidPromise() throws Exception {
-        final Throwable cause = new RuntimeException("fake exception");
-        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), any(Http2Headers.class),
-                                 anyInt(), anyBoolean(), any(ChannelPromise.class)))
-                .then((Answer<ChannelFuture>) invocationOnMock -> {
-                    ChannelPromise promise = invocationOnMock.getArgument(5);
-                    assertFalse(promise.isVoid());
-                    return promise.setFailure(cause);
-                });
-        createStream(STREAM_ID, false);
-        // END_STREAM flag, so that a listener is added to the future.
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, newVoidPromise(channel));
-
-        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), any(Http2Headers.class),
-                                    anyInt(), anyBoolean(), any(ChannelPromise.class));
-        // When using a void promise, the error should be propagated via the channel pipeline.
-        verify(pipeline).fireExceptionCaught(cause);
     }
 
     private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Exception {

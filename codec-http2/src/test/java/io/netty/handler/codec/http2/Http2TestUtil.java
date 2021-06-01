@@ -438,51 +438,6 @@ public final class Http2TestUtil {
         }
     }
 
-    static ChannelPromise newVoidPromise(final Channel channel) {
-        return new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE) {
-            @Override
-            public ChannelPromise addListener(
-                    GenericFutureListener<? extends Future<? super Void>> listener) {
-                throw new AssertionFailedError();
-            }
-
-            @Override
-            public ChannelPromise addListeners(
-                    GenericFutureListener<? extends Future<? super Void>>... listeners) {
-                throw new AssertionFailedError();
-            }
-
-            @Override
-            public boolean isVoid() {
-                return true;
-            }
-
-            @Override
-            public boolean tryFailure(Throwable cause) {
-                channel().pipeline().fireExceptionCaught(cause);
-                return true;
-            }
-
-            @Override
-            public ChannelPromise setFailure(Throwable cause) {
-                tryFailure(cause);
-                return this;
-            }
-
-            @Override
-            public ChannelPromise unvoid() {
-                ChannelPromise promise =
-                        new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-                promise.addListener((ChannelFutureListener) future -> {
-                    if (!future.isSuccess()) {
-                        channel().pipeline().fireExceptionCaught(future.cause());
-                    }
-                });
-                return promise;
-            }
-        };
-    }
-
     static final class TestStreamByteDistributorStreamState implements StreamByteDistributor.StreamState {
         private final Http2Stream stream;
         boolean isWriteAllowed;

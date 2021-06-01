@@ -106,7 +106,6 @@ public class WriteTimeoutHandler implements ChannelHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (timeoutNanos > 0) {
-            promise = promise.unvoid();
             scheduleTimeout(ctx, promise);
         }
         ctx.write(msg, promise);

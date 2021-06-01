@@ -42,7 +42,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketGatheringWriteTest extends AbstractSocketTest {
@@ -143,7 +142,6 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         ChannelFuture cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
-        assertNotEquals(cc.voidPromise(), cf);
         try {
             assertTrue(cf.await(60000));
             cf.sync();

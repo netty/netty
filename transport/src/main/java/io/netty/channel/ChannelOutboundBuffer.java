@@ -702,15 +702,11 @@ public final class ChannelOutboundBuffer {
     }
 
     private static void safeSuccess(ChannelPromise promise) {
-        // Only log if the given promise is not of type VoidChannelPromise as trySuccess(...) is expected to return
-        // false.
-        PromiseNotificationUtil.trySuccess(promise, null, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.trySuccess(promise, null, logger);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
-        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
-        // false.
-        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
     @Deprecated

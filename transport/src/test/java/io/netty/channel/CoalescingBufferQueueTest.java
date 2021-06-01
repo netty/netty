@@ -58,7 +58,7 @@ public class CoalescingBufferQueueTest {
             mouseSuccess = future.isSuccess();
         };
         emptyPromise = newPromise();
-        voidPromise = channel.voidPromise();
+        voidPromise = channel.newPromise();
 
         cat = Unpooled.wrappedBuffer("cat".getBytes(CharsetUtil.US_ASCII));
         mouse = Unpooled.wrappedBuffer("mouse".getBytes(CharsetUtil.US_ASCII));

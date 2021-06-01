@@ -132,20 +132,6 @@ public class HttpServerKeepAliveHandlerTest {
     }
 
     @Test
-    public void testConnectionCloseHeaderHandledCorrectlyForVoidPromise() throws Exception {
-        HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
-        response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        setupMessageLength(response);
-
-        channel.writeAndFlush(response, channel.voidPromise());
-        HttpResponse writtenResponse = channel.readOutbound();
-
-        assertFalse(channel.isOpen());
-        ReferenceCountUtil.release(writtenResponse);
-        assertFalse(channel.finishAndReleaseAll());
-    }
-
-    @Test
     public void test_PipelineKeepAlive() {
         FullHttpRequest firstRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");
         setKeepAlive(firstRequest, true);

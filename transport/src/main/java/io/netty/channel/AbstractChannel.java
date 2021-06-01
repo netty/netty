@@ -52,7 +52,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Unsafe unsafe;
     private final ChannelPipeline pipeline;
     private final ChannelFuture succeedFuture;
-    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture;
 
     private volatile SocketAddress localAddress;
@@ -438,11 +437,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
-    @Override
-    public final ChannelPromise voidPromise() {
-        return pipeline.voidPromise();
-    }
-
     protected final void readIfIsAutoRead() {
         if (config().isAutoRead()) {
             read();
@@ -679,7 +673,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (closeFuture.isDone()) {
                     // Closed already.
                     safeSetSuccess(promise);
-                } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
+                } else {
                     // This means close() was called before so we just register a listener and return
                     closeFuture.addListener((ChannelFutureListener) future -> promise.setSuccess());
                 }
@@ -740,7 +734,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void fireChannelInactiveAndDeregister(final boolean wasActive) {
-            deregister(voidPromise(), wasActive && !isActive());
+            deregister(newPromise(), wasActive && !isActive());
         }
 
         @Override
@@ -825,7 +819,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 doBeginRead();
             } catch (final Exception e) {
                 invokeLater(() -> pipeline.fireExceptionCaught(e));
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
@@ -936,13 +930,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                  * may still return {@code true} even if the channel should be closed as result of the exception.
                  */
                 initialCloseCause = t;
-                close(voidPromise(), t, newClosedChannelException(t, "flush0()"), false);
+                close(newPromise(), t, newClosedChannelException(t, "flush0()"), false);
             } else {
                 try {
-                    shutdownOutput(voidPromise(), t);
+                    shutdownOutput(newPromise(), t);
                 } catch (Throwable t2) {
                     initialCloseCause = t;
-                    close(voidPromise(), t2, newClosedChannelException(t, "flush0()"), false);
+                    close(newPromise(), t2, newClosedChannelException(t, "flush0()"), false);
                 }
             }
         }
@@ -954,13 +948,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 exception.initCause(cause);
             }
             return exception;
-        }
-
-        @Override
-        public final ChannelPromise voidPromise() {
-            assertEventLoop();
-
-            return unsafeVoidPromise;
         }
 
         protected final boolean ensureOpen(ChannelPromise promise) {
@@ -976,7 +963,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
          */
         protected final void safeSetSuccess(ChannelPromise promise) {
-            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+            if (!promise.trySuccess()) {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
             }
         }
@@ -985,7 +972,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
          */
         protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
-            if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
+            if (!promise.tryFailure(cause)) {
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
             }
         }
@@ -994,7 +981,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (isOpen()) {
                 return;
             }
-            close(voidPromise());
+            close(newPromise());
         }
 
         private void invokeLater(Runnable task) {

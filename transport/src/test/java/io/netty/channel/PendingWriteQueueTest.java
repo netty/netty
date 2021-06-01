@@ -267,32 +267,6 @@ public class PendingWriteQueueTest {
         assertEquals(3L, (long) channel.readOutbound());
     }
 
-    @Test
-    public void testRemoveAndWriteAllWithVoidPromise() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                // Convert to writeAndFlush(...) so the promise will be notified by the transport.
-                ctx.writeAndFlush(msg, promise);
-            }
-        }, new ChannelHandler() { });
-
-        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().lastContext());
-
-        ChannelPromise promise = channel.newPromise();
-        channel.eventLoop().execute(() -> {
-            queue.add(1L, promise);
-            queue.add(2L, channel.voidPromise());
-            queue.removeAndWriteAll();
-        });
-
-        assertTrue(channel.finish());
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
-    }
-
     @Disabled("Need to verify and think about if the assumptions made by this test are valid at all.")
     @Test
     public void testRemoveAndFailAllReentrantWrite() {

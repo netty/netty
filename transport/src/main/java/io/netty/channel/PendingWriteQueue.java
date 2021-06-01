@@ -141,9 +141,7 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     ChannelPromise promise = write.promise;
                     recycle(write, false);
-                    if (!(promise instanceof VoidChannelPromise)) {
-                        combiner.add(promise);
-                    }
+                    combiner.add(promise);
                     ctx.write(msg, promise);
                     write = next;
                 }
@@ -276,7 +274,7 @@ public final class PendingWriteQueue {
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
-        if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
+        if (!promise.tryFailure(cause)) {
             logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }

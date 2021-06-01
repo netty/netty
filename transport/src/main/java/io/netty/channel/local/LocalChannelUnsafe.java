@@ -16,8 +16,10 @@
 package io.netty.channel.local;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPromise;
 
 interface LocalChannelUnsafe extends Channel.Unsafe {
     void register0();
     void deregister0();
+    ChannelPromise newPromise();
 }

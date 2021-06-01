@@ -43,7 +43,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
@@ -69,38 +68,20 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testFileRegionVoidPromise(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testFileRegionVoidPromise);
-    }
-
-    @Test
-    public void testFileRegionVoidPromiseNotAutoRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testFileRegionVoidPromiseNotAutoRead);
-    }
-
-    @Test
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testFileRegionCountLargerThenFile);
     }
 
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false, true, true);
+        testFileRegion0(sb, cb, true, true);
     }
 
     public void testCustomFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false, true, false);
-    }
-
-    public void testFileRegionVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, true, true, true);
+        testFileRegion0(sb, cb, true, false);
     }
 
     public void testFileRegionNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false, false, true);
-    }
-
-    public void testFileRegionVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, true, false, true);
+        testFileRegion0(sb, cb, false, true);
     }
 
     public void testFileRegionCountLargerThenFile(ServerBootstrap sb, Bootstrap cb) throws Throwable {
@@ -132,7 +113,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     private static void testFileRegion0(
-            ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead, boolean defaultFileRegion)
+            ServerBootstrap sb, Bootstrap cb, final boolean autoRead, boolean defaultFileRegion)
             throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
@@ -198,15 +179,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         //
         // See https://github.com/netty/netty/issues/2769
         //     https://github.com/netty/netty/issues/2964
-        if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise()));
-            assertEquals(cc.voidPromise(), cc.write(emptyRegion, cc.voidPromise()));
-            assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
-        } else {
-            assertNotEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize)));
-            assertNotEquals(cc.voidPromise(), cc.write(emptyRegion));
-            assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
-        }
+        cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize));
+        cc.write(emptyRegion);
+        cc.writeAndFlush(region);
 
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {

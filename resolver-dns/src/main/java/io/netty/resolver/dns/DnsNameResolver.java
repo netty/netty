@@ -1230,7 +1230,6 @@ public class DnsNameResolver extends InetNameResolver {
             boolean flush,
             ChannelPromise writePromise,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        assert !writePromise.isVoid();
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 requireNonNull(promise, "promise"));

@@ -260,9 +260,4 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     public ChannelFuture newFailedFuture(Throwable cause) {
         return ctx.newFailedFuture(cause);
     }
-
-    @Override
-    public ChannelPromise voidPromise() {
-        return ctx.voidPromise();
-    }
 }

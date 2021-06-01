@@ -63,7 +63,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof ByteBuf) {
-                                ctx.writeAndFlush(msg, ctx.voidPromise());
+                                ctx.writeAndFlush(msg);
                             } else {
                                 throw new AssertionError();
                             }
@@ -110,7 +110,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                             throw new IllegalStateException();
                         }
                         lastWritePromise = promise;
-                        ctx.write(msg, ctx.voidPromise());
+                        ctx.write(msg);
                     }
                 });
             }

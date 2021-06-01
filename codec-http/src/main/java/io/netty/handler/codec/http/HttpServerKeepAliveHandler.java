@@ -82,7 +82,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise = promise.unvoid().addListener(ChannelFutureListener.CLOSE);
+            promise.addListener(ChannelFutureListener.CLOSE);
         }
         ctx.write(msg, promise);
     }

@@ -133,22 +133,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture write(Object message, ChannelMatcher matcher);
 
     /**
-     * Writes the specified {@code message} to all {@link Channel}s in this
-     * group that are matched by the given {@link ChannelMatcher}. If the specified {@code message} is an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
-     *
-     * If {@code voidPromise} is {@code true} {@link Channel#voidPromise()} is used for the writes and so the same
-     * restrictions to the returned {@link ChannelGroupFuture} apply as to a void promise.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture write(Object message, ChannelMatcher matcher, boolean voidPromise);
-
-    /**
      * Flush all {@link Channel}s in this
      * group. If the specified {@code messages} are an instance of
      * {@link ByteBuf}, it is automatically
@@ -190,12 +174,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * {@link Channel}s that are matched by the {@link ChannelMatcher}.
      */
     ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher);
-
-    /**
-     * Shortcut for calling {@link #write(Object, ChannelMatcher, boolean)} and {@link #flush()} and only act on
-     * {@link Channel}s that are matched by the {@link ChannelMatcher}.
-     */
-    ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher, boolean voidPromise);
 
     /**
      * @deprecated Use {@link #writeAndFlush(Object, ChannelMatcher)} instead.
