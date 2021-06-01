@@ -422,6 +422,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             break;
         }
+        default:
+            break;
         }
     }
 
