@@ -313,6 +313,8 @@ public class IdleStateHandler implements ChannelHandler {
         case 1:
         case 2:
             return;
+        default:
+             break;
         }
 
         state = 1;
