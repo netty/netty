@@ -1,0 +1,2 @@
+io.netty.buffer.api.bytebuffer.ByteBufferMemoryManagers
+io.netty.buffer.api.unsafe.UnsafeMemoryManagers
