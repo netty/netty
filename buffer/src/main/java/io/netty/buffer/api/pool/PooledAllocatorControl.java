@@ -30,9 +30,4 @@ class PooledAllocatorControl implements AllocatorControl {
     public UntetheredMemory allocateUntethered(Buffer originator, int size) {
         return parent.allocate(this, size);
     }
-
-    @Override
-    public void recoverMemory(Object memory) {
-        arena.free(chunk, handle, normSize, threadCache);
-    }
 }

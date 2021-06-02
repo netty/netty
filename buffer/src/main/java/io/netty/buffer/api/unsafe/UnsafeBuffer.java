@@ -1625,7 +1625,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         return memory;
     }
 
-    // <editor-fold name="BufferIntegratable methods">
+    // <editor-fold desc="BufferIntegratable methods">
     private ByteBufAdaptor adaptor;
     @Override
     public ByteBuf asByteBuf() {

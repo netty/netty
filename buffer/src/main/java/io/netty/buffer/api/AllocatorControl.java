@@ -35,15 +35,6 @@ public interface AllocatorControl {
     UntetheredMemory allocateUntethered(Buffer originator, int size);
 
     /**
-     * Return memory to the allocator, after it has been untethered from it's lifetime.
-     * This either happens if the memory has leaked and been re-captured, or if it is no longer in use by a buffer
-     * through {@link Buffer#ensureWritable(int)}.
-     *
-     * @param memory The untethered memory to return to the allocator.
-     */
-    void recoverMemory(Object memory);
-
-    /**
      * Memory that isn't attached to any particular buffer.
      */
     interface UntetheredMemory {

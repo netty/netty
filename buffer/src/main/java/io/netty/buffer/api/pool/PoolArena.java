@@ -263,13 +263,6 @@ class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl
     }
 
     @Override
-    public void recoverMemory(Object memory) {
-        // This means we've lost all strong references to a PoolChunk.
-        // Probably means we don't need it anymore, so just free its memory.
-        manager.discardRecoverableMemory(memory);
-    }
-
-    @Override
     public int numThreadCaches() {
         return numThreadCaches.get();
     }

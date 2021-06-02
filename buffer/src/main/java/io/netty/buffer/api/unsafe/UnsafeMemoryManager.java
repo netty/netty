@@ -80,16 +80,6 @@ public class UnsafeMemoryManager implements MemoryManager {
     }
 
     @Override
-    public int capacityOfRecoverableMemory(Object memory) {
-        return ((UnsafeMemory) memory).size;
-    }
-
-    @Override
-    public void discardRecoverableMemory(Object recoverableMemory) {
-        // We cannot reliably drop unsafe memory. We have to rely on the cleaner to do that.
-    }
-
-    @Override
     public Buffer recoverMemory(AllocatorControl allocatorControl, Object recoverableMemory, Drop<Buffer> drop) {
         UnsafeMemory memory = (UnsafeMemory) recoverableMemory;
         return new UnsafeBuffer(memory, 0, memory.size, allocatorControl, convert(drop));
