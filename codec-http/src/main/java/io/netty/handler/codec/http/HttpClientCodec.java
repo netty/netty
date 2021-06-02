@@ -300,6 +300,8 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                             }
                         }
                         break;
+                    default:
+                        break;
                 }
             }
             return super.isContentAlwaysEmpty(msg);
