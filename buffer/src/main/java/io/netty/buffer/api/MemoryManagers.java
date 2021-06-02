@@ -16,6 +16,8 @@
 package io.netty.buffer.api;
 
 import io.netty.buffer.api.internal.MemoryManagersOverride;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
@@ -80,6 +82,12 @@ public interface MemoryManagers {
                     try {
                         return Stream.ofNullable(provider.get());
                     } catch (ServiceConfigurationError | Exception e) {
+                        InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagers.class);
+                        if (logger.isTraceEnabled()) {
+                            logger.debug("Failed to load a MemoryManagers implementation.", e);
+                        } else {
+                            logger.debug("Failed to load a MemoryManagres implementation: " + e.getMessage());
+                        }
                         return Stream.empty();
                     }
                 })

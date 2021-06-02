@@ -21,6 +21,8 @@ import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.buffer.api.MemoryManagers;
 import io.netty.buffer.api.internal.ResourceSupport;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -59,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class BufferTestSupport {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferTestSupport.class);
     public static ExecutorService executor;
 
     private static final Memoize<Fixture[]> INITIAL_NO_CONST = new Memoize<>(
@@ -67,42 +70,23 @@ public abstract class BufferTestSupport {
             () -> fixtureCombinations(initialFixturesForEachImplementation()).toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> ALL_ALLOCATORS = new Memoize<>(
             () -> Arrays.stream(ALL_COMBINATIONS.get())
-                    .filter(sample())
                     .toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> NON_COMPOSITE = new Memoize<>(
             () -> Arrays.stream(ALL_COMBINATIONS.get())
                     .filter(f -> !f.isComposite())
-                    .filter(sample())
                     .toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> HEAP_ALLOCS = new Memoize<>(
             () -> Arrays.stream(ALL_COMBINATIONS.get())
                     .filter(f -> f.isHeap())
-                    .filter(sample())
                     .toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> DIRECT_ALLOCS = new Memoize<>(
             () -> Arrays.stream(ALL_COMBINATIONS.get())
                     .filter(f -> f.isDirect())
-                    .filter(sample())
                     .toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> POOLED_ALLOCS = new Memoize<>(
             () -> Arrays.stream(ALL_COMBINATIONS.get())
                     .filter(f -> f.isPooled())
-                    .filter(sample())
                     .toArray(Fixture[]::new));
-    private static final Memoize<Fixture[]> POOLED_DIRECT_ALLOCS = new Memoize<>(
-            () -> Arrays.stream(ALL_COMBINATIONS.get())
-                    .filter(f -> f.isPooled() && f.isDirect())
-                    .filter(sample())
-                    .toArray(Fixture[]::new));
-
-    private static Predicate<Fixture> sample() {
-//        String sampleSetting = System.getProperty("sample");
-//        if ("nosample".equalsIgnoreCase(sampleSetting)) {
-            return fixture -> true;
-//        }
-        // Filter out 85% of tests.
-//        return filterOfTheDay(15);
-    }
 
     protected static Predicate<Fixture> filterOfTheDay(int percentage) {
         Instant today = Instant.now().truncatedTo(ChronoUnit.DAYS); // New seed every day.
@@ -131,10 +115,6 @@ public abstract class BufferTestSupport {
         return POOLED_ALLOCS.get();
     }
 
-    static Fixture[] pooledDirectAllocators() {
-        return POOLED_DIRECT_ALLOCS.get();
-    }
-
     static Fixture[] initialNoConstAllocators() {
         return INITIAL_NO_CONST.get();
     }
@@ -157,6 +137,7 @@ public abstract class BufferTestSupport {
             try {
                 loadableManagers.add(provider.get());
             } catch (ServiceConfigurationError | Exception e) {
+                logger.debug("Could not load implementation for testing", e);
                 failedManagers.add(e);
             }
         });
