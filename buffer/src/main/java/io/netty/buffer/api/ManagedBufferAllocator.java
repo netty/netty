@@ -58,10 +58,4 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
             }
         };
     }
-
-    @Override
-    public void recoverMemory(Object memory) {
-        // Free the recovered memory.
-        manager.recoverMemory(this, memory, manager.drop()).close();
-    }
 }

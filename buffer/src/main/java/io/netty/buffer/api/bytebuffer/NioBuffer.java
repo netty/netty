@@ -1210,7 +1210,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         return base;
     }
 
-    // <editor-fold name="BufferIntegratable methods">
+    // <editor-fold desc="BufferIntegratable methods">
     private ByteBufAdaptor adaptor;
     @Override
     public ByteBuf asByteBuf() {
