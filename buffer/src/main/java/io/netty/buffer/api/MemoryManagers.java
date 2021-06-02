@@ -18,6 +18,7 @@ package io.netty.buffer.api;
 import io.netty.buffer.api.internal.MemoryManagersOverride;
 
 import java.util.Optional;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -78,7 +79,7 @@ public interface MemoryManagers {
                 .flatMap(provider -> {
                     try {
                         return Stream.ofNullable(provider.get());
-                    } catch (Exception e) {
+                    } catch (ServiceConfigurationError | Exception e) {
                         return Stream.empty();
                     }
                 })
