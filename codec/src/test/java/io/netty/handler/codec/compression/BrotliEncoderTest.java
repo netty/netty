@@ -23,8 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @Override
-    public void initChannel() {
-        channel = new EmbeddedChannel(new BrotliEncoder());
+    public EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(new BrotliEncoder());
     }
 
     @Override
