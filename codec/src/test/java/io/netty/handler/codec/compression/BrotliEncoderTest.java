@@ -57,8 +57,6 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
         compressed.release();
 
         DirectDecompress decompress = Decoder.decompress(compressedArray);
-        System.out.println(decompress.getResultStatus() + "/" + compressed);
-
         byte[] decompressed = decompress.getDecompressedData();
         return Unpooled.wrappedBuffer(decompressed);
     }
