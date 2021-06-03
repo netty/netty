@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.decoder.Decoder;
+import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
@@ -39,25 +40,22 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
         return new EmbeddedChannel(new BrotliEncoder());
     }
 
-    @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        CompositeByteBuf compositeByteBuf = (CompositeByteBuf) compressed;
-
-        CompositeByteBuf newCompositeBuf = Unpooled.compositeBuffer();
-        for (ByteBuf byteBuf : compositeByteBuf) {
-            newCompositeBuf.addComponent(true, decompressBuf(byteBuf));
-        }
-
-        return newCompositeBuf;
-    }
-
-    private ByteBuf decompressBuf(ByteBuf compressed) throws IOException {
         byte[] compressedArray = new byte[compressed.readableBytes()];
         compressed.readBytes(compressedArray);
         compressed.release();
 
         DirectDecompress decompress = Decoder.decompress(compressedArray);
+        if (decompress.getResultStatus() == DecoderJNI.Status.ERROR) {
+            throw new DecompressionException("Brotli stream corrupted");
+        }
+
         byte[] decompressed = decompress.getDecompressedData();
         return Unpooled.wrappedBuffer(decompressed);
+    }
+
+    @Override
+    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
+        // NO-OP
     }
 }
