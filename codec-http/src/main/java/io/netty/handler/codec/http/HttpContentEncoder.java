@@ -142,7 +142,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
-                        out.add(res);
+                        out.add(ReferenceCountUtil.retain(res));
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
@@ -165,7 +165,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
-                        out.add(res);
+                        out.add(ReferenceCountUtil.retain(res));
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
