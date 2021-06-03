@@ -22,6 +22,16 @@ import io.netty.channel.embedded.EmbeddedChannel;
 
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
+    static {
+        try {
+            Brotli.ensureAvailability();
+            System.out.println("Loaded");
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
+
     @Override
     public EmbeddedChannel createChannel() {
         return new EmbeddedChannel(new BrotliEncoder());
