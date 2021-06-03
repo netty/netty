@@ -38,6 +38,7 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
+        System.out.println(compressed);
         byte[] compressedArray = new byte[compressed.readableBytes()];
         compressed.readBytes(compressedArray);
         compressed.release();
