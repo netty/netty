@@ -26,7 +26,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * Compress a {@link ByteBuf} with with the brotli format.
+ * Compress a {@link ByteBuf} with the brotli format.
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */

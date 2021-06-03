@@ -23,7 +23,8 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * Wrapper of {@link HttpContentCompressor} that enables support of Brotli compression.
+ * Extension of {@link HttpContentCompressor} that enables support of Brotli compression
+ * along with Gzip and Deflate.
  */
 public class BrotliContentCompressor extends HttpContentCompressor {
 
@@ -193,5 +194,14 @@ public class BrotliContentCompressor extends HttpContentCompressor {
             }
         }
         return null;
+    }
+
+    /**
+     * Check if {@link Brotli} is available for compression or not.
+     *
+     * @return Returns {@code true} if {@link Brotli} is available else {@code false}
+     */
+    public static boolean isAvailable() {
+        return Brotli.isAvailable();
     }
 }
