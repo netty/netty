@@ -64,7 +64,7 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>com.jcraft</groupId>
+      <groupId>com.jcraft</groupId>uy
       <artifactId>jzlib</artifactId>
       <optional>true</optional>
     </dependency>

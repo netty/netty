@@ -16,10 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.decoder.Decoder;
-import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+
+import java.io.IOException;
 
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
@@ -38,13 +40,21 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        System.out.println(compressed);
+        CompositeByteBuf compositeByteBuf = (CompositeByteBuf) compressed;
+
+        CompositeByteBuf newCompositeBuf = Unpooled.compositeBuffer();
+        for (ByteBuf byteBuf : compositeByteBuf) {
+            newCompositeBuf.addComponent(true, decompressBuf(byteBuf));
+        }
+
+        return newCompositeBuf;
+    }
+
+    private ByteBuf decompressBuf(ByteBuf compressed) throws IOException {
         byte[] compressedArray = new byte[compressed.readableBytes()];
         compressed.readBytes(compressedArray);
         compressed.release();
 
-        DirectDecompress decompress = Decoder.decompress(compressedArray);
-        System.out.println(decompress.getResultStatus());
         byte[] decompressed = Decoder.decompress(compressedArray).getDecompressedData();
         return Unpooled.wrappedBuffer(decompressed);
     }
