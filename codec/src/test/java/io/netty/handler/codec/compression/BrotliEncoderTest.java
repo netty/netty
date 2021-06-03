@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.decoder.Decoder;
+import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -55,7 +56,10 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
         compressed.readBytes(compressedArray);
         compressed.release();
 
-        byte[] decompressed = Decoder.decompress(compressedArray).getDecompressedData();
+        DirectDecompress decompress = Decoder.decompress(compressedArray);
+        System.out.println(decompress.getResultStatus() + "/" + compressed);
+
+        byte[] decompressed = decompress.getDecompressedData();
         return Unpooled.wrappedBuffer(decompressed);
     }
 }
