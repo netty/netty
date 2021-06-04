@@ -23,8 +23,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 
-import java.io.IOException;
-
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
     static {
@@ -40,6 +38,7 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
         return new EmbeddedChannel(new BrotliEncoder());
     }
 
+    @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
         byte[] compressedArray = new byte[compressed.readableBytes()];
         compressed.readBytes(compressedArray);
@@ -55,7 +54,16 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
     }
 
     @Override
-    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
-        // NO-OP
+    protected ByteBuf readDecompressed(final int dataLength) throws Exception {
+        CompositeByteBuf decompressed = Unpooled.compositeBuffer();
+        ByteBuf msg;
+        while ((msg = channel.readOutbound()) != null) {
+            if (msg.isReadable()) {
+                decompressed.addComponent(true, decompress(msg, -1));
+            } else {
+                msg.release();
+            }
+        }
+        return decompressed;
     }
 }
