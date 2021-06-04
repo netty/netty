@@ -18,11 +18,16 @@ package io.netty.buffer.api.adaptor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.internal.AdaptableBuffer;
+import io.netty.util.internal.PlatformDependent;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import java.util.Objects;
 
 public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable {
+    private static final int DEFAULT_MAX_CAPACITY = Integer.MAX_VALUE;
     private final BufferAllocator onheap;
     private final BufferAllocator offheap;
     private boolean closed;
@@ -55,12 +60,12 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public ByteBuf buffer(int initialCapacity) {
-        return new ByteBufAdaptor(this, onheap.allocate(initialCapacity));
+        return buffer(initialCapacity, DEFAULT_MAX_CAPACITY);
     }
 
     @Override
     public ByteBuf buffer(int initialCapacity, int maxCapacity) {
-        return buffer(maxCapacity);
+        return initialise(onheap.allocate(initialCapacity), maxCapacity);
     }
 
     @Override
@@ -100,12 +105,17 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public ByteBuf directBuffer(int initialCapacity) {
-        return new ByteBufAdaptor(this, offheap.allocate(initialCapacity));
+        return directBuffer(initialCapacity, DEFAULT_MAX_CAPACITY);
     }
 
     @Override
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        return directBuffer(maxCapacity);
+        return initialise(offheap.allocate(initialCapacity), maxCapacity);
+    }
+
+    private ByteBuf initialise(Buffer buffer, int maxCapacity) {
+        AdaptableBuffer<?> adaptableBuffer = (AdaptableBuffer<?>) buffer;
+        return adaptableBuffer.initialise(this, maxCapacity);
     }
 
     @Override
@@ -145,7 +155,14 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
-        return 0;
+        checkPositiveOrZero(minNewCapacity, "minNewCapacity");
+        if (minNewCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",
+                    minNewCapacity, maxCapacity));
+        }
+        int newCapacity = PlatformDependent.roundToPowerOfTwo(minNewCapacity);
+        return Math.min(maxCapacity, newCapacity);
     }
 
     @Override
