@@ -23,6 +23,7 @@ import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.ByteCursor;
 import io.netty.buffer.api.internal.Statics;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.internal.ResourceSupport;
@@ -47,11 +48,17 @@ public final class ByteBufAdaptor extends ByteBuf {
     private final ByteBufAllocatorAdaptor alloc;
     private final Buffer buffer;
     private final boolean hasMemoryAddress;
+    private final int maxCapacity;
 
-    public ByteBufAdaptor(ByteBufAllocatorAdaptor alloc, Buffer buffer) {
+    public ByteBufAdaptor(ByteBufAllocatorAdaptor alloc, Buffer buffer, int maxCapacity) {
+        if (buffer.capacity() > maxCapacity) {
+            throw new IllegalArgumentException(
+                    "Max capacity (" + maxCapacity + ") cannot be less than buffer capacity: " + buffer.capacity());
+        }
         this.alloc = alloc;
         this.buffer = buffer;
         hasMemoryAddress = buffer.nativeAddress() != 0;
+        this.maxCapacity = maxCapacity;
     }
 
     /**
@@ -215,8 +222,17 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
+        ensureWritable(minWritableBytes, true);
+        return this;
+    }
+
+    @Override
+    public int ensureWritable(int minWritableBytes, boolean force) {
         checkAccess();
         if (writableBytes() < minWritableBytes) {
+            if (maxCapacity < capacity() + minWritableBytes - writableBytes()) {
+                return 1;
+            }
             try {
                 if (isOwned((ResourceSupport<?, ?>) buffer)) {
                     // Good place.
@@ -231,17 +247,12 @@ public final class ByteBufAdaptor extends ByteBuf {
                         retain(borrows);
                     }
                 }
+                return 2;
             } catch (IllegalArgumentException e) {
                 throw new IndexOutOfBoundsException(e.getMessage());
             }
         }
-        return this;
-    }
-
-    @Override
-    public int ensureWritable(int minWritableBytes, boolean force) {
-        ensureWritable(minWritableBytes);
-        return minWritableBytes;
+        return 0;
     }
 
     @Override
@@ -1499,8 +1510,12 @@ public final class ByteBufAdaptor extends ByteBuf {
     public ByteBuffer nioBuffer(int index, int length) {
         checkAccess();
         ByteBuffer copy = isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);
-        while (index < length) {
-            copy.put(getByte(index++));
+        ByteCursor cursor = buffer.openCursor(index, length);
+        while (cursor.readLong()) {
+            copy.putLong(cursor.getLong());
+        }
+        while (cursor.readByte()) {
+            copy.put(cursor.getByte());
         }
         return copy.flip();
     }
@@ -1699,7 +1714,7 @@ public final class ByteBufAdaptor extends ByteBuf {
     }
 
     private ByteBufAdaptor wrap(Buffer copy) {
-        return new ByteBufAdaptor(alloc, copy);
+        return new ByteBufAdaptor(alloc, copy, maxCapacity);
     }
 
     private BufferAllocator preferredBufferAllocator() {

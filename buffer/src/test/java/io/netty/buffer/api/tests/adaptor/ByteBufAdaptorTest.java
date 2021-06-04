@@ -46,7 +46,7 @@ public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int capacity, int maxCapacity) {
-        return alloc.buffer(capacity, capacity);
+        return alloc.buffer(capacity, maxCapacity);
     }
 
     @Disabled("This test codifies that asking to reading 0 bytes from an empty but unclosed stream should return -1, " +

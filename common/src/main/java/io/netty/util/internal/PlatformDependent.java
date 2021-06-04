@@ -764,6 +764,10 @@ public final class PlatformDependent {
         return Pow2.align(value, alignment);
     }
 
+    public static int roundToPowerOfTwo(final int value) {
+        return Pow2.roundToPowerOfTwo(value);
+    }
+
     private static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);

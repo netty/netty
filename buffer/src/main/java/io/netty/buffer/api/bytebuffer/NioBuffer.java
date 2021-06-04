@@ -15,7 +15,6 @@
  */
 package io.netty.buffer.api.bytebuffer;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
@@ -23,18 +22,13 @@ import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.ByteCursor;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.Owned;
-import io.netty.buffer.api.adaptor.BufferIntegratable;
-import io.netty.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
-import io.netty.buffer.api.internal.ResourceSupport;
 import io.netty.buffer.api.ReadableComponent;
 import io.netty.buffer.api.ReadableComponentProcessor;
 import io.netty.buffer.api.WritableComponent;
 import io.netty.buffer.api.WritableComponentProcessor;
+import io.netty.buffer.api.internal.AdaptableBuffer;
 import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.Statics;
-import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -46,8 +40,7 @@ import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 
-class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, ReadableComponent, WritableComponent,
-        BufferIntegratable {
+class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
     private final AllocatorControl control;
@@ -1209,67 +1202,4 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     ByteBuffer recoverable() {
         return base;
     }
-
-    // <editor-fold desc="BufferIntegratable methods">
-    private ByteBufAdaptor adaptor;
-    @Override
-    public ByteBuf asByteBuf() {
-        ByteBufAdaptor bba = adaptor;
-        if (bba == null) {
-            ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(
-                    BufferAllocator.heap(), BufferAllocator.direct());
-            return adaptor = new ByteBufAdaptor(alloc, this);
-        }
-        return bba;
-    }
-
-    @Override
-    public int refCnt() {
-        return isAccessible()? 1 + countBorrows() : 0;
-    }
-
-    @Override
-    public ReferenceCounted retain() {
-        return retain(1);
-    }
-
-    @Override
-    public ReferenceCounted retain(int increment) {
-        for (int i = 0; i < increment; i++) {
-            acquire();
-        }
-        return this;
-    }
-
-    @Override
-    public ReferenceCounted touch() {
-        return this;
-    }
-
-    @Override
-    public ReferenceCounted touch(Object hint) {
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return release(1);
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        int refCount = 1 + countBorrows();
-        if (!isAccessible() || decrement > refCount) {
-            throw new IllegalReferenceCountException(refCount, -decrement);
-        }
-        for (int i = 0; i < decrement; i++) {
-            try {
-                close();
-            } catch (RuntimeException e) {
-                throw new IllegalReferenceCountException(e);
-            }
-        }
-        return !isAccessible();
-    }
-    // </editor-fold>
 }
