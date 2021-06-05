@@ -105,6 +105,12 @@ public final class EmptyByteBuf extends ByteBuf {
         return false;
     }
 
+    /**
+     * An empty buffer is a special buffer, it is both heap and direct,
+     * which means if there is a isHeap() method in this class, it will return {@code true} too.
+     * See <a href="https://github.com/netty/netty/issues/11354#issuecomment-855193484">this</a>
+     * for detail explanation.
+     */
     @Override
     public boolean isDirect() {
         return true;
