@@ -86,6 +86,9 @@ public final class Unpooled {
 
     /**
      * A buffer whose capacity is {@code 0}.
+     * Note: An empty buffer is both direct and heap buffer,
+     * because it is always backed by a zero-length byte array and a direct buffer internally.
+     * See {@link EmptyByteBuf}
      */
     public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 

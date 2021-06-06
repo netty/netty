@@ -307,6 +307,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Returns {@code true} if and only if this buffer is backed by an
      * NIO direct buffer.
+     * Note: An empty buffer is both direct and heap buffer,
+     * because it is always backed by a zero-length byte array and a direct buffer internally.
+     * See {@link EmptyByteBuf#isDirect()}
      */
     public abstract boolean isDirect();
 
@@ -2349,6 +2352,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * Returns {@code true} if and only if this buffer has a backing byte array.
      * If this method returns true, you can safely call {@link #array()} and
      * {@link #arrayOffset()}.
+     * Note: An empty buffer is both direct and heap buffer,
+     * because it is always backed by a zero-length byte array and a direct buffer internally.
+     * See {@link EmptyByteBuf#hasArray()}
      */
     public abstract boolean hasArray();
 
@@ -2372,6 +2378,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Returns {@code true} if and only if this buffer has a reference to the low-level memory address that points
      * to the backing data.
+     * Note: An empty buffer is both direct and heap buffer,
+     * because it is always backed by a zero-length byte array and a direct buffer internally.
+     * See {@link EmptyByteBuf#hasMemoryAddress()}
      */
     public abstract boolean hasMemoryAddress();
 
