@@ -230,12 +230,34 @@ public final class ByteBufUtil {
      */
     public static int indexOf(ByteBuf needle, ByteBuf haystack) {
         // TODO: maybe use Boyer Moore for efficiency.
-        int attempts = haystack.readableBytes() - needle.readableBytes() + 1;
-        for (int i = 0; i < attempts; i++) {
-            if (equals(needle, needle.readerIndex(),
-                       haystack, haystack.readerIndex() + i,
-                       needle.readableBytes())) {
-                return haystack.readerIndex() + i;
+        if (haystack == null || needle == null) {
+            return -1;
+        }
+
+        int n = haystack.readableBytes();
+        int m = needle.readableBytes();
+        if (m == 0) {
+            return 0;
+        }
+        int[] next = new int[m];
+        for (int i = 1, j = 0; i < m; i++) {
+            while (j > 0 && needle.getByte(i) != needle.getByte(j)) {
+                j = next[j - 1];
+            }
+            if (needle.getByte(i) == needle.getByte(j)) {
+                j++;
+            }
+            next[i] = j;
+        }
+        for (int i = 0, j = 0; i < n; i++) {
+            while (j > 0 && haystack.getByte(i) != needle.getByte(j)) {
+                j = next[j - 1];
+            }
+            if (haystack.getByte(i) == needle.getByte(j)) {
+                j++;
+            }
+            if (j == m) {
+                return i - m + 1;
             }
         }
         return -1;

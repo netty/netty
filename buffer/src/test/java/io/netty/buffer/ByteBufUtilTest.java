@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import com.google.common.base.Charsets;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -116,6 +117,17 @@ public class ByteBufUtilTest {
                 ByteBufUtil.decodeHexDump("fg");
             }
         });
+    }
+
+    @Test
+    public void testIndexOf() {
+        final ByteBuf haystack = Unpooled.copiedBuffer("abc123", CharsetUtil.UTF_8);
+        assertEquals(0, ByteBufUtil.indexOf(Unpooled.copiedBuffer("a", Charsets.UTF_8), haystack));
+        assertEquals(1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("bc".getBytes(Charsets.UTF_8)), haystack));
+        assertEquals(2, ByteBufUtil.indexOf(Unpooled.copiedBuffer("c".getBytes(Charsets.UTF_8)), haystack));
+        assertEquals(0, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abc12".getBytes(Charsets.UTF_8)), haystack));
+        assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abcdef".getBytes(Charsets.UTF_8)), haystack));
+        assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abc12x".getBytes(Charsets.UTF_8)), haystack));
     }
 
     @Test
