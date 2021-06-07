@@ -98,7 +98,7 @@ import java.nio.ByteOrder;
  */
 public interface Buffer extends Resource<Buffer>, BufferAccessors {
     /**
-     * Change the default byte order of this buffer, and return this buffer.
+     * Changes the default byte order of this buffer, and return this buffer.
      *
      * @param order The new default byte order, used by accessor methods that don't use an explicit byte order.
      * @return This buffer instance.
@@ -169,7 +169,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Fill the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link
+     * Fills the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link
      * #writerOffset()}, but copies the full capacity of the buffer. The {@link #readerOffset()} and {@link
      * #writerOffset()} are not modified.
      *
@@ -180,13 +180,13 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     Buffer fill(byte value);
 
     /**
-     * Give the native memory address backing this buffer, or return 0 if this buffer has no native memory address.
+     * Gives the native memory address backing this buffer, or return 0 if this buffer has no native memory address.
      * @return The native memory address, if any, otherwise 0.
      */
     long nativeAddress();
 
     /**
-     * Make this buffer read-only.
+     * Makes this buffer read-only.
      * This is irreversible.
      *
      * @return this buffer.
@@ -194,7 +194,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     Buffer makeReadOnly();
 
     /**
-     * Query if this buffer is read-only or not.
+     * Queries if this buffer is read-only or not.
      *
      * @return {@code true} if this buffer is read-only, {@code false} otherwise.
      */
@@ -261,7 +261,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     void copyInto(int srcPos, Buffer dest, int destPos, int length);
 
     /**
-     * Write into this buffer, all the readable bytes from the given buffer.
+     * Writes into this buffer, all the readable bytes from the given buffer.
      * This updates the {@linkplain #writerOffset() write offset} of this buffer, and the
      * {@linkplain #readerOffset() reader offset} of the given buffer.
      *
@@ -278,7 +278,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Write into this buffer, all the bytes from the given byte array.
+     * Writes into this buffer, all the bytes from the given byte array.
      * This updates the {@linkplain #writerOffset() write offset} of this buffer by the length of the array.
      *
      * @param source The byte array to read from.
@@ -305,8 +305,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Open a cursor to iterate the readable bytes of this buffer. The {@linkplain #readerOffset() reader offset} and
-     * {@linkplain #writerOffset() witer offset} are not modified by the cursor.
+     * Opens a cursor to iterate the readable bytes of this buffer. The {@linkplain #readerOffset() reader offset} and
+     * {@linkplain #writerOffset() writer offset} are not modified by the cursor.
      * <p>
      * Care should be taken to ensure that the buffer's lifetime extends beyond the cursor and the iteration, and that
      * the {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() writer offset} are not modified
@@ -317,8 +317,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     ByteCursor openCursor();
 
     /**
-     * Open a cursor to iterate the given number bytes of this buffer, starting at the given offset.
-     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() witer offset} are not modified by
+     * Opens a cursor to iterate the given number bytes of this buffer, starting at the given offset.
+     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() writer offset} are not modified by
      * the cursor.
      * <p>
      * Care should be taken to ensure that the buffer's lifetime extends beyond the cursor and the iteration, and that
@@ -335,8 +335,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     ByteCursor openCursor(int fromOffset, int length);
 
     /**
-     * Open a cursor to iterate the readable bytes of this buffer, in reverse.
-     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() witer offset} are not modified by
+     * Opens a cursor to iterate the readable bytes of this buffer, in reverse.
+     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() writer offset} are not modified by
      * the cursor.
      * <p>
      * Care should be taken to ensure that the buffer's lifetime extends beyond the cursor and the iteration, and that
@@ -351,8 +351,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Open a cursor to iterate the given number bytes of this buffer, in reverse, starting at the given offset.
-     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() witer offset} are not modified by
+     * Opens a cursor to iterate the given number bytes of this buffer, in reverse, starting at the given offset.
+     * The {@linkplain #readerOffset() reader offset} and {@linkplain #writerOffset() writer offset} are not modified by
      * the cursor.
      * <p>
      * Care should be taken to ensure that the buffer's lifetime extends beyond the cursor and the iteration, and that
@@ -369,7 +369,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     ByteCursor openReverseCursor(int fromOffset, int length);
 
     /**
-     * Ensure that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
+     * Ensures that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
      * bytes.
      * If this buffer already has the necessary space, then this method returns immediately.
      * If this buffer does not already have the necessary space, then it will be expanded using the
@@ -387,7 +387,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Ensure that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
+     * Ensures that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
      * bytes.
      * If this buffer already has the necessary space, then this method returns immediately.
      * If this buffer does not already have the necessary space, then space will be made available in one or all of
@@ -461,7 +461,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     Buffer copy(int offset, int length);
 
     /**
-     * Split the buffer into two, at the {@linkplain #writerOffset() write offset} position.
+     * Splits the buffer into two, at the {@linkplain #writerOffset() write offset} position.
      * <p>
      * The region of this buffer that contain the read and readable bytes, will be captured and returned in a new
      * buffer, that will hold its own ownership of that region. This allows the returned buffer to be independently
@@ -509,7 +509,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     }
 
     /**
-     * Split the buffer into two, at the given {@code splitOffset}.
+     * Splits the buffer into two, at the given {@code splitOffset}.
      * <p>
      * The region of this buffer that precede the {@code splitOffset}, will be captured and returned in a new
      * buffer, that will hold its own ownership of that region. This allows the returned buffer to be independently
@@ -598,7 +598,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     int countWritableComponents();
 
     /**
-     * Process all readable components of this buffer, and return the number of components processed.
+     * Processes all readable components of this buffer, and return the number of components processed.
      * <p>
      * The given {@linkplain ReadableComponentProcessor processor} is called for each readable component in this buffer,
      * and passed a component index, for the given component in the iteration, and a {@link ReadableComponent} object

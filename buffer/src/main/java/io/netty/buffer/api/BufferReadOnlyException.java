@@ -21,6 +21,10 @@ package io.netty.buffer.api;
 public final class BufferReadOnlyException extends UnsupportedOperationException {
     private static final long serialVersionUID = 4855825594125231593L;
 
+    public BufferReadOnlyException() {
+        this("This buffer is read-only.");
+    }
+
     public BufferReadOnlyException(final String message) {
         super(message);
     }

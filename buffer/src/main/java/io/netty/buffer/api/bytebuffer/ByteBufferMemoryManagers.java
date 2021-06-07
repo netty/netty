@@ -20,22 +20,17 @@ import io.netty.buffer.api.MemoryManagers;
 
 public class ByteBufferMemoryManagers implements MemoryManagers {
     @Override
-    public MemoryManager getHeapMemoryManager() {
+    public MemoryManager heapMemoryManager() {
         return new ByteBufferMemoryManager(false);
     }
 
     @Override
-    public MemoryManager getNativeMemoryManager() {
+    public MemoryManager nativeMemoryManager() {
         return new ByteBufferMemoryManager(true);
     }
 
     @Override
-    public String getImplementationName() {
+    public String implementationName() {
         return "ByteBuffer";
-    }
-
-    @Override
-    public String toString() {
-        return "BB";
     }
 }

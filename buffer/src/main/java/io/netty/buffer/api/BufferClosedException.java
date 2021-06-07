@@ -21,6 +21,10 @@ package io.netty.buffer.api;
 public final class BufferClosedException extends UnsupportedOperationException {
     private static final long serialVersionUID = 85913332711192868L;
 
+    public BufferClosedException() {
+        this("This buffer is closed.");
+    }
+
     public BufferClosedException(final String message) {
         super(message);
     }

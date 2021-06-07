@@ -30,22 +30,17 @@ public class UnsafeMemoryManagers implements MemoryManagers {
     }
 
     @Override
-    public MemoryManager getHeapMemoryManager() {
+    public MemoryManager heapMemoryManager() {
         return new UnsafeMemoryManager(false);
     }
 
     @Override
-    public MemoryManager getNativeMemoryManager() {
+    public MemoryManager nativeMemoryManager() {
         return new UnsafeMemoryManager(true);
     }
 
     @Override
-    public String getImplementationName() {
+    public String implementationName() {
         return "Unsafe";
-    }
-
-    @Override
-    public String toString() {
-        return "US";
     }
 }

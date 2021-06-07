@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * A {@code Send} object is a temporary holder of a {@link Resource}, used for transferring the ownership of the
+ * A temporary holder of a {@link Resource}, used for transferring the ownership of the
  * resource from one thread to another.
  * <p>
  * Prior to the {@code Send} being created, the originating resource is invalidated, to prevent access while it is being
