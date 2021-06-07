@@ -96,7 +96,7 @@ jobs:
         java-version: '11' # The JDK version to make available on the path.
 
     - name: Compile project
-      run: ./mvnw clean package -DskipTests=true -ntp -B
+      run: ./mvnw -B -ntp clean package -DskipTests=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
