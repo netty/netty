@@ -40,7 +40,7 @@ package io.netty.buffer.search;
  *      MultiSearchProcessor processor = factory.newSearchProcessor();
  *
  *      int idx1 = haystack.forEachByte(processor);
- *      // idx1 is 1 (index of the last character of the occurence of "AB" in the haystack)
+ *      // idx1 is 1 (index of the last character of the occurrence of "AB" in the haystack)
  *      // processor.getFoundNeedleId() is 0 (index of "AB" in needles[])
  *
  *      int continueFrom1 = idx1 + 1;
