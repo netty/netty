@@ -24,7 +24,15 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+/**
+ * Instances of this class record life cycle events of resources, to help debug life-cycle errors.
+ */
 public abstract class LifecycleTracer {
+    /**
+     * Get a tracer for a newly allocated resource.
+     *
+     * @return A new tracer for a resource.
+     */
     public static LifecycleTracer get() {
         if (Trace.TRACE_LIFECYCLE_DEPTH == 0) {
             return NoOpTracer.INSTANCE;

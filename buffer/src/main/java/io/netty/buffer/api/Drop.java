@@ -16,10 +16,10 @@
 package io.netty.buffer.api;
 
 /**
- * The Drop interface is used by {@link Resource} instances to implement their resource disposal mechanics.
+ * An interface used by {@link Resource} instances to implement their resource disposal mechanics.
  * The {@link #drop(Object)} method will be called by the resource when they are closed.
  *
- * @param <T>
+ * @param <T> The type of resource that can be dropped.
  */
 @FunctionalInterface
 public interface Drop<T> {

@@ -133,7 +133,7 @@ public abstract class BufferTestSupport {
         // Multiply by all MemoryManagers.
         List<Throwable> failedManagers = new ArrayList<>();
         List<MemoryManagers> loadableManagers = new ArrayList<>();
-        MemoryManagers.getAllManagers().forEach(provider -> {
+        MemoryManagers.availableManagers().forEach(provider -> {
             try {
                 loadableManagers.add(provider.get());
             } catch (ServiceConfigurationError | Exception e) {
@@ -151,7 +151,14 @@ public abstract class BufferTestSupport {
         initFixtures = initFixtures.stream().flatMap(f -> {
             Builder<Fixture> builder = Stream.builder();
             for (MemoryManagers managers : loadableManagers) {
-                builder.add(new Fixture(f + "/" + managers,
+                char[] chars = managers.implementationName().toCharArray();
+                for (int i = 1, j = 1; i < chars.length; i++) {
+                    if (Character.isUpperCase(chars[i])) {
+                        chars[j++] = chars[i];
+                    }
+                }
+                String managersName = String.valueOf(chars, 0, 2);
+                builder.add(new Fixture(f + "/" + managersName,
                                         () -> MemoryManagers.using(managers, f), f.getProperties()));
             }
             return builder.build();
