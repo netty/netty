@@ -230,7 +230,9 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf);
+                        // Mimic what voidPromise() did before.
+                        ctx.write(previousBuf).addListener(
+                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     break;
                 }
@@ -238,7 +240,9 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof ByteBufConvertible) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf);
+                        // Mimic what voidPromise() did before.
+                        ctx.write(previousBuf).addListener(
+                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof ChannelPromise) {

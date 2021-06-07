@@ -733,7 +733,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             findAndInvokeFlush();
         } else {
             Tasks tasks = invokeTasks();
-            safeExecute(executor, tasks.invokeFlushTask, null, null);
+            safeExecute(executor, tasks.invokeFlushTask,
+                    // Mimic what voidPromise() did before.
+                    newPromise().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE), null);
         }
 
         return this;
