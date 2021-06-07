@@ -59,8 +59,8 @@ jobs:
 
       - name: Prepare release with Maven
         run: |
-          ./mvnw -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
-          ./mvnw clean
+          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+          ./mvnw -B -ntp clean
 
       - name: Checkout tag
         run: ./.github/scripts/release_checkout_tag.sh release.properties
@@ -240,7 +240,7 @@ jobs:
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/
         # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/
