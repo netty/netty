@@ -617,7 +617,7 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- Conscrypt - needed for running tests, used for acclerating SSL with OpenSSL. -->
+      <!-- Conscrypt - needed for running tests, used for accelerating SSL with OpenSSL. -->
       <dependency>
         <groupId>${conscrypt.groupId}</groupId>
         <artifactId>${conscrypt.artifactId}</artifactId>
