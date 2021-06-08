@@ -26,7 +26,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
  * Extension of {@link HttpContentCompressor} that enables support of Brotli compression
  * along with Gzip and Deflate.
  */
-public class BrotliContentCompressor extends HttpContentCompressor {
+public final class BrotliContentCompressor extends HttpContentCompressor {
 
     private final Encoder.Parameters parameters;
 
