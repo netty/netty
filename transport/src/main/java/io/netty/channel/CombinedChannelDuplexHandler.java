@@ -544,11 +544,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelProgressivePromise newProgressivePromise() {
-            return ctx.newProgressivePromise();
-        }
-
-        @Override
         public ChannelFuture newSucceededFuture() {
             return ctx.newSucceededFuture();
         }

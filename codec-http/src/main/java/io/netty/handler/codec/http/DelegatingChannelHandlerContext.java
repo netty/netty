@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -244,11 +243,6 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     @Override
     public ChannelPromise newPromise() {
         return ctx.newPromise();
-    }
-
-    @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return ctx.newProgressivePromise();
     }
 
     @Override

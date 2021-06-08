@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.Attribute;
@@ -324,11 +323,6 @@ final class Http2FrameInboundWriter {
         @Override
         public ChannelPromise newPromise() {
             return channel.newPromise();
-        }
-
-        @Override
-        public ChannelProgressivePromise newProgressivePromise() {
-            return channel.newProgressivePromise();
         }
 
         @Override

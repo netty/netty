@@ -30,7 +30,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.Attribute;
@@ -728,11 +727,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         @Override
         public ChannelPromise newPromise() {
             return ctx.newPromise();
-        }
-
-        @Override
-        public ChannelProgressivePromise newProgressivePromise() {
-            return ctx.newProgressivePromise();
         }
 
         @Override

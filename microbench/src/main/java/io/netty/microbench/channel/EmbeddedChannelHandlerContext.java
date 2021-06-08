@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -300,11 +299,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     @Override
     public final ChannelPromise newPromise() {
         return channel().newPromise();
-    }
-
-    @Override
-    public final ChannelProgressivePromise newProgressivePromise() {
-        return channel().newProgressivePromise();
     }
 
     @Override

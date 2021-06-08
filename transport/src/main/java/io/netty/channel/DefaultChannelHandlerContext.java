@@ -827,11 +827,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
-    }
-
-    @Override
     public ChannelFuture newSucceededFuture() {
         return pipeline().newSucceededFuture();
     }

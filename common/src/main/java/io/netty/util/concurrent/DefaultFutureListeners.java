@@ -21,7 +21,6 @@ final class DefaultFutureListeners {
 
     private GenericFutureListener<? extends Future<?>>[] listeners;
     private int size;
-    private int progressiveSize; // the number of progressive listeners
 
     @SuppressWarnings("unchecked")
     DefaultFutureListeners(
@@ -30,12 +29,6 @@ final class DefaultFutureListeners {
         listeners[0] = first;
         listeners[1] = second;
         size = 2;
-        if (first instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
-        if (second instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
     }
 
     public void add(GenericFutureListener<? extends Future<?>> l) {
@@ -46,10 +39,6 @@ final class DefaultFutureListeners {
         }
         listeners[size] = l;
         this.size = size + 1;
-
-        if (l instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
     }
 
     public void remove(GenericFutureListener<? extends Future<?>> l) {
@@ -63,10 +52,6 @@ final class DefaultFutureListeners {
                 }
                 listeners[-- size] = null;
                 this.size = size;
-
-                if (l instanceof GenericProgressiveFutureListener) {
-                    progressiveSize --;
-                }
                 return;
             }
         }
@@ -78,9 +63,5 @@ final class DefaultFutureListeners {
 
     public int size() {
         return size;
-    }
-
-    public int progressiveSize() {
-        return progressiveSize;
     }
 }

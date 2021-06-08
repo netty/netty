@@ -262,11 +262,6 @@ public interface ChannelOutboundInvoker {
     ChannelPromise newPromise();
 
     /**
-     * Return an new {@link ChannelProgressivePromise}
-     */
-    ChannelProgressivePromise newProgressivePromise();
-
-    /**
      * Create a new {@link ChannelFuture} which is marked as succeeded already. So {@link ChannelFuture#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
