@@ -19,9 +19,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * A reference counted buffer of memory, with separate reader and writer offsets.
+ * A life cycled buffer of memory, with separate reader and writer offsets.
  * <p>
- * A buffer is a sequential stretch of memory with a certain capacity, an offset for writing, and an offset for reading.
+ * A buffer is a logically sequential stretch of memory with a certain capacity, an offset for writing,
+ * and an offset for reading.
+ * Buffers may be {@linkplain CompositeBuffer composed} of multiple {@linkplain #countComponents() components},
+ * where each component is a guaranteed contiguous chunk of memory.
  *
  * <h3>Creating a buffer</h3>
  *

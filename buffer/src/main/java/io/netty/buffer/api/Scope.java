@@ -15,10 +15,12 @@
  */
 package io.netty.buffer.api;
 
-import java.util.ArrayDeque;
+import io.netty.buffer.api.internal.ArrayListScope;
+
+import java.util.Collections;
 
 /**
- * A scope is a convenient mechanism for capturing the life cycles of multiple reference counted objects. Once the scope
+ * A scope is a convenient mechanism for capturing the life cycles of multiple resource objects. Once the scope
  * is closed, all the added objects will also be closed in reverse insert order. That is, the most recently added
  * object will be closed first.
  * <p>
@@ -30,8 +32,29 @@ import java.util.ArrayDeque;
  * <p>
  * Note that scopes are not thread-safe. They are intended to be used from a single thread.
  */
-public final class Scope implements AutoCloseable {
-    private final ArrayDeque<Resource<?>> deque = new ArrayDeque<>();
+public interface Scope extends AutoCloseable {
+    /**
+     * Create a new, empty scope.
+     *
+     * @return A new, empty scope.
+     */
+    static Scope empty() {
+        return new ArrayListScope();
+    }
+
+    /**
+     * Create a new scope with the given resources.
+     * <p>
+     * More resources can be added later, and they will all be closed in reverse order of when they were added.
+     *
+     * @param resources The initial resources to add, in order.
+     * @return A new scope with the given resources.
+     */
+    static Scope of(Resource<?>... resources) {
+        ArrayListScope scope = new ArrayListScope();
+        Collections.addAll(scope, resources);
+        return scope;
+    }
 
     /**
      * Add the given reference counted object to this scope, so that it will be {@linkplain Resource#close() closed}
@@ -42,19 +65,11 @@ public final class Scope implements AutoCloseable {
      * @return The same exact object that was added; further operations can be chained on the object after this method
      * call.
      */
-    public <T extends Resource<T>> T add(T obj) {
-        deque.addLast(obj);
-        return obj;
-    }
+    <T extends Resource<T>> T add(T obj);
 
     /**
      * Close this scope and all the reference counted object it contains.
      */
     @Override
-    public void close() {
-        Resource<?> obj;
-        while ((obj = deque.pollLast()) != null) {
-            obj.close();
-        }
-    }
+    void close();
 }
