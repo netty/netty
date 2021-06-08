@@ -49,7 +49,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private final ConcurrentMap<ChannelId, Channel> serverChannels = new ConcurrentHashMap<>();
     private final ConcurrentMap<ChannelId, Channel> nonServerChannels = new ConcurrentHashMap<>();
     private final ChannelFutureListener remover = future -> remove(future.channel());
-    private final VoidChannelGroupFuture voidFuture = new VoidChannelGroupFuture(this);
     private final boolean stayClosed;
     private volatile boolean closed;
 
