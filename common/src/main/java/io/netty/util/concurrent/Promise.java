@@ -68,15 +68,6 @@ public interface Promise<V> extends Future<V> {
     Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     @Override
-    Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    @Override
-    Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
-
-    @Override
-    Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    @Override
     Promise<V> await() throws InterruptedException;
 
     @Override

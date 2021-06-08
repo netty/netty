@@ -41,14 +41,5 @@ public interface RunnableScheduledFuture<V> extends
 
     @Override
     RunnableScheduledFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
-
-    @Override
-    RunnableScheduledFuture<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    @Override
-    RunnableScheduledFuture<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
-
-    @Override
-    RunnableScheduledFuture<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 }
 

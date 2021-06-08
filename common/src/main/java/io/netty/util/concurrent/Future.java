@@ -56,32 +56,6 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     /**
-     * Adds the specified listeners to this future.  The
-     * specified listeners are notified when this future is
-     * {@linkplain #isDone() done}.  If this future is already
-     * completed, the specified listeners are notified immediately.
-     */
-    Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    /**
-     * Removes the first occurrence of the specified listener from this future.
-     * The specified listener is no longer notified when this
-     * future is {@linkplain #isDone() done}.  If the specified
-     * listener is not associated with this future, this method
-     * does nothing and returns silently.
-     */
-    Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
-
-    /**
-     * Removes the first occurrence for each of the listeners from this future.
-     * The specified listeners are no longer notified when this
-     * future is {@linkplain #isDone() done}.  If the specified
-     * listeners are not associated with this future, this method
-     * does nothing and returns silently.
-     */
-    Future<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
      *

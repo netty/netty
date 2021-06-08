@@ -178,7 +178,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             return false;
         }
 
-        c.closeFuture().removeListener(remover);
         return true;
     }
 

@@ -32,16 +32,6 @@ public class CompleteChannelFutureTest {
     }
 
     @Test
-    public void shouldNotDoAnythingOnRemove() throws Exception {
-        Channel channel = Mockito.mock(Channel.class);
-        CompleteChannelFuture future = new CompleteChannelFutureImpl(channel);
-        ChannelFutureListener l = Mockito.mock(ChannelFutureListener.class);
-        future.removeListener(l);
-        Mockito.verifyNoMoreInteractions(l);
-        Mockito.verifyZeroInteractions(channel);
-    }
-
-    @Test
     public void testConstantProperties() throws InterruptedException {
         Channel channel = Mockito.mock(Channel.class);
         CompleteChannelFuture future = new CompleteChannelFutureImpl(channel);

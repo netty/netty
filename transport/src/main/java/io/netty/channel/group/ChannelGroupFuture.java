@@ -144,15 +144,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     ChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
-
-    @Override
-    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
-
-    @Override
-    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
-
-    @Override
     ChannelGroupFuture await() throws InterruptedException;
 
     @Override

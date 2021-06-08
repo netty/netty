@@ -87,24 +87,6 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.addListeners(listeners);
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-        super.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.removeListeners(listeners);
-        return this;
-    }
-
-    @Override
     public ChannelPromise sync() throws InterruptedException {
         super.sync();
         return this;

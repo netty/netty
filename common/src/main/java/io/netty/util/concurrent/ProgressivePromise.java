@@ -43,15 +43,6 @@ public interface ProgressivePromise<V> extends Promise<V>, ProgressiveFuture<V> 
     ProgressivePromise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     @Override
-    ProgressivePromise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    @Override
-    ProgressivePromise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
-
-    @Override
-    ProgressivePromise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
-
-    @Override
     ProgressivePromise<V> await() throws InterruptedException;
 
     @Override
