@@ -734,7 +734,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             Tasks tasks = invokeTasks();
             safeExecute(executor, tasks.invokeFlushTask,
-                    // Mimic what voidPromise() did before.
+                    // If flush throws we want to at least propagate the exception through the ChannelPipeline
+                    // as otherwise the user will not be made aware of the failure at all.
                     newPromise().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE), null);
         }
 
