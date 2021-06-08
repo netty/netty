@@ -68,7 +68,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private final Channel channel;
     private final ChannelFuture succeededFuture;
-    private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
     private final List<DefaultChannelHandlerContext> handlers = new ArrayList<>(4);
 
@@ -77,7 +76,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, channel.eventLoop());
-        voidPromise =  new VoidChannelPromise(channel, true);
 
         tail = new DefaultChannelHandlerContext(this, TAIL_NAME, TAIL_HANDLER);
         head = new DefaultChannelHandlerContext(this, HEAD_NAME, HEAD_HANDLER);
@@ -951,11 +949,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelFuture newFailedFuture(Throwable cause) {
         return new FailedChannelFuture(channel(), executor(), cause);
-    }
-
-    @Override
-    public final ChannelPromise voidPromise() {
-        return voidPromise;
     }
 
     /**

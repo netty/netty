@@ -34,7 +34,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SocketEchoTest extends AbstractSocketTest {
 
@@ -52,7 +51,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true);
+        testSimpleEcho0(sb, cb, true);
     }
 
     @Test
@@ -62,29 +61,11 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false);
-    }
-
-    @Test//(timeout = 30000)
-    public void testSimpleEchoWithVoidPromise(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testSimpleEchoWithVoidPromise);
-    }
-
-    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, true);
-    }
-
-    @Test//(timeout = 30000)
-    public void testSimpleEchoWithVoidPromiseNotAutoRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testSimpleEchoWithVoidPromiseNotAutoRead);
-    }
-
-    public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false);
+        testSimpleEcho0(sb, cb, false);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean voidPromise, boolean autoRead)
+            ServerBootstrap sb, Bootstrap cb, boolean autoRead)
             throws Throwable {
 
         final EchoHandler sh = new EchoHandler(autoRead);
@@ -107,11 +88,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
-            if (voidPromise) {
-                assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
-            } else {
-                assertNotEquals(cc.voidPromise(), cc.writeAndFlush(buf));
-            }
+            cc.writeAndFlush(buf);
             i += length;
         }
 

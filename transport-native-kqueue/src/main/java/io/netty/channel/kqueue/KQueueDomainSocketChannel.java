@@ -163,7 +163,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                             break readLoop;
                         case -1:
                             allocHandle.lastBytesRead(-1);
-                            close(voidPromise());
+                            close(newPromise());
                             return;
                         default:
                             allocHandle.lastBytesRead(1);

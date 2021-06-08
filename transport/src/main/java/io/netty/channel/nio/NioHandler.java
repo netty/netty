@@ -329,7 +329,7 @@ public final class NioHandler implements IoHandler {
                 logger.warn("Failed to re-register a Channel to the new Selector.", e);
                 if (a instanceof AbstractNioChannel) {
                     AbstractNioChannel ch = (AbstractNioChannel) a;
-                    ch.unsafe().close(ch.unsafe().voidPromise());
+                    ch.unsafe().close(ch.newPromise());
                 } else {
                     @SuppressWarnings("unchecked")
                     NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -573,7 +573,7 @@ public final class NioHandler implements IoHandler {
         if (!k.isValid()) {
 
             // close the channel if the key is not valid anymore
-            unsafe.close(unsafe.voidPromise());
+            unsafe.close(ch.newPromise());
             return;
         }
 
@@ -603,7 +603,7 @@ public final class NioHandler implements IoHandler {
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {
-            unsafe.close(unsafe.voidPromise());
+            unsafe.close(ch.newPromise());
         }
     }
 
@@ -651,7 +651,7 @@ public final class NioHandler implements IoHandler {
         }
 
         for (AbstractNioChannel ch: channels) {
-            ch.unsafe().close(ch.unsafe().voidPromise());
+            ch.unsafe().close(ch.newPromise());
         }
     }
 

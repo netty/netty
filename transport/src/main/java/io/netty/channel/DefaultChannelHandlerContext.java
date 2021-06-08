@@ -456,7 +456,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
         requireNonNull(localAddress, "localAddress");
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -496,7 +496,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelFuture connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
         requireNonNull(remoteAddress, "remoteAddress");
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -535,7 +535,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return close(promise);
         }
 
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -568,7 +568,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelFuture close(final ChannelPromise promise) {
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -601,7 +601,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -634,7 +634,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelFuture deregister(final ChannelPromise promise) {
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -733,7 +733,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             findAndInvokeFlush();
         } else {
             Tasks tasks = invokeTasks();
-            safeExecute(executor, tasks.invokeFlushTask, channel().voidPromise(), null);
+            safeExecute(executor, tasks.invokeFlushTask,
+                    // If flush throws we want to at least propagate the exception through the ChannelPipeline
+                    // as otherwise the user will not be made aware of the failure at all.
+                    newPromise().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE), null);
         }
 
         return this;
@@ -768,7 +771,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         requireNonNull(msg, "msg");
         try {
-            if (isNotValidPromise(promise, true)) {
+            if (isNotValidPromise(promise)) {
                 ReferenceCountUtil.release(msg);
                 // cancelled
                 return;
@@ -815,9 +818,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
-        // false.
-        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
     @Override
@@ -840,7 +841,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return pipeline().newFailedFuture(cause);
     }
 
-    private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
+    private boolean isNotValidPromise(ChannelPromise promise) {
         requireNonNull(promise, "promise");
 
         if (promise.isDone()) {
@@ -861,11 +862,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         if (promise.getClass() == DefaultChannelPromise.class) {
             return false;
-        }
-
-        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
 
         if (promise instanceof AbstractChannel.CloseFuture) {
@@ -895,11 +891,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             ctx = ctx.prev;
         } while ((ctx.executionMask & mask) == 0 || ctx.handlerState == REMOVE_STARTED);
         return ctx;
-    }
-
-    @Override
-    public ChannelPromise voidPromise() {
-        return channel().voidPromise();
     }
 
     boolean setAddComplete() {
@@ -977,7 +968,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                     ReferenceCountUtil.release(msg);
                 }
             } finally {
-                promise.setFailure(cause);
+                if (promise != null) {
+                    promise.setFailure(cause);
+                }
             }
             return false;
         }

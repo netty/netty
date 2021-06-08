@@ -217,7 +217,7 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
-            unsafe().close(unsafe().voidPromise());
+            unsafe().close(newPromise());
         } else {
             releaseInboundBuffers();
 
@@ -419,7 +419,7 @@ public class LocalChannel extends AbstractChannel {
                     doBind(localAddress);
                 } catch (Throwable t) {
                     safeSetFailure(promise, t);
-                    close(voidPromise());
+                    close(newPromise());
                     return;
                 }
             }
@@ -428,7 +428,7 @@ public class LocalChannel extends AbstractChannel {
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ConnectException("connection refused: " + remoteAddress);
                 safeSetFailure(promise, cause);
-                close(voidPromise());
+                close(newPromise());
                 return;
             }
 
@@ -471,6 +471,11 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void deregister0() {
+        }
+
+        @Override
+        public ChannelPromise newPromise() {
+            return LocalChannel.this.newPromise();
         }
     }
 }

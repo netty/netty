@@ -168,7 +168,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                     case 0:
                         break readLoop;
                     case -1:
-                        close(voidPromise());
+                        close(newPromise());
                         return;
                     default:
                         allocHandle.incMessagesRead(1);

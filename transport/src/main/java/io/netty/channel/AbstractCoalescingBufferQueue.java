@@ -54,7 +54,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
     public final void addFirst(ByteBuf buf, ChannelPromise promise) {
-        addFirst(buf, toChannelFutureListener(promise));
+        addFirst(buf, (ChannelFutureListener) new DelegatingChannelPromiseNotifier(promise));
     }
 
     private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
@@ -81,7 +81,7 @@ public abstract class AbstractCoalescingBufferQueue {
     public final void add(ByteBuf buf, ChannelPromise promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
-        add(buf, toChannelFutureListener(promise));
+        add(buf, (ChannelFutureListener) new DelegatingChannelPromiseNotifier(promise));
     }
 
     /**
@@ -230,7 +230,10 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.voidPromise());
+                        // If the write fails we want to at least propagate the exception through the ChannelPipeline
+                        // as otherwise the user will not be made aware of the failure at all.
+                        ctx.write(previousBuf).addListener(
+                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     break;
                 }
@@ -238,7 +241,10 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof ByteBufConvertible) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.voidPromise());
+                        // If the write fails we want to at least propagate the exception through the ChannelPipeline
+                        // as otherwise the user will not be made aware of the failure at all.
+                        ctx.write(previousBuf).addListener(
+                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof ChannelPromise) {
@@ -379,9 +385,5 @@ public abstract class AbstractCoalescingBufferQueue {
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
         }
-    }
-
-    private static ChannelFutureListener toChannelFutureListener(ChannelPromise promise) {
-        return promise.isVoid() ? null : new DelegatingChannelPromiseNotifier(promise);
     }
 }

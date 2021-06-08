@@ -37,7 +37,7 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     private final boolean logNotifyFailure;
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate) {
-        this(delegate, !(delegate instanceof VoidChannelPromise));
+        this(delegate, true);
     }
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
@@ -141,16 +141,6 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     public ChannelPromise awaitUninterruptibly() {
         delegate.awaitUninterruptibly();
         return this;
-    }
-
-    @Override
-    public boolean isVoid() {
-        return delegate.isVoid();
-    }
-
-    @Override
-    public ChannelPromise unvoid() {
-        return isVoid() ? new DelegatingChannelPromiseNotifier(delegate.unvoid()) : this;
     }
 
     @Override

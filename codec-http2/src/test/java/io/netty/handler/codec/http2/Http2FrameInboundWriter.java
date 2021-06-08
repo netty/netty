@@ -340,10 +340,5 @@ final class Http2FrameInboundWriter {
         public ChannelFuture newFailedFuture(Throwable cause) {
             return channel.newFailedFuture(cause);
         }
-
-        @Override
-        public ChannelPromise voidPromise() {
-            return channel.voidPromise();
-        }
     }
 }

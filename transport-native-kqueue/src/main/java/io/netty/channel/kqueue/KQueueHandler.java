@@ -342,7 +342,7 @@ public final class KQueueHandler implements IoHandler {
         AbstractKQueueChannel[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
 
         for (AbstractKQueueChannel ch: localChannels) {
-            ch.unsafe().close(ch.unsafe().voidPromise());
+            ch.unsafe().close(ch.newPromise());
         }
     }
 

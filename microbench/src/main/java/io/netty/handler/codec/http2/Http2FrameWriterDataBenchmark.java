@@ -101,14 +101,14 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void newWriter() {
-        writer.writeData(ctx, 3, payload.retain(), padding, true, ctx.voidPromise());
+        writer.writeData(ctx, 3, payload.retain(), padding, true, ctx.newPromise());
         ctx.flush();
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void oldWriter() {
-        oldWriter.writeData(ctx, 3, payload.retain(), padding, true, ctx.voidPromise());
+        oldWriter.writeData(ctx, 3, payload.retain(), padding, true, ctx.newPromise());
         ctx.flush();
     }
 

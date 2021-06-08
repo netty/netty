@@ -342,7 +342,7 @@ public class EmbeddedChannel extends AbstractChannel {
             p.fireChannelRead(m);
         }
 
-        flushInbound(false, voidPromise());
+        flushInbound(false, null);
         return isNotEmpty(inboundMessages);
     }
 
@@ -366,7 +366,8 @@ public class EmbeddedChannel extends AbstractChannel {
         if (checkOpen(true)) {
             pipeline().fireChannelRead(msg);
         }
-        return checkException(promise);
+        checkException(promise);
+        return promise;
     }
 
     /**
@@ -375,7 +376,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #flushOutbound()
      */
     public EmbeddedChannel flushInbound() {
-        flushInbound(true, voidPromise());
+        flushInbound(true, null);
         return this;
     }
 
@@ -386,7 +387,8 @@ public class EmbeddedChannel extends AbstractChannel {
           runPendingTasks();
       }
 
-      return checkException(promise);
+      checkException(promise);
+      return promise;
     }
 
     /**
@@ -450,7 +452,8 @@ public class EmbeddedChannel extends AbstractChannel {
         if (checkOpen(true)) {
             return write(msg, promise);
         }
-        return checkException(promise);
+        checkException(promise);
+        return promise;
     }
 
     /**
@@ -462,7 +465,7 @@ public class EmbeddedChannel extends AbstractChannel {
         if (checkOpen(true)) {
             flushOutbound0();
         }
-        checkException(voidPromise());
+        checkException(null);
         return this;
     }
 
@@ -640,26 +643,27 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Checks for the presence of an {@link Exception}.
      */
-    private ChannelFuture checkException(ChannelPromise promise) {
-      Throwable t = lastException;
-      if (t != null) {
-        lastException = null;
+    private void checkException(ChannelPromise promise) {
+        Throwable t = lastException;
+        if (t != null) {
+            lastException = null;
 
-        if (promise.isVoid()) {
-            PlatformDependent.throwException(t);
+            if (promise == null) {
+                PlatformDependent.throwException(t);
+                return;
+            }
+
+            promise.setFailure(t);
+        } else if (promise != null) {
+            promise.setSuccess();
         }
-
-        return promise.setFailure(t);
-      }
-
-      return promise.setSuccess();
     }
 
     /**
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-      checkException(voidPromise());
+        checkException(null);
     }
 
     /**
@@ -846,11 +850,6 @@ public class EmbeddedChannel extends AbstractChannel {
             public void flush() {
                 EmbeddedUnsafe.this.flush();
                 mayRunPendingTasks();
-            }
-
-            @Override
-            public ChannelPromise voidPromise() {
-                return EmbeddedUnsafe.this.voidPromise();
             }
 
             @Override

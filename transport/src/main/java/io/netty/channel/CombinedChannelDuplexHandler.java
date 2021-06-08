@@ -559,11 +559,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelPromise voidPromise() {
-            return ctx.voidPromise();
-        }
-
-        @Override
         public <T> Attribute<T> attr(AttributeKey<T> key) {
             return ctx.channel().attr(key);
         }

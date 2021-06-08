@@ -856,7 +856,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
         parentChannel.unsafe().outboundBuffer().addMessage(
-                Unpooled.buffer().writeZero(800), 800, parentChannel.voidPromise());
+                Unpooled.buffer().writeZero(800), 800, parentChannel.newPromise());
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
@@ -959,7 +959,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     public void callUnsafeCloseMultipleTimes() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        childChannel.unsafe().close(childChannel.voidPromise());
+        childChannel.unsafe().close(childChannel.newPromise());
 
         ChannelPromise promise = childChannel.newPromise();
         childChannel.unsafe().close(promise);

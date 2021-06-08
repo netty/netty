@@ -171,5 +171,10 @@ public class LocalServerChannel extends AbstractServerChannel {
         @Override
         public void deregister0() {
         }
+
+        @Override
+        public ChannelPromise newPromise() {
+            return LocalServerChannel.this.newPromise();
+        }
     }
 }

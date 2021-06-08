@@ -243,7 +243,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
                                     "connection timed out: " + remoteAddress))) {
-                                close(voidPromise());
+                                close(newPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
@@ -254,7 +254,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                 connectTimeoutFuture.cancel(false);
                             }
                             connectPromise = null;
-                            close(voidPromise());
+                            close(newPromise());
                         }
                     });
                 }
@@ -286,7 +286,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
