@@ -13,19 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.api;
+package io.netty.buffer.api.internal;
+
+import io.netty.buffer.api.Resource;
+import io.netty.buffer.api.Scope;
+
+import java.util.ArrayList;
 
 /**
- * An exception thrown when an operation is attempted on a {@link Buffer} when it has been closed.
+ * A {@link Scope} implementation based on {@link ArrayList}.
  */
-public final class BufferClosedException extends IllegalStateException {
-    private static final long serialVersionUID = 85913332711192868L;
+public class ArrayListScope extends ArrayList<Resource<?>> implements Scope {
+    private static final long serialVersionUID = 3093047762719644781L;
 
-    public BufferClosedException() {
-        this("This buffer is closed.");
+    @Override
+    public <T extends Resource<T>> T add(T obj) {
+        super.add(obj);
+        return obj;
     }
 
-    public BufferClosedException(final String message) {
-        super(message);
+    @Override
+    public void close() {
+        while (!isEmpty()) {
+            remove(size() - 1).close();
+        }
     }
 }
