@@ -32,7 +32,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-public interface Send<T extends Resource<T>> {
+public interface Send<T extends Resource<T>> extends AutoCloseable {
     /**
      * Construct a {@link Send} based on the given {@link Supplier}. The supplier will be called only once, in the
      * receiving thread.
@@ -62,7 +62,7 @@ public interface Send<T extends Resource<T>> {
             }
 
             @Override
-            public void discard() {
+            public void close() {
                 if (!gate.getAndSet(true)) {
                     supplier.get().close();
                 }
@@ -108,9 +108,10 @@ public interface Send<T extends Resource<T>> {
 
     /**
      * Discard this {@link Send} and the object it contains.
-     * This has no effect if the send object has already been received.
+     * This has no effect if the send-object has already been received.
      */
-    default void discard() {
+    @Override
+    default void close() {
         try {
             receive().close();
         } catch (IllegalStateException ignore) {

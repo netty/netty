@@ -32,7 +32,7 @@ public final class MemoryManagerOverride {
     private MemoryManagerOverride() {
     }
 
-    public static MemoryManager getManagers() {
+    public static MemoryManager configuredOrDefaultManager() {
         if (OVERRIDES_AVAILABLE.get() > 0) {
             return OVERRIDES.getOrDefault(Thread.currentThread(), DEFAULT);
         }

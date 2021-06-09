@@ -32,7 +32,7 @@ import java.nio.ByteOrder;
  * A number of standard allocators exist, and are available through static methods on the {@code BufferAllocator}
  * interface.
  *
- * <h3>Life cycle and reference counting</h3>
+ * <h3>Buffer life cycle</h3>
  *
  * The buffer has a life cycle, where it is allocated, used, and deallocated.
  * When the buffer is initially allocated, a pairing {@link #close()} call will deallocate it.
@@ -138,7 +138,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     Buffer readerOffset(int offset);
 
     /**
-     * Get the current writer offset. The next write will happen at this byte offset into the byffer.
+     * Get the current writer offset. The next write will happen at this byte offset into the buffer.
      *
      * @return The current writer offset.
      */
@@ -212,7 +212,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
      *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
      * @param dest The destination byte array.
-     * @param destPos The index into the {@code dest} array wherefrom the copying should start.
+     * @param destPos The index into the {@code dest} array from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination array is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
@@ -230,10 +230,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * The position and limit of the destination byte buffer are also ignored, and do not influence {@code destPos}
      * or {@code length}.
      *
-     * @param srcPos The byte offset into this buffer wherefrom the copying should start; the byte at this offset in
+     * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
      *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
      * @param dest The destination byte buffer.
-     * @param destPos The index into the {@code dest} array wherefrom the copying should start.
+     * @param destPos The index into the {@code dest} array from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination array is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
@@ -251,10 +251,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * The read and write offsets of the destination buffer are also ignored, and do not influence {@code destPos}
      * or {@code length}.
      *
-     * @param srcPos The byte offset into this buffer wherefrom the copying should start; the byte at this offset in
+     * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
      *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
      * @param dest The destination buffer.
-     * @param destPos The index into the {@code dest} array wherefrom the copying should start.
+     * @param destPos The index into the {@code dest} array from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination array is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
@@ -441,6 +441,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      *
      * @return A new buffer instance, with independent {@link #readerOffset()} and {@link #writerOffset()},
      * that contains a copy of the readable region of this buffer.
+     * @throws BufferClosedException if this buffer is closed.
      */
     default Buffer copy() {
         int offset = readerOffset();
@@ -459,6 +460,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      *
      * @return A new buffer instance, with independent {@link #readerOffset()} and {@link #writerOffset()},
      * that contains a copy of the given region of this buffer.
+     * @throws IllegalArgumentException if the {@code offset} or {@code length} reaches outside the bounds of the
+     * buffer.
+     * @throws BufferClosedException if this buffer is closed.
      */
     Buffer copy(int offset, int length);
 
@@ -606,7 +610,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * and passed a component index, for the given component in the iteration, and a {@link ReadableComponent} object
      * for accessing the data within the given component.
      * <p>
-     * The component index is specific to the particular invokation of this method. The first call to the consumer will
+     * The component index is specific to the particular invocation of this method. The first call to the consumer will
      * be passed the given initial index, and the next call will be passed the initial index plus one, and so on.
      * <p>
      * The {@linkplain ReadableComponentProcessor component processor} may stop the iteration at any time by returning
@@ -635,7 +639,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @param initialIndex The initial index of the iteration, and the index that will be passed to the first call to
      *                    the {@linkplain ReadableComponentProcessor#process(int, ReadableComponent) processor}.
      * @param processor The processor that will be used to process the buffer components.
-     * @return The number of readable components processed, as a positive number of all readable components were
+     * @return The number of readable components processed, as a positive number if all readable components were
      * processed, or as a negative number if the iteration was stopped because
      * {@link ReadableComponentProcessor#process(int, ReadableComponent)} returned {@code false}.
      * In any case, the number of components processed may be less than {@link #countComponents()}.
@@ -649,7 +653,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * and passed a component index, for the given component in the iteration, and a {@link WritableComponent} object
      * for accessing the data within the given component.
      * <p>
-     * The component index is specific to the particular invokation of this method. The first call to the consumer will
+     * The component index is specific to the particular invocation of this method. The first call to the consumer will
      * be passed the given initial index, and the next call will be passed the initial index plus one, and so on.
      * <p>
      * The {@link WritableComponentProcessor component processor} may stop the iteration at any time by returning
@@ -675,7 +679,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @param initialIndex The initial index of the iteration, and the index that will be passed to the first call to
      *                    the {@linkplain WritableComponentProcessor#process(int, WritableComponent) processor}.
      * @param processor The processor that will be used to process the buffer components.
-     * @return The number of writable components processed, as a positive number of all writable components were
+     * @return The number of writable components processed, as a positive number if all writable components were
      * processed, or as a negative number if the iteration was stopped because
      * {@link WritableComponentProcessor#process(int, WritableComponent)} returned {@code false}.
      * In any case, the number of components processed may be less than {@link #countComponents()}.

@@ -154,8 +154,8 @@ public class BufferSendTest extends BufferTestSupport {
                 assertFalse(Send.isSendOf(Buffer.class, new Object()));
                 assertFalse(Send.isSendOf(Object.class, new Object()));
             } finally {
-                bufferSend.discard();
-                bufferRefSend.discard();
+                bufferSend.close();
+                bufferRefSend.close();
             }
             // Type checks must still pass after the sends have been received.
             assertTrue(Send.isSendOf(Buffer.class, bufferSend));
