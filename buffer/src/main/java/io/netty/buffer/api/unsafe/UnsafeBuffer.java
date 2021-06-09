@@ -249,6 +249,9 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (!dest.isAccessible()) {
+            throw bufferIsClosed(dest);
+        }
         checkCopyIntoArgs(srcPos, length, destPos, dest.capacity());
         if (dest.readOnly()) {
             throw bufferIsReadOnly(this);

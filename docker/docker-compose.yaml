@@ -62,6 +62,10 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
+  build-unsafe-buffer:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
+
   shell:
     <<: *common
     entrypoint: /bin/bash

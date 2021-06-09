@@ -145,6 +145,9 @@ jobs:
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
+          - setup: linux-x86_64-java11-unsafe-buffer
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-unsafe-buffer"
 
     name: ${{ matrix.setup }} build
     needs: verify-pr
