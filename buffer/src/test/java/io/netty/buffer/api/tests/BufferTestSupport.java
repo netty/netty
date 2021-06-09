@@ -483,7 +483,7 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x06, buffer.readByte());
                 assertEquals((byte) 0x07, buffer.readByte());
                 assertEquals((byte) 0x08, buffer.readByte());
-                buffer.reset();
+                buffer.resetOffsets();
 
                 buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
                 buf.copyInto(0, buffer, 0, buffer.capacity());
@@ -496,7 +496,7 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x03, buffer.readByte());
                 assertEquals((byte) 0x02, buffer.readByte());
                 assertEquals((byte) 0x01, buffer.readByte());
-                buffer.reset();
+                buffer.resetOffsets();
             }
 
             try (Buffer buffer = bbAlloc.apply(6)) {
@@ -515,7 +515,7 @@ public abstract class BufferTestSupport {
                 buf.copyInto(1, buffer, 1, 3);
                 assertEquals(3, buffer.readerOffset());
                 assertEquals(3, buffer.writerOffset());
-                buffer.reset();
+                buffer.resetOffsets();
                 buffer.writerOffset(6);
                 assertEquals((byte) 0x00, buffer.readByte());
                 assertEquals((byte) 0x07, buffer.readByte());
@@ -525,7 +525,7 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x00, buffer.readByte());
             }
 
-            buf.reset();
+            buf.resetOffsets();
             buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
             // Testing copyInto for overlapping writes:
             //

@@ -538,8 +538,8 @@ public class BufferReferenceCountingTest extends BufferTestSupport {
                 buf.close();
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
                 try (Buffer split = copy.split(4)) {
-                    split.reset().ensureWritable(Long.BYTES);
-                    copy.reset().ensureWritable(Long.BYTES);
+                    split.resetOffsets().ensureWritable(Long.BYTES);
+                    copy.resetOffsets().ensureWritable(Long.BYTES);
                     assertThat(split.capacity()).isEqualTo(Long.BYTES);
                     assertThat(copy.capacity()).isEqualTo(Long.BYTES);
                     assertThat(split.getLong(0)).isEqualTo(0x01020304_00000000L);

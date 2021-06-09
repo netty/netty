@@ -46,18 +46,18 @@ public class BufferWriteBytesCombinationsTest extends BufferTestSupport {
                     verifyWriteBytes(target, source);
 
                     // LE to BE
-                    target.fill((byte) 0).reset().order(BIG_ENDIAN);
-                    source.fill((byte) 0).reset().order(LITTLE_ENDIAN);
+                    target.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
+                    source.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
                     verifyWriteBytes(target, source);
 
                     // BE to LE
-                    target.fill((byte) 0).reset().order(LITTLE_ENDIAN);
-                    source.fill((byte) 0).reset().order(BIG_ENDIAN);
+                    target.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
+                    source.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
                     verifyWriteBytes(target, source);
 
                     // LE to LE
-                    target.fill((byte) 0).reset().order(LITTLE_ENDIAN);
-                    source.fill((byte) 0).reset().order(BIG_ENDIAN);
+                    target.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
+                    source.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
                     verifyWriteBytes(target, source);
                 } catch (Exception e) {
                     e.addSuppressed(new RuntimeException("other fixture was: " + otherFixture));

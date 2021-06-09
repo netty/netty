@@ -29,7 +29,7 @@ import java.nio.ByteOrder;
  * <h3>Creating a buffer</h3>
  *
  * Buffers are created by {@linkplain BufferAllocator allocators}, and their {@code allocate} family of methods.
- * A number of standard allocators exist, and ara available through static methods on the {@code BufferAllocator}
+ * A number of standard allocators exist, and are available through static methods on the {@code BufferAllocator}
  * interface.
  *
  * <h3>Life cycle and reference counting</h3>
@@ -44,8 +44,6 @@ import java.nio.ByteOrder;
  * <h3>Thread-safety</h3>
  *
  * Buffers are not thread-safe.
- * The {@linkplain #isAccessible() accessibility state} implied by the {@link Resource} interface is itself not
- * thread-safe, and buffers additionally contain other mutable data that is not thread-safe.
  *
  * <h3>Accessing data</h3>
  *
@@ -135,6 +133,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @return This Buffer.
      * @throws IndexOutOfBoundsException if the specified {@code offset} is less than zero or greater than the current
      *                                   {@link #writerOffset()}.
+     * @throws BufferClosedException if this buffer is closed.
      */
     Buffer readerOffset(int offset);
 
@@ -176,7 +175,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * #writerOffset()}, but copies the full capacity of the buffer. The {@link #readerOffset()} and {@link
      * #writerOffset()} are not modified.
      *
-     * @param value The byte value to write at every position in the buffer.
+     * @param value The byte value to write at every offset in the buffer.
      * @return This Buffer.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
@@ -210,7 +209,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * This method does not read or modify the {@linkplain #writerOffset() write offset} or the
      * {@linkplain #readerOffset() read offset}.
      *
-     * @param srcPos The byte offset into this buffer wherefrom the copying should start; the byte at this offset in
+     * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
      *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
      * @param dest The destination byte array.
      * @param destPos The index into the {@code dest} array wherefrom the copying should start.
@@ -301,7 +300,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * Resets the {@linkplain #readerOffset() read offset} and the {@linkplain #writerOffset() write offset} on this
      * buffer to their initial values.
      */
-    default Buffer reset() {
+    default Buffer resetOffsets() {
         readerOffset(0);
         writerOffset(0);
         return this;
