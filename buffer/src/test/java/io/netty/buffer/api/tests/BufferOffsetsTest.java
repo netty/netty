@@ -169,7 +169,7 @@ public class BufferOffsetsTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeInt(0).readShort();
-            buf.reset();
+            buf.resetOffsets();
             assertEquals(0, buf.readerOffset());
             assertEquals(0, buf.writerOffset());
         }

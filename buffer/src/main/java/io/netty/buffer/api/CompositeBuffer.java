@@ -772,7 +772,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                     compactable = bufs;
                 }
                 for (Buffer buf : compactable) {
-                    buf.reset();
+                    buf.resetOffsets();
                 }
                 computeBufferOffsets();
                 if (writableBytes() >= size) {

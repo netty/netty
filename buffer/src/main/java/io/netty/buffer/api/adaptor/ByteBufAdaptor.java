@@ -157,7 +157,7 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf setIndex(int readerIndex, int writerIndex) {
-        buffer.reset().writerOffset(writerIndex).readerOffset(readerIndex);
+        buffer.resetOffsets().writerOffset(writerIndex).readerOffset(readerIndex);
         return this;
     }
 

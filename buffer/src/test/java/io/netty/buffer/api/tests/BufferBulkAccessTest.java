@@ -219,7 +219,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(0x28)) {
             buf.order(BIG_ENDIAN); // The byte order should have no impact.
             checkByteIteration(buf);
-            buf.reset();
+            buf.resetOffsets();
             checkByteIterationOfRegion(buf);
         }
     }
@@ -231,7 +231,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(0x28)) {
             buf.order(LITTLE_ENDIAN); // The byte order should have no impact.
             checkByteIteration(buf);
-            buf.reset();
+            buf.resetOffsets();
             checkByteIterationOfRegion(buf);
         }
     }
@@ -243,7 +243,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(0x28)) {
             buf.order(BIG_ENDIAN); // The byte order should have no impact.
             checkReverseByteIteration(buf);
-            buf.reset();
+            buf.resetOffsets();
             checkReverseByteIterationOfRegion(buf);
         }
     }
@@ -255,7 +255,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(0x28)) {
             buf.order(LITTLE_ENDIAN); // The byte order should have no impact.
             checkReverseByteIteration(buf);
-            buf.reset();
+            buf.resetOffsets();
             checkReverseByteIterationOfRegion(buf);
         }
     }
