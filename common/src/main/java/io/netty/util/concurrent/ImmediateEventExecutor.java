@@ -130,11 +130,6 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new ImmediateProgressivePromise<>(this);
-    }
-
-    @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay,
                                        TimeUnit unit) {
         throw new UnsupportedOperationException();
@@ -157,17 +152,6 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     static class ImmediatePromise<V> extends DefaultPromise<V> {
         ImmediatePromise(EventExecutor executor) {
-            super(executor);
-        }
-
-        @Override
-        protected void checkDeadLock() {
-            // No check
-        }
-    }
-
-    static class ImmediateProgressivePromise<V> extends DefaultProgressivePromise<V> {
-        ImmediateProgressivePromise(EventExecutor executor) {
             super(executor);
         }
 

@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
@@ -278,10 +277,6 @@ public final class BinaryMemcacheClientCodec extends
 
                 public ChannelPromise newPromise() {
                     return ctx.newPromise();
-                }
-
-                public ChannelProgressivePromise newProgressivePromise() {
-                    return ctx.newProgressivePromise();
                 }
 
                 public ChannelFuture newSucceededFuture() {

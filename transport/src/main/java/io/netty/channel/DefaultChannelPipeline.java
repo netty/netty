@@ -937,11 +937,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel(), executor());
-    }
-
-    @Override
     public final ChannelFuture newSucceededFuture() {
         return succeededFuture;
     }

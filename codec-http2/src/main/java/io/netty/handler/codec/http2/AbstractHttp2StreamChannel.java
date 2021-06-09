@@ -26,7 +26,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
@@ -487,11 +486,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public ChannelPromise newPromise() {
         return pipeline().newPromise();
-    }
-
-    @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
     }
 
     @Override
