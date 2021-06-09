@@ -235,7 +235,6 @@ public class DataCompressionHttp2Test {
         }
     }
 
-
     @Test
     public void brotliEncodingSingleEmptyMessage() throws Exception {
         final String text = "";

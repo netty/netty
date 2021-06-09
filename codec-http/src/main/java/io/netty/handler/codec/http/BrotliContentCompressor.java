@@ -175,7 +175,7 @@ public final class BrotliContentCompressor extends HttpContentCompressor {
         }
         if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
             if (brQ != -1.0f && brQ >= gzipQ) {
-                return Brotli.isAvailable() ? "br" : null;
+                return isAvailable() ? "br" : null;
             } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
                 return "gzip";
             } else if (deflateQ != -1.0f) {
@@ -184,7 +184,7 @@ public final class BrotliContentCompressor extends HttpContentCompressor {
         }
         if (starQ > 0.0f) {
             if (brQ == -1.0f) {
-                return Brotli.isAvailable() ? "br" : null;
+                return isAvailable() ? "br" : null;
             }
             if (gzipQ == -1.0f) {
                 return "gzip";
