@@ -15,10 +15,12 @@
  */
 package io.netty.buffer.api.bytebuffer;
 
+import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.Statics;
 
 import java.lang.ref.Cleaner;
@@ -29,21 +31,18 @@ import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.convert;
 
 public class ByteBufferMemoryManager implements MemoryManager {
-    private final boolean direct;
-
-    public ByteBufferMemoryManager(boolean direct) {
-        this.direct = direct;
-    }
-
     @Override
-    public boolean isNative() {
-        return direct;
-    }
-
-    @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner) {
+    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
+                                 AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
-        ByteBuffer buffer = direct? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity);
+        final ByteBuffer buffer;
+        if (allocationType == StandardAllocationTypes.OFF_HEAP) {
+            buffer = ByteBuffer.allocateDirect(capacity);
+        } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
+            buffer = ByteBuffer.allocate(capacity);
+        } else {
+            throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
+        }
         buffer.order(ByteOrder.nativeOrder());
         return new NioBuffer(buffer, buffer, allocatorControl, convert(drop));
     }
@@ -75,5 +74,10 @@ public class ByteBufferMemoryManager implements MemoryManager {
     public Object sliceMemory(Object memory, int offset, int length) {
         var buffer = (ByteBuffer) memory;
         return bbslice(buffer, offset, length);
+    }
+
+    @Override
+    public String implementationName() {
+        return "ByteBuffer";
     }
 }

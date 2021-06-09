@@ -13,24 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.api.bytebuffer;
+package io.netty.buffer.api;
 
-import io.netty.buffer.api.MemoryManager;
-import io.netty.buffer.api.MemoryManagers;
-
-public class ByteBufferMemoryManagers implements MemoryManagers {
-    @Override
-    public MemoryManager heapMemoryManager() {
-        return new ByteBufferMemoryManager(false);
-    }
-
-    @Override
-    public MemoryManager nativeMemoryManager() {
-        return new ByteBufferMemoryManager(true);
-    }
-
-    @Override
-    public String implementationName() {
-        return "ByteBuffer";
-    }
+/**
+ * An object used by {@linkplain BufferAllocator buffer allocators} to communicate desirable properties of an
+ * allocation to a {@linkplain MemoryManager memory manager}, such as wether an allocation should be off-heap.
+ * <p>
+ * Standard implementations of this interface can be found in {@link StandardAllocationTypes}.
+ */
+public interface AllocationType {
 }

@@ -15,10 +15,12 @@
  */
 package io.netty.buffer.api.pool;
 
+import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -162,6 +164,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     private final MemoryManager manager;
+    private final AllocationType allocationType;
     private final PoolArena[] arenas;
     private final int smallCacheSize;
     private final int normalCacheSize;
@@ -171,31 +174,32 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     private final int chunkSize;
     private final PooledBufferAllocatorMetric metric;
 
-    public PooledBufferAllocator(MemoryManager manager) {
-        this(manager, manager.isNative()? DEFAULT_NUM_DIRECT_ARENA : DEFAULT_NUM_HEAP_ARENA,
+    public PooledBufferAllocator(MemoryManager manager, boolean direct) {
+        this(manager, direct, direct? DEFAULT_NUM_DIRECT_ARENA : DEFAULT_NUM_HEAP_ARENA,
                 DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER, DEFAULT_SMALL_CACHE_SIZE,
                 DEFAULT_NORMAL_CACHE_SIZE, DEFAULT_USE_CACHE_FOR_ALL_THREADS,
                 DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
-    public PooledBufferAllocator(MemoryManager manager, int numArenas, int pageSize, int maxOrder) {
-        this(manager, numArenas, pageSize, maxOrder, DEFAULT_SMALL_CACHE_SIZE,
+    public PooledBufferAllocator(MemoryManager manager, boolean direct, int numArenas, int pageSize, int maxOrder) {
+        this(manager, direct, numArenas, pageSize, maxOrder, DEFAULT_SMALL_CACHE_SIZE,
                 DEFAULT_NORMAL_CACHE_SIZE, DEFAULT_USE_CACHE_FOR_ALL_THREADS,
                 DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
-    public PooledBufferAllocator(MemoryManager manager, int numArenas, int pageSize, int maxOrder,
+    public PooledBufferAllocator(MemoryManager manager, boolean direct, int numArenas, int pageSize, int maxOrder,
                                  int smallCacheSize, int normalCacheSize,
                                  boolean useCacheForAllThreads) {
-        this(manager, numArenas, pageSize, maxOrder,
+        this(manager, direct, numArenas, pageSize, maxOrder,
              smallCacheSize, normalCacheSize,
              useCacheForAllThreads, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
-    public PooledBufferAllocator(MemoryManager manager, int numArenas, int pageSize, int maxOrder,
+    public PooledBufferAllocator(MemoryManager manager, boolean direct, int numArenas, int pageSize, int maxOrder,
                                  int smallCacheSize, int normalCacheSize,
                                  boolean useCacheForAllThreads, int directMemoryCacheAlignment) {
         this.manager = requireNonNull(manager, "MemoryManager");
+        allocationType = direct? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
         threadCache = new PoolThreadLocalCache(useCacheForAllThreads);
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -230,7 +234,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             arenas = newArenaArray(numArenas);
             List<PoolArenaMetric> metrics = new ArrayList<>(arenas.length);
             for (int i = 0; i < arenas.length; i ++) {
-                PoolArena arena = new PoolArena(this, manager,
+                PoolArena arena = new PoolArena(this, manager, allocationType,
                         pageSize, pageShifts, chunkSize,
                         directMemoryCacheAlignment);
                 arenas[i] = arena;
@@ -309,7 +313,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     private UntetheredMemory allocateUnpooled(int size) {
-        return new UnpooledUnthetheredMemory(this, manager, size);
+        return new UnpooledUnthetheredMemory(this, manager, allocationType, size);
     }
 
     @Override
@@ -390,7 +394,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     public boolean isDirectBufferPooled() {
-        return manager.isNative();
+        return allocationType == StandardAllocationTypes.OFF_HEAP;
     }
 
     public int numArenas() {

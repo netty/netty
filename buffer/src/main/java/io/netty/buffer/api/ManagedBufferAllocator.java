@@ -23,20 +23,23 @@ import static io.netty.buffer.api.internal.Statics.NO_OP_DROP;
 
 class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     private final MemoryManager manager;
+    private final AllocationType allocationType;
 
-    ManagedBufferAllocator(MemoryManager manager) {
+    ManagedBufferAllocator(MemoryManager manager, boolean direct) {
         this.manager = manager;
+        allocationType = direct? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
     }
 
     @Override
     public Buffer allocate(int size) {
         BufferAllocator.checkSize(size);
-        return manager.allocateShared(this, size, manager.drop(), Statics.CLEANER);
+        return manager.allocateShared(this, size, manager.drop(), Statics.CLEANER, allocationType);
     }
 
     @Override
     public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
-        Buffer constantBuffer = manager.allocateShared(this, bytes.length, manager.drop(), Statics.CLEANER);
+        Buffer constantBuffer = manager.allocateShared(
+                this, bytes.length, manager.drop(), Statics.CLEANER, allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
@@ -45,7 +48,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     @Override
     public UntetheredMemory allocateUntethered(Buffer originator, int size) {
         BufferAllocator.checkSize(size);
-        var buf = manager.allocateShared(this, size, NO_OP_DROP, Statics.CLEANER);
+        var buf = manager.allocateShared(this, size, NO_OP_DROP, Statics.CLEANER, allocationType);
         return new UntetheredMemory() {
             @Override
             public <Memory> Memory memory() {

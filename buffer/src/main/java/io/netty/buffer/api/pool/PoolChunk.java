@@ -179,7 +179,7 @@ final class PoolChunk implements PoolChunkMetric {
               int maxPageIdx) {
         this.arena = arena;
         MemoryManager manager = arena.manager;
-        base = manager.allocateShared(arena, chunkSize, manager.drop(), Statics.CLEANER);
+        base = manager.allocateShared(arena, chunkSize, manager.drop(), Statics.CLEANER, arena.allocationType);
         memory = manager.unwrapRecoverableMemory(base);
         baseDrop = ArcDrop.wrap(Buffer::close);
         this.pageSize = pageSize;

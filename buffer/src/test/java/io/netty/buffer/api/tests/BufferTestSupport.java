@@ -19,7 +19,7 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.CompositeBuffer;
-import io.netty.buffer.api.MemoryManagers;
+import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.internal.ResourceSupport;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -132,8 +132,8 @@ public abstract class BufferTestSupport {
 
         // Multiply by all MemoryManagers.
         List<Throwable> failedManagers = new ArrayList<>();
-        List<MemoryManagers> loadableManagers = new ArrayList<>();
-        MemoryManagers.availableManagers().forEach(provider -> {
+        List<MemoryManager> loadableManagers = new ArrayList<>();
+        MemoryManager.availableManagers().forEach(provider -> {
             try {
                 loadableManagers.add(provider.get());
             } catch (ServiceConfigurationError | Exception e) {
@@ -150,7 +150,7 @@ public abstract class BufferTestSupport {
         }
         initFixtures = initFixtures.stream().flatMap(f -> {
             Builder<Fixture> builder = Stream.builder();
-            for (MemoryManagers managers : loadableManagers) {
+            for (MemoryManager managers : loadableManagers) {
                 char[] chars = managers.implementationName().toCharArray();
                 for (int i = 1, j = 1; i < chars.length; i++) {
                     if (Character.isUpperCase(chars[i])) {
@@ -159,7 +159,7 @@ public abstract class BufferTestSupport {
                 }
                 String managersName = String.valueOf(chars, 0, 2);
                 builder.add(new Fixture(f + "/" + managersName,
-                                        () -> MemoryManagers.using(managers, f), f.getProperties()));
+                                        () -> MemoryManager.using(managers, f), f.getProperties()));
             }
             return builder.build();
         }).collect(Collectors.toList());
