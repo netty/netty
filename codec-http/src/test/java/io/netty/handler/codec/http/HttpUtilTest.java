@@ -86,12 +86,12 @@ public class HttpUtilTest {
 
     @Test
     public void testGetCharsetQuoted() {
-        HttpUtilTest.this.testGetCharsetUtf8("text/html; charset=\"utf-8\"");
+        testGetCharsetUtf8("text/html; charset=\"utf-8\"");
     }
 
     @Test
     public void testGetCharsetNoSpaceQuoted() {
-        HttpUtilTest.this.testGetCharsetUtf8("text/html;charset=\"utf-8\"");
+        testGetCharsetUtf8("text/html;charset=\"utf-8\"");
     }
 
     private void testGetCharsetUtf8(String contentType) {
@@ -122,7 +122,7 @@ public class HttpUtilTest {
         testGetCharsetInvalidQuotes("text/html;charset=\"\"");
     }
 
-    private void testGetCharsetInvalidQuotes(String contentType) {
+    private static void testGetCharsetInvalidQuotes(String contentType) {
         String UPPER_CASE_NORMAL_CONTENT_TYPE = contentType.toUpperCase();
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
