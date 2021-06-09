@@ -472,58 +472,58 @@ public abstract class BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
-            Buffer buffer = bbAlloc.apply(8);
-            buffer.writerOffset(8);
-            buf.copyInto(0, buffer, 0, buffer.capacity());
-            assertEquals((byte) 0x01, buffer.readByte());
-            assertEquals((byte) 0x02, buffer.readByte());
-            assertEquals((byte) 0x03, buffer.readByte());
-            assertEquals((byte) 0x04, buffer.readByte());
-            assertEquals((byte) 0x05, buffer.readByte());
-            assertEquals((byte) 0x06, buffer.readByte());
-            assertEquals((byte) 0x07, buffer.readByte());
-            assertEquals((byte) 0x08, buffer.readByte());
-            buffer.reset();
+            try (Buffer buffer = bbAlloc.apply(8)) {
+                buffer.writerOffset(8);
+                buf.copyInto(0, buffer, 0, buffer.capacity());
+                assertEquals((byte) 0x01, buffer.readByte());
+                assertEquals((byte) 0x02, buffer.readByte());
+                assertEquals((byte) 0x03, buffer.readByte());
+                assertEquals((byte) 0x04, buffer.readByte());
+                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x06, buffer.readByte());
+                assertEquals((byte) 0x07, buffer.readByte());
+                assertEquals((byte) 0x08, buffer.readByte());
+                buffer.reset();
 
-            buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
-            buf.copyInto(0, buffer, 0, buffer.capacity());
-            buffer.writerOffset(8);
-            assertEquals((byte) 0x08, buffer.readByte());
-            assertEquals((byte) 0x07, buffer.readByte());
-            assertEquals((byte) 0x06, buffer.readByte());
-            assertEquals((byte) 0x05, buffer.readByte());
-            assertEquals((byte) 0x04, buffer.readByte());
-            assertEquals((byte) 0x03, buffer.readByte());
-            assertEquals((byte) 0x02, buffer.readByte());
-            assertEquals((byte) 0x01, buffer.readByte());
-            buffer.reset();
+                buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
+                buf.copyInto(0, buffer, 0, buffer.capacity());
+                buffer.writerOffset(8);
+                assertEquals((byte) 0x08, buffer.readByte());
+                assertEquals((byte) 0x07, buffer.readByte());
+                assertEquals((byte) 0x06, buffer.readByte());
+                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x04, buffer.readByte());
+                assertEquals((byte) 0x03, buffer.readByte());
+                assertEquals((byte) 0x02, buffer.readByte());
+                assertEquals((byte) 0x01, buffer.readByte());
+                buffer.reset();
+            }
 
-            buffer.close();
-            buffer = bbAlloc.apply(6);
-            buf.copyInto(1, buffer, 1, 3);
-            buffer.writerOffset(6);
-            assertEquals((byte) 0x00, buffer.readByte());
-            assertEquals((byte) 0x07, buffer.readByte());
-            assertEquals((byte) 0x06, buffer.readByte());
-            assertEquals((byte) 0x05, buffer.readByte());
-            assertEquals((byte) 0x00, buffer.readByte());
-            assertEquals((byte) 0x00, buffer.readByte());
+            try (Buffer buffer = bbAlloc.apply(6)) {
+                buf.copyInto(1, buffer, 1, 3);
+                buffer.writerOffset(6);
+                assertEquals((byte) 0x00, buffer.readByte());
+                assertEquals((byte) 0x07, buffer.readByte());
+                assertEquals((byte) 0x06, buffer.readByte());
+                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x00, buffer.readByte());
+                assertEquals((byte) 0x00, buffer.readByte());
+            }
 
-            buffer.close();
-            buffer = bbAlloc.apply(6);
-            buffer.writerOffset(3).readerOffset(3);
-            buf.copyInto(1, buffer, 1, 3);
-            assertEquals(3, buffer.readerOffset());
-            assertEquals(3, buffer.writerOffset());
-            buffer.reset();
-            buffer.writerOffset(6);
-            assertEquals((byte) 0x00, buffer.readByte());
-            assertEquals((byte) 0x07, buffer.readByte());
-            assertEquals((byte) 0x06, buffer.readByte());
-            assertEquals((byte) 0x05, buffer.readByte());
-            assertEquals((byte) 0x00, buffer.readByte());
-            assertEquals((byte) 0x00, buffer.readByte());
-            buffer.close();
+            try (Buffer buffer = bbAlloc.apply(6)) {
+                buffer.writerOffset(3).readerOffset(3);
+                buf.copyInto(1, buffer, 1, 3);
+                assertEquals(3, buffer.readerOffset());
+                assertEquals(3, buffer.writerOffset());
+                buffer.reset();
+                buffer.writerOffset(6);
+                assertEquals((byte) 0x00, buffer.readByte());
+                assertEquals((byte) 0x07, buffer.readByte());
+                assertEquals((byte) 0x06, buffer.readByte());
+                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x00, buffer.readByte());
+                assertEquals((byte) 0x00, buffer.readByte());
+            }
 
             buf.reset();
             buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);

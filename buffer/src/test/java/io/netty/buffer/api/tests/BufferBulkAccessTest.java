@@ -17,7 +17,6 @@ package io.netty.buffer.api.tests;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.Scope;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -153,14 +152,13 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOnHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.heap();
-             var scope = new Scope()) {
+             var b = BufferAllocator.heap()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return scope.add(compose(a, bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
                 }
             });
         }
@@ -170,14 +168,13 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOffHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.direct();
-             var scope = new Scope()) {
+             var b = BufferAllocator.direct()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return scope.add(compose(a, bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
                 }
             });
         }
@@ -187,14 +184,13 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOnHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.heap();
-             var scope = new Scope()) {
+             var b = BufferAllocator.heap()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return scope.add(compose(a, bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
                 }
             });
         }
@@ -204,14 +200,13 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOffHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.direct();
-             var scope = new Scope()) {
+             var b = BufferAllocator.direct()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return scope.add(compose(a, bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
                 }
             });
         }
