@@ -15,6 +15,7 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.MemoryManagerLoader;
 import io.netty.buffer.api.internal.MemoryManagerOverride;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -45,7 +46,7 @@ public interface MemoryManager {
      * @return A MemoryManagers instance.
      */
     static MemoryManager instance() {
-        return MemoryManagerOverride.getManagers();
+        return MemoryManagerOverride.configuredOrDefaultManager();
     }
 
     /**
@@ -64,21 +65,15 @@ public interface MemoryManager {
 
     /**
      * Get a lazy-loading stream of all available memory managers.
-     * <p>
-     * Note: All available {@link MemoryManager} instances are service loaded and instantiated on every call.
      *
      * @return A stream of providers of memory managers instances.
      */
     static Stream<Provider<MemoryManager>> availableManagers() {
-        var loader = ServiceLoader.load(MemoryManager.class);
-        return loader.stream();
+        return MemoryManagerLoader.stream();
     }
 
     /**
      * Find a {@link MemoryManager} implementation by its {@linkplain #implementationName() implementation name}.
-     * <p>
-     * Note: All available {@link MemoryManager} instances are service loaded and instantiated every time this
-     * method is called.
      *
      * @param implementationName The named implementation to look for.
      * @return A {@link MemoryManager} implementation, if any was found.

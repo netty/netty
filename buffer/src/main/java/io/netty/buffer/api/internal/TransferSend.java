@@ -60,7 +60,7 @@ public class TransferSend<I extends Resource<I>, T extends ResourceSupport<I, T>
     }
 
     @Override
-    public void discard() {
+    public void close() {
         if (!(boolean) RECEIVED.getAndSet(this, true)) {
             var copy = outgoing.transferOwnership(drop);
             drop.attach(copy);

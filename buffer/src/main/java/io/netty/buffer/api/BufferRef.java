@@ -23,7 +23,6 @@ import java.lang.invoke.VarHandle;
 public final class BufferRef extends BufferHolder<BufferRef> {
     /**
      * Create a reference to the given {@linkplain Buffer buffer}.
-     * This increments the reference count of the buffer.
      *
      * @param buf The buffer to reference.
      */
@@ -52,8 +51,8 @@ public final class BufferRef extends BufferHolder<BufferRef> {
     /**
      * Replace the underlying referenced buffer with the given buffer.
      * <p>
-     * <strong>Note:</strong> this method decreases the reference count of the current buffer,
-     * and takes exclusive ownership of the sent buffer.
+     * <strong>Note:</strong> this method closes the current buffer,
+     * and takes exclusive ownership of the received buffer.
      * <p>
      * The buffer assignment is performed using a volatile store.
      *
@@ -68,7 +67,7 @@ public final class BufferRef extends BufferHolder<BufferRef> {
      *
      * @return The buffer held by the reference.
      */
-    public Buffer contents() {
+    public Buffer content() {
         return getBufferVolatile();
     }
 }

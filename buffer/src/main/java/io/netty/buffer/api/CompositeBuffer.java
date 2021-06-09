@@ -126,17 +126,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     /**
      * Compose the given sequence of sends of buffers and present them as a single buffer.
      * <p>
-     * <strong>Note:</strong> The composite buffer holds a reference to all the constituent buffers,
-     * until the composite buffer is deallocated.
-     * This means the constituent buffers must still have their outside-reference count decremented as normal.
-     * If the buffers are allocated for the purpose of participating in the composite buffer,
-     * then they should be closed as soon as the composite buffer has been created, like in this example:
-     * <pre>{@code
-     *     try (Buffer a = allocator.allocate(size);
-     *          Buffer b = allocator.allocate(size)) {
-     *         return allocator.compose(a, b); // Reference counts for 'a' and 'b' incremented here.
-     *     } // Reference count for 'a' and 'b' decremented here; composite buffer now holds the last references.
-     * }</pre>
+     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
      * See the class documentation for more information on what is required of the given buffers for composition to be
      * allowed.
@@ -156,7 +146,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         IllegalStateException ise = null;
         for (int i = 0; i < sends.length; i++) {
             if (ise != null) {
-                sends[i].discard();
+                sends[i].close();
             } else {
                 try {
                     bufs[i] = sends[i].receive();
@@ -225,8 +215,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (buf.capacity() > 0) {
             return true;
         } else {
-            // If we filter a buffer out, then we must make sure to close it since we incremented the reference count
-            // with Deref.get() earlier.
+            // If we filter a buffer out, then we must make sure to close it since it's ownership was sent to us.
             buf.close();
             return false;
         }
@@ -234,10 +223,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     private static Stream<Buffer> flattenBuffer(Buffer buf) {
         if (buf instanceof CompositeBuffer) {
-            // Extract components and move our reference count from the composite onto the components.
+            // Extract components so composite buffers always have non-composite components.
             var composite = (CompositeBuffer) buf;
-            var bufs = composite.bufs;
-            return Stream.of(bufs);
+            return Stream.of(composite.bufs);
         }
         return Stream.of(buf);
     }

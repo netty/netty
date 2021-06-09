@@ -29,7 +29,7 @@ public interface Owned<T> {
      * <p>
      * This method is called by {@link Send} implementations. These implementations will ensure that the transfer of
      * ownership (the calling of this method) happens-before the new owner begins accessing the new object. This ensures
-     * that the new resource instanec is safely published to the new owners.
+     * that the new resource instance is safely published to the new owners.
      *
      * @param drop The drop object that knows how to dispose of the state represented by this {@link Resource}.
      * @return A new resource instance that is exactly the same as this resource.

@@ -43,8 +43,6 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
 
     /**
      * Create a new {@link BufferHolder} to hold the given {@linkplain Buffer buffer}.
-     * <p>
-     * <strong>Note:</strong> this increases the reference count of the given buffer.
      *
      * @param buf The {@linkplain Buffer buffer} to be held by this holder.
      */
@@ -60,7 +58,7 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
      * @param send The {@linkplain Buffer buffer} to be held by this holder.
      */
     protected BufferHolder(Send<Buffer> send) {
-        buf = Objects.requireNonNull(send, "The send cannot be null.").receive();
+        buf = Objects.requireNonNull(send, "The Send-object cannot be null.").receive();
     }
 
     @Override
@@ -89,8 +87,8 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
      * <p>
      * This method is protected to permit advanced use cases of {@link BufferHolder} sub-class implementations.
      * <p>
-     * <strong>Note:</strong> this method decreases the reference count of the current buffer,
-     * and takes exclusive ownership of the sent buffer.
+     * <strong>Note:</strong> this method closes the current buffer,
+     * and takes exclusive ownership of the received buffer.
      * <p>
      * The buffer assignment is performed using a plain store.
      *
@@ -107,8 +105,8 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
      * <p>
      * This method is protected to permit advanced use cases of {@link BufferHolder} sub-class implementations.
      * <p>
-     * <strong>Note:</strong> this method decreases the reference count of the current buffer,
-     * and takes exclusive ownership of the sent buffer.
+     * <strong>Note:</strong> this method closes the current buffer,
+     * and takes exclusive ownership of the received buffer.
      * <p>
      * The buffer assignment is performed using a volatile store.
      *

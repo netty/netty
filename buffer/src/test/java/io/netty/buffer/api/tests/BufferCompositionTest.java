@@ -72,7 +72,7 @@ public class BufferCompositionTest extends BufferTestSupport {
             try {
                 assertThrows(BufferClosedException.class, () -> bufA.extendWith(sendA));
             } finally {
-                sendA.discard();
+                sendA.close();
             }
 
             CompositeBuffer bufB = CompositeBuffer.compose(allocator, allocator.allocate(4).send());
@@ -80,7 +80,7 @@ public class BufferCompositionTest extends BufferTestSupport {
             try (CompositeBuffer compositeBuffer = CompositeBuffer.compose(allocator, sendB)) {
                 assertThrows(IllegalStateException.class, () -> compositeBuffer.extendWith(sendB));
             } finally {
-                sendB.discard();
+                sendB.close();
             }
         }
     }

@@ -35,10 +35,10 @@ class BufferRefTest {
             try (Buffer b = allocator.allocate(8)) {
                 ref = new BufferRef(b.send());
             }
-            ref.contents().writeInt(42);
-            assertThat(ref.contents().readInt()).isEqualTo(42);
+            ref.content().writeInt(42);
+            assertThat(ref.content().readInt()).isEqualTo(42);
             ref.close();
-            assertThrows(BufferClosedException.class, () -> ref.contents().writeInt(32));
+            assertThrows(BufferClosedException.class, () -> ref.content().writeInt(32));
         }
     }
 
@@ -47,10 +47,10 @@ class BufferRefTest {
         try (BufferAllocator allocator = BufferAllocator.heap();
              Buffer buf = allocator.allocate(8)) {
             BufferRef ref = new BufferRef(buf.send());
-            ref.contents().writeInt(42);
-            assertThat(ref.contents().readInt()).isEqualTo(42);
+            ref.content().writeInt(42);
+            assertThat(ref.content().readInt()).isEqualTo(42);
             ref.close();
-            assertThrows(BufferClosedException.class, () -> ref.contents().writeInt(32));
+            assertThrows(BufferClosedException.class, () -> ref.content().writeInt(32));
         }
     }
 
@@ -67,17 +67,17 @@ class BufferRefTest {
             }));
 
             orig.get().writeInt(42);
-            assertThat(ref.contents().readInt()).isEqualTo(42);
+            assertThat(ref.content().readInt()).isEqualTo(42);
 
             try (Buffer buf = allocator.allocate(8)) {
                 ref.replace(buf.send()); // Pass replacement via send().
             }
 
             assertThrows(BufferClosedException.class, () -> orig.get().writeInt(32));
-            ref.contents().writeInt(42);
-            assertThat(ref.contents().readInt()).isEqualTo(42);
+            ref.content().writeInt(42);
+            assertThat(ref.content().readInt()).isEqualTo(42);
             ref.close();
-            assertThrows(BufferClosedException.class, () -> ref.contents().writeInt(32));
+            assertThrows(BufferClosedException.class, () -> ref.content().writeInt(32));
         }
     }
 
@@ -85,11 +85,11 @@ class BufferRefTest {
     public void sendingRefMustSendBuffer() {
         try (BufferAllocator allocator = BufferAllocator.heap();
              BufferRef refA = new BufferRef(allocator.allocate(8).send())) {
-            refA.contents().writeInt(42);
+            refA.content().writeInt(42);
             Send<BufferRef> send = refA.send();
-            assertThrows(BufferClosedException.class, () -> refA.contents().readInt());
+            assertThrows(BufferClosedException.class, () -> refA.content().readInt());
             try (BufferRef refB = send.receive()) {
-                assertThat(refB.contents().readInt()).isEqualTo(42);
+                assertThat(refB.content().readInt()).isEqualTo(42);
             }
         }
     }
