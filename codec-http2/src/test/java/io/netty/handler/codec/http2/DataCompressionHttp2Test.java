@@ -284,34 +284,6 @@ public class DataCompressionHttp2Test {
     }
 
     @Test
-    public void brotliEncodingMultipleMessages() throws Exception {
-        final String text1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
-        final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
-        final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
-        bootstrapEnv(data1.readableBytes() + data2.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text1 + text2, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data1.release();
-            data2.release();
-        }
-    }
-
-    @Test
     public void deflateEncodingWriteLargeMessage() throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
