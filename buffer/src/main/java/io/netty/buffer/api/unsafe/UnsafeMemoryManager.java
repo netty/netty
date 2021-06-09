@@ -29,6 +29,15 @@ import java.lang.ref.Cleaner;
 import static io.netty.buffer.api.internal.Statics.convert;
 
 public class UnsafeMemoryManager implements MemoryManager {
+    public UnsafeMemoryManager() {
+        if (!PlatformDependent.hasUnsafe()) {
+            throw new UnsupportedOperationException("Unsafe is not available.");
+        }
+        if (!PlatformDependent.hasDirectBufferNoCleanerConstructor()) {
+            throw new UnsupportedOperationException("DirectByteBuffer internal constructor is not available.");
+        }
+    }
+
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
                                  AllocationType allocationType) {
