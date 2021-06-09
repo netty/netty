@@ -76,17 +76,64 @@ public class HttpUtilTest {
 
     @Test
     public void testGetCharset() {
-        String NORMAL_CONTENT_TYPE = "text/html; charset=utf-8";
-        String UPPER_CASE_NORMAL_CONTENT_TYPE = "TEXT/HTML; CHARSET=UTF-8";
+        testGetCharsetUtf8("text/html; charset=utf-8");
+    }
+
+    @Test
+    public void testGetCharsetNoSpace() {
+        testGetCharsetUtf8("text/html;charset=utf-8");
+    }
+
+    @Test
+    public void testGetCharsetQuoted() {
+        testGetCharsetUtf8("text/html; charset=\"utf-8\"");
+    }
+
+    @Test
+    public void testGetCharsetNoSpaceQuoted() {
+        testGetCharsetUtf8("text/html;charset=\"utf-8\"");
+    }
+
+    private void testGetCharsetUtf8(String contentType) {
+        String UPPER_CASE_NORMAL_CONTENT_TYPE = contentType.toUpperCase();
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        message.headers().set(HttpHeaderNames.CONTENT_TYPE, NORMAL_CONTENT_TYPE);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(NORMAL_CONTENT_TYPE));
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(contentType));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
+    }
+
+    @Test
+    public void testGetCharsetNoLeadingQuotes() {
+        testGetCharsetInvalidQuotes("text/html;charset=utf-8\"");
+    }
+
+    @Test
+    public void testGetCharsetNoTrailingQuotes() {
+        testGetCharsetInvalidQuotes("text/html;charset=\"utf-8");
+    }
+
+    @Test
+    public void testGetCharsetOnlyQuotes() {
+        testGetCharsetInvalidQuotes("text/html;charset=\"\"");
+    }
+
+    private static void testGetCharsetInvalidQuotes(String contentType) {
+        String UPPER_CASE_NORMAL_CONTENT_TYPE = contentType.toUpperCase();
+
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message, CharsetUtil.ISO_8859_1));
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(contentType, CharsetUtil.ISO_8859_1));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message, CharsetUtil.ISO_8859_1));
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE,
+                CharsetUtil.ISO_8859_1));
     }
 
     @Test

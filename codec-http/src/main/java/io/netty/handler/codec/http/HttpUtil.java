@@ -395,11 +395,17 @@ public final class HttpUtil {
      */
     public static Charset getCharset(CharSequence contentTypeValue, Charset defaultCharset) {
         if (contentTypeValue != null) {
-            CharSequence charsetCharSequence = getCharsetAsSequence(contentTypeValue);
-            if (charsetCharSequence != null) {
+            CharSequence charsetRaw = getCharsetAsSequence(contentTypeValue);
+            if (charsetRaw != null) {
+                if (charsetRaw.length() > 2) { // at least contains 2 quotes(")
+                    if (charsetRaw.charAt(0) == '"' && charsetRaw.charAt(charsetRaw.length() - 1) == '"') {
+                        charsetRaw = charsetRaw.subSequence(1, charsetRaw.length() - 1);
+                    }
+                }
                 try {
-                    return Charset.forName(charsetCharSequence.toString());
+                    return Charset.forName(charsetRaw.toString());
                 } catch (UnsupportedCharsetException | IllegalCharsetNameException ignored) {
+                    // just return the default charset
                     return defaultCharset;
                 }
             } else {
