@@ -152,25 +152,6 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.addListeners(listeners);
-        return this;
-    }
-
-    @Override
-    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-        super.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public DefaultChannelGroupFuture removeListeners(
-            GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.removeListeners(listeners);
-        return this;
-    }
-
-    @Override
     public DefaultChannelGroupFuture await() throws InterruptedException {
         super.await();
         return this;

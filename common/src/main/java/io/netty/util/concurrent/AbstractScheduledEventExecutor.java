@@ -311,27 +311,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public RunnableScheduledFuture<V> addListeners(
-                GenericFutureListener<? extends Future<? super V>>... listeners) {
-            future.addListeners(listeners);
-            return this;
-        }
-
-        @Override
-        public RunnableScheduledFuture<V> removeListener(
-                GenericFutureListener<? extends Future<? super V>> listener) {
-            future.removeListener(listener);
-            return this;
-        }
-
-        @Override
-        public RunnableScheduledFuture<V> removeListeners(
-                GenericFutureListener<? extends Future<? super V>>... listeners) {
-            future.removeListeners(listeners);
-            return this;
-        }
-
-        @Override
         public boolean isPeriodic() {
             return future.isPeriodic();
         }

@@ -61,24 +61,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public RunnableFuture<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        promise.addListeners(listeners);
-        return this;
-    }
-
-    @Override
-    public RunnableFuture<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        promise.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public RunnableFuture<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        promise.removeListeners(listeners);
-        return this;
-    }
-
-    @Override
     public RunnableFuture<V> sync() throws InterruptedException {
         promise.sync();
         return this;

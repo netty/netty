@@ -28,15 +28,6 @@ public interface ChannelProgressivePromise extends ProgressivePromise<Void>, Cha
     ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
-
-    @Override
-    ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
-
-    @Override
-    ChannelProgressivePromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
-
-    @Override
     ChannelProgressivePromise sync() throws InterruptedException;
 
     @Override

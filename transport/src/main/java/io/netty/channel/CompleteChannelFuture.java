@@ -58,24 +58,6 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
     }
 
     @Override
-    public ChannelFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.addListeners(listeners);
-        return this;
-    }
-
-    @Override
-    public ChannelFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-        super.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public ChannelFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        super.removeListeners(listeners);
-        return this;
-    }
-
-    @Override
     public ChannelFuture syncUninterruptibly() {
         return this;
     }

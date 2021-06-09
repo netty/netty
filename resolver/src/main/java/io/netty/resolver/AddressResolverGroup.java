@@ -111,10 +111,6 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             executorTerminationListeners.clear();
         }
 
-        for (final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry : listeners) {
-            entry.getKey().terminationFuture().removeListener(entry.getValue());
-        }
-
         for (final AddressResolver<T> r: rArray) {
             try {
                 r.close();
