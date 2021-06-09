@@ -412,6 +412,9 @@ public abstract class BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.heap();
              Buffer source = allocator.allocate(8)) {
             assertThrows(expected, () -> source.copyInto(0, buf, 0, 1));
+            if (expected == BufferClosedException.class) {
+                assertThrows(expected, () -> buf.copyInto(0, source, 0, 1));
+            }
         }
     }
 

@@ -311,6 +311,14 @@
       </properties>
     </profile>
 
+    <!-- Enable Unsafe buffer implementation. -->
+    <profile>
+      <id>unsafeBuffer</id>
+      <properties>
+        <argLine.java9>-Dio.netty.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.buffer.api.MemoryManager=Unsafe</argLine.java9>
+      </properties>
+    </profile>
+
     <profile>
       <id>boringssl</id>
       <activation>

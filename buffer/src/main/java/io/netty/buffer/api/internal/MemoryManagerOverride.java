@@ -17,19 +17,41 @@ package io.netty.buffer.api.internal;
 
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManager;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 public final class MemoryManagerOverride {
-    private static final MemoryManager DEFAULT = new ByteBufferMemoryManager();
+    private static final MemoryManager DEFAULT = createDefaultMemoryManagerInstance();
     private static final AtomicInteger OVERRIDES_AVAILABLE = new AtomicInteger();
     private static final Map<Thread, MemoryManager> OVERRIDES = Collections.synchronizedMap(new IdentityHashMap<>());
 
     private MemoryManagerOverride() {
+    }
+
+    private static MemoryManager createDefaultMemoryManagerInstance() {
+        String systemProperty = "io.netty.buffer.api.MemoryManager";
+        String configured = System.getProperty(systemProperty);
+        if (configured != null) {
+            Optional<MemoryManager> candidateManager = MemoryManager.lookupImplementation(configured);
+            InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagerOverride.class);
+            if (candidateManager.isPresent()) {
+                logger.debug("{} configured: {}", systemProperty, configured);
+                return candidateManager.get();
+            } else {
+                MemoryManager fallback = new ByteBufferMemoryManager();
+                logger.debug("{} requested implementation is unavailable: {} (using default {} implementation instead)",
+                             systemProperty, configured, fallback.implementationName());
+                return fallback;
+            }
+        }
+        return new ByteBufferMemoryManager();
     }
 
     public static MemoryManager configuredOrDefaultManager() {
