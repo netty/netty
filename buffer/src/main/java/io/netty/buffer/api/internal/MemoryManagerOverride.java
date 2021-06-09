@@ -15,8 +15,8 @@
  */
 package io.netty.buffer.api.internal;
 
-import io.netty.buffer.api.MemoryManagers;
-import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManagers;
+import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManager;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -24,22 +24,22 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-public final class MemoryManagersOverride {
-    private static final MemoryManagers DEFAULT = new ByteBufferMemoryManagers();
+public final class MemoryManagerOverride {
+    private static final MemoryManager DEFAULT = new ByteBufferMemoryManager();
     private static final AtomicInteger OVERRIDES_AVAILABLE = new AtomicInteger();
-    private static final Map<Thread, MemoryManagers> OVERRIDES = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<Thread, MemoryManager> OVERRIDES = Collections.synchronizedMap(new IdentityHashMap<>());
 
-    private MemoryManagersOverride() {
+    private MemoryManagerOverride() {
     }
 
-    public static MemoryManagers getManagers() {
+    public static MemoryManager getManagers() {
         if (OVERRIDES_AVAILABLE.get() > 0) {
             return OVERRIDES.getOrDefault(Thread.currentThread(), DEFAULT);
         }
         return DEFAULT;
     }
 
-    public static <T> T using(MemoryManagers managers, Supplier<T> supplier) {
+    public static <T> T using(MemoryManager managers, Supplier<T> supplier) {
         Thread thread = Thread.currentThread();
         OVERRIDES.put(thread, managers);
         OVERRIDES_AVAILABLE.incrementAndGet();

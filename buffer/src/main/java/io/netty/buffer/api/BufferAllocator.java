@@ -29,12 +29,12 @@ public interface BufferAllocator extends AutoCloseable {
      * On-heap buffers have a {@code byte[]} internally, and their {@linkplain Buffer#nativeAddress() native address}
      * is zero.
      * <p>
-     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManagers#defaultManagers()}.
+     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
      * @return A non-pooling allocator of on-heap buffers
      */
     static BufferAllocator heap() {
-        return new ManagedBufferAllocator(MemoryManagers.defaultManagers().heapMemoryManager());
+        return new ManagedBufferAllocator(MemoryManager.instance(), false);
     }
 
     /**
@@ -42,12 +42,12 @@ public interface BufferAllocator extends AutoCloseable {
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
      * {@linkplain Buffer#nativeAddress() native address method.
      * <p>
-     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManagers#defaultManagers()}.
+     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
      * @return A non-pooling allocator of on-heap buffers
      */
     static BufferAllocator direct() {
-        return new ManagedBufferAllocator(MemoryManagers.defaultManagers().nativeMemoryManager());
+        return new ManagedBufferAllocator(MemoryManager.instance(), true);
     }
 
     /**
@@ -55,12 +55,12 @@ public interface BufferAllocator extends AutoCloseable {
      * On-heap buffers have a {@code byte[]} internally, and their {@linkplain Buffer#nativeAddress() native address}
      * is zero.
      * <p>
-     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManagers#defaultManagers()}.
+     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
      * @return A pooling allocator of on-heap buffers
      */
     static BufferAllocator pooledHeap() {
-        return new PooledBufferAllocator(MemoryManagers.defaultManagers().heapMemoryManager());
+        return new PooledBufferAllocator(MemoryManager.instance(), false);
     }
 
     /**
@@ -68,12 +68,12 @@ public interface BufferAllocator extends AutoCloseable {
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
      * {@linkplain Buffer#nativeAddress() native address method.
      * <p>
-     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManagers#defaultManagers()}.
+     * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
      * @return A pooling allocator of on-heap buffers
      */
     static BufferAllocator pooledDirect() {
-        return new PooledBufferAllocator(MemoryManagers.defaultManagers().nativeMemoryManager());
+        return new PooledBufferAllocator(MemoryManager.instance(), true);
     }
 
     /**

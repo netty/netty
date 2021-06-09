@@ -15,9 +15,18 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.MemoryManagerOverride;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.Cleaner;
+import java.util.Optional;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * The choice of {@code MemoryManager} implementation also determines the choice of {@link Buffer} implementation.
@@ -32,11 +41,66 @@ import java.lang.ref.Cleaner;
 @UnstableApi
 public interface MemoryManager {
     /**
-     * Queries whether this memory manager allocates off-heap buffers.
-     *
-     * @return {@code true} if this manager allocates off-heap buffers.
+     * Get the default, or currently configured, memory managers instance.
+     * @return A MemoryManagers instance.
      */
-    boolean isNative();
+    static MemoryManager instance() {
+        return MemoryManagerOverride.getManagers();
+    }
+
+    /**
+     * Temporarily override the default configured memory managers instance.
+     * <p>
+     * Calls to {@link #instance()} from within the given supplier will get the given managers instance.
+     *
+     * @param managers Override the default configured managers instance with this instance.
+     * @param supplier The supplier function to be called while the override is in place.
+     * @param <T> The result type from the supplier.
+     * @return The result from the supplier.
+     */
+    static <T> T using(MemoryManager managers, Supplier<T> supplier) {
+        return MemoryManagerOverride.using(managers, supplier);
+    }
+
+    /**
+     * Get a lazy-loading stream of all available memory managers.
+     * <p>
+     * Note: All available {@link MemoryManager} instances are service loaded and instantiated on every call.
+     *
+     * @return A stream of providers of memory managers instances.
+     */
+    static Stream<Provider<MemoryManager>> availableManagers() {
+        var loader = ServiceLoader.load(MemoryManager.class);
+        return loader.stream();
+    }
+
+    /**
+     * Find a {@link MemoryManager} implementation by its {@linkplain #implementationName() implementation name}.
+     * <p>
+     * Note: All available {@link MemoryManager} instances are service loaded and instantiated every time this
+     * method is called.
+     *
+     * @param implementationName The named implementation to look for.
+     * @return A {@link MemoryManager} implementation, if any was found.
+     */
+    static Optional<MemoryManager> lookupImplementation(String implementationName) {
+        return availableManagers()
+                .flatMap(provider -> {
+                    try {
+                        return Stream.ofNullable(provider.get());
+                    } catch (ServiceConfigurationError | Exception e) {
+                        InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManager.class);
+                        if (logger.isTraceEnabled()) {
+                            logger.debug("Failed to load a MemoryManager implementation.", e);
+                        } else {
+                            logger.debug("Failed to load a MemoryManager implementation: " + e.getMessage());
+                        }
+                        return Stream.empty();
+                    }
+                })
+                .filter(impl -> implementationName.equals(impl.implementationName()))
+                .findFirst();
+    }
 
     /**
      * Allocates a shared buffer. "Shared" is the normal type of buffer, and means the buffer permit concurrent access
@@ -48,9 +112,13 @@ public interface MemoryManager {
      *            The size has passed the {@link BufferAllocator#checkSize(long)} check.
      * @param drop The {@link Drop} instance to use when the buffer is {@linkplain Resource#close() closed}.
      * @param cleaner The {@link Cleaner} that the underlying memory should be attached to. Can be {@code null}.
+     * @param allocationType The type of allocation to perform.
+     *                      Typically, one of the {@linkplain StandardAllocationTypes}.
      * @return A {@link Buffer} instance with the given configuration.
+     * @throws IllegalArgumentException For unknown {@link AllocationType}s.
      */
-    Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner);
+    Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
+                          AllocationType allocationType);
 
     /**
      * Allocates a constant buffer based on the given parent. A "constant" buffer is conceptually similar to a read-only
@@ -60,8 +128,8 @@ public interface MemoryManager {
      *
      * @param readOnlyConstParent The read-only parent buffer for which a const buffer should be created. The parent
      *                            buffer is allocated in the usual way, with
-     *                            {@link #allocateShared(AllocatorControl, long, Drop, Cleaner)}, initialised with
-     *                            contents, and then made {@linkplain Buffer#makeReadOnly() read-only}.
+     *                            {@link #allocateShared(AllocatorControl, long, Drop, Cleaner, AllocationType)},
+     *                            initialised with contents, and then made {@linkplain Buffer#makeReadOnly() read-only}.
      * @return A const buffer with the same size, contents, and read-only state of the given parent buffer.
      */
     Buffer allocateConstChild(Buffer readOnlyConstParent);
@@ -101,4 +169,12 @@ public interface MemoryManager {
      * @return A new opaque memory instance that represents the given slice of the original.
      */
     Object sliceMemory(Object memory, int offset, int length);
+
+    /**
+     * Get the name for this implementation, which can be used for finding this particular implementation via the
+     * {@link #lookupImplementation(String)} method.
+     *
+     * @return The name of this memory managers implementation.
+     */
+    String implementationName();
 }

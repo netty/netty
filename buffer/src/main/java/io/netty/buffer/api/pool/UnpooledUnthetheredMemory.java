@@ -15,6 +15,7 @@
  */
 package io.netty.buffer.api.pool;
 
+import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
@@ -26,11 +27,12 @@ class UnpooledUnthetheredMemory implements AllocatorControl.UntetheredMemory {
     private final MemoryManager manager;
     private final Buffer buffer;
 
-    UnpooledUnthetheredMemory(PooledBufferAllocator allocator, MemoryManager manager, int size) {
+    UnpooledUnthetheredMemory(PooledBufferAllocator allocator, MemoryManager manager,
+                              AllocationType allocationType, int size) {
         this.manager = manager;
         PooledAllocatorControl allocatorControl = new PooledAllocatorControl();
         allocatorControl.parent = allocator;
-        buffer = manager.allocateShared(allocatorControl, size, manager.drop(), Statics.CLEANER);
+        buffer = manager.allocateShared(allocatorControl, size, manager.drop(), Statics.CLEANER, allocationType);
     }
 
     @Override

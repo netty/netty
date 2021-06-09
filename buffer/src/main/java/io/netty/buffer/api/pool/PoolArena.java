@@ -15,6 +15,7 @@
  */
 package io.netty.buffer.api.pool;
 
+import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.MemoryManager;
@@ -39,6 +40,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl
 
     final PooledBufferAllocator parent;
     final MemoryManager manager;
+    final AllocationType allocationType;
 
     final int numSmallSubpagePools;
     final int directMemoryCacheAlignment;
@@ -70,11 +72,12 @@ class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl
     // Number of thread caches backed by this arena.
     final AtomicInteger numThreadCaches = new AtomicInteger();
 
-    protected PoolArena(PooledBufferAllocator parent, MemoryManager manager, int pageSize,
-                        int pageShifts, int chunkSize, int cacheAlignment) {
+    protected PoolArena(PooledBufferAllocator parent, MemoryManager manager, AllocationType allocationType,
+                        int pageSize, int pageShifts, int chunkSize, int cacheAlignment) {
         super(pageSize, pageShifts, chunkSize, cacheAlignment);
         this.parent = parent;
         this.manager = manager;
+        this.allocationType = allocationType;
         directMemoryCacheAlignment = cacheAlignment;
 
         numSmallSubpagePools = nSubpages;
@@ -211,7 +214,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl
     private UntetheredMemory allocateHuge(int size) {
         activeBytesHuge.add(size);
         allocationsHuge.increment();
-        return new UnpooledUnthetheredMemory(parent, manager, size);
+        return new UnpooledUnthetheredMemory(parent, manager, allocationType, size);
     }
 
     void free(PoolChunk chunk, long handle, int normCapacity, PoolThreadCache cache) {
