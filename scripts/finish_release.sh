@@ -42,7 +42,7 @@ export JAVA_HOME="$JAVA8_HOME"
 
 ./mvnw -Psonatype-oss-release -am -pl resolver-dns-native-macos,transport-native-unix-common,transport-native-kqueue clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
 
-./mvnw -Psonatype-oss-release,full,uber-staging -pl all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
+./mvnw -Psonatype-oss-release,full,uber-staging -pl all clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
 
 ./mvnw org.sonatype.plugins:nexus-staging-maven-plugin:rc-close org.sonatype.plugins:nexus-staging-maven-plugin:rc-release -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true -DstagingProgressTimeoutMinutes=10
 
