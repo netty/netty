@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -110,7 +112,20 @@ public class Http3FrameCodecTest {
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new ChannelOutboundHandlerAdapter()).get();
         qpackAttributes.decoderStream(decoderStream);
-        codecChannel = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, newCodec()).get();
+        codecChannel = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+                new ChannelInitializer<QuicStreamChannel>() {
+                    @Override
+                    protected void initChannel(QuicStreamChannel ch) {
+                        Http3RequestStreamEncodeStateValidator encStateValidator =
+                                new Http3RequestStreamEncodeStateValidator();
+                        Http3RequestStreamDecodeStateValidator decStateValidator =
+                                new Http3RequestStreamDecodeStateValidator();
+                        ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder,
+                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator));
+                        ch.pipeline().addLast(encStateValidator);
+                        ch.pipeline().addLast(decStateValidator);
+                    }
+                }).get();
     }
 
     @After
@@ -145,6 +160,9 @@ public class Http3FrameCodecTest {
     public void testHttp3DataFrame() throws Exception {
         byte[] bytes = new byte[1024];
         ThreadLocalRandom.current().nextBytes(bytes);
+        final DefaultHttp3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame(new DefaultHttp3Headers());
+        addRequestHeaders(headersFrame.headers());
+        testFrameEncodedAndDecoded(headersFrame);
         testFrameEncodedAndDecoded(new DefaultHttp3DataFrame(Unpooled.wrappedBuffer(bytes)));
     }
 
@@ -413,11 +431,15 @@ public class Http3FrameCodecTest {
         verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
     }
 
-    private static void addRequestHeaders(Http3Headers headers) {
+    private static void addPseudoRequestHeaders(Http3Headers headers) {
         headers.add(":authority", "netty.quic"); // name only
         headers.add(":path", "/"); // name & value
         headers.add(":method", "GET"); // name & value with few options per name
         headers.add(":scheme", "https");
+    }
+
+    private static void addRequestHeaders(Http3Headers headers) {
+        addPseudoRequestHeaders(headers);
         headers.add("x-qpack-draft", "19");
     }
 
@@ -491,6 +513,10 @@ public class Http3FrameCodecTest {
 
     @Test
     public void testMultipleFramesEncodedAndDecodedInOneBufferPushPromise() throws Exception {
+        final DefaultHttp3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame(new DefaultHttp3Headers());
+        addPseudoRequestHeaders(headersFrame.headers());
+        testFrameEncodedAndDecoded(headersFrame);
+
         Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(9);
         addRequestHeaders(pushPromiseFrame.headers());
         testMultipleFramesEncodedAndDecodedInOneBuffer(pushPromiseFrame,
@@ -593,11 +619,6 @@ public class Http3FrameCodecTest {
         while ((msg = decoderStream.readOutbound()) != null) {
             qpackDecoderHandler.channelRead(decoderStream.pipeline().firstContext(), msg);
         }
-    }
-
-    private Http3FrameCodec newCodec() {
-        return new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder, MAX_HEADER_SIZE,
-                encoder);
     }
 
     private static boolean frameContainsHeaders(Http3Frame frame) {

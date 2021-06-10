@@ -25,6 +25,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 
 import java.util.function.LongFunction;
 
+import static io.netty.incubator.codec.http3.Http3RequestStreamCodecState.NO_STATE;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 
 /**
@@ -74,7 +75,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
                 qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
-                codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION));
+                codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE));
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
@@ -111,18 +112,22 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      *
      * @return a new codec.
      */
-    public final ChannelHandler newCodec() {
-        return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE);
+    public final ChannelHandler newCodec(Http3RequestStreamCodecState encodeState,
+                                         Http3RequestStreamCodecState decodeState) {
+        return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE, encodeState, decodeState);
     }
 
-    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler(QuicStreamChannel forStream) {
+    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler(
+            QuicStreamChannel forStream, Http3RequestStreamCodecState encodeState,
+            Http3RequestStreamCodecState decodeState) {
         final QpackAttributes qpackAttributes = Http3.getQpackAttributes(forStream.parent());
         assert qpackAttributes != null;
         if (localControlStreamHandler.isServer()) {
-            return Http3RequestStreamValidationHandler.newServerValidator(qpackAttributes, qpackDecoder);
+            return Http3RequestStreamValidationHandler.newServerValidator(qpackAttributes, qpackDecoder,
+                    encodeState, decodeState);
         }
         return Http3RequestStreamValidationHandler.newClientValidator(localControlStreamHandler::isGoAwayReceived,
-                qpackAttributes, qpackDecoder);
+                qpackAttributes, qpackDecoder, encodeState, decodeState);
     }
 
     @Override

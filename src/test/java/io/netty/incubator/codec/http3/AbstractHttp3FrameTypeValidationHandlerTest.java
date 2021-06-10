@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -32,24 +33,29 @@ import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http3Frame> {
 
     private final QuicStreamType defaultStreamType;
+    private final boolean isOutbound;
+    private final boolean isInbound;
     protected EmbeddedQuicChannel parent;
     protected QpackAttributes qpackAttributes;
 
-    protected abstract Http3FrameTypeValidationHandler<T> newHandler();
+    protected abstract ChannelHandler newHandler();
 
     protected abstract List<T> newValidFrames();
 
     protected abstract List<Http3Frame> newInvalidFrames();
 
-    protected AbstractHttp3FrameTypeValidationHandlerTest(QuicStreamType defaultStreamType) {
+    protected AbstractHttp3FrameTypeValidationHandlerTest(QuicStreamType defaultStreamType, boolean isOutbound,
+                                                          boolean isInbound) {
         this.defaultStreamType = defaultStreamType;
+        this.isOutbound = isOutbound;
+        this.isInbound = isInbound;
     }
 
     @Before
@@ -73,6 +79,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testValidTypeInbound() throws Exception {
+        assumeTrue(isInbound);
         final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
@@ -91,6 +98,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testValidTypeOutbound() throws Exception {
+        assumeTrue(isOutbound);
         final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
         List<T> validFrames = newValidFrames();
         for (T valid : validFrames) {
@@ -103,6 +111,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testInvalidTypeInbound() throws Exception {
+        assumeTrue(isInbound);
         final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
 
         Http3ErrorCode errorCode = inboundErrorCodeInvalid();
@@ -126,6 +135,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
     @Test
     public void testInvalidTypeOutbound() throws Exception {
+        assumeTrue(isOutbound);
         final EmbeddedQuicStreamChannel channel = newStream(defaultStreamType, newHandler());
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
@@ -157,7 +167,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         ReferenceCountUtil.release(streamType);
     }
 
-    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType, Http3FrameTypeValidationHandler<T> handler)
+    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType, ChannelHandler handler)
             throws Exception {
         return (EmbeddedQuicStreamChannel) parent.createStream(streamType, handler).get();
     }

@@ -67,9 +67,13 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
     @Override
     void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         ChannelPipeline pipeline = streamChannel.pipeline();
+        Http3RequestStreamEncodeStateValidator encodeStateValidator = new Http3RequestStreamEncodeStateValidator();
+        Http3RequestStreamDecodeStateValidator decodeStateValidator = new Http3RequestStreamDecodeStateValidator();
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-        pipeline.addLast(newCodec());
-        pipeline.addLast(newRequestStreamValidationHandler(streamChannel));
+        pipeline.addLast(newCodec(encodeStateValidator, decodeStateValidator));
+        pipeline.addLast(encodeStateValidator);
+        pipeline.addLast(decodeStateValidator);
+        pipeline.addLast(newRequestStreamValidationHandler(streamChannel, encodeStateValidator, decodeStateValidator));
         pipeline.addLast(requestStreamHandler);
     }
 }

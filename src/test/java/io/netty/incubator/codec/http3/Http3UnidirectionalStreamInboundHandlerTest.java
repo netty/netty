@@ -153,7 +153,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         }
 
         Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
+                (v, __, ___) -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
                 new QpackEncoder()),
                 outboundControlHandler, null, ChannelInboundHandlerAdapter::new,
                 ChannelInboundHandlerAdapter::new);
@@ -235,7 +235,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         final QpackEncoder qpackEncoder = new QpackEncoder();
         final QpackDecoder qpackDecoder = new QpackDecoder(new DefaultHttp3SettingsFrame());
         return new Http3UnidirectionalStreamInboundHandler(
-                v -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
+                (v, __, ___) -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
                 qpackEncoder),
                 new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                         new CodecHandler()), factory,

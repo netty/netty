@@ -16,10 +16,8 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
@@ -41,11 +39,11 @@ public class Http3ControlStreamOutboundHandlerTest extends
     private final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
 
     public Http3ControlStreamOutboundHandlerTest() {
-        super(QuicStreamType.UNIDIRECTIONAL);
+        super(QuicStreamType.UNIDIRECTIONAL, true, true);
     }
 
     @Override
-    protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
+    protected Http3FrameTypeDuplexValidationHandler<Http3ControlStreamFrame> newHandler() {
         return new Http3ControlStreamOutboundHandler(false, settingsFrame, new ChannelInboundHandlerAdapter());
     }
 
@@ -115,13 +113,12 @@ public class Http3ControlStreamOutboundHandlerTest extends
     }
 
     @Override
-    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType,
-                                                  Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler)
+    protected EmbeddedQuicStreamChannel newStream(QuicStreamType streamType, ChannelHandler handler)
             throws Exception {
         return newStream(handler);
     }
 
-    private EmbeddedQuicStreamChannel newStream(Http3FrameTypeValidationHandler<Http3ControlStreamFrame> handler)
+    private EmbeddedQuicStreamChannel newStream(ChannelHandler handler)
             throws Exception {
         EmbeddedQuicStreamChannel channel = super.newStream(QuicStreamType.UNIDIRECTIONAL, handler);
         ByteBuf buffer = channel.readOutbound();

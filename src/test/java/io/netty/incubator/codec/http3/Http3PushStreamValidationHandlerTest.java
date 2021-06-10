@@ -25,11 +25,11 @@ public class Http3PushStreamValidationHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3PushStreamFrame> {
 
     public Http3PushStreamValidationHandlerTest() {
-        super(QuicStreamType.UNIDIRECTIONAL);
+        super(QuicStreamType.UNIDIRECTIONAL, true, true);
     }
 
     @Override
-    protected Http3FrameTypeValidationHandler<Http3PushStreamFrame> newHandler() {
+    protected Http3FrameTypeDuplexValidationHandler<Http3PushStreamFrame> newHandler() {
         return Http3PushStreamValidationHandler.INSTANCE;
     }
 

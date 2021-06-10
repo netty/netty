@@ -27,7 +27,6 @@ import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -48,6 +47,8 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAM
 import static io.netty.incubator.codec.http3.Http3CodecUtils.numBytesForVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.readVariableLengthInteger;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Decodes / encodes {@link Http3Frame}s.
@@ -57,9 +58,10 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private final long maxHeaderListSize;
     private final QpackDecoder qpackDecoder;
     private final QpackEncoder qpackEncoder;
+    private final Http3RequestStreamCodecState encodeState;
+    private final Http3RequestStreamCodecState decodeState;
 
     private boolean firstFrame = true;
-    private boolean headersReceived;
     private boolean error;
     private long type = -1;
     private int payLoadLength = -1;
@@ -68,19 +70,23 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     static Http3FrameCodecFactory newFactory(QpackDecoder qpackDecoder,
                                              long maxHeaderListSize, QpackEncoder qpackEncoder) {
-        ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
-        ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
+        checkNotNull(qpackEncoder, "qpackEncoder");
+        checkNotNull(qpackDecoder, "qpackDecoder");
 
         // QPACK decoder and encoder are shared between streams in a connection.
-        return validator -> new Http3FrameCodec(validator, qpackDecoder, maxHeaderListSize, qpackEncoder);
+        return (validator, encodeState, decodeState) -> new Http3FrameCodec(validator, qpackDecoder,
+                maxHeaderListSize, qpackEncoder, encodeState, decodeState);
     }
 
     Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
-                    long maxHeaderListSize, QpackEncoder qpackEncoder) {
-        this.validator = ObjectUtil.checkNotNull(validator, "validator");
-        this.qpackDecoder = ObjectUtil.checkNotNull(qpackDecoder, "qpackDecoder");
-        this.maxHeaderListSize = ObjectUtil.checkPositive(maxHeaderListSize, "maxHeaderListSize");
-        this.qpackEncoder = ObjectUtil.checkNotNull(qpackEncoder, "qpackEncoder");
+                    long maxHeaderListSize, QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
+                    Http3RequestStreamCodecState decodeState) {
+        this.validator = checkNotNull(validator, "validator");
+        this.qpackDecoder = checkNotNull(qpackDecoder, "qpackDecoder");
+        this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        this.qpackEncoder = checkNotNull(qpackEncoder, "qpackEncoder");
+        this.encodeState = checkNotNull(encodeState, "encodeState");
+        this.decodeState = checkNotNull(decodeState, "decodeState");
     }
 
     @Override
@@ -222,8 +228,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                if (decodeHeaders(ctx, headersFrame.headers(), in, payLoadLength, headersReceived)) {
-                    headersReceived = true;
+                if (decodeHeaders(ctx, headersFrame.headers(), in, payLoadLength, decodeState.receivedFinalHeaders())) {
                     out.add(headersFrame);
                     return payLoadLength;
                 }
@@ -725,8 +730,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
          * Creates a new codec instance for the passed {@code streamType}.
          *
          * @param validator for the frames.
-         * @return new codec instance for the passed {@code streamType}..
+         * @param encodeState for the request stream.
+         * @param decodeState for the request stream.
+         * @return new codec instance for the passed {@code streamType}.
          */
-        ChannelHandler newCodec(Http3FrameTypeValidator validator);
+        ChannelHandler newCodec(Http3FrameTypeValidator validator, Http3RequestStreamCodecState encodeState,
+                                Http3RequestStreamCodecState decodeState);
     }
 }

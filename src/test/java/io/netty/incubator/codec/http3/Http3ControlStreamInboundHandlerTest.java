@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
@@ -50,7 +51,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     private QpackEncoder qpackEncoder;
 
     public Http3ControlStreamInboundHandlerTest(boolean server, boolean forwardControlFrames) {
-        super(QuicStreamType.UNIDIRECTIONAL);
+        super(QuicStreamType.UNIDIRECTIONAL, false, true);
         this.server = server;
         this.forwardControlFrames = forwardControlFrames;
     }
@@ -83,7 +84,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     @Override
-    protected Http3FrameTypeValidationHandler<Http3ControlStreamFrame> newHandler() {
+    protected ChannelHandler newHandler() {
         return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter(), qpackEncoder);
     }
 
@@ -229,6 +230,7 @@ public class Http3ControlStreamInboundHandlerTest extends
         }
         assertFrameReleased(frame);
     }
+
     @Test
     public void testSecondSettingsFrameFails() throws Exception {
         EmbeddedChannel channel = newStream();

@@ -38,7 +38,7 @@ import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_Q
 import static io.netty.incubator.codec.http3.QpackUtil.toIntOrThrow;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
-final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHandler<Http3ControlStreamFrame> {
+final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValidationHandler<Http3ControlStreamFrame> {
     final boolean server;
     private final ChannelHandler controlFrameHandler;
     private final QpackEncoder qpackEncoder;
@@ -75,18 +75,15 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeValidationHan
     }
 
     @Override
-    void frameTypeUnexpected(ChannelHandlerContext ctx, Object frame) {
-        if (!firstFrameRead && !(frame instanceof Http3SettingsFrame)) {
+    void readFrameDiscarded(ChannelHandlerContext ctx, Object discardedFrame) {
+        if (!firstFrameRead && !(discardedFrame instanceof Http3SettingsFrame)) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
                     "Missing settings frame.", forwardControlFrames());
-            ReferenceCountUtil.release(frame);
-            return;
         }
-        super.frameTypeUnexpected(ctx, frame);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Http3ControlStreamFrame frame) throws QpackException {
+    void channelRead(ChannelHandlerContext ctx, Http3ControlStreamFrame frame) throws QpackException {
         boolean isSettingsFrame = frame instanceof Http3SettingsFrame;
         if (!firstFrameRead && !isSettingsFrame) {
             Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,

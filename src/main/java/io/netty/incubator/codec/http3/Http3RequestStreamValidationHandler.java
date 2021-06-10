@@ -20,128 +20,60 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpStatusClass;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.function.BooleanSupplier;
 
-final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidationHandler<Http3RequestStreamFrame> {
-    private enum State {
-        Initial,
-        Headers,
-        Data,
-        End
-    }
-    private State readState = State.Initial;
-    private State writeState = State.Initial;
+import static io.netty.handler.codec.http.HttpMethod.HEAD;
+import static io.netty.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_MESSAGE_ERROR;
+import static io.netty.incubator.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
+
+final class Http3RequestStreamValidationHandler extends Http3FrameTypeDuplexValidationHandler<Http3RequestStreamFrame> {
     private final boolean server;
     private final BooleanSupplier goAwayReceivedSupplier;
     private final QpackAttributes qpackAttributes;
     private final QpackDecoder qpackDecoder;
+    private final Http3RequestStreamCodecState decodeState;
+    private final Http3RequestStreamCodecState encodeState;
 
     private boolean clientHeadRequest;
     private long expectedLength = -1;
     private long seenLength;
 
-    static Http3RequestStreamValidationHandler newServerValidator(QpackAttributes qpackAttributes,
-                                                                  QpackDecoder decoder) {
-        return new Http3RequestStreamValidationHandler(true, () -> false, qpackAttributes, decoder);
+    static Http3RequestStreamValidationHandler newServerValidator(
+            QpackAttributes qpackAttributes, QpackDecoder decoder, Http3RequestStreamCodecState encodeState,
+            Http3RequestStreamCodecState decodeState) {
+        return new Http3RequestStreamValidationHandler(true, () -> false, qpackAttributes, decoder,
+                encodeState, decodeState);
     }
 
-    static Http3RequestStreamValidationHandler newClientValidator(BooleanSupplier goAwayReceivedSupplier,
-                                                                  QpackAttributes qpackAttributes,
-                                                                  QpackDecoder decoder) {
-        return new Http3RequestStreamValidationHandler(false, goAwayReceivedSupplier, qpackAttributes, decoder);
+    static Http3RequestStreamValidationHandler newClientValidator(
+            BooleanSupplier goAwayReceivedSupplier, QpackAttributes qpackAttributes, QpackDecoder decoder,
+            Http3RequestStreamCodecState encodeState, Http3RequestStreamCodecState decodeState) {
+        return new Http3RequestStreamValidationHandler(false, goAwayReceivedSupplier, qpackAttributes, decoder,
+                encodeState, decodeState);
     }
 
     private Http3RequestStreamValidationHandler(boolean server, BooleanSupplier goAwayReceivedSupplier,
-                                                QpackAttributes qpackAttributes, QpackDecoder qpackDecoder) {
+                                                QpackAttributes qpackAttributes, QpackDecoder qpackDecoder,
+                                                Http3RequestStreamCodecState encodeState,
+                                                Http3RequestStreamCodecState decodeState) {
         super(Http3RequestStreamFrame.class);
         this.server = server;
         this.goAwayReceivedSupplier = goAwayReceivedSupplier;
         this.qpackAttributes = qpackAttributes;
         this.qpackDecoder = qpackDecoder;
-    }
-
-    private State checkState(boolean inbound, State state, Http3RequestStreamFrame frame) throws Http3Exception {
-        switch (state) {
-            case Initial:
-                if (!(frame instanceof Http3HeadersFrame)) {
-                    return null;
-                }
-                Http3HeadersFrame headersFrame = (Http3HeadersFrame) frame;
-                if (inbound) {
-                    if (headersFrame.headers().contains(HttpHeaderNames.CONNECTION)) {
-                        // We should close the stream.
-                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
-                        throw new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
-                                "connection header included");
-                    }
-                    CharSequence value = headersFrame.headers().get(HttpHeaderNames.TE);
-                    if (value != null && !HttpHeaderValues.TRAILERS.equals(value)) {
-                        // We should close the stream.
-                        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
-                        throw new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR,
-                                "te header field included with invalid value: " + value);
-                    }
-                    long length = HttpUtil.normalizeAndGetContentLength(headersFrame.headers()
-                            .getAll(HttpHeaderNames.CONTENT_LENGTH), false, true);
-                    if (length != -1) {
-                        headersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, length);
-                        expectedLength = length;
-                    }
-                } else if (!server) {
-                    clientHeadRequest = HttpMethod.HEAD.asciiName().equals(headersFrame.headers().method());
-                }
-                return isInformationalResponse(inbound, headersFrame) ? State.Initial : State.Headers;
-            case Headers:
-                if (frame instanceof Http3DataFrame) {
-                    if (inbound) {
-                        verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
-                    }
-                    return State.Data;
-                }
-                if (frame instanceof Http3HeadersFrame) {
-                    if (isInformationalResponse(inbound, (Http3HeadersFrame) frame)) {
-                        // Information response after final response headers
-                        return null;
-                    }
-                    if (inbound) {
-                        verifyContentLength(0, true);
-                    }
-                    return State.End;
-                }
-            case Data:
-                if (inbound && frame instanceof Http3DataFrame) {
-                    verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
-                }
-                if (frame instanceof Http3HeadersFrame) {
-                    if (isInformationalResponse(inbound, (Http3HeadersFrame) frame)) {
-                        // Information response after final response headers
-                        return null;
-                    }
-                    if (inbound) {
-                        verifyContentLength(0, true);
-                    }
-                    // trailers
-                    return State.End;
-                }
-                return state;
-            case End:
-                return null;
-            default:
-                throw new Error();
-        }
+        this.decodeState = decodeState;
+        this.encodeState = encodeState;
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, ChannelPromise promise) {
-        if (!(frame instanceof Http3PushPromiseFrame)) {
-            if (!server && writeState == State.Initial && goAwayReceivedSupplier.getAsBoolean()) {
+    void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, ChannelPromise promise) {
+        if (!server) {
+            if (goAwayReceivedSupplier.getAsBoolean() && !encodeState.started()) {
                 String type = StringUtil.simpleClassName(frame);
                 ReferenceCountUtil.release(frame);
                 promise.setFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
@@ -149,51 +81,75 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
                 ctx.close();
                 return;
             }
-            try {
-                State newState = checkState(false, writeState, frame);
-                if (newState == null) {
-                    frameTypeUnexpected(promise, frame);
-                    return;
-                }
-                writeState = newState;
-            } catch (Http3Exception e) {
-                ReferenceCountUtil.release(frame);
-                promise.setFailure(e);
-                ctx.close();
+            if (frame instanceof Http3HeadersFrame) {
+                clientHeadRequest = HEAD.asciiName().equals(((Http3HeadersFrame) frame).headers().method());
             }
-        } else if (!server) {
-            // Only supported on the server.
-            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
-            frameTypeUnexpected(promise, frame);
-            return;
+            if (frame instanceof Http3PushPromiseFrame) {
+                // Only supported on the server.
+                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
+                frameTypeUnexpected(promise, frame);
+                return;
+            }
         }
-
         ctx.write(frame, promise);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame) {
-        if (!(frame instanceof Http3PushPromiseFrame)) {
-            try {
-                State newState = checkState(true, readState, frame);
-                if (newState == null) {
-                    frameTypeUnexpected(ctx, frame);
-                    return;
-                }
-                readState = newState;
-            } catch (Http3Exception e) {
-                ReferenceCountUtil.release(frame);
-                ctx.fireExceptionCaught(e);
-                Http3CodecUtils.streamError(ctx, e.errorCode());
-                return;
+    void channelRead(ChannelHandlerContext ctx, Http3RequestStreamFrame frame) {
+        if (frame instanceof Http3PushPromiseFrame) {
+            if (server) {
+                // Server should not receive a push promise
+                // https://quicwg.org/base-drafts/draft-ietf-quic-http.html#name-push_promise
+                frameTypeUnexpected(ctx, frame);
+            } else {
+                ctx.fireChannelRead(frame);
             }
-        } else if (!server) {
-            // Only supported on the server.
-            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
-            frameTypeUnexpected(ctx, frame);
             return;
         }
+
+        if (frame instanceof Http3HeadersFrame) {
+            Http3HeadersFrame headersFrame = (Http3HeadersFrame) frame;
+            if (headersFrame.headers().contains(HttpHeaderNames.CONNECTION)) {
+                headerUnexpected(ctx, frame, "connection header not allowed");
+                return;
+            }
+            CharSequence value = headersFrame.headers().get(HttpHeaderNames.TE);
+            if (value != null && !HttpHeaderValues.TRAILERS.equals(value)) {
+                headerUnexpected(ctx, frame, "te header field contains an invalid value: " + value);
+                return;
+            }
+            if (decodeState.receivedFinalHeaders()) {
+                long length = normalizeAndGetContentLength(
+                        headersFrame.headers().getAll(HttpHeaderNames.CONTENT_LENGTH), false, true);
+                if (length >= 0) {
+                    headersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, length);
+                    expectedLength = length;
+                }
+            }
+        }
+
+        if (frame instanceof Http3DataFrame) {
+            try {
+                verifyContentLength(((Http3DataFrame) frame).content().readableBytes(), false);
+            } catch (Http3Exception e) {
+                ReferenceCountUtil.release(frame);
+                failStream(ctx, e);
+                return;
+            }
+        }
         ctx.fireChannelRead(frame);
+    }
+
+    private void headerUnexpected(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, String msg) {
+        // We should close the stream.
+        // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1
+        ReferenceCountUtil.release(frame);
+        failStream(ctx, new Http3Exception(H3_MESSAGE_ERROR, msg));
+    }
+
+    private void failStream(ChannelHandlerContext ctx, Http3Exception cause) {
+        ctx.fireExceptionCaught(cause);
+        Http3CodecUtils.streamError(ctx, cause.errorCode());
     }
 
     @Override
@@ -223,18 +179,13 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeValidation
         if (expectedLength != -1 && (seenLength > expectedLength ||
                 (!clientHeadRequest && end && seenLength != expectedLength))) {
             throw new Http3Exception(
-                    Http3ErrorCode.H3_MESSAGE_ERROR, "Expected content-length " + expectedLength +
+                    H3_MESSAGE_ERROR, "Expected content-length " + expectedLength +
                     " != " + seenLength + ".");
         }
     }
 
-    private boolean isInformationalResponse(boolean inbound, Http3HeadersFrame headersFrame) {
-        return ((server && !inbound) || (!server && inbound)) &&
-                HttpStatusClass.valueOf(headersFrame.headers().status()) == HttpStatusClass.INFORMATIONAL;
-    }
-
     private void sendStreamAbandonedIfRequired(ChannelHandlerContext ctx) {
-        if (!qpackAttributes.dynamicTableDisabled() && readState != State.End) {
+        if (!qpackAttributes.dynamicTableDisabled() && !decodeState.terminated()) {
             final long streamId = ((QuicStreamChannel) ctx.channel()).streamId();
             if (qpackAttributes.decoderStreamAvailable()) {
                 qpackDecoder.streamAbandoned(qpackAttributes.decoderStream(), streamId);

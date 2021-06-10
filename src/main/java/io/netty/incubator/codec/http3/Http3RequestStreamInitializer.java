@@ -34,10 +34,17 @@ public abstract class Http3RequestStreamInitializer extends ChannelInitializer<Q
             throw new IllegalStateException("Couldn't obtain the " +
                     StringUtil.simpleClassName(Http3ConnectionHandler.class) + " of the parent Channel");
         }
+
+        Http3RequestStreamEncodeStateValidator encodeStateValidator = new Http3RequestStreamEncodeStateValidator();
+        Http3RequestStreamDecodeStateValidator decodeStateValidator = new Http3RequestStreamDecodeStateValidator();
+
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames
-        pipeline.addLast(connectionHandler.newCodec());
+        pipeline.addLast(connectionHandler.newCodec(encodeStateValidator, decodeStateValidator));
         // Add the handler that will validate what we write and receive on this stream.
-        pipeline.addLast(connectionHandler.newRequestStreamValidationHandler(ch));
+        pipeline.addLast(encodeStateValidator);
+        pipeline.addLast(decodeStateValidator);
+        pipeline.addLast(connectionHandler.newRequestStreamValidationHandler(ch, encodeStateValidator,
+                decodeStateValidator));
         initRequestStream(ch);
     }
 
