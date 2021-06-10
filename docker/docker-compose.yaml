@@ -64,7 +64,7 @@ services:
 
   build-unsafe-buffer:
     <<: *common
-    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
 
   shell:
     <<: *common
