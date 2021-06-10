@@ -25,6 +25,8 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -32,6 +34,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,7 +74,7 @@ public class MqttCodecTest {
     @Mock
     private final Attribute<MqttVersion> versionAttrMock = mock(Attribute.class);
 
-    private List<Object> out;
+    private final List<Object> out = new ArrayList<Object>();
 
     private final MqttDecoder mqttDecoder = new MqttDecoder();
 
@@ -82,7 +85,6 @@ public class MqttCodecTest {
 
     @Before
     public void setup() {
-        out = new LinkedList<Object>();
         MockitoAnnotations.initMocks(this);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(ALLOCATOR);
@@ -94,6 +96,14 @@ public class MqttCodecTest {
             }
         });
         when(channel.attr(MqttCodecUtil.MQTT_VERSION_KEY)).thenReturn(versionAttrMock);
+    }
+
+    @After
+    public void after() {
+        for (Object o : out) {
+            ReferenceCountUtil.release(o);
+        }
+        out.clear();
     }
 
     @Test
@@ -736,14 +746,13 @@ public class MqttCodecTest {
         verify(versionAttrMock, times(1)).set(MqttVersion.MQTT_5);
         clearInvocations(versionAttrMock);
 
-        final List<Object> connectOut = new LinkedList<Object>();
-        mqttDecoder.decode(ctx, connectByteBuf, connectOut);
+        mqttDecoder.channelRead(ctx, connectByteBuf);
 
         verify(versionAttrMock, times(1)).set(MqttVersion.MQTT_5);
 
-        assertEquals("Expected one CONNECT object but got " + connectOut.size(), 1, connectOut.size());
+        assertEquals("Expected one CONNECT object but got " + out.size(), 1, out.size());
 
-        final MqttConnectMessage decodedConnectMessage = (MqttConnectMessage) connectOut.get(0);
+        final MqttConnectMessage decodedConnectMessage = (MqttConnectMessage) out.get(0);
 
         validateFixedHeaders(connectMessage.fixedHeader(), decodedConnectMessage.fixedHeader());
         validateConnectVariableHeader(connectMessage.variableHeader(), decodedConnectMessage.variableHeader());
