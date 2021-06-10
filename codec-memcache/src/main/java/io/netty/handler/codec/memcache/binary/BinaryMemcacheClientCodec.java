@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
@@ -172,16 +173,6 @@ public final class BinaryMemcacheClientCodec extends
                     return this;
                 }
 
-                public ChannelHandlerContext read() {
-                    ctx.read();
-                    return this;
-                }
-
-                public ChannelHandlerContext flush() {
-                    ctx.flush();
-                    return this;
-                }
-
                 public ChannelPipeline pipeline() {
                     return ctx.pipeline();
                 }
@@ -230,49 +221,69 @@ public final class BinaryMemcacheClientCodec extends
                 }
 
                 @Override
-                public ChannelFuture register(ChannelPromise promise) {
-                    return ctx.register(promise);
+                public ChannelHandlerContext bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+                    ctx.bind(localAddress, callback);
+                    return this;
                 }
 
-                public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-                    return ctx.bind(localAddress, promise);
+                @Override
+                public ChannelHandlerContext connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                                     ChannelOutboundInvokerCallback callback) {
+                    ctx.connect(remoteAddress, localAddress, callback);
+                    return this;
                 }
 
-                public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-                    return ctx.connect(remoteAddress, promise);
+                @Override
+                public ChannelHandlerContext disconnect(ChannelOutboundInvokerCallback callback) {
+                    ctx.disconnect(callback);
+                    return this;
                 }
 
-                public ChannelFuture connect(
-                        SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    return ctx.connect(remoteAddress, localAddress, promise);
+                @Override
+                public ChannelHandlerContext close(ChannelOutboundInvokerCallback callback) {
+                    ctx.close(callback);
+                    return this;
                 }
 
-                public ChannelFuture disconnect(ChannelPromise promise) {
-                    return ctx.disconnect(promise);
+                @Override
+                public ChannelHandlerContext register(ChannelOutboundInvokerCallback callback) {
+                    ctx.register(callback);
+                    return this;
                 }
 
-                public ChannelFuture close(ChannelPromise promise) {
-                    return ctx.close(promise);
+                @Override
+                public ChannelHandlerContext deregister(ChannelOutboundInvokerCallback callback) {
+                    ctx.deregister(callback);
+                    return this;
                 }
 
-                public ChannelFuture deregister(ChannelPromise promise) {
-                    return ctx.deregister(promise);
+                @Override
+                public ChannelHandlerContext read(ChannelOutboundInvokerCallback callback) {
+                    ctx.read(callback);
+                    return this;
                 }
 
-                public ChannelFuture write(Object msg) {
-                    return ctx.write(msg);
+                @Override
+                public ChannelHandlerContext write(Object msg, ChannelOutboundInvokerCallback callback) {
+                    ctx.write(msg, callback);
+                    return this;
                 }
 
-                public ChannelFuture write(Object msg, ChannelPromise promise) {
-                    return ctx.write(msg, promise);
+                @Override
+                public ChannelHandlerContext flush(ChannelOutboundInvokerCallback callback) {
+                    ctx.flush(callback);
+                    return this;
                 }
 
-                public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-                    return ctx.writeAndFlush(msg, promise);
+                @Override
+                public ChannelHandlerContext writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
+                    ctx.writeAndFlush(msg, callback);
+                    return this;
                 }
 
-                public ChannelFuture writeAndFlush(Object msg) {
-                    return ctx.writeAndFlush(msg);
+                @Override
+                public ChannelOutboundInvokerCallback voidCallback() {
+                    return ctx.voidCallback();
                 }
 
                 public ChannelPromise newPromise() {

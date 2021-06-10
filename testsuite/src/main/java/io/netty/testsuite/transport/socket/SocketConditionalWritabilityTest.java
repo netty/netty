@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -60,11 +61,11 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void flush(ChannelHandlerContext ctx) {
+                        public void flush(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                             if (ctx.channel().isWritable()) {
                                 writeRemainingBytes(ctx);
                             } else {
-                                ctx.flush();
+                                ctx.flush(callback);
                             }
                         }
 

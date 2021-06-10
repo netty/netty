@@ -86,8 +86,9 @@ public class CombinedChannelDuplexHandlerTest {
             () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
                   new ChannelHandler() {
                       @Override
-                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-                          promise.setFailure(new UnsupportedOperationException());
+                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                                       ChannelOutboundInvokerCallback callback) {
+                          callback.onError(new UnsupportedOperationException());
                       }
                   }, new ChannelHandler() { }));
     }
@@ -257,6 +258,7 @@ public class CombinedChannelDuplexHandlerTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testPromisesPassed() {
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
+
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
                         new ChannelHandler() {
@@ -381,45 +383,46 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                         ChannelOutboundInvokerCallback callback) {
             try {
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.BIND);
-                promise.setSuccess();
+                callback.onSuccess();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                callback.onError(e);
             }
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                            SocketAddress localAddress, ChannelPromise promise) {
+                            SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
             try {
                 assertSame(REMOTE_ADDRESS, remoteAddress);
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.CONNECT);
-                promise.setSuccess();
+                callback.onSuccess();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                callback.onError(e);
             }
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
             queue.add(Event.DISCONNECT);
-            promise.setSuccess();
+            callback.onSuccess();
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
             queue.add(Event.CLOSE);
-            promise.setSuccess();
+            callback.onSuccess();
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
             queue.add(Event.DEREGISTER);
-            promise.setSuccess();
+            callback.onSuccess();
         }
 
         @Override
@@ -428,13 +431,13 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
             try {
                 assertSame(MSG, msg);
                 queue.add(Event.WRITE);
-                promise.setSuccess();
+                callback.onSuccess();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                callback.onError(e);
             }
         }
 

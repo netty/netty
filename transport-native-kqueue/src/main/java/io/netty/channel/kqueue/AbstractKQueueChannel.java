@@ -26,6 +26,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
@@ -531,8 +532,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress,
+                final ChannelOutboundInvokerCallback callback) {
+            if (!trySetUncancellable(callback) || !ensureOpen(callback)) {
                 return;
             }
 
@@ -543,9 +545,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
                 boolean wasActive = isActive();
                 if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
+                    fulfillConnectPromise(callback, wasActive);
                 } else {
-                    connectPromise = promise;
+                    connectPromise = callback;
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
@@ -561,7 +563,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
+                    callback.addListener((ChannelFutureListener) future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -573,7 +575,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 }
             } catch (Throwable t) {
                 closeIfClosed();
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
+                callback.tryFailure(annotateConnectException(t, remoteAddress));
             }
         }
 

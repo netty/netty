@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
 
@@ -33,8 +33,13 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
+<<<<<<< HEAD
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ChannelFuture future = ctx.write(msg, promise);
+=======
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) throws Exception {
+        ChannelFuture future = ctx.write(msg, callback);
+>>>>>>> e79e09d18f (Change ChannelOutboundInvoker API to take ChannelOutboundInvokerCallback to support zero cost callbacks.)
         if (msg instanceof HAProxyMessage) {
             future.addListener(new ChannelFutureListener() {
                 @Override

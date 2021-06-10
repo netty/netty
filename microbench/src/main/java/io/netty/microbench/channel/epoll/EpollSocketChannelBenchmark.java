@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -104,11 +105,16 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     }
 
                     @Override
+<<<<<<< HEAD
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+=======
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback)
+                            throws Exception {
+>>>>>>> e79e09d18f (Change ChannelOutboundInvoker API to take ChannelOutboundInvokerCallback to support zero cost callbacks.)
                         if (lastWritePromise != null) {
                             throw new IllegalStateException();
                         }
-                        lastWritePromise = promise;
+                        lastWritePromise = callback;
                         ctx.write(msg);
                     }
                 });

@@ -380,10 +380,10 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = ch.register(promise);
-            f.awaitUninterruptibly();
-            assertFalse(f.isSuccess());
-            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+            ch.register(promise);
+            promise.awaitUninterruptibly();
+            assertFalse(promise.isSuccess());
+            assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
 
             // Ensure the listener was notified.
             assertFalse(latch.await(1, TimeUnit.SECONDS));

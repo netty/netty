@@ -20,8 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -96,7 +96,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -110,19 +110,19 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
                 }
 
                 if (buf.isReadable()) {
-                    ctx.write(buf, promise);
+                    ctx.write(buf, callback);
                 } else {
                     buf.release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    ctx.write(Unpooled.EMPTY_BUFFER, callback);
                 }
                 buf = null;
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, callback);
             }
         } catch (EncoderException e) {
-            promise.setFailure(e);
+            callback.onError(e);
         } catch (Throwable e) {
-            promise.setFailure(new EncoderException(e));
+            callback.onError(new EncoderException(e));
         } finally {
             if (buf != null) {
                 buf.release();

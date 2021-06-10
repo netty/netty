@@ -19,7 +19,7 @@ package io.netty.example.redis;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.redis.ArrayRedisMessage;
 import io.netty.handler.codec.redis.ErrorRedisMessage;
@@ -39,14 +39,14 @@ import java.util.List;
 public class RedisClientHandler implements ChannelHandler {
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
         String[] commands = ((String) msg).split("\\s+");
         List<RedisMessage> children = new ArrayList<>(commands.length);
         for (String cmdString : commands) {
             children.add(new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), cmdString)));
         }
         RedisMessage request = new ArrayRedisMessage(children);
-        ctx.write(request, promise);
+        ctx.write(request, callback);
     }
 
     @Override

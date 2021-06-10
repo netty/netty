@@ -89,7 +89,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
 
             clientSslHandler.write(clientCtx, wrapSrcBuffer, clientCtx.newPromise());
         }
-        clientSslHandler.flush(clientCtx);
+        clientSslHandler.flush(clientCtx, );
         return clientCtx.cumulation().retainedSlice();
     }
 }

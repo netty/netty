@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
@@ -193,14 +194,14 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+    public void close(final ChannelHandlerContext ctx, final ChannelOutboundInvokerCallback callback) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
+        f.addListener((ChannelFutureListener) f1 -> ctx.close(callback));
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
             ctx.executor().schedule(() -> {
-                ctx.close(promise);
+                ctx.close(callback);
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }
     }
@@ -225,7 +226,8 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
+        return promise;
     }
 
     private ChannelHandlerContext ctx() {

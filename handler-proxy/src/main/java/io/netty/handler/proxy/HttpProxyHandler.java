@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -286,12 +286,18 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         @Override
         public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+<<<<<<< HEAD
                          ChannelPromise promise) {
             codec.bind(ctx, localAddress, promise);
+=======
+                         ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.bind(ctx, localAddress, callback);
+>>>>>>> e79e09d18f (Change ChannelOutboundInvoker API to take ChannelOutboundInvokerCallback to support zero cost callbacks.)
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+<<<<<<< HEAD
                             ChannelPromise promise) {
             codec.connect(ctx, remoteAddress, localAddress, promise);
         }
@@ -309,14 +315,34 @@ public final class HttpProxyHandler extends ProxyHandler {
         @Override
         public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
             codec.deregister(ctx, promise);
+=======
+                            ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.connect(ctx, remoteAddress, localAddress, callback);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
-            codec.read(ctx);
+        public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.disconnect(ctx, callback);
         }
 
         @Override
+        public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.close(ctx, callback);
+        }
+
+        @Override
+        public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.deregister(ctx, callback);
+>>>>>>> e79e09d18f (Change ChannelOutboundInvoker API to take ChannelOutboundInvokerCallback to support zero cost callbacks.)
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.read(ctx, );
+        }
+
+        @Override
+<<<<<<< HEAD
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             codec.write(ctx, msg, promise);
         }
@@ -324,6 +350,15 @@ public final class HttpProxyHandler extends ProxyHandler {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             codec.flush(ctx);
+=======
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.write(ctx, msg, callback);
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) throws Exception {
+            codec.flush(ctx, );
+>>>>>>> e79e09d18f (Change ChannelOutboundInvoker API to take ChannelOutboundInvokerCallback to support zero cost callbacks.)
         }
     }
 }

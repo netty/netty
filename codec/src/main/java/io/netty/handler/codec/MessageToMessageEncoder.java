@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
@@ -78,7 +79,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
         CodecOutputList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -96,20 +97,22 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                             StringUtil.simpleClassName(this) + " must produce at least one message.");
                 }
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, callback);
             }
         } catch (EncoderException e) {
-            promise.setFailure(e);
+            callback.onError(e);
         } catch (Throwable t) {
-            promise.setFailure(new EncoderException(t));
+            callback.onError(new EncoderException(t));
         } finally {
             if (out != null) {
                 try {
                     final int sizeMinusOne = out.size() - 1;
                     if (sizeMinusOne == 0) {
-                        ctx.write(out.getUnsafe(0), promise);
+                        ctx.write(out.getUnsafe(0), callback);
                     } else if (sizeMinusOne > 0) {
-                        writePromiseCombiner(ctx, out, promise);
+                       ChannelPromise promise = ctx.newPromise();
+                       callback.notifyWhenFutureCompletes(promise);
+                       writePromiseCombiner(ctx, out, promise);
                     }
                 } finally {
                     out.recycle();

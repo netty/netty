@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.channel.ChannelOutboundInvokerCallback;
+import io.netty.channel.ChannelPromise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -45,7 +47,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -195,7 +196,11 @@ public class EmbeddedChannelTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::close);
-        testFireChannelInactiveAndUnregistered(channel -> channel.close(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(channel -> {
+            ChannelPromise promise = channel.newPromise();
+            channel.close(promise);
+            return promise;
+        });
     }
 
     @Test
@@ -203,7 +208,11 @@ public class EmbeddedChannelTest {
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::disconnect);
 
-        testFireChannelInactiveAndUnregistered(channel -> channel.disconnect(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(channel -> {
+            ChannelPromise promise = channel.newPromise();
+            channel.disconnect(promise);
+            return promise;
+        });
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {
@@ -255,8 +264,8 @@ public class EmbeddedChannelTest {
     public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelHandler() {
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-                promise.tryFailure(new Throwable());
+            public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
+                callback.onError(new Throwable());
             }
         });
         assertFalse(channel.disconnect().isSuccess());
@@ -347,8 +356,9 @@ public class EmbeddedChannelTest {
     public void testWriteLater() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
-                ctx.executor().execute(() -> ctx.write(msg, promise));
+            public void write(final ChannelHandlerContext ctx, final Object msg,
+                              final ChannelOutboundInvokerCallback callback) {
+                ctx.executor().execute(() -> ctx.write(msg, callback));
             }
         });
         Object msg = new Object();
@@ -364,9 +374,10 @@ public class EmbeddedChannelTest {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+            public void write(final ChannelHandlerContext ctx, final Object msg,
+                              final ChannelOutboundInvokerCallback callback) {
                 ctx.executor().schedule(() -> {
-                    ctx.writeAndFlush(msg, promise);
+                    ctx.writeAndFlush(msg, callback);
                 }, delay, TimeUnit.MILLISECONDS);
             }
         });
@@ -451,8 +462,8 @@ public class EmbeddedChannelTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                ctx.write(msg, promise);
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
+                ctx.write(msg, callback);
                 latch.countDown();
             }
 
@@ -570,15 +581,15 @@ public class EmbeddedChannelTest {
         private final Queue<Integer> queue = new ArrayDeque<>();
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
             queue.add(DISCONNECT);
-            promise.setSuccess();
+            callback.onSuccess();
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
             queue.add(CLOSE);
-            promise.setSuccess();
+            callback.onSuccess();
         }
 
         Integer pollEvent() {

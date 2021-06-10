@@ -22,4 +22,5 @@ interface LocalChannelUnsafe extends Channel.Unsafe {
     void register0();
     void deregister0();
     ChannelPromise newPromise();
+    void closeWithNoop();
 }

@@ -26,6 +26,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -235,11 +236,13 @@ public class BootstrapTest {
                         }
 
                         @Override
-                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                        public LocalServerChannel bind(SocketAddress localAddress,
+                                                       ChannelOutboundInvokerCallback callback) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
-                            return promise.setFailure(new SocketException());
+                            callback.onError(new SocketException());
+                            return this;
                         }
                     });
             bootstrap.childHandler(new DummyHandler());
@@ -391,14 +394,16 @@ public class BootstrapTest {
         assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
     }
 
+    // TODO: Fix me
     private static final class LateRegisterHandler implements ChannelHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
         private ChannelPromise registerPromise;
 
         @Override
-        public void register(ChannelHandlerContext ctx, final ChannelPromise promise) {
-            registerPromise = promise;
+        public void register(ChannelHandlerContext ctx, final ChannelOutboundInvokerCallback callback) {
+            registerPromise = ctx.newPromise();
+            callback.notifyWhenFutureCompletes(registerPromise);
             latch.countDown();
             ChannelPromise newPromise = ctx.newPromise();
             newPromise.addListener((ChannelFutureListener) future -> {

@@ -29,6 +29,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -601,18 +602,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         }
 
         @Override
-        public ChannelHandlerContext read() {
-            ctx.read();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext flush() {
-            ctx.flush();
-            return this;
-        }
-
-        @Override
         public ChannelPipeline pipeline() {
             return ctx.pipeline();
         }
@@ -665,43 +654,46 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.bind(localAddress, promise);
+        public ChannelHandlerContext bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+            ctx.bind(localAddress, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, promise);
+        public ChannelHandlerContext connect(SocketAddress remoteAddress, ChannelOutboundInvokerCallback callback) {
+            ctx.connect(remoteAddress, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
+        public ChannelHandlerContext connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                              ChannelOutboundInvokerCallback callback) {
+            ctx.connect(remoteAddress, localAddress, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            return ctx.disconnect(promise);
+        public ChannelHandlerContext disconnect(ChannelOutboundInvokerCallback callback) {
+            ctx.disconnect(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            return ctx.close(promise);
+        public ChannelHandlerContext close(ChannelOutboundInvokerCallback callback) {
+            ctx.close(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture register() {
-            return ctx.register();
+        public ChannelHandlerContext register(ChannelOutboundInvokerCallback callback) {
+            ctx.register(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            return ctx.register(promise);
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            return ctx.deregister(promise);
+        public ChannelHandlerContext deregister(ChannelOutboundInvokerCallback callback) {
+            ctx.deregister(callback);
+            return this;
         }
 
         @Override
@@ -710,18 +702,37 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         }
 
         @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return ctx.write(msg, promise);
+        public ChannelHandlerContext write(Object msg, ChannelOutboundInvokerCallback callback) {
+            ctx.write(msg, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            return ctx.writeAndFlush(msg, promise);
+        public ChannelHandlerContext writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
+            ctx.writeAndFlush(msg, callback);
+            return this;
         }
 
         @Override
         public ChannelFuture writeAndFlush(Object msg) {
             return ctx.writeAndFlush(msg);
+        }
+
+        @Override
+        public ChannelFuture register() {
+            return ctx.register();
+        }
+
+        @Override
+        public ChannelHandlerContext read() {
+            ctx.read();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext flush() {
+            ctx.flush();
+            return this;
         }
 
         @Override
@@ -737,6 +748,11 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         @Override
         public ChannelFuture newFailedFuture(Throwable cause) {
             return ctx.newFailedFuture(cause);
+        }
+
+        @Override
+        public ChannelOutboundInvokerCallback voidCallback() {
+            return ctx.voidCallback();
         }
     }
 }

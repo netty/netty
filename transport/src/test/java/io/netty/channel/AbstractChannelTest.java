@@ -138,10 +138,10 @@ public class AbstractChannelTest {
             protected AbstractUnsafe newUnsafe() {
                 return new AbstractUnsafe() {
                     @Override
-                    public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                    public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
                         active = true;
-                        promise.setSuccess();
+                        callback.onSuccess();
                     }
                 };
             }
@@ -227,8 +227,9 @@ public class AbstractChannelTest {
         protected AbstractUnsafe newUnsafe() {
             return new AbstractUnsafe() {
                 @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    promise.setFailure(new UnsupportedOperationException());
+                public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                    ChannelOutboundInvokerCallback callback) {
+                    callback.onError(new UnsupportedOperationException());
                 }
             };
         }

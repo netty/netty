@@ -30,9 +30,9 @@ final class LoggingHandler implements ChannelHandler {
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
         log(Event.WRITE);
-        ctx.write(msg, promise);
+        ctx.write(msg, callback);
     }
 
     @Override
@@ -42,44 +42,44 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
         log(Event.BIND, "localAddress=" + localAddress);
-        ctx.bind(localAddress, promise);
+        ctx.bind(localAddress, callback);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+                        ChannelOutboundInvokerCallback callback) {
         log(Event.CONNECT, "remoteAddress=" + remoteAddress + " localAddress=" + localAddress);
-        ctx.connect(remoteAddress, localAddress, promise);
+        ctx.connect(remoteAddress, localAddress, callback);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         log(Event.DISCONNECT);
-        ctx.disconnect(promise);
+        ctx.disconnect(callback);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         log(Event.CLOSE);
-        ctx.close(promise);
+        ctx.close(callback);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         log(Event.REGISTER);
-        ctx.register(promise);
+        ctx.register(callback);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         log(Event.DEREGISTER);
-        ctx.deregister(promise);
+        ctx.deregister(callback);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         log(Event.READ);
         ctx.read();
     }

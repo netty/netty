@@ -26,6 +26,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
@@ -580,8 +581,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress,
+                final ChannelOutboundInvokerCallback callback) {
+            if (!trySetUncancellable(callback) || !ensureOpen(callback)) {
                 return;
             }
 
@@ -592,9 +594,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
                 boolean wasActive = isActive();
                 if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
+                    fulfillConnectPromise(callback, wasActive);
                 } else {
-                    connectPromise = promise;
+                    connectPromise = callback;
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
@@ -610,7 +612,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
+                    callback.addListener((ChannelFutureListener) future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -622,7 +624,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 }
             } catch (Throwable t) {
                 closeIfClosed();
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
+                callback.tryFailure(annotateConnectException(t, remoteAddress));
             }
         }
 

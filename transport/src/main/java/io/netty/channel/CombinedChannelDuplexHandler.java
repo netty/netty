@@ -243,12 +243,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelPromise promise) {
+            SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.bind(outboundCtx, localAddress, promise);
+            outboundHandler.bind(outboundCtx, localAddress, callback);
         } else {
-            outboundCtx.bind(localAddress, promise);
+            outboundCtx.bind(localAddress, callback);
         }
     }
 
@@ -256,57 +256,57 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+            ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
+            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, callback);
         } else {
-            outboundCtx.connect(remoteAddress, localAddress, promise);
+            outboundCtx.connect(remoteAddress, localAddress, callback);
         }
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.disconnect(outboundCtx, promise);
+            outboundHandler.disconnect(outboundCtx, callback);
         } else {
-            outboundCtx.disconnect(promise);
+            outboundCtx.disconnect(callback);
         }
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.close(outboundCtx, promise);
+            outboundHandler.close(outboundCtx, callback);
         } else {
-            outboundCtx.close(promise);
+            outboundCtx.close(callback);
         }
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.register(outboundCtx, promise);
+            outboundHandler.register(outboundCtx, callback);
         } else {
-            outboundCtx.register(promise);
+            outboundCtx.register(callback);
         }
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.deregister(outboundCtx, promise);
+            outboundHandler.deregister(outboundCtx, callback);
         } else {
-            outboundCtx.deregister(promise);
+            outboundCtx.deregister(callback);
         }
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.read(outboundCtx);
@@ -316,12 +316,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.write(outboundCtx, msg, promise);
+            outboundHandler.write(outboundCtx, msg, callback);
         } else {
-            outboundCtx.write(msg, promise);
+            outboundCtx.write(msg, callback);
         }
     }
 
@@ -336,6 +336,18 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     private static final class DelegatingChannelHandlerContext implements ChannelHandlerContext {
+
+        private final ChannelOutboundInvokerCallback voidCallback = new ChannelOutboundInvokerCallback() {
+            @Override
+            public void onSuccess() {
+                // NOOP
+            }
+
+            @Override
+            public void onError(Throwable cause) {
+                fireExceptionCaught(cause);
+            }
+        };
 
         private final ChannelHandlerContext ctx;
         private final ChannelHandler handler;
@@ -426,74 +438,51 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress) {
-            return ctx.bind(localAddress);
+        public ChannelHandlerContext bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+            ctx.bind(localAddress, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress) {
-            return ctx.connect(remoteAddress);
+        public ChannelHandlerContext connect(
+                SocketAddress remoteAddress, SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+            ctx.connect(remoteAddress, localAddress, callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            return ctx.connect(remoteAddress, localAddress);
+        public ChannelHandlerContext disconnect(ChannelOutboundInvokerCallback callback) {
+            ctx.disconnect(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture disconnect() {
-            return ctx.disconnect();
+        public ChannelHandlerContext close(ChannelOutboundInvokerCallback callback) {
+            ctx.close(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture close() {
-            return ctx.close();
+        public ChannelHandlerContext register(ChannelOutboundInvokerCallback callback) {
+            ctx.register(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture register() {
-            return ctx.register();
+        public ChannelHandlerContext deregister(ChannelOutboundInvokerCallback callback) {
+            ctx.deregister(callback);
+            return this;
         }
 
         @Override
-        public ChannelFuture deregister() {
-            return ctx.deregister();
+        public ChannelHandlerContext write(Object msg, ChannelOutboundInvokerCallback callback) {
+            return ctx.write(msg, callback);
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.bind(localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(
-                SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            return ctx.disconnect(promise);
-        }
-
-        @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            return ctx.close(promise);
-        }
-
-        @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            return ctx.register(promise);
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            return ctx.deregister(promise);
+        public ChannelHandlerContext writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
+            ctx.writeAndFlush(msg, callback);
+            return this;
         }
 
         @Override
@@ -503,29 +492,9 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture write(Object msg) {
-            return ctx.write(msg);
-        }
-
-        @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return ctx.write(msg, promise);
-        }
-
-        @Override
         public ChannelHandlerContext flush() {
             ctx.flush();
             return this;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            return ctx.writeAndFlush(msg, promise);
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg) {
-            return ctx.writeAndFlush(msg);
         }
 
         @Override
@@ -561,6 +530,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         @Override
         public <T> boolean hasAttr(AttributeKey<T> key) {
             return ctx.channel().hasAttr(key);
+        }
+
+        @Override
+        public ChannelOutboundInvokerCallback voidCallback() {
+            return voidCallback;
         }
 
         void remove() {

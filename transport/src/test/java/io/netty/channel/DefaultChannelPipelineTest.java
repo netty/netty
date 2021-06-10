@@ -689,8 +689,8 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
-        assertTrue(future.isCancelled());
+        pipeline.bind(new LocalAddress("test"), promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -700,8 +700,8 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
-        assertTrue(future.isCancelled());
+        pipeline.connect(new LocalAddress("test"), promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -711,8 +711,8 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.disconnect(promise);
-        assertTrue(future.isCancelled());
+       pipeline.disconnect(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -722,8 +722,8 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.close(promise);
-        assertTrue(future.isCancelled());
+        pipeline.close(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -763,8 +763,8 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.deregister(promise);
-        assertTrue(future.isCancelled());
+        pipeline.deregister(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -776,8 +776,8 @@ public class DefaultChannelPipelineTest {
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.write(buffer, promise);
-        assertTrue(future.isCancelled());
+        pipeline.write(buffer, promise);
+        assertTrue(promise.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
 
@@ -790,8 +790,8 @@ public class DefaultChannelPipelineTest {
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.writeAndFlush(buffer, promise);
-        assertTrue(future.isCancelled());
+        pipeline.writeAndFlush(buffer, promise);
+        assertTrue(promise.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
 
@@ -1248,45 +1248,46 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                             ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.bind(localAddress, promise);
+                ctx.bind(localAddress, callback);
             }
 
             @Skip
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.connect(remoteAddress, localAddress, promise);
+                ctx.connect(remoteAddress, localAddress, callback);
             }
 
             @Skip
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.disconnect(promise);
+                ctx.disconnect(callback);
             }
 
             @Skip
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.close(promise);
+                ctx.close(callback);
             }
 
             @Skip
             @Override
-            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void register(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.register(promise);
+                ctx.register(callback);
             }
 
             @Skip
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.deregister(promise);
+                ctx.deregister(callback);
             }
 
             @Skip
@@ -1298,9 +1299,9 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
                 fail();
-                ctx.write(msg, promise);
+                ctx.write(msg, callback);
             }
 
             @Skip
@@ -1418,40 +1419,41 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                             ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_BIND;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_CONNECT;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_DISCONNECT;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_CLOSE;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
-            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void register(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_REGISTER;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_DEREGISTER;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
@@ -1460,9 +1462,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
                 executionMask |= MASK_WRITE;
-                promise.setSuccess();
+                callback.onSuccess();
             }
 
             @Override
@@ -1698,11 +1700,11 @@ public class DefaultChannelPipelineTest {
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
                     if (msg == writeObject) {
                         doneLatch.countDown();
                     }
-                    ctx.write(msg, promise);
+                    ctx.write(msg, callback);
                 }
             });
         };
@@ -1941,7 +1943,7 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelOutboundInvokerCallback callback) {
             outboundBuffer.add(msg);
         }
 

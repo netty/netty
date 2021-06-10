@@ -23,9 +23,9 @@ import java.net.SocketAddress;
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
- * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link #write(Object, ChannelPromise)}</li>
+ * <li>{@link ChannelOutboundInvoker#connect(SocketAddress, ChannelOutboundInvokerCallback)}</li>
+ * <li>{@link ChannelOutboundInvoker#disconnect(ChannelOutboundInvokerCallback)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, ChannelOutboundInvokerCallback)}</li>
  * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
@@ -85,8 +85,9 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
+            callback.onError(new UnsupportedOperationException());
         }
     }
 }
