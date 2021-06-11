@@ -335,10 +335,12 @@ public class DnsNameResolverTest {
 
     private static final String WINDOWS_HOST_NAME;
     private static final boolean WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS;
+    private static final boolean WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS;
 
     static {
         String windowsHostName;
         boolean windowsHostsFileLocalhostEntryExists;
+        boolean windowsHostsFileHostNameEntryExists;
         try {
             if (PlatformDependent.isWindows()) {
                 windowsHostName = InetAddress.getLocalHost().getHostName();
@@ -349,16 +351,22 @@ public class DnsNameResolverTest {
                 windowsHostsFileLocalhostEntryExists =
                         provider.ipv4Entries().get("localhost") != null ||
                                 provider.ipv6Entries().get("localhost") != null;
+                windowsHostsFileHostNameEntryExists =
+                        provider.ipv4Entries().get(windowsHostName) != null ||
+                                provider.ipv6Entries().get(windowsHostName) != null;
             } else {
                 windowsHostName = null;
                 windowsHostsFileLocalhostEntryExists = false;
+                windowsHostsFileHostNameEntryExists = false;
             }
         } catch (Exception ignore) {
             windowsHostName = null;
             windowsHostsFileLocalhostEntryExists = false;
+            windowsHostsFileHostNameEntryExists = false;
         }
         WINDOWS_HOST_NAME = windowsHostName;
         WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS = windowsHostsFileLocalhostEntryExists;
+        WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS = windowsHostsFileHostNameEntryExists;
     }
 
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
@@ -802,6 +810,7 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveHostNameIpv4() {
         assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
         testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, WINDOWS_HOST_NAME);
     }
@@ -809,6 +818,7 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveHostNameIpv6() {
         assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
         testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, WINDOWS_HOST_NAME);
     }
@@ -865,6 +875,7 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveAllHostNameIpv4() {
         assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
         testResolveAll0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, WINDOWS_HOST_NAME);
     }
@@ -872,6 +883,7 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveAllHostNameIpv6() {
         assumeThat(PlatformDependent.isWindows()).isTrue();
+        assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
         testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, WINDOWS_HOST_NAME);
     }
