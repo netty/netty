@@ -43,7 +43,7 @@ public final class ArcDrop<T> implements Drop<T> {
         if (drop.getClass() == ArcDrop.class) {
             return drop;
         }
-        return new ArcDrop<X>(drop);
+        return new ArcDrop<>(drop);
     }
 
     public static <X> Drop<X> acquire(Drop<X> drop) {
@@ -51,7 +51,7 @@ public final class ArcDrop<T> implements Drop<T> {
             ((ArcDrop<X>) drop).increment();
             return drop;
         }
-        return new ArcDrop<X>(drop);
+        return new ArcDrop<>(drop);
     }
 
     public ArcDrop<T> increment() {

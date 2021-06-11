@@ -43,7 +43,7 @@ import java.nio.ByteOrder;
  *
  * <h3>Thread-safety</h3>
  *
- * Buffers are not thread-safe.
+ * Buffers are <strong>not</strong> thread-safe.
  *
  * <h3>Accessing data</h3>
  *

@@ -79,7 +79,8 @@ public abstract class LifecycleTracer {
     }
 
     private static final class StackTracer extends LifecycleTracer {
-        private static final int MAX_TRACE_POINTS = Math.min(Integer.getInteger("MAX_TRACE_POINTS", 50), 1000);
+        private static final int MAX_TRACE_POINTS = Math.min(Integer.getInteger(
+                "io.netty.buffer.api.internal.LifecycleTracer.MAX_TRACE_POINTS", 50), 1000);
         private static final StackWalker WALKER;
         static {
             int depth = Trace.TRACE_LIFECYCLE_DEPTH;
@@ -149,7 +150,8 @@ public abstract class LifecycleTracer {
             int traceDefault = 0;
             //noinspection AssertWithSideEffects
             assert (traceDefault = 10) > 0;
-            TRACE_LIFECYCLE_DEPTH = Math.max(Integer.getInteger("TRACE_LIFECYCLE_DEPTH", traceDefault), 0);
+            TRACE_LIFECYCLE_DEPTH = Math.max(Integer.getInteger(
+                    "io.netty.buffer.api.internal.LifecycleTracer.TRACE_LIFECYCLE_DEPTH", traceDefault), 0);
         }
 
         final String name;
@@ -196,7 +198,7 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {
             return this;
         }
     }

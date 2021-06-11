@@ -17,7 +17,7 @@ package io.netty.buffer.api;
 
 /**
  * An object used by {@linkplain BufferAllocator buffer allocators} to communicate desirable properties of an
- * allocation to a {@linkplain MemoryManager memory manager}, such as wether an allocation should be off-heap.
+ * allocation to a {@linkplain MemoryManager memory manager}, such as whether an allocation should be off-heap.
  * <p>
  * Standard implementations of this interface can be found in {@link StandardAllocationTypes}.
  */

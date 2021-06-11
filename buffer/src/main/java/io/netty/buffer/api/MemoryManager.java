@@ -120,6 +120,8 @@ public interface MemoryManager {
      * buffer, but the implementation may share the underlying memory across multiple buffer instance - something that
      * is normally not allowed by the API. This allows efficient implementation of the
      * {@link BufferAllocator#constBufferSupplier(byte[])} method.
+     * <p>
+     * <strong>Note:</strong> the const-parent buffer must be allocated by this memory manager.
      *
      * @param readOnlyConstParent The read-only parent buffer for which a const buffer should be created. The parent
      *                            buffer is allocated in the usual way, with

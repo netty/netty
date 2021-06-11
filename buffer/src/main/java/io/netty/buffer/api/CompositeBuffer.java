@@ -43,7 +43,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
  *         will have ownership, because it is guaranteed that there are no other references to its constituent buffers.
  *     </li>
  *     <li>
- *         {@link #compose(BufferAllocator)} creates and empty, zero capacity, composite buffer. Such empty buffers may
+ *         {@link #compose(BufferAllocator)} creates an empty, zero capacity, composite buffer. Such empty buffers may
  *         change their {@linkplain #order() byte order} or {@linkplain #readOnly() read-only} states when they gain
  *         their first component.
  *     </li>
@@ -95,7 +95,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
      * non-composite copy of the buffer.
      */
     private static final int MAX_CAPACITY = Integer.MAX_VALUE - 8;
-    private static final Drop<CompositeBuffer> COMPOSITE_DROP = new Drop<CompositeBuffer>() {
+    private static final Drop<CompositeBuffer> COMPOSITE_DROP = new Drop<>() {
         @Override
         public void drop(CompositeBuffer buf) {
             for (Buffer b : buf.bufs) {
@@ -146,14 +146,22 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         IllegalStateException ise = null;
         for (int i = 0; i < sends.length; i++) {
             if (ise != null) {
-                sends[i].close();
+                try {
+                    sends[i].close();
+                } catch (Exception closeExc) {
+                    ise.addSuppressed(closeExc);
+                }
             } else {
                 try {
                     bufs[i] = sends[i].receive();
                 } catch (IllegalStateException e) {
                     ise = e;
                     for (int j = 0; j < i; j++) {
-                        bufs[j].close();
+                        try {
+                            bufs[j].close();
+                        } catch (Exception closeExc) {
+                            ise.addSuppressed(closeExc);
+                        }
                     }
                 }
             }
@@ -202,11 +210,16 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         Set<Buffer> duplicatesCheck = Collections.newSetFromMap(new IdentityHashMap<>());
         duplicatesCheck.addAll(Arrays.asList(bufs));
         if (duplicatesCheck.size() < bufs.length) {
-            for (Buffer buf : bufs) {
-                buf.close(); // Undo the increment we did with Deref.get().
-            }
-            throw new IllegalArgumentException(
+            IllegalArgumentException iae = new IllegalArgumentException(
                     "Cannot create composite buffer with duplicate constituent buffer components.");
+            for (Buffer buf : bufs) {
+                try {
+                    buf.close();
+                } catch (Exception closeExc) {
+                    iae.addSuppressed(closeExc);
+                }
+            }
+            throw iae;
         }
         return bufs;
     }
@@ -236,19 +249,16 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         try {
             if (bufs.length > 0) {
                 ByteOrder targetOrder = bufs[0].order();
+                boolean targetReadOnly = bufs[0].readOnly();
                 for (Buffer buf : bufs) {
                     if (buf.order() != targetOrder) {
                         throw new IllegalArgumentException("Constituent buffers have inconsistent byte order.");
                     }
-                }
-                order = bufs[0].order();
-
-                boolean targetReadOnly = bufs[0].readOnly();
-                for (Buffer buf : bufs) {
                     if (buf.readOnly() != targetReadOnly) {
                         throw new IllegalArgumentException("Constituent buffers have inconsistent read-only state.");
                     }
                 }
+                order = bufs[0].order();
                 readOnly = targetReadOnly;
             } else {
                 order = ByteOrder.nativeOrder();
@@ -260,7 +270,11 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             // Always close bufs on exception, regardless of acquireBufs value.
             // If acquireBufs is false, it just means the ref count increments happened prior to this constructor call.
             for (Buffer buf : bufs) {
-                buf.close();
+                try {
+                    buf.close();
+                } catch (Exception closeExc) {
+                    e.addSuppressed(closeExc);
+                }
             }
             throw e;
         }
