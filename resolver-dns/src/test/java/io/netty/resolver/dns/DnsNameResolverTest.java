@@ -827,7 +827,7 @@ public class DnsNameResolverTest {
         testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
     }
 
-    @Disabled("Need to understand why this started to fail recently un github actions")
+    @Disabled("Need to understand why this started to fail recently on github actions")
     @Test
     public void testResolveAllLocalhostIpv4() {
         assumeThat(PlatformDependent.isWindows()).isTrue();
