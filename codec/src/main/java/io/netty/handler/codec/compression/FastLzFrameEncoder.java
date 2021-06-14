@@ -115,8 +115,15 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 blockType = BLOCK_TYPE_NON_COMPRESSED;
 
                 out.ensureWritable(outputOffset + 2 + length);
-                final byte[] output = out.array();
-                final int outputPtr = out.arrayOffset() + outputOffset + 2;
+                final byte[] output;
+                final int outputPtr;
+                if (out.hasArray()) {
+                    output = out.array();
+                    outputPtr = out.arrayOffset() + outputOffset + 2;
+                } else {
+                    output = new byte[length];
+                    outputPtr = 0;
+                }
 
                 if (checksum != null) {
                     final byte[] input;
@@ -137,6 +144,9 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     System.arraycopy(input, inputPtr, output, outputPtr, length);
                 } else {
                     in.getBytes(idx, output, outputPtr, length);
+                }
+                if (!out.hasArray()) {
+                    out.setBytes(outputOffset + 2, output);
                 }
                 chunkLength = length;
             } else {
@@ -160,9 +170,19 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
                 final int maxOutputLength = calculateOutputBufferLength(length);
                 out.ensureWritable(outputOffset + 4 + maxOutputLength);
-                final byte[] output = out.array();
-                final int outputPtr = out.arrayOffset() + outputOffset + 4;
+                final byte[] output;
+                final int outputPtr;
+                if (out.hasArray()) {
+                    output = out.array();
+                    outputPtr = out.arrayOffset() + outputOffset + 4;
+                } else {
+                    output = new byte[maxOutputLength];
+                    outputPtr = 0;
+                }
                 final int compressedLength = compress(input, inputPtr, length, output, outputPtr, level);
+                if (!out.hasArray()) {
+                    out.setBytes(outputOffset + 4, output, 0, compressedLength);
+                }
                 if (compressedLength < length) {
                     blockType = BLOCK_TYPE_COMPRESSED;
                     chunkLength = compressedLength;
@@ -171,7 +191,13 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     outputOffset += 2;
                 } else {
                     blockType = BLOCK_TYPE_NON_COMPRESSED;
-                    System.arraycopy(input, inputPtr, output, outputPtr - 2, length);
+                    if (out.hasArray()) {
+                        System.arraycopy(input, inputPtr, output, outputPtr - 2, length);
+                    } else {
+                        for (int i = 0; i < length; i++) {
+                            out.setByte(outputOffset + 2 + i, input[inputPtr + i]);
+                        }
+                    }
                     chunkLength = length;
                 }
             }

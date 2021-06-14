@@ -45,14 +45,12 @@ public abstract class AbstractIntegrationTest {
     protected abstract EmbeddedChannel createEncoder();
     protected abstract EmbeddedChannel createDecoder();
 
-    @BeforeEach
-    public void initChannels() throws Exception {
+    public void initChannels() {
         encoder = createEncoder();
         decoder = createDecoder();
     }
 
-    @AfterEach
-    public void closeChannels() throws Exception {
+    public void closeChannels() {
         encoder.close();
         for (;;) {
             Object msg = encoder.readOutbound();
@@ -74,19 +72,22 @@ public abstract class AbstractIntegrationTest {
 
     @Test
     public void testEmpty() throws Exception {
-        testIdentity(EmptyArrays.EMPTY_BYTES);
+        testIdentity(EmptyArrays.EMPTY_BYTES, true);
+        testIdentity(EmptyArrays.EMPTY_BYTES, false);
     }
 
     @Test
     public void testOneByte() throws Exception {
         final byte[] data = { 'A' };
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
     public void testTwoBytes() throws Exception {
         final byte[] data = { 'B', 'A' };
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
@@ -94,14 +95,16 @@ public abstract class AbstractIntegrationTest {
         final byte[] data = ("Netty is a NIO client server framework which enables " +
                 "quick and easy development of network applications such as protocol " +
                 "servers and clients.").getBytes(CharsetUtil.UTF_8);
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
     public void testLargeRandom() throws Exception {
         final byte[] data = new byte[1024 * 1024];
         rand.nextBytes(data);
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
@@ -111,7 +114,8 @@ public abstract class AbstractIntegrationTest {
         for (int i = 0; i < 1024; i++) {
             data[i] = 2;
         }
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
@@ -120,20 +124,23 @@ public abstract class AbstractIntegrationTest {
         for (int i = 0; i < data.length; i++) {
             data[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
         }
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
     public void testLongBlank() throws Exception {
         final byte[] data = new byte[102400];
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
     public void testLongSame() throws Exception {
         final byte[] data = new byte[102400];
         Arrays.fill(data, (byte) 123);
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
     @Test
@@ -142,31 +149,39 @@ public abstract class AbstractIntegrationTest {
         for (int i = 0; i < data.length; i++) {
             data[i] = (byte) i;
         }
-        testIdentity(data);
+        testIdentity(data, true);
+        testIdentity(data, false);
     }
 
-    protected void testIdentity(final byte[] data) {
-        final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertTrue(encoder.writeOutbound(in.retain()));
-        assertTrue(encoder.finish());
-
+    protected void testIdentity(final byte[] data, boolean heapBuffer) {
+        initChannels();
+        final ByteBuf in = heapBuffer? Unpooled.wrappedBuffer(data) :
+                Unpooled.directBuffer(data.length).setBytes(0, data);
         final CompositeByteBuf compressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = encoder.readOutbound()) != null) {
-            compressed.addComponent(true, msg);
-        }
-        assertThat(compressed, is(notNullValue()));
-
-        decoder.writeInbound(compressed.retain());
-        assertFalse(compressed.isReadable());
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-        while ((msg = decoder.readInbound()) != null) {
-            decompressed.addComponent(true, msg);
-        }
-        assertEquals(in.resetReaderIndex(), decompressed);
 
-        compressed.release();
-        decompressed.release();
-        in.release();
+        try {
+            assertTrue(encoder.writeOutbound(in.retain()));
+            assertTrue(encoder.finish());
+
+            ByteBuf msg;
+            while ((msg = encoder.readOutbound()) != null) {
+                compressed.addComponent(true, msg);
+            }
+            assertThat(compressed, is(notNullValue()));
+
+            decoder.writeInbound(compressed.retain());
+            assertFalse(compressed.isReadable());
+            while ((msg = decoder.readInbound()) != null) {
+                decompressed.addComponent(true, msg);
+            }
+            in.readerIndex(0);
+            assertEquals(in, decompressed);
+        } finally {
+            compressed.release();
+            decompressed.release();
+            in.release();
+            closeChannels();
+        }
     }
 }

@@ -159,10 +159,18 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             inputPtr = 0;
         }
 
-        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length);
+        // Estimate may apparently under-count by one in some cases.
+        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length) + 1;
         out.ensureWritable(maxOutputLength);
-        final byte[] output = out.array();
-        final int outputPtr = out.arrayOffset() + out.writerIndex();
+        final byte[] output;
+        final int outputPtr;
+        if (out.hasArray()) {
+            output = out.array();
+            outputPtr = out.arrayOffset() + out.writerIndex();
+        } else {
+            output = new byte[maxOutputLength];
+            outputPtr = 0;
+        }
 
         final int outputLength;
         if (length >= compressThreshold) {
@@ -173,7 +181,12 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             outputLength = encodeNonCompress(input, inputPtr, length, output, outputPtr);
         }
 
-        out.writerIndex(out.writerIndex() + outputLength);
+        if (out.hasArray()) {
+            out.writerIndex(out.writerIndex() + outputLength);
+        } else {
+            out.writeBytes(output, 0, outputLength);
+        }
+
         in.skipBytes(length);
 
         if (!in.hasArray()) {
