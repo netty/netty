@@ -92,7 +92,7 @@ jobs:
     #    uses a compiled language
 
     - name: Compile project
-      run: ./mvnw clean package -DskipTests=true -ntp -B
+      run: ./mvnw -B -ntp clean package -DskipTests=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

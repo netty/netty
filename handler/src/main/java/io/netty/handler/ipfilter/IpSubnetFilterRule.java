@@ -195,7 +195,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             final InetAddress inetAddress = remoteAddress.getAddress();
             if (inetAddress instanceof Inet6Address) {
                 BigInteger ipAddress = ipToInt((Inet6Address) inetAddress);
-                return ipAddress.and(subnetMask).equals(networkAddress);
+                return ipAddress.and(subnetMask).equals(subnetMask) || ipAddress.and(subnetMask).equals(networkAddress);
             }
             return false;
         }

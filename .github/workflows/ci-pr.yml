@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-maven-verify-pr-
             ${{ runner.os }}-maven-
       - name: Verify with Maven
-        run: ./mvnw verify -B --file pom.xml -DskipTests=true
+        run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true
 
   build-pr-windows:
     runs-on: windows-2016
@@ -68,7 +68,7 @@ jobs:
             pr-windows-x86_64-maven-cache-
 
       - name: Build project
-        run: ./mvnw.cmd --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: Upload Test Results
         if: always()
@@ -126,7 +126,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
