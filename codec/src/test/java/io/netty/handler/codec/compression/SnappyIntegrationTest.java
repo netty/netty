@@ -64,7 +64,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
                 -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                 -1,   -1
         };
-        testIdentity(data);
+        testIdentity(data, true);
     }
 
     // These tests were found using testRandom() with large RANDOM_RUNS.
@@ -104,7 +104,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
     private void testWithSeed(long seed) {
         byte[] data = new byte[16 * 1048576];
         new Random(seed).nextBytes(data);
-        testIdentity(data);
+        testIdentity(data, true);
     }
 
     private static void printSeedAsTest(long l) {
