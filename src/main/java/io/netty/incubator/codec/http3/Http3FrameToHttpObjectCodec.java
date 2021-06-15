@@ -18,7 +18,6 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -145,10 +144,9 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             }
         }
 
-        ChannelFuture future = null;
         if (msg instanceof HttpMessage) {
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
-             future = ctx.write(new DefaultHttp3HeadersFrame(headers));
+            ctx.write(new DefaultHttp3HeadersFrame(headers));
         }
 
         if (msg instanceof LastHttpContent) {
@@ -156,22 +154,17 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             boolean readable = last.content().isReadable();
             boolean hasTrailers = !last.trailingHeaders().isEmpty();
 
-            if (future != null && !readable && !hasTrailers) {
-                future.addListener(QuicStreamChannel.WRITE_FIN);
-                last.release();
-            } else {
-                if (readable && !hasTrailers) {
-                    ctx.write(new DefaultHttp3DataFrame(last.content())).addListener(QuicStreamChannel.WRITE_FIN);
-                } else if (!readable) {
-                    Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.WRITE_FIN);
-                    last.release();
-                } else {
-                    ctx.write(new DefaultHttp3DataFrame(last.content()));
-                    Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers)).addListener(QuicStreamChannel.WRITE_FIN);
-                }
+            if (readable) {
+                ctx.write(new DefaultHttp3DataFrame(last.content()));
             }
+            if (hasTrailers) {
+                Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
+                ctx.write(new DefaultHttp3HeadersFrame(headers));
+            }
+            if (!readable) {
+                last.release();
+            }
+            ((QuicStreamChannel) ctx.channel()).shutdownOutput();
         } else if (msg instanceof HttpContent) {
             ctx.write(new DefaultHttp3DataFrame(((HttpContent) msg).content()));
         }

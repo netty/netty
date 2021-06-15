@@ -186,11 +186,7 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeEmptyEnd() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
-        LastHttpContent end = LastHttpContent.EMPTY_LAST_CONTENT;
-        assertTrue(ch.writeOutbound(end));
-
-        Http3HeadersFrame emptyFrame = ch.readOutbound();
-        assertTrue(emptyFrame.headers().isEmpty());
+        ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertTrue(ch.isOutputShutdown());
         assertFalse(ch.finish());
@@ -497,11 +493,7 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeEmptyEndAsClient() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        LastHttpContent end = LastHttpContent.EMPTY_LAST_CONTENT;
-        assertTrue(ch.writeOutbound(end));
-
-        Http3HeadersFrame emptyFrame = ch.readOutbound();
-        assertTrue(emptyFrame.headers().isEmpty());
+        ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertTrue(ch.isOutputShutdown());
         assertFalse(ch.finish());
