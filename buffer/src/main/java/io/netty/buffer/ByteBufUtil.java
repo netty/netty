@@ -229,7 +229,6 @@ public final class ByteBufUtil {
      * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
      */
     public static int indexOf(ByteBuf needle, ByteBuf haystack) {
-        // TODO: maybe use Boyer Moore for efficiency.
         if (haystack == null || needle == null) {
             return -1;
         }
@@ -239,28 +238,90 @@ public final class ByteBufUtil {
         if (m == 0) {
             return 0;
         }
-        int[] next = new int[m];
-        for (int i = 1, j = 0; i < m; i++) {
-            while (j > 0 && needle.getByte(i) != needle.getByte(j)) {
-                j = next[j - 1];
+
+        int i = maxSuf(needle, m, true);
+        int j = maxSuf(needle, m, false);
+        int ell = Math.max(i, j);
+        int memory;
+        int per = 0;
+
+        if (equals(needle, 0, needle, per, per + ell + 1)) {
+            j = 0;
+            memory = -1;
+            while (j <= n - m) {
+                i = Math.max(ell, memory) + 1;
+                while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
+                    ++i;
+                }
+                if (i >= m) {
+                    i = ell;
+                    while (i > memory && needle.getByte(i) == haystack.getByte(i + j)) {
+                        --i;
+                    }
+                    if (i <= memory) {
+                        return j;
+                    }
+                    j += per;
+                    memory = m - per - 1;
+                } else {
+                    j += i - ell;
+                    memory = -1;
+                }
             }
-            if (needle.getByte(i) == needle.getByte(j)) {
-                j++;
-            }
-            next[i] = j;
-        }
-        for (int i = 0, j = 0; i < n; i++) {
-            while (j > 0 && haystack.getByte(i) != needle.getByte(j)) {
-                j = next[j - 1];
-            }
-            if (haystack.getByte(i) == needle.getByte(j)) {
-                j++;
-            }
-            if (j == m) {
-                return i - m + 1;
+        } else {
+            per = Math.max(ell + 1, m - ell - 1) + 1;
+            j = 0;
+            while (j <= n - m) {
+                i = ell + 1;
+                while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
+                    ++i;
+                }
+                if (i >= m) {
+                    i = ell;
+                    while (i >= 0 && needle.getByte(i) == haystack.getByte(i + j)) {
+                        --i;
+                    }
+                    if (i < 0) {
+                        return j;
+                    }
+                    j += per;
+                } else {
+                    j += i - ell;
+                }
             }
         }
         return -1;
+    }
+
+    private static int maxSuf(ByteBuf x, int m, boolean isSuffix) {
+        int p = 1;
+        int ms = -1;
+        int j = 0;
+        int k = 1;
+        byte a;
+        byte b;
+        while (j + k < m) {
+            a = x.getByte(j + k);
+            b = x.getByte(ms + k);
+            boolean suffix = isSuffix ? a < b : a > b;
+            if (suffix) {
+                j += k;
+                k = 1;
+                p = j - ms;
+            } else if (a == b) {
+                if (k != p) {
+                    ++k;
+                } else {
+                    j += p;
+                    k = 1;
+                }
+            } else {
+                ms = j;
+                j = ms + 1;
+                k = p = 1;
+            }
+        }
+        return ms;
     }
 
     /**
