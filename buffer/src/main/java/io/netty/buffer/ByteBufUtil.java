@@ -233,6 +233,10 @@ public final class ByteBufUtil {
             return -1;
         }
 
+        if (needle.readableBytes() > haystack.readableBytes()) {
+            return -1;
+        }
+
         int n = haystack.readableBytes();
         int m = needle.readableBytes();
         if (m == 0) {
