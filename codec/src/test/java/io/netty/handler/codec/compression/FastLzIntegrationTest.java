@@ -64,49 +64,54 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Override   // test batched flow of data
-    protected void testIdentity(final byte[] data) {
-        final ByteBuf original = Unpooled.wrappedBuffer(data);
-
-        int written = 0, length = rand.nextInt(100);
-        while (written + length < data.length) {
-            ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
-            encoder.writeOutbound(in);
-            written += length;
-            length = rand.nextInt(100);
-        }
-        ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
-        encoder.writeOutbound(in);
-        encoder.finish();
-
-        ByteBuf msg;
+    protected void testIdentity(final byte[] data, boolean heapBuffer) {
+        initChannels();
+        final ByteBuf original = heapBuffer? Unpooled.wrappedBuffer(data) :
+                Unpooled.directBuffer(data.length).writeBytes(data);
         final CompositeByteBuf compressed = Unpooled.compositeBuffer();
-        while ((msg = encoder.readOutbound()) != null) {
-            compressed.addComponent(true, msg);
-        }
-        assertThat(compressed, is(notNullValue()));
-
-        final byte[] compressedArray = new byte[compressed.readableBytes()];
-        compressed.readBytes(compressedArray);
-        written = 0;
-        length = rand.nextInt(100);
-        while (written + length < compressedArray.length) {
-            in = Unpooled.wrappedBuffer(compressedArray, written, length);
-            decoder.writeInbound(in);
-            written += length;
-            length = rand.nextInt(100);
-        }
-        in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
-        decoder.writeInbound(in);
-
-        assertFalse(compressed.isReadable());
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-        while ((msg = decoder.readInbound()) != null) {
-            decompressed.addComponent(true, msg);
-        }
-        assertEquals(original, decompressed);
 
-        compressed.release();
-        decompressed.release();
-        original.release();
+        try {
+            int written = 0, length = rand.nextInt(100);
+            while (written + length < data.length) {
+                ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
+                encoder.writeOutbound(in);
+                written += length;
+                length = rand.nextInt(100);
+            }
+            ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
+            encoder.writeOutbound(in);
+            encoder.finish();
+
+            ByteBuf msg;
+            while ((msg = encoder.readOutbound()) != null) {
+                compressed.addComponent(true, msg);
+            }
+            assertThat(compressed, is(notNullValue()));
+
+            final byte[] compressedArray = new byte[compressed.readableBytes()];
+            compressed.readBytes(compressedArray);
+            written = 0;
+            length = rand.nextInt(100);
+            while (written + length < compressedArray.length) {
+                in = Unpooled.wrappedBuffer(compressedArray, written, length);
+                decoder.writeInbound(in);
+                written += length;
+                length = rand.nextInt(100);
+            }
+            in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
+            decoder.writeInbound(in);
+
+            assertFalse(compressed.isReadable());
+            while ((msg = decoder.readInbound()) != null) {
+                decompressed.addComponent(true, msg);
+            }
+            assertEquals(original, decompressed);
+        } finally {
+            compressed.release();
+            decompressed.release();
+            original.release();
+            closeChannels();
+        }
     }
 }

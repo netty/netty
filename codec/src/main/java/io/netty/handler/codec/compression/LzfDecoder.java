@@ -171,13 +171,24 @@ public class LzfDecoder extends ByteToMessageDecoder {
                     }
 
                     ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
-                    final byte[] outputArray = uncompressed.array();
-                    final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
+                    final byte[] outputArray;
+                    final int outPos;
+                    if (uncompressed.hasArray()) {
+                        outputArray = uncompressed.array();
+                        outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
+                    } else {
+                        outputArray = new byte[originalLength];
+                        outPos = 0;
+                    }
 
                     boolean success = false;
                     try {
                         decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
-                        uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
+                        if (uncompressed.hasArray()) {
+                            uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
+                        } else {
+                            uncompressed.writeBytes(outputArray);
+                        }
                         out.add(uncompressed);
                         in.skipBytes(chunkLength);
                         success = true;

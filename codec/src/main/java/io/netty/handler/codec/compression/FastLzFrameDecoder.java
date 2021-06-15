@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.EmptyArrays;
@@ -146,70 +147,50 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                 final int idx = in.readerIndex();
                 final int originalLength = this.originalLength;
 
-                final ByteBuf uncompressed;
-                final byte[] output;
-                final int outputPtr;
+                final byte[] output = originalLength == 0? EmptyArrays.EMPTY_BYTES : new byte[originalLength];
+                final int outputPtr = 0;
 
-                if (originalLength != 0) {
-                    uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
-                    output = uncompressed.array();
-                    outputPtr = uncompressed.arrayOffset() + uncompressed.writerIndex();
-                } else {
-                    uncompressed = null;
-                    output = EmptyArrays.EMPTY_BYTES;
-                    outputPtr = 0;
-                }
-
-                boolean success = false;
-                try {
-                    if (isCompressed) {
-                        final byte[] input;
-                        final int inputPtr;
-                        if (in.hasArray()) {
-                            input = in.array();
-                            inputPtr = in.arrayOffset() + idx;
-                        } else {
-                            input = new byte[chunkLength];
-                            in.getBytes(idx, input);
-                            inputPtr = 0;
-                        }
-
-                        final int decompressedBytes = decompress(input, inputPtr, chunkLength,
-                                output, outputPtr, originalLength);
-                        if (originalLength != decompressedBytes) {
-                            throw new DecompressionException(String.format(
-                                    "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
-                                    originalLength, decompressedBytes));
-                        }
+                if (isCompressed) {
+                    final byte[] input;
+                    final int inputPtr;
+                    if (in.hasArray()) {
+                        input = in.array();
+                        inputPtr = in.arrayOffset() + idx;
                     } else {
-                        in.getBytes(idx, output, outputPtr, chunkLength);
+                        input = new byte[chunkLength];
+                        in.getBytes(idx, input);
+                        inputPtr = 0;
                     }
 
-                    final Checksum checksum = this.checksum;
-                    if (hasChecksum && checksum != null) {
-                        checksum.reset();
-                        checksum.update(output, outputPtr, originalLength);
-                        final int checksumResult = (int) checksum.getValue();
-                        if (checksumResult != currentChecksum) {
-                            throw new DecompressionException(String.format(
-                                    "stream corrupted: mismatching checksum: %d (expected: %d)",
-                                    checksumResult, currentChecksum));
-                        }
+                    final int decompressedBytes = decompress(input, inputPtr, chunkLength,
+                                                             output, outputPtr, originalLength);
+                    if (originalLength != decompressedBytes) {
+                        throw new DecompressionException(String.format(
+                                "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
+                                originalLength, decompressedBytes));
                     }
+                } else {
+                    in.getBytes(idx, output, outputPtr, chunkLength);
+                }
 
-                    if (uncompressed != null) {
-                        uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                        out.add(uncompressed);
-                    }
-                    in.skipBytes(chunkLength);
-
-                    currentState = State.INIT_BLOCK;
-                    success = true;
-                } finally {
-                    if (!success && uncompressed != null) {
-                        uncompressed.release();
+                final Checksum checksum = this.checksum;
+                if (hasChecksum && checksum != null) {
+                    checksum.reset();
+                    checksum.update(output, outputPtr, originalLength);
+                    final int checksumResult = (int) checksum.getValue();
+                    if (checksumResult != currentChecksum) {
+                        throw new DecompressionException(String.format(
+                                "stream corrupted: mismatching checksum: %d (expected: %d)",
+                                checksumResult, currentChecksum));
                     }
                 }
+
+                if (output.length > 0) {
+                    out.add(Unpooled.wrappedBuffer(output).writerIndex(originalLength));
+                }
+                in.skipBytes(chunkLength);
+
+                currentState = State.INIT_BLOCK;
                 break;
             case CORRUPTED:
                 in.skipBytes(in.readableBytes());
