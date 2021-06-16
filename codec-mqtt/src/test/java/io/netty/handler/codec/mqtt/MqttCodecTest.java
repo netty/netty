@@ -160,6 +160,84 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testConnectMessageNonZeroReservedBit0Mqtt311() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte | 1)); // set bit 0 to 1
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    @Test
+    public void testConnectMessageNonZeroReservedBit1Mqtt311() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte | 2)); // set bit 1 to 1
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    @Test
+    public void testConnectMessageNonZeroReservedBit2Mqtt311() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte | 4)); // set bit 2 to 1
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    @Test
+    public void testConnectMessageNonZeroReservedBit3Mqtt311() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte | 8)); // set bit 3 to 1
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    @Test
+    public void testSubscribeMessageNonZeroReservedBit0Mqtt311() throws Exception {
+        final MqttSubscribeMessage message = createSubscribeMessage();
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte | 1)); // set bit 1 to 0
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    @Test
+    public void testSubscribeMessageZeroReservedBit1Mqtt311() throws Exception {
+        final MqttSubscribeMessage message = createSubscribeMessage();
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        byte firstByte = byteBuf.getByte(0);
+        byteBuf.setByte(0, (byte) (firstByte & ~2)); // set bit 1 to 0
+        ArgumentCaptor<MqttMessage> captor = ArgumentCaptor.forClass(MqttMessage.class);
+        mqttDecoder.channelRead(ctx, byteBuf);
+        verify(ctx).fireChannelRead(captor.capture());
+        checkForSingleDecoderException(captor);
+    }
+
+    private void checkForSingleDecoderException(ArgumentCaptor<MqttMessage> captor) {
+        final MqttMessage result = captor.getValue();
+        assertTrue("Decoding should have resulted in a DecoderException",
+                result.decoderResult().cause() instanceof DecoderException);
+    }
+
+    @Test
     public void testConnectMessageNoPassword() throws Exception {
         final MqttConnectMessage message = createConnectMessage(
                 MqttVersion.MQTT_3_1_1,
@@ -877,7 +955,7 @@ public class MqttCodecTest {
 
     private static MqttSubscribeMessage createSubscribeMessage() {
         MqttFixedHeader mqttFixedHeader =
-                new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, true, 0);
+                new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
         List<MqttTopicSubscription> topicSubscriptions = new LinkedList<>();
@@ -903,7 +981,7 @@ public class MqttCodecTest {
 
     private static MqttUnsubscribeMessage createUnsubscribeMessage() {
         MqttFixedHeader mqttFixedHeader =
-                new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, true, 0);
+                new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
         List<String> topics = new LinkedList<>();
