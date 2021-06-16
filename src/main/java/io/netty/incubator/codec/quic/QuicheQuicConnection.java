@@ -47,6 +47,8 @@ final class QuicheQuicConnection {
         // TODO: Maybe cache these per thread as we only use them temporary within a limited scope.
         infoBuffer = Quiche.allocateNativeOrder(QUICHE_SEND_INFOS_OFFSET +
                 2 * Quiche.SIZEOF_QUICHE_SEND_INFO);
+        // Let's memset the memory.
+        infoBuffer.setZero(0, infoBuffer.capacity());
     }
 
     void free() {

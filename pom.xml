@@ -94,11 +94,11 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>6d070ed8694216806f3ce689d71ceb7ad76d425e</quicheCommitSha>
+    <quicheCommitSha>7eb57c4fc608932acc76c3ee2759c2e41e51d566</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
-    <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+    <cflags>-std=gnu99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
     <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
     <extraCmakeFlags />
     <extraCflags />
@@ -185,7 +185,7 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
     </profile>
@@ -202,7 +202,7 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -lrt</extraLdflags>
+        <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch_64</bundleNativeCode>
         <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
