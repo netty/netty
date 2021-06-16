@@ -1598,7 +1598,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     SSL.setCipherSuites(ssl, cipherSuiteSpec, false);
                     if (OpenSsl.isTlsv13Supported()) {
                         // Set TLSv1.3 ciphers.
-                        SSL.setCipherSuites(ssl, cipherSuiteSpecTLSv13, true);
+                        SSL.setCipherSuites(ssl, OpenSsl.checkTls13Ciphers(logger, cipherSuiteSpecTLSv13), true);
                     }
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are

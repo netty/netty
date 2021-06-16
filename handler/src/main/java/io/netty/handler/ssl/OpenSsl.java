@@ -29,6 +29,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -37,7 +38,9 @@ import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -64,6 +67,7 @@ public final class OpenSsl {
     private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
+    static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
 
     // self-signed certificate for netty.io and the matching private-key
     private static final String CERT = "-----BEGIN CERTIFICATE-----\n" +
@@ -184,8 +188,16 @@ public final class OpenSsl {
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS = new String [] { "TLS_AES_128_GCM_SHA256",
                         "TLS_AES_256_GCM_SHA384" ,
                         "TLS_CHACHA20_POLY1305_SHA256" };
+
+                StringBuilder ciphersBuilder = new StringBuilder(64);
+                for (String cipher: EXTRA_SUPPORTED_TLS_1_3_CIPHERS) {
+                    ciphersBuilder.append(cipher).append(",");
+                }
+                ciphersBuilder.setLength(ciphersBuilder.length() - 1);
+                EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = ciphersBuilder.toString();
             }  else {
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
+                EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
             }
 
             try {
@@ -381,7 +393,27 @@ public final class OpenSsl {
             TLSV13_SUPPORTED = false;
             IS_BORINGSSL = false;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
+            EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
         }
+    }
+
+    static String checkTls13Ciphers(InternalLogger logger, String ciphers) {
+        if (IS_BORINGSSL && !ciphers.isEmpty()) {
+            assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
+            Set<String> boringsslTlsv13Ciphers = new HashSet<String>();
+            Collections.addAll(boringsslTlsv13Ciphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
+            for (String cipher: ciphers.split(",")) {
+                boringsslTlsv13Ciphers.remove(cipher);
+            }
+            if (!boringsslTlsv13Ciphers.isEmpty()) {
+                logger.info(
+                        "BoringSSL doesn't allow to explicit enable / disable TLSv1.3 ciphers." +
+                                " The default TLSv1.3 ciphers will be used: '{}'.",
+                        Arrays.toString(EXTRA_SUPPORTED_TLS_1_3_CIPHERS));
+                return EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
+            }
+        }
+        return ciphers;
     }
 
     static boolean isSessionCacheSupported() {
