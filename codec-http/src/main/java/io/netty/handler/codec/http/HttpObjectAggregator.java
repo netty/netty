@@ -395,6 +395,12 @@ public class HttpObjectAggregator
         public abstract FullHttpMessage copy();
 
         @Override
+        public abstract FullHttpMessage slice();
+
+        @Override
+        public abstract FullHttpMessage retainedSlice();
+
+        @Override
         public abstract FullHttpMessage duplicate();
 
         @Override
@@ -410,6 +416,16 @@ public class HttpObjectAggregator
         @Override
         public FullHttpRequest copy() {
             return replace(content().copy());
+        }
+
+        @Override
+        public FullHttpRequest slice() {
+            return replace(content().slice());
+        }
+
+        @Override
+        public FullHttpRequest retainedSlice() {
+            return replace(content().retainedSlice());
         }
 
         @Override
@@ -508,6 +524,16 @@ public class HttpObjectAggregator
         @Override
         public FullHttpResponse copy() {
             return replace(content().copy());
+        }
+
+        @Override
+        public FullHttpResponse slice() {
+            return replace(content().slice());
+        }
+
+        @Override
+        public FullHttpResponse retainedSlice() {
+            return replace(content().retainedSlice());
         }
 
         @Override

@@ -54,6 +54,16 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
     }
 
     @Override
+    public StompFrame slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public StompFrame retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public StompFrame duplicate() {
         return replace(content.duplicate());
     }

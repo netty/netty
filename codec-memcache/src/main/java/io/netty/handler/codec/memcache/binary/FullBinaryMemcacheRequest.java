@@ -29,6 +29,12 @@ public interface FullBinaryMemcacheRequest extends BinaryMemcacheRequest, FullMe
     FullBinaryMemcacheRequest copy();
 
     @Override
+    FullBinaryMemcacheRequest slice();
+
+    @Override
+    FullBinaryMemcacheRequest retainedSlice();
+
+    @Override
     FullBinaryMemcacheRequest duplicate();
 
     @Override

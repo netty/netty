@@ -36,6 +36,12 @@ public interface Http2UnknownFrame extends Http2StreamFrame, ByteBufHolder {
     Http2UnknownFrame copy();
 
     @Override
+    Http2UnknownFrame slice();
+
+    @Override
+    Http2UnknownFrame retainedSlice();
+
+    @Override
     Http2UnknownFrame duplicate();
 
     @Override

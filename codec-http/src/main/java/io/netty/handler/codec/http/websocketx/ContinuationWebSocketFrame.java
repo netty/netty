@@ -97,6 +97,16 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public ContinuationWebSocketFrame slice() {
+        return (ContinuationWebSocketFrame) super.slice();
+    }
+
+    @Override
+    public ContinuationWebSocketFrame retainedSlice() {
+        return (ContinuationWebSocketFrame) super.retainedSlice();
+    }
+
+    @Override
     public ContinuationWebSocketFrame duplicate() {
         return (ContinuationWebSocketFrame) super.duplicate();
     }

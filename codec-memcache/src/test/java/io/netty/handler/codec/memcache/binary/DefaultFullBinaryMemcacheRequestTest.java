@@ -57,6 +57,27 @@ public class DefaultFullBinaryMemcacheRequestTest {
     }
 
     @Test
+    public void fullSlice() {
+        FullBinaryMemcacheRequest newInstance = request.slice();
+        try {
+            assertCopy(request, request.content(), newInstance);
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void fullRetainedSlice() {
+        FullBinaryMemcacheRequest newInstance = request.retainedSlice();
+        try {
+            assertCopy(request, request.content(), newInstance);
+        } finally {
+            request.release();
+            newInstance.release();
+        }
+    }
+
+    @Test
     public void fullDuplicate() {
         FullBinaryMemcacheRequest newInstance = request.duplicate();
         try {

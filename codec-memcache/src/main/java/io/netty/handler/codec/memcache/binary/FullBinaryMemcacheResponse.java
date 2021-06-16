@@ -29,6 +29,12 @@ public interface FullBinaryMemcacheResponse extends BinaryMemcacheResponse, Full
     FullBinaryMemcacheResponse copy();
 
     @Override
+    FullBinaryMemcacheResponse slice();
+
+    @Override
+    FullBinaryMemcacheResponse retainedSlice();
+
+    @Override
     FullBinaryMemcacheResponse duplicate();
 
     @Override

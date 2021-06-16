@@ -46,6 +46,16 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
+    public HttpContent slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public HttpContent retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public HttpContent duplicate() {
         return replace(content.duplicate());
     }

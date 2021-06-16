@@ -31,6 +31,12 @@ public interface SmtpContent extends ByteBufHolder {
     SmtpContent copy();
 
     @Override
+    SmtpContent slice();
+
+    @Override
+    SmtpContent retainedSlice();
+
+    @Override
     SmtpContent duplicate();
 
     @Override

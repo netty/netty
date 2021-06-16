@@ -147,6 +147,16 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     }
 
     @Override
+    public PemPrivateKey slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public PemPrivateKey retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public PemPrivateKey duplicate() {
         return replace(content.duplicate());
     }

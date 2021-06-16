@@ -16,6 +16,7 @@
 package io.netty.handler.codec.smtp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.UnstableApi;
 
@@ -34,6 +35,16 @@ public interface LastSmtpContent extends SmtpContent {
     LastSmtpContent EMPTY_LAST_CONTENT = new LastSmtpContent() {
         @Override
         public LastSmtpContent copy() {
+            return this;
+        }
+
+        @Override
+        public LastSmtpContent slice() {
+            return this;
+        }
+
+        @Override
+        public LastSmtpContent retainedSlice() {
             return this;
         }
 

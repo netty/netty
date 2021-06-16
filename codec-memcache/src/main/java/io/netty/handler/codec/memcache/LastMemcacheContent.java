@@ -38,6 +38,16 @@ public interface LastMemcacheContent extends MemcacheContent {
         }
 
         @Override
+        public LastMemcacheContent slice() {
+            return this;
+        }
+
+        @Override
+        public LastMemcacheContent retainedSlice() {
+            return this;
+        }
+
+        @Override
         public LastMemcacheContent duplicate() {
             return this;
         }
@@ -105,6 +115,12 @@ public interface LastMemcacheContent extends MemcacheContent {
 
     @Override
     LastMemcacheContent copy();
+
+    @Override
+    LastMemcacheContent slice();
+
+    @Override
+    LastMemcacheContent retainedSlice();
 
     @Override
     LastMemcacheContent duplicate();

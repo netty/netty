@@ -41,6 +41,16 @@ public class DefaultBulkStringRedisContent extends DefaultByteBufHolder implemen
     }
 
     @Override
+    public BulkStringRedisContent slice() {
+        return (BulkStringRedisContent) super.slice();
+    }
+
+    @Override
+    public BulkStringRedisContent retainedSlice() {
+        return (BulkStringRedisContent) super.retainedSlice();
+    }
+
+    @Override
     public BulkStringRedisContent duplicate() {
         return (BulkStringRedisContent) super.duplicate();
     }

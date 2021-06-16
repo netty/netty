@@ -48,6 +48,16 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
     }
 
     @Override
+    public MemcacheContent slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public MemcacheContent retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public MemcacheContent duplicate() {
         return replace(content.duplicate());
     }

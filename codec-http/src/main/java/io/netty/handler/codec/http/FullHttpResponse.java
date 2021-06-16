@@ -26,6 +26,12 @@ public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
     FullHttpResponse copy();
 
     @Override
+    FullHttpResponse slice();
+
+    @Override
+    FullHttpResponse retainedSlice();
+
+    @Override
     FullHttpResponse duplicate();
 
     @Override

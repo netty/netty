@@ -26,6 +26,12 @@ public interface FullHttpRequest extends HttpRequest, FullHttpMessage {
     FullHttpRequest copy();
 
     @Override
+    FullHttpRequest slice();
+
+    @Override
+    FullHttpRequest retainedSlice();
+
+    @Override
     FullHttpRequest duplicate();
 
     @Override

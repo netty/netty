@@ -33,6 +33,20 @@ public interface ByteBufHolder extends ReferenceCounted {
     ByteBufHolder copy();
 
     /**
+     * Slices this {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
+     *
+     * @see ByteBuf#slice()
+     */
+    ByteBufHolder slice();
+
+    /**
+     * Slices this {@link ByteBufHolder}. This method returns a retained slice unlike {@link #slice()}.
+     *
+     * @see ByteBuf#retainedSlice()
+     */
+    ByteBufHolder retainedSlice();
+
+    /**
      * Duplicates this {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
      */
     ByteBufHolder duplicate();

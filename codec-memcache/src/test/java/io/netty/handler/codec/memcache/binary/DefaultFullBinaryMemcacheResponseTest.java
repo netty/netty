@@ -57,6 +57,27 @@ public class DefaultFullBinaryMemcacheResponseTest {
     }
 
     @Test
+    public void fullSlice() {
+        FullBinaryMemcacheResponse newInstance = response.slice();
+        try {
+            assertResponseEquals(response, response.content(), newInstance);
+        } finally {
+            response.release();
+        }
+    }
+
+    @Test
+    public void fullRetainedSlice() {
+        FullBinaryMemcacheResponse newInstance = response.retainedSlice();
+        try {
+            assertResponseEquals(response, response.content(), newInstance);
+        } finally {
+            response.release();
+            newInstance.release();
+        }
+    }
+
+    @Test
     public void fullDuplicate() {
         try {
             assertResponseEquals(response, response.content(), response.duplicate());

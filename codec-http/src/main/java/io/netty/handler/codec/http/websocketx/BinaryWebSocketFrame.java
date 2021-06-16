@@ -60,6 +60,16 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public BinaryWebSocketFrame slice() {
+        return (BinaryWebSocketFrame) super.slice();
+    }
+
+    @Override
+    public BinaryWebSocketFrame retainedSlice() {
+        return (BinaryWebSocketFrame) super.retainedSlice();
+    }
+
+    @Override
     public BinaryWebSocketFrame duplicate() {
         return (BinaryWebSocketFrame) super.duplicate();
     }

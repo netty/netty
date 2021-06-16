@@ -31,6 +31,12 @@ public interface StompContentSubframe extends ByteBufHolder, StompSubframe {
     StompContentSubframe copy();
 
     @Override
+    StompContentSubframe slice();
+
+    @Override
+    StompContentSubframe retainedSlice();
+
+    @Override
     StompContentSubframe duplicate();
 
     @Override

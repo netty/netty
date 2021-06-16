@@ -61,6 +61,16 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
     }
 
     @Override
+    public PemValue slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public PemValue retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public PemValue duplicate() {
         return replace(content.duplicate());
     }
