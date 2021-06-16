@@ -153,7 +153,11 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     /**
-     * Decodes the fixed header. It's one byte for the flags and then variable bytes for the remaining length.
+     * Decodes the fixed header. It's one byte for the flags and then variable
+     * bytes for the remaining length.
+     *
+     * @see
+     * https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180841
      *
      * @param buffer the buffer to decode from
      * @return the fixed header
@@ -165,6 +169,59 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         boolean dupFlag = (b1 & 0x08) == 0x08;
         int qosLevel = (b1 & 0x06) >> 1;
         boolean retain = (b1 & 0x01) != 0;
+
+        switch (messageType) {
+            case PUBLISH:
+                if (qosLevel == 3) {
+                    throw new DecoderException("Illegal QOS Level in fixed header of PUBLISH message ("
+                            + qosLevel + ')');
+                }
+                break;
+
+            case PUBREL:
+            case SUBSCRIBE:
+            case UNSUBSCRIBE:
+                if (dupFlag) {
+                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType.toString()
+                            + " message, must be 0, found 1");
+                }
+                if (qosLevel != 1) {
+                    throw new DecoderException("Illegal QOS Level in fixed header of " + messageType.toString()
+                            + " message, must be 1, found " + qosLevel);
+                }
+                if (retain) {
+                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType.toString()
+                            + " message, must be 0, found 1");
+                }
+                break;
+
+            case AUTH:
+            case CONNACK:
+            case CONNECT:
+            case DISCONNECT:
+            case PINGREQ:
+            case PINGRESP:
+            case PUBACK:
+            case PUBCOMP:
+            case PUBREC:
+            case SUBACK:
+            case UNSUBACK:
+                if (dupFlag) {
+                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType.toString()
+                            + " message, must be 0, found 1");
+                }
+                if (qosLevel != 0) {
+                    throw new DecoderException("Illegal BIT 2 or 1 in fixed header of " + messageType.toString()
+                            + " message, must be 0, found " + qosLevel);
+                }
+                if (retain) {
+                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType.toString()
+                            + " message, must be 0, found 1");
+                }
+                break;
+            default:
+                throw new DecoderException("Unknown message type, do not know how to validate fixed header");
+        }
 
         int remainingLength = 0;
         int multiplier = 1;
