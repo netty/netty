@@ -189,7 +189,7 @@ public final class OpenSsl {
                         "TLS_AES_256_GCM_SHA384" ,
                         "TLS_CHACHA20_POLY1305_SHA256" };
 
-                StringBuilder ciphersBuilder = new StringBuilder(64);
+                StringBuilder ciphersBuilder = new StringBuilder(128);
                 for (String cipher: EXTRA_SUPPORTED_TLS_1_3_CIPHERS) {
                     ciphersBuilder.append(cipher).append(",");
                 }
@@ -402,10 +402,15 @@ public final class OpenSsl {
             assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
             Set<String> boringsslTlsv13Ciphers = new HashSet<String>();
             Collections.addAll(boringsslTlsv13Ciphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
+            boolean ciphersNotMatch = false;
             for (String cipher: ciphers.split(",")) {
+                if (boringsslTlsv13Ciphers.isEmpty()) {
+                    ciphersNotMatch = true;
+                    break;
+                }
                 boringsslTlsv13Ciphers.remove(cipher);
             }
-            if (!boringsslTlsv13Ciphers.isEmpty()) {
+            if (ciphersNotMatch || !boringsslTlsv13Ciphers.isEmpty()) {
                 logger.info(
                         "BoringSSL doesn't allow to explicit enable / disable TLSv1.3 ciphers." +
                                 " The default TLSv1.3 ciphers will be used: '{}'.",
