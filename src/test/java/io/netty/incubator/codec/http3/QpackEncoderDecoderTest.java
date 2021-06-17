@@ -58,7 +58,7 @@ public class QpackEncoderDecoderTest {
     private final Http3Headers encHeaders = new DefaultHttp3Headers();
     private final Http3Headers decHeaders = new DefaultHttp3Headers();
     private final ByteBuf out = Unpooled.buffer();
-    private final EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+    private final EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
     private QpackAttributes attributes;
 
     @After

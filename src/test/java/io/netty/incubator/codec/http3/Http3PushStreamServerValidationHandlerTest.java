@@ -16,21 +16,22 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.incubator.codec.quic.QuicStreamType;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class Http3PushStreamValidationHandlerTest extends
+public class Http3PushStreamServerValidationHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3PushStreamFrame> {
 
-    public Http3PushStreamValidationHandlerTest() {
-        super(QuicStreamType.UNIDIRECTIONAL, true, true);
+    public Http3PushStreamServerValidationHandlerTest() {
+        super(true, QuicStreamType.UNIDIRECTIONAL);
     }
 
     @Override
-    protected Http3FrameTypeDuplexValidationHandler<Http3PushStreamFrame> newHandler() {
-        return Http3PushStreamValidationHandler.INSTANCE;
+    protected ChannelHandler newHandler() {
+        return Http3PushStreamServerValidationHandler.INSTANCE;
     }
 
     @Override

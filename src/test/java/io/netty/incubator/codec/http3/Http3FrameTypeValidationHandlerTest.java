@@ -26,7 +26,7 @@ abstract class Http3FrameTypeValidationHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3RequestStreamFrame> {
 
     Http3FrameTypeValidationHandlerTest(boolean isOutbound, boolean isInbound) {
-        super(QuicStreamType.BIDIRECTIONAL, isOutbound, isInbound);
+        super(true, QuicStreamType.BIDIRECTIONAL);
     }
 
     @Override

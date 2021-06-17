@@ -26,19 +26,18 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import java.util.function.LongFunction;
 
 import static io.netty.incubator.codec.http3.Http3RequestStreamCodecState.NO_STATE;
-import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
-    private final Http3FrameCodecFactory codecFactory;
-    private final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
-    private final boolean disableQpackDynamicTable;
-    private final Http3ControlStreamInboundHandler localControlStreamHandler;
-    private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
-    private final QpackDecoder qpackDecoder;
-    private final QpackEncoder qpackEncoder;
+    final Http3FrameCodecFactory codecFactory;
+    final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
+    final boolean disableQpackDynamicTable;
+    final Http3ControlStreamInboundHandler localControlStreamHandler;
+    final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
+    final QpackDecoder qpackDecoder;
+    final QpackEncoder qpackEncoder;
     private boolean controlStreamCreationInProgress;
 
     /**
@@ -72,10 +71,10 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         qpackDecoder = new QpackDecoder(localSettings);
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
-        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
-                qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
                 codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE));
+        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
+                qpackEncoder, remoteControlStreamHandler);
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {
@@ -117,7 +116,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE, encodeState, decodeState);
     }
 
-    final Http3RequestStreamValidationHandler newRequestStreamValidationHandler(
+    final ChannelHandler newRequestStreamValidationHandler(
             QuicStreamChannel forStream, Http3RequestStreamCodecState encodeState,
             Http3RequestStreamCodecState decodeState) {
         final QpackAttributes qpackAttributes = Http3.getQpackAttributes(forStream.parent());
@@ -128,6 +127,16 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         }
         return Http3RequestStreamValidationHandler.newClientValidator(localControlStreamHandler::isGoAwayReceived,
                 qpackAttributes, qpackDecoder, encodeState, decodeState);
+    }
+
+    final ChannelHandler newPushStreamValidationHandler(QuicStreamChannel forStream,
+                                                        Http3RequestStreamCodecState decodeState) {
+        if (localControlStreamHandler.isServer()) {
+            return Http3PushStreamServerValidationHandler.INSTANCE;
+        }
+        final QpackAttributes qpackAttributes = Http3.getQpackAttributes(forStream.parent());
+        assert qpackAttributes != null;
+        return new Http3PushStreamClientValidationHandler(qpackAttributes, qpackDecoder, decodeState);
     }
 
     @Override
@@ -153,14 +162,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                     initBidirectionalStream(ctx, channel);
                     break;
                 case UNIDIRECTIONAL:
-                    final Long maxTableCapacity = remoteControlStreamHandler.localSettings()
-                            .get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
-                    channel.pipeline().addLast(
-                            new Http3UnidirectionalStreamInboundHandler(codecFactory,
-                                    localControlStreamHandler, remoteControlStreamHandler,
-                                    unknownInboundStreamHandlerFactory,
-                                    () -> new QpackEncoderHandler(maxTableCapacity, qpackDecoder),
-                                    () -> new QpackDecoderHandler(qpackEncoder)));
+                    initUnidirectionalStream(ctx, channel);
                     break;
                 default:
                     throw new Error();
@@ -176,6 +178,14 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @param streamChannel the {@link QuicStreamChannel}.
      */
     abstract void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel);
+
+    /**
+     * Called when an unidirectional stream is opened from the remote-peer.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} of the parent {@link QuicChannel}.
+     * @param streamChannel the {@link QuicStreamChannel}.
+     */
+    abstract void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel);
 
     /**
      * Always returns {@code false} as it keeps state.

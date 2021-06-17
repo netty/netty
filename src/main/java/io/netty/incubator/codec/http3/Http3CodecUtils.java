@@ -22,10 +22,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_INTERNAL_ERROR;
+import static io.netty.incubator.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 
 final class Http3CodecUtils {
     static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
@@ -61,6 +65,18 @@ final class Http3CodecUtils {
 
     static boolean isReservedFrameType(long type) {
         return type >= MIN_RESERVED_FRAME_TYPE && type <= MAX_RESERVED_FRAME_TYPE;
+    }
+
+    /**
+     * Checks if the passed {@link QuicStreamChannel} is a server initiated stream.
+     *
+     * @param channel to check.
+     * @return {@code true} if the passed {@link QuicStreamChannel} is a server initiated stream.
+     */
+    static boolean isServerInitiatedQuicStream(QuicStreamChannel channel) {
+        // Server streams have odd stream id
+        // https://www.rfc-editor.org/rfc/rfc9000.html#name-stream-types-and-identifier
+        return channel.streamId() % 2 != 0;
     }
 
     static boolean isReservedHttp2FrameType(long type) {
@@ -184,7 +200,7 @@ final class Http3CodecUtils {
      * See <a href="https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-16">
      *     Variable-Length Integer Encoding </a>
      */
-     static int numBytesForVariableLengthInteger(byte b) {
+    static int numBytesForVariableLengthInteger(byte b) {
         byte val = (byte) (b >> 6);
         if ((val & 1) != 0) {
             if ((val & 2) != 0) {
@@ -216,11 +232,12 @@ final class Http3CodecUtils {
         if (fireException) {
             ctx.fireExceptionCaught(exception);
         }
-        connectionError(ctx, exception.errorCode(), exception.getMessage());
+        connectionError(ctx.channel(), exception.errorCode(), exception.getMessage());
     }
 
     /**
      * A connection-error should be handled as defined in the HTTP3 spec.
+     *
      * @param ctx           the {@link ChannelHandlerContext} of the handle that handles it.
      * @param errorCode     the {@link Http3ErrorCode} that caused the error.
      * @param msg           the message that should be used as reason for the error, may be {@code null}.
@@ -231,9 +248,14 @@ final class Http3CodecUtils {
          if (fireException) {
              ctx.fireExceptionCaught(new Http3Exception(errorCode, msg));
          }
-         connectionError(ctx, errorCode, msg);
+         connectionError(ctx.channel(), errorCode, msg);
     }
 
+    /**
+     * Closes the channel if the passed {@link ChannelFuture} fails or has already failed.
+     *
+     * @param future {@link ChannelFuture} which if fails will close the channel.
+     */
     static void closeOnFailure(ChannelFuture future) {
         if (future.isDone() && !future.isSuccess()) {
             future.channel().close();
@@ -242,10 +264,16 @@ final class Http3CodecUtils {
         future.addListener(CLOSE_ON_FAILURE);
     }
 
-    private static void connectionError(ChannelHandlerContext ctx, Http3ErrorCode errorCode, String msg) {
+    /**
+     * A connection-error should be handled as defined in the HTTP3 spec.
+     *
+     * @param channel       the {@link Channel} on which error has occured.
+     * @param errorCode     the {@link Http3ErrorCode} that caused the error.
+     * @param msg           the message that should be used as reason for the error, may be {@code null}.
+     */
+    static void connectionError(Channel channel, Http3ErrorCode errorCode, String msg) {
         final QuicChannel quicChannel;
 
-        Channel channel = ctx.channel();
         if (channel instanceof QuicChannel) {
             quicChannel = (QuicChannel) channel;
         } else {
@@ -269,6 +297,36 @@ final class Http3CodecUtils {
     static void readIfNoAutoRead(ChannelHandlerContext ctx) {
         if (!ctx.channel().config().isAutoRead()) {
             ctx.read();
+        }
+    }
+
+    /**
+     * Retrieves {@link Http3ConnectionHandler} from the passed {@link QuicChannel} pipeline or closes the connection if
+     * none available.
+     *
+     * @param ch for which the {@link Http3ConnectionHandler} is to be retrieved.
+     * @return {@link Http3ConnectionHandler} if available, else close the connection and return {@code null}.
+     */
+    static Http3ConnectionHandler getConnectionHandlerOrClose(QuicChannel ch) {
+        Http3ConnectionHandler connectionHandler = ch.pipeline().get(Http3ConnectionHandler.class);
+        if (connectionHandler == null) {
+            connectionError(ch, H3_INTERNAL_ERROR, "Couldn't obtain the " +
+                    StringUtil.simpleClassName(Http3ConnectionHandler.class) + " of the parent Channel");
+            return null;
+        }
+        return connectionHandler;
+    }
+
+    /**
+     * Verify if the passed {@link QuicStreamChannel} is a {@link QuicStreamType#UNIDIRECTIONAL} QUIC stream.
+     *
+     * @param ch to verify
+     * @throws IllegalArgumentException if the passed {@link QuicStreamChannel} is not a
+     * {@link QuicStreamType#UNIDIRECTIONAL} QUIC stream.
+     */
+    static void verifyIsUnidirectional(QuicStreamChannel ch) {
+        if (ch.type() != UNIDIRECTIONAL) {
+            throw new IllegalArgumentException("Invalid stream type: " + ch.type() + " for stream: " + ch.streamId());
         }
     }
 }

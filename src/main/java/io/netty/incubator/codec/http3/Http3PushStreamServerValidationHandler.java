@@ -18,11 +18,12 @@ package io.netty.incubator.codec.http3;
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1">HTTP Message Exchanges</a>.
  */
-final class Http3PushStreamValidationHandler extends Http3FrameTypeDuplexValidationHandler<Http3PushStreamFrame> {
+final class Http3PushStreamServerValidationHandler
+        extends Http3FrameTypeOutboundValidationHandler<Http3PushStreamFrame> {
 
-    static final Http3PushStreamValidationHandler INSTANCE = new Http3PushStreamValidationHandler();
+    static final Http3PushStreamServerValidationHandler INSTANCE = new Http3PushStreamServerValidationHandler();
 
-    private Http3PushStreamValidationHandler() {
+    private Http3PushStreamServerValidationHandler() {
         super(Http3PushStreamFrame.class);
     }
 

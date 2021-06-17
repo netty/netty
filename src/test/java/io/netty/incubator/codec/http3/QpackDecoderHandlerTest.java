@@ -329,7 +329,7 @@ public class QpackDecoderHandlerTest {
 
     private void setup(long tableCapacity) throws Exception {
         maxEntries = Math.toIntExact(floorDiv(tableCapacity, 32));
-        parent = new EmbeddedQuicChannel();
+        parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         setQpackAttributes(parent, attributes);
         Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();

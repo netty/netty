@@ -23,6 +23,8 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.function.LongFunction;
 
+import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+
 
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> for the server-side.
@@ -75,5 +77,17 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
         pipeline.addLast(decodeStateValidator);
         pipeline.addLast(newRequestStreamValidationHandler(streamChannel, encodeStateValidator, decodeStateValidator));
         pipeline.addLast(requestStreamHandler);
+    }
+
+    @Override
+    void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
+        final Long maxTableCapacity = remoteControlStreamHandler.localSettings()
+                .get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
+        streamChannel.pipeline().addLast(
+                new Http3UnidirectionalStreamInboundServerHandler(codecFactory,
+                        localControlStreamHandler, remoteControlStreamHandler,
+                        unknownInboundStreamHandlerFactory,
+                        () -> new QpackEncoderHandler(maxTableCapacity, qpackDecoder),
+                        () -> new QpackDecoderHandler(qpackEncoder)));
     }
 }

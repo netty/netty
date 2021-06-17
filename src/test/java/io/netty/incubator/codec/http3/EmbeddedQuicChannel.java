@@ -21,7 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageSizeEstimator;
@@ -33,6 +34,7 @@ import io.netty.incubator.codec.quic.QuicChannelConfig;
 import io.netty.incubator.codec.quic.QuicConnectionStats;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -42,27 +44,42 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
+import static io.netty.util.AttributeKey.valueOf;
+import static java.lang.System.arraycopy;
 import static java.util.Collections.unmodifiableCollection;
 
 final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
-    private static final AtomicLongFieldUpdater<EmbeddedQuicChannel> streamIdUpdater =
-            AtomicLongFieldUpdater.newUpdater(EmbeddedQuicChannel.class, "streamId");
-
-    private volatile long streamId;
+    private static final AttributeKey<AtomicLong> streamIdGeneratorKey =
+            valueOf("embedded_channel_stream_id_generator");
     private final Map<QuicStreamType, Long> peerAllowedStreams = new EnumMap<>(QuicStreamType.class);
     private final AtomicBoolean closed = new AtomicBoolean();
     private final ConcurrentLinkedQueue<Integer> closeErrorCodes = new ConcurrentLinkedQueue<>();
     private QuicChannelConfig config;
 
-    EmbeddedQuicChannel(ChannelHandler... handlers) {
-        super(handlers);
+    EmbeddedQuicChannel(boolean server) {
+        this(server, new ChannelHandler[0]);
     }
 
-    EmbeddedQuicChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
-                        ChannelHandler... handlers) {
-        super(parent, channelId, register, hasDisconnect, handlers);
+    EmbeddedQuicChannel(boolean server, ChannelHandler... handlers) {
+        super(prependChannelConsumer(channel -> channel.attr(streamIdGeneratorKey).set(new AtomicLong(server ? 1 : 0)),
+                handlers));
+    }
+
+    static ChannelHandler[] prependChannelConsumer(Consumer<Channel> channelConsumer,
+                                                   ChannelHandler... handlers) {
+        ChannelHandler[] toReturn = new ChannelHandler[handlers.length + 1];
+        toReturn[0] = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                channelConsumer.accept(ctx.channel());
+                super.handlerAdded(ctx);
+            }
+        };
+        arraycopy(handlers, 0, toReturn, 1, handlers.length);
+        return toReturn;
     }
 
     @Override
@@ -102,8 +119,9 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     @Override
     public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
+        final AtomicLong streamIdGenerator = attr(streamIdGeneratorKey).get();
         return promise.setSuccess(new EmbeddedQuicStreamChannel(this, true, type,
-                streamIdUpdater.getAndAdd(this, 2), handler));
+                streamIdGenerator.getAndAdd(2), handler));
     }
 
     @Override

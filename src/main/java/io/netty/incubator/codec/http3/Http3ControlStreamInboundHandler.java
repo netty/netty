@@ -32,6 +32,9 @@ import java.nio.channels.ClosedChannelException;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.connectionError;
 import static io.netty.incubator.codec.http3.Http3CodecUtils.criticalStreamClosed;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_FRAME_UNEXPECTED;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_ID_ERROR;
+import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_MISSING_SETTINGS;
 import static io.netty.incubator.codec.http3.Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
@@ -42,15 +45,18 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     final boolean server;
     private final ChannelHandler controlFrameHandler;
     private final QpackEncoder qpackEncoder;
+    private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     private boolean firstFrameRead;
     private Long receivedGoawayId;
     private Long receivedMaxPushId;
 
-    Http3ControlStreamInboundHandler(boolean server, ChannelHandler controlFrameHandler, QpackEncoder qpackEncoder) {
+    Http3ControlStreamInboundHandler(boolean server, ChannelHandler controlFrameHandler, QpackEncoder qpackEncoder,
+                                     Http3ControlStreamOutboundHandler remoteControlStreamHandler) {
         super(Http3ControlStreamFrame.class);
         this.server = server;
         this.controlFrameHandler = controlFrameHandler;
         this.qpackEncoder = qpackEncoder;
+        this.remoteControlStreamHandler = remoteControlStreamHandler;
     }
 
     boolean isServer() {
@@ -59,6 +65,10 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
 
     boolean isGoAwayReceived() {
         return receivedGoawayId != null;
+    }
+
+    long maxPushIdReceived() {
+        return receivedMaxPushId == null ? -1 : receivedMaxPushId;
     }
 
     private boolean forwardControlFrames() {
@@ -77,8 +87,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     @Override
     void readFrameDiscarded(ChannelHandlerContext ctx, Object discardedFrame) {
         if (!firstFrameRead && !(discardedFrame instanceof Http3SettingsFrame)) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
-                    "Missing settings frame.", forwardControlFrames());
+            connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS, "Missing settings frame.", forwardControlFrames());
         }
     }
 
@@ -86,14 +95,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     void channelRead(ChannelHandlerContext ctx, Http3ControlStreamFrame frame) throws QpackException {
         boolean isSettingsFrame = frame instanceof Http3SettingsFrame;
         if (!firstFrameRead && !isSettingsFrame) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_MISSING_SETTINGS,
-                    "Missing settings frame.", forwardControlFrames());
+            connectionError(ctx, H3_MISSING_SETTINGS, "Missing settings frame.", forwardControlFrames());
             ReferenceCountUtil.release(frame);
             return;
         }
         if (firstFrameRead && isSettingsFrame) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                    "Second settings frame received.", forwardControlFrames());
+            connectionError(ctx, H3_FRAME_UNEXPECTED, "Second settings frame received.", forwardControlFrames());
             ReferenceCountUtil.release(frame);
             return;
         }
@@ -152,12 +159,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     private boolean handleHttp3GoAwayFrame(ChannelHandlerContext ctx, Http3GoAwayFrame goAwayFrame) {
         long id = goAwayFrame.id();
         if (!server && id % 4 != 0) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                    "GOAWAY received with ID of non-request stream.", forwardControlFrames());
+            connectionError(ctx, H3_FRAME_UNEXPECTED, "GOAWAY received with ID of non-request stream.",
+                    forwardControlFrames());
             return false;
         }
         if (receivedGoawayId != null && id > receivedGoawayId) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
+            connectionError(ctx, H3_ID_ERROR,
                     "GOAWAY received with ID larger than previously received.", forwardControlFrames());
             return false;
         }
@@ -168,13 +175,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     private boolean handleHttp3MaxPushIdFrame(ChannelHandlerContext ctx, Http3MaxPushIdFrame frame) {
         long id = frame.id();
         if (!server) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_FRAME_UNEXPECTED,
-                    "MAX_PUSH_ID received by client.", forwardControlFrames());
+            connectionError(ctx, H3_FRAME_UNEXPECTED, "MAX_PUSH_ID received by client.",
+                    forwardControlFrames());
             return false;
         }
         if (receivedMaxPushId != null && id < receivedMaxPushId) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                    "MAX_PUSH_ID reduced limit.", forwardControlFrames());
+            connectionError(ctx, H3_ID_ERROR, "MAX_PUSH_ID reduced limit.", forwardControlFrames());
             return false;
         }
         receivedMaxPushId = id;
@@ -182,7 +188,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     }
 
     private boolean handleHttp3CancelPushFrame(ChannelHandlerContext ctx, Http3CancelPushFrame cancelPushFrame) {
-        // TODO: handle this.
+        final Long maxPushId = server ? receivedMaxPushId : remoteControlStreamHandler.sentMaxPushId();
+        if (maxPushId == null || maxPushId < cancelPushFrame.id()) {
+            connectionError(ctx, H3_ID_ERROR, "CANCEL_PUSH received with an ID greater than MAX_PUSH_ID.",
+                    forwardControlFrames());
+            return false;
+        }
         return true;
     }
 

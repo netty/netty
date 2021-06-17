@@ -91,4 +91,13 @@ final class Http3TestUtils {
     static Http3ControlStreamFrame newHttp3ControlStreamFrame() {
         return ()  -> 0;
     }
+
+    static DefaultHttp3HeadersFrame newHeadersFrameWithPseudoHeaders() {
+        final DefaultHttp3HeadersFrame headers = new DefaultHttp3HeadersFrame();
+        headers.headers().add(":authority", "netty.quic"); // name only
+        headers.headers().add(":path", "/"); // name & value
+        headers.headers().add(":method", "GET"); // name & value with few options per name
+        headers.headers().add(":scheme", "https");
+        return headers;
+    }
 }

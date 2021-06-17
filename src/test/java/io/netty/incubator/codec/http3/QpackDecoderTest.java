@@ -127,7 +127,7 @@ public class QpackDecoderTest {
         final DefaultHttp3SettingsFrame settings = new DefaultHttp3SettingsFrame();
         settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, MAX_UNSIGNED_INT);
         table = new QpackDecoderDynamicTable();
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         decoderStream = new EmbeddedQuicStreamChannel();
         attributes.decoderStream(decoderStream);

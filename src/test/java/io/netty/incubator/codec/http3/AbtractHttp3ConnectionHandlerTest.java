@@ -26,14 +26,20 @@ import static org.junit.Assert.assertTrue;
 
 public abstract class AbtractHttp3ConnectionHandlerTest {
 
+    private final boolean server;
+
     protected abstract Http3ConnectionHandler newConnectionHandler();
 
     protected abstract void assertBidirectionalStreamHandled(EmbeddedQuicChannel channel,
                                                              QuicStreamChannel streamChannel);
 
+    public AbtractHttp3ConnectionHandlerTest(boolean server) {
+        this.server = server;
+    }
+
     @Test
     public void testOpenLocalControlStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
         ChannelHandlerContext ctx = quicChannel.pipeline().firstContext();
 
         Http3ConnectionHandler handler = newConnectionHandler();
@@ -55,7 +61,7 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
 
     @Test
     public void testBidirectionalStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
         final EmbeddedQuicStreamChannel bidirectionalStream =
                 (EmbeddedQuicStreamChannel) quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                         new ChannelDuplexHandler()).get();
@@ -81,7 +87,7 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
 
     @Test
     public void testUnidirectionalStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
         final QuicStreamChannel unidirectionalStream =
                 quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelDuplexHandler()).get();
         ChannelHandlerContext ctx = quicChannel.pipeline().firstContext();

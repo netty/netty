@@ -15,12 +15,12 @@
  */
 package io.netty.incubator.codec.http3;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.util.AsciiString;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 final class QpackStaticTable {
 

@@ -15,11 +15,11 @@
  */
 package io.netty.incubator.codec.http3;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
-
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
+
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3Headers> {
 

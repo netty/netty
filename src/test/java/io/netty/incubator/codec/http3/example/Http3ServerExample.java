@@ -31,6 +31,7 @@ import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
 import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
+import io.netty.incubator.codec.http3.Http3ServerPushStreamManager;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicSslContext;
@@ -72,6 +73,7 @@ public final class Http3ServerExample {
                     @Override
                     protected void initChannel(QuicChannel ch) {
                         // Called for each connection
+                        Http3ServerPushStreamManager pushStreamManager = new Http3ServerPushStreamManager(ch);
                         ch.pipeline().addLast(new Http3ServerConnectionHandler(
                                 new ChannelInitializer<QuicStreamChannel>() {
                                     // Called for each request-stream,
@@ -109,7 +111,7 @@ public final class Http3ServerExample {
                                             }
                                         });
                                     }
-                                }));
+                                }, pushStreamManager.controlStreamListener(), null, null, false));
                     }
                 }).build();
         try {

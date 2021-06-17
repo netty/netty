@@ -57,6 +57,23 @@ public final class Http3 {
         return channel.attr(HTTP3_CONTROL_STREAM_KEY).get();
     }
 
+    /**
+     * Returns the value of the <a
+     * href="https://quicwg.org/base-drafts/draft-ietf-quic-http.html#name-max_push_id">max push ID</a> received for
+     * this connection.
+     *
+     * @return Received <a
+     * href="https://quicwg.org/base-drafts/draft-ietf-quic-http.html#name-max_push_id">max push ID</a> for this
+     * connection.
+     */
+    static long maxPushIdReceived(QuicChannel channel) {
+        final Http3ConnectionHandler connectionHandler = Http3CodecUtils.getConnectionHandlerOrClose(channel);
+        if (connectionHandler == null) {
+            throw new IllegalStateException("Connection handler not found.");
+        }
+        return connectionHandler.localControlStreamHandler.maxPushIdReceived();
+    }
+
     static void setLocalControlStream(Channel channel, QuicStreamChannel controlStreamChannel) {
         channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
     }
@@ -71,7 +88,7 @@ public final class Http3 {
 
     /**
      * Returns a new HTTP/3 request-stream that will use the given {@link ChannelHandler}
-     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 is automatically added to the
+     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 codecs are automatically added to the
      * pipeline as well.
      *
      * If you need more control you can also use the {@link Http3RequestStreamInitializer} directly.
@@ -81,23 +98,12 @@ public final class Http3 {
      * @return          the {@link Future} that will be notified once the request-stream was opened.
      */
     public static Future<QuicStreamChannel> newRequestStream(QuicChannel channel, ChannelHandler handler) {
-        final Http3RequestStreamInitializer initializer;
-        if (handler instanceof Http3RequestStreamInitializer) {
-            initializer = (Http3RequestStreamInitializer) handler;
-        } else {
-            initializer = new Http3RequestStreamInitializer() {
-                @Override
-                protected void initRequestStream(QuicStreamChannel ch) {
-                    ch.pipeline().addLast(handler);
-                }
-            };
-        }
-        return channel.createStream(QuicStreamType.BIDIRECTIONAL, initializer);
+        return channel.createStream(QuicStreamType.BIDIRECTIONAL, requestStreamInitializer(handler));
     }
 
     /**
      * Returns a new HTTP/3 request-stream bootstrap that will use the given {@link ChannelHandler}
-     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 is automatically added to the
+     * to dispatch {@link Http3RequestStreamFrame}s too. The needed HTTP/3 codecs are automatically added to the
      * pipeline as well.
      *
      * If you need more control you can also use the {@link Http3RequestStreamInitializer} directly.
@@ -107,18 +113,8 @@ public final class Http3 {
      * @return          the {@link QuicStreamChannelBootstrap} that should be used.
      */
     public static QuicStreamChannelBootstrap newRequestStreamBootstrap(QuicChannel channel, ChannelHandler handler) {
-        final Http3RequestStreamInitializer initializer;
-        if (handler instanceof Http3RequestStreamInitializer) {
-            initializer = (Http3RequestStreamInitializer) handler;
-        } else {
-            initializer = new Http3RequestStreamInitializer() {
-                @Override
-                protected void initRequestStream(QuicStreamChannel ch) {
-                    ch.pipeline().addLast(handler);
-                }
-            };
-        }
-        return channel.newStreamBootstrap().handler(initializer).type(QuicStreamType.BIDIRECTIONAL);
+        return channel.newStreamBootstrap().handler(requestStreamInitializer(handler))
+                .type(QuicStreamType.BIDIRECTIONAL);
     }
 
     /**
@@ -164,5 +160,17 @@ public final class Http3 {
     private static <T extends QuicCodecBuilder<T>> T configure(T builder) {
         return builder.initialMaxStreamsUnidirectional(MIN_INITIAL_MAX_STREAMS_UNIDIRECTIONAL)
                 .initialMaxStreamDataUnidirectional(MIN_INITIAL_MAX_STREAM_DATA_UNIDIRECTIONAL);
+    }
+
+    private static Http3RequestStreamInitializer requestStreamInitializer(ChannelHandler handler) {
+        if (handler instanceof Http3RequestStreamInitializer) {
+            return (Http3RequestStreamInitializer) handler;
+        }
+        return new Http3RequestStreamInitializer() {
+            @Override
+            protected void initRequestStream(QuicStreamChannel ch) {
+                ch.pipeline().addLast(handler);
+            }
+        };
     }
 }

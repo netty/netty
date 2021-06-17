@@ -22,8 +22,11 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,6 +47,11 @@ import static org.junit.Assert.assertTrue;
 public class Http3UnidirectionalStreamInboundHandlerTest {
 
     private final boolean server;
+    private EmbeddedQuicChannel parent;
+    private Http3ControlStreamOutboundHandler remoteControlStreamHandler;
+    private Http3ControlStreamInboundHandler localControlStreamHandler;
+    private QpackEncoder qpackEncoder;
+    private QpackDecoder qpackDecoder;
 
     @Parameterized.Parameters(name = "{index}: server = {0}")
     public static Object[] parameters() {
@@ -52,6 +60,22 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     public Http3UnidirectionalStreamInboundHandlerTest(boolean server) {
         this.server = server;
+    }
+
+    @Before
+    public void setUp() {
+        parent = new EmbeddedQuicChannel(server);
+        qpackEncoder = new QpackEncoder();
+        qpackDecoder = new QpackDecoder(new DefaultHttp3SettingsFrame());
+        localControlStreamHandler = new Http3ControlStreamInboundHandler(server, null, qpackEncoder,
+                remoteControlStreamHandler);
+        remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
+                new CodecHandler());
+    }
+
+    @After
+    public void tearDown() {
+        assertFalse(parent.finish());
     }
 
     @Test
@@ -128,14 +152,18 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         testPushStream(2);
     }
 
-    private void testPushStream(long pushId) throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        Http3ControlStreamOutboundHandler outboundControlHandler = new Http3ControlStreamOutboundHandler(server,
-                new DefaultHttp3SettingsFrame(), new CodecHandler());
-
+    private void testPushStream(long maxPushId) throws Exception {
+        assertFalse(parent.finish());
+        parent = new EmbeddedQuicChannel(server, server ?
+                new Http3ServerConnectionHandler(new ChannelInboundHandlerAdapter()) :
+                new Http3ClientConnectionHandler());
+        final EmbeddedQuicStreamChannel localControlStream =
+                (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(parent);
+        assertNotNull(localControlStream);
+        assertTrue(localControlStream.releaseOutbound());
         EmbeddedQuicStreamChannel outboundControlChannel =
-                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, outboundControlHandler)
-                        .get();
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+                        remoteControlStreamHandler).get();
 
         // Let's drain everything that was written while channelActive(...) was called.
         for (;;) {
@@ -146,33 +174,31 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
             ReferenceCountUtil.release(written);
         }
 
-        if (pushId >= 0) {
-            assertTrue(outboundControlChannel.writeOutbound(new DefaultHttp3MaxPushIdFrame(pushId)));
+        if (maxPushId >= 0) {
+            assertTrue(outboundControlChannel.writeOutbound(new DefaultHttp3MaxPushIdFrame(maxPushId)));
             Object push = outboundControlChannel.readOutbound();
             ReferenceCountUtil.release(push);
         }
 
-        Http3UnidirectionalStreamInboundHandler handler = new Http3UnidirectionalStreamInboundHandler(
-                (v, __, ___) -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
-                new QpackEncoder()),
-                outboundControlHandler, null, ChannelInboundHandlerAdapter::new,
-                ChannelInboundHandlerAdapter::new);
+        Http3UnidirectionalStreamInboundHandler handler = newUniStreamInboundHandler(null);
         EmbeddedQuicStreamChannel channel =
-                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
+                (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL, handler).get();
 
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, HTTP3_PUSH_STREAM_TYPE);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, 2);
+        final int pushId = 2;
+        Http3CodecUtils.writeVariableLengthInteger(buffer, pushId);
 
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());
         if (server) {
             Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, parent);
         } else {
-            if (pushId <= 0) {
+            if (pushId > maxPushId) {
                 Http3TestUtils.verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
             } else {
-               assertNotNull(channel.pipeline().context(CodecHandler.class));
+                assertTrue(parent.isActive());
+                assertNotNull(channel.pipeline().context(CodecHandler.class));
             }
         }
         assertFalse(channel.finish());
@@ -225,22 +251,29 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         return newChannel(null);
     }
 
-    private EmbeddedChannel newChannel(LongFunction<ChannelHandler> factory) throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
-        Http3UnidirectionalStreamInboundHandler handler = newUniStreamInboundHandler(factory);
+    private EmbeddedChannel newChannel(LongFunction<ChannelHandler> unknownStreamHandlerFactory) throws Exception {
+        Http3UnidirectionalStreamInboundHandler handler = newUniStreamInboundHandler(unknownStreamHandlerFactory);
         return (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL, handler).get();
     }
 
-    private Http3UnidirectionalStreamInboundHandler newUniStreamInboundHandler(LongFunction<ChannelHandler> factory) {
-        final QpackEncoder qpackEncoder = new QpackEncoder();
-        final QpackDecoder qpackDecoder = new QpackDecoder(new DefaultHttp3SettingsFrame());
-        return new Http3UnidirectionalStreamInboundHandler(
-                (v, __, ___) -> new CodecHandler(), new Http3ControlStreamInboundHandler(server, null,
-                qpackEncoder),
-                new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
-                        new CodecHandler()), factory,
-                () -> new QpackEncoderHandler((long) Integer.MAX_VALUE, qpackDecoder),
-                () -> new QpackDecoderHandler(qpackEncoder));
+    private Http3UnidirectionalStreamInboundHandler newUniStreamInboundHandler(
+            LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
+        return server ?
+                new Http3UnidirectionalStreamInboundServerHandler((v, __, ___) -> new CodecHandler(),
+                        localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,
+                        () -> new QpackEncoderHandler((long) Integer.MAX_VALUE, qpackDecoder),
+                        () -> new QpackDecoderHandler(qpackEncoder)) :
+                new Http3UnidirectionalStreamInboundClientHandler((v, __, ___) -> new CodecHandler(),
+                        localControlStreamHandler, remoteControlStreamHandler,
+                        unknownStreamHandlerFactory,
+                        pushId -> new Http3PushStreamClientInitializer() {
+                            @Override
+                            protected void initPushStream(QuicStreamChannel ch) {
+                                ch.pipeline().addLast(new CodecHandler());
+                            }
+                        },
+                        () -> new QpackEncoderHandler((long) Integer.MAX_VALUE,
+                        qpackDecoder), () -> new QpackDecoderHandler(qpackEncoder));
     }
 
     private static final class CodecHandler extends ChannelHandlerAdapter {  }

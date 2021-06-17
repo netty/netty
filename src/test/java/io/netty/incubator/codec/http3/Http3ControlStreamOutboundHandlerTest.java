@@ -39,7 +39,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
     private final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
 
     public Http3ControlStreamOutboundHandlerTest() {
-        super(QuicStreamType.UNIDIRECTIONAL, true, true);
+        super(true, QuicStreamType.UNIDIRECTIONAL);
     }
 
     @Override

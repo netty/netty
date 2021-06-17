@@ -38,19 +38,19 @@ import static io.netty.incubator.codec.http3.Http3RequestStreamCodecState.NO_STA
 /**
  * {@link ByteToMessageDecoder} which helps to detect the type of unidirectional stream.
  */
-final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder {
+abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder {
     private static final AttributeKey<Boolean> REMOTE_CONTROL_STREAM = AttributeKey.valueOf("H3_REMOTE_CONTROL_STREAM");
     private static final AttributeKey<Boolean> REMOTE_QPACK_DECODER_STREAM =
             AttributeKey.valueOf("H3_REMOTE_QPACK_DECODER_STREAM");
     private static final AttributeKey<Boolean> REMOTE_QPACK_ENCODER_STREAM =
             AttributeKey.valueOf("H3_REMOTE_QPACK_ENCODER_STREAM");
 
-    private final Http3FrameCodecFactory codecFactory;
-    private final Http3ControlStreamInboundHandler localControlStreamHandler;
-    private final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
-    private final Supplier<ChannelHandler> qpackEncoderHandlerFactory;
-    private final Supplier<ChannelHandler> qpackDecoderHandlerFactory;
-    private final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
+    final Http3FrameCodecFactory codecFactory;
+    final Http3ControlStreamInboundHandler localControlStreamHandler;
+    final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
+    final Supplier<ChannelHandler> qpackEncoderHandlerFactory;
+    final Supplier<ChannelHandler> qpackDecoderHandlerFactory;
+    final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
     Http3UnidirectionalStreamInboundHandler(Http3FrameCodecFactory codecFactory,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
@@ -89,7 +89,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
                 if (in.readableBytes() < pushIdLen) {
                     return;
                 }
-                long pushId = Http3CodecUtils.readVariableLengthInteger(in, len);
+                long pushId = Http3CodecUtils.readVariableLengthInteger(in, pushIdLen);
                 initPushStream(ctx, pushId);
                 break;
             case HTTP3_QPACK_ENCODER_STREAM_TYPE:
@@ -133,32 +133,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
      * Called if the current {@link Channel} is a
      * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.2">push stream</a>.
      */
-    private void initPushStream(ChannelHandlerContext ctx, long id) {
-        if (localControlStreamHandler.isServer()) {
-            Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
-                    "Server received push stream.", false);
-        } else {
-            // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.4
-            Long maxPushId = remoteControlStreamHandler.sentMaxPushId();
-            if (maxPushId == null) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                        "Received push stream before send MAX_PUSH_ID frame.", false);
-            } else if (maxPushId < id) {
-                Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_ID_ERROR,
-                        "Received push stream with id " + id + " while the max push id is " + maxPushId + '.', false);
-            } else {
-                // TODO: Handle push streams correctly
-                ctx.pipeline().addLast(Http3PushStreamValidationHandler.INSTANCE);
-                // For now add a handler that will just release the frames so we dont leak.
-                ctx.pipeline().addLast(ReleaseHandler.INSTANCE);
-
-                // Replace this handler with the codec which also validates that only valid frames will be decoded.
-                ctx.pipeline().replace(this, null,
-                        codecFactory.newCodec(Http3PushStreamFrameTypeValidator.NO_VALIDATION, NO_STATE,
-                                NO_STATE));
-            }
-        }
-    }
+    abstract void initPushStream(ChannelHandlerContext ctx, long id);
 
     /**
      * Called if the current {@link Channel} is a
@@ -200,7 +175,7 @@ final class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDecoder
         ctx.pipeline().replace(this, null, unknownStreamHandlerFactory.apply(streamType));
     }
 
-    private static final class ReleaseHandler extends ChannelInboundHandlerAdapter {
+    static final class ReleaseHandler extends ChannelInboundHandlerAdapter {
         static final ReleaseHandler INSTANCE = new ReleaseHandler();
 
         @Override

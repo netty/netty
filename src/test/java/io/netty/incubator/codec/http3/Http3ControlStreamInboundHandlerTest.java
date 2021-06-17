@@ -49,9 +49,10 @@ public class Http3ControlStreamInboundHandlerTest extends
     private final boolean server;
     private final boolean forwardControlFrames;
     private QpackEncoder qpackEncoder;
+    private Http3ControlStreamOutboundHandler remoteControlStreamHandler;
 
     public Http3ControlStreamInboundHandlerTest(boolean server, boolean forwardControlFrames) {
-        super(QuicStreamType.UNIDIRECTIONAL, false, true);
+        super(true, QuicStreamType.UNIDIRECTIONAL);
         this.server = server;
         this.forwardControlFrames = forwardControlFrames;
     }
@@ -72,6 +73,8 @@ public class Http3ControlStreamInboundHandlerTest extends
     public void setUp() {
         super.setUp();
         qpackEncoder = new QpackEncoder();
+        remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
+                new ChannelInboundHandlerAdapter());
     }
 
     @Override
@@ -85,7 +88,8 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Override
     protected ChannelHandler newHandler() {
-        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter(), qpackEncoder);
+        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter(), qpackEncoder,
+                remoteControlStreamHandler);
     }
 
     @Override
@@ -123,7 +127,7 @@ public class Http3ControlStreamInboundHandlerTest extends
         final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
                                 forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
-                                qpackEncoder));
+                                qpackEncoder, remoteControlStreamHandler));
 
         writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
         verifyClose(Http3ErrorCode.H3_MISSING_SETTINGS, parent);
@@ -187,7 +191,7 @@ public class Http3ControlStreamInboundHandlerTest extends
         EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.UNIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
                                 forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
-                                qpackEncoder));
+                                qpackEncoder, remoteControlStreamHandler));
 
         // We always need to start with a settings frame.
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();

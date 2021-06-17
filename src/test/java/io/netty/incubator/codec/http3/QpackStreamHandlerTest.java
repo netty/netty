@@ -28,7 +28,7 @@ public class QpackStreamHandlerTest {
 
     @Test
     public void testStreamClosedWhileParentStillActive() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
 
         EmbeddedQuicStreamChannel channel =
                 (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
@@ -39,7 +39,7 @@ public class QpackStreamHandlerTest {
 
     @Test
     public void testStreamClosedWhileParentIsInactive() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
         parent.close().get();
 
         EmbeddedQuicStreamChannel channel =
@@ -50,7 +50,7 @@ public class QpackStreamHandlerTest {
 
     @Test
     public void testStreamDropsInboundData() throws Exception {
-        EmbeddedQuicChannel parent = new EmbeddedQuicChannel();
+        EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
         parent.close().get();
 
         EmbeddedQuicStreamChannel channel =

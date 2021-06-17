@@ -19,6 +19,10 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
 
+    public Http3ClientConnectionHandlerTest() {
+        super(false);
+    }
+
     @Override
     protected Http3ConnectionHandler newConnectionHandler() {
         return new Http3ClientConnectionHandler();

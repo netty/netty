@@ -29,6 +29,10 @@ public class Http3ServerConnectionHandlerTest extends AbtractHttp3ConnectionHand
         }
     };
 
+    public Http3ServerConnectionHandlerTest() {
+        super(true);
+    }
+
     @Override
     protected Http3ConnectionHandler newConnectionHandler() {
         return new Http3ServerConnectionHandler(REQUEST_HANDLER);

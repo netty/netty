@@ -90,7 +90,7 @@ public class Http3FrameCodecTest {
 
     @Before
     public void setUp() throws Exception {
-        parent = new EmbeddedQuicChannel();
+        parent = new EmbeddedQuicChannel(true);
         QpackAttributes qpackAttributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, qpackAttributes);
         final Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
