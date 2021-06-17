@@ -32,6 +32,31 @@
     <javaModuleName>io.netty.codec</javaModuleName>
   </properties>
 
+  <profiles>
+    <profile>
+      <id>mac-aarch64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <!-- Brotli native lib is not available for Apple M1 silicon yet -->
+                <exclude>BrotliDecoderTest.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
