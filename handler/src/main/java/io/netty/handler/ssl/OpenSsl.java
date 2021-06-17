@@ -412,7 +412,7 @@ public final class OpenSsl {
             }
             if (ciphersNotMatch || !boringsslTlsv13Ciphers.isEmpty()) {
                 logger.info(
-                        "BoringSSL doesn't allow to explicit enable / disable TLSv1.3 ciphers." +
+                        "BoringSSL doesn't allow to enable or disable TLSv1.3 ciphers explicitly." +
                                 " The default TLSv1.3 ciphers will be used: '{}'.",
                         Arrays.toString(EXTRA_SUPPORTED_TLS_1_3_CIPHERS));
                 return EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
