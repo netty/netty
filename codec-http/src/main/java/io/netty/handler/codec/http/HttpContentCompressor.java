@@ -17,9 +17,19 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.http.compression.BrotliCompressionOptions;
+import io.netty.handler.codec.http.compression.CompressionOptions;
+import io.netty.handler.codec.http.compression.DeflateCompressionOptions;
+import io.netty.handler.codec.http.compression.GzipCompressionOptions;
 import io.netty.util.internal.ObjectUtil;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
@@ -30,18 +40,27 @@ import io.netty.util.internal.ObjectUtil;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
-    final int compressionLevel;
-    final int windowBits;
-    final int memLevel;
-    final int contentSizeThreshold;
-    ChannelHandlerContext ctx;
+    private final boolean supportsCompressionOptions;
+
+    private BrotliCompressionOptions brotliCompressionOptions;
+    private GzipCompressionOptions gzipCompressionOptions;
+    private DeflateCompressionOptions deflateCompressionOptions;
+
+    private int compressionLevel;
+    private int windowBits;
+    private int memLevel;
+    private int contentSizeThreshold;
+    private ChannelHandlerContext ctx;
 
     /**
-     * Creates a new handler with the default compression level (<tt>6</tt>),
-     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Create a new {@link HttpContentCompressor} Instancewith default {@link BrotliCompressionOptions#DEFAULT},
+     * {@link GzipCompressionOptions#DEFAULT} and {@link DeflateCompressionOptions#DEFAULT}
      */
     public HttpContentCompressor() {
-        this(6);
+        brotliCompressionOptions = BrotliCompressionOptions.DEFAULT;
+        gzipCompressionOptions = GzipCompressionOptions.DEFAULT;
+        deflateCompressionOptions = DeflateCompressionOptions.DEFAULT;
+        supportsCompressionOptions = true;
     }
 
     /**
@@ -53,6 +72,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel) {
         this(compressionLevel, 15, 8, 0);
     }
@@ -76,6 +96,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        memory.  Larger values result in better and faster compression
      *        at the expense of memory usage.  The default value is {@code 8}
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
         this(compressionLevel, windowBits, memLevel, 0);
     }
@@ -103,11 +124,73 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        body exceeds the threshold. The value should be a non negative
      *        number. {@code 0} will enable compression for all responses.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
+        supportsCompressionOptions = false;
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} Instance with specified
+     * {@link CompressionOptions}s and ContentSizeThreshold set to {@code 0}
+     *
+     * @param compressionOptions {@link CompressionOptions} Instance(s)
+     */
+    public HttpContentCompressor(CompressionOptions... compressionOptions) {
+        this(0, compressionOptions);
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} Instance with specified
+     * {@link CompressionOptions}s
+     *
+     * @param compressionOptions {@link CompressionOptions} Instance(s)
+     */
+    public HttpContentCompressor(int contentSizeThreshold, CompressionOptions... compressionOptions) {
+        this(Arrays.asList(ObjectUtil.checkNotNull(compressionOptions, "CompressionOptions")));
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} Instance with specified
+     * {@link CompressionOptions}s and ContentSizeThreshold set to {@code 0}
+     *
+     * @param compressionOptionsCollection {@link Collection<CompressionOptions>} Instance
+     */
+    public HttpContentCompressor(Collection<CompressionOptions> compressionOptionsCollection) {
+        this(0, compressionOptionsCollection);
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} Instance with specified
+     * {@link CompressionOptions}s
+     *
+     * @param compressionOptionsCollection {@link Collection<CompressionOptions>} Instance
+     */
+    public HttpContentCompressor(int contentSizeThreshold, Collection<CompressionOptions> compressionOptionsCollection) {
+        this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
+        ObjectUtil.checkNotNull(compressionOptionsCollection, "CompressionOptions");
+        ObjectUtil.checkNonEmpty(compressionOptionsCollection, "CompressionOptions");
+
+        for (CompressionOptions compressionOptions : compressionOptionsCollection) {
+            if (compressionOptions == null) {
+                continue; // Skip null
+            }
+
+            if (compressionOptions instanceof BrotliCompressionOptions) {
+                brotliCompressionOptions = (BrotliCompressionOptions) compressionOptions;
+            } else if (compressionOptions instanceof GzipCompressionOptions) {
+                gzipCompressionOptions = (GzipCompressionOptions) compressionOptions;
+            } else if (compressionOptions instanceof DeflateCompressionOptions) {
+                deflateCompressionOptions = (DeflateCompressionOptions) compressionOptions;
+            } else {
+                throw new IllegalArgumentException("Unsupported CompressionOption: " + compressionOptions);
+            }
+        }
+
+        supportsCompressionOptions = true;
     }
 
     @Override
@@ -131,30 +214,108 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        ZlibWrapper wrapper = determineWrapper(acceptEncoding);
-        if (wrapper == null) {
-            return null;
-        }
+        if (supportsCompressionOptions) {
+            String targetContentEncoding = determineEncoding(acceptEncoding);
+            if (targetContentEncoding == null) {
+                return null;
+            }
 
-        String targetContentEncoding;
-        switch (wrapper) {
-            case GZIP:
-                targetContentEncoding = "gzip";
-                break;
-            case ZLIB:
-                targetContentEncoding = "deflate";
-                break;
-            default:
+            if (targetContentEncoding.equals("gzip")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                                ZlibWrapper.GZIP, gzipCompressionOptions.compressionLevel()
+                                , gzipCompressionOptions.windowBits(), gzipCompressionOptions.memLevel())));
+            } else if (targetContentEncoding.equals("deflate")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                                ZlibWrapper.ZLIB, deflateCompressionOptions.compressionLevel(),
+                                deflateCompressionOptions.windowBits(), deflateCompressionOptions.memLevel())));
+            } else if (targetContentEncoding.equals("br")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), new BrotliEncoder(brotliCompressionOptions.parameters())));
+            } else {
                 throw new Error();
-        }
+            }
+        } else {
+            ZlibWrapper wrapper = determineWrapper(acceptEncoding);
+            if (wrapper == null) {
+                return null;
+            }
 
-        return new Result(
-                targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                        wrapper, compressionLevel, windowBits, memLevel)));
+            String targetContentEncoding;
+            switch (wrapper) {
+                case GZIP:
+                    targetContentEncoding = "gzip";
+                    break;
+                case ZLIB:
+                    targetContentEncoding = "deflate";
+                    break;
+                default:
+                    throw new Error();
+            }
+
+            return new Result(
+                    targetContentEncoding,
+                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                            wrapper, compressionLevel, windowBits, memLevel)));
+        }
     }
 
+    @SuppressWarnings("FloatingPointEquality")
+    protected String determineEncoding(String acceptEncoding) {
+        float starQ = -1.0f;
+        float brQ = -1.0f;
+        float gzipQ = -1.0f;
+        float deflateQ = -1.0f;
+        for (String encoding : acceptEncoding.split(",")) {
+            float q = 1.0f;
+            int equalsPos = encoding.indexOf('=');
+            if (equalsPos != -1) {
+                try {
+                    q = Float.parseFloat(encoding.substring(equalsPos + 1));
+                } catch (NumberFormatException e) {
+                    // Ignore encoding
+                    q = 0.0f;
+                }
+            }
+            if (encoding.contains("*")) {
+                starQ = q;
+            } else if (encoding.contains("br") && q > brQ) {
+                brQ = q;
+            } else if (encoding.contains("gzip") && q > gzipQ) {
+                gzipQ = q;
+            } else if (encoding.contains("deflate") && q > deflateQ) {
+                deflateQ = q;
+            }
+        }
+        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ != -1.0f && brQ >= gzipQ) {
+                return isAvailable() ? "br" : null;
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
+                return "gzip";
+            } else if (deflateQ != -1.0f) {
+                return "deflate";
+            }
+        }
+        if (starQ > 0.0f) {
+            if (brQ == -1.0f) {
+                return isAvailable() ? "br" : null;
+            }
+            if (gzipQ == -1.0f) {
+                return "gzip";
+            }
+            if (deflateQ == -1.0f) {
+                return "deflate";
+            }
+        }
+        return null;
+    }
+
+    @Deprecated
     @SuppressWarnings("FloatingPointEquality")
     protected ZlibWrapper determineWrapper(String acceptEncoding) {
         float starQ = -1.0f;
@@ -195,5 +356,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
         return null;
+    }
+
+    /**
+     * Check if {@link Brotli} is available for compression or not.
+     *
+     * @return Returns {@code true} if {@link Brotli} is available else {@code false}
+     */
+    public static boolean isAvailable() {
+        return Brotli.isAvailable();
     }
 }

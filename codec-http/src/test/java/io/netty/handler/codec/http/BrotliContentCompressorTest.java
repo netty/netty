@@ -29,7 +29,7 @@ public class BrotliContentCompressorTest {
 
     @Test
     public void testGetTargetContentEncoding() {
-        BrotliContentCompressor compressor = new BrotliContentCompressor();
+        HttpContentCompressor compressor = new HttpContentCompressor();
 
         String[] tests = {
                 // Accept-Encoding -> Content-Encoding
@@ -51,7 +51,7 @@ public class BrotliContentCompressorTest {
 
     @Test
     public void testAcceptEncodingHttpRequest() {
-        EmbeddedChannel ch = new EmbeddedChannel(new BrotliContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
         FullHttpRequest fullHttpRequest = ch.readInbound();
         fullHttpRequest.release();
