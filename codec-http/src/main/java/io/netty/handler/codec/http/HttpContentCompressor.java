@@ -169,7 +169,9 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *
      * @param compressionOptionsCollection {@link Collection<CompressionOptions>} Instance
      */
-    public HttpContentCompressor(int contentSizeThreshold, Collection<CompressionOptions> compressionOptionsCollection) {
+    public HttpContentCompressor(int contentSizeThreshold,
+                                 Collection<CompressionOptions> compressionOptionsCollection) {
+
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
         ObjectUtil.checkNotNull(compressionOptionsCollection, "CompressionOptions");
         ObjectUtil.checkNonEmpty(compressionOptionsCollection, "CompressionOptions");
