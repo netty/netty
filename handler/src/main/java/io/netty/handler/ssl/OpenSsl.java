@@ -38,7 +38,6 @@ import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -191,7 +190,7 @@ public final class OpenSsl {
 
                 StringBuilder ciphersBuilder = new StringBuilder(128);
                 for (String cipher: EXTRA_SUPPORTED_TLS_1_3_CIPHERS) {
-                    ciphersBuilder.append(cipher).append(",");
+                    ciphersBuilder.append(cipher).append(":");
                 }
                 ciphersBuilder.setLength(ciphersBuilder.length() - 1);
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = ciphersBuilder.toString();
@@ -400,21 +399,36 @@ public final class OpenSsl {
     static String checkTls13Ciphers(InternalLogger logger, String ciphers) {
         if (IS_BORINGSSL && !ciphers.isEmpty()) {
             assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
-            Set<String> boringsslTlsv13Ciphers = new HashSet<String>();
+            Set<String> boringsslTlsv13Ciphers = new HashSet<String>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);
             Collections.addAll(boringsslTlsv13Ciphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
             boolean ciphersNotMatch = false;
-            for (String cipher: ciphers.split(",")) {
+            for (String cipher: ciphers.split(":")) {
                 if (boringsslTlsv13Ciphers.isEmpty()) {
                     ciphersNotMatch = true;
                     break;
                 }
-                boringsslTlsv13Ciphers.remove(cipher);
+                if (!boringsslTlsv13Ciphers.remove(cipher) &&
+                        !boringsslTlsv13Ciphers.remove(CipherSuiteConverter.toJava(cipher, "TLS"))) {
+                    ciphersNotMatch = true;
+                    break;
+                }
             }
-            if (ciphersNotMatch || !boringsslTlsv13Ciphers.isEmpty()) {
-                logger.info(
-                        "BoringSSL doesn't allow to enable or disable TLSv1.3 ciphers explicitly." +
-                                " The default TLSv1.3 ciphers will be used: '{}'.",
-                        Arrays.toString(EXTRA_SUPPORTED_TLS_1_3_CIPHERS));
+
+            // Also check if there are ciphers left.
+            ciphersNotMatch |= !boringsslTlsv13Ciphers.isEmpty();
+
+            if (ciphersNotMatch) {
+                if (logger.isInfoEnabled()) {
+                    StringBuilder javaCiphers = new StringBuilder(128);
+                    for (String cipher : ciphers.split(":")) {
+                        javaCiphers.append(CipherSuiteConverter.toJava(cipher, "TLS")).append(":");
+                    }
+                    javaCiphers.setLength(javaCiphers.length() - 1);
+                    logger.info(
+                            "BoringSSL doesn't allow to enable or disable TLSv1.3 ciphers explicitly." +
+                                    " Provided TLSv1.3 ciphers: '{}', default TLSv1.3 ciphers that will be used: '{}'.",
+                            javaCiphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING);
+                }
                 return EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
             }
         }
