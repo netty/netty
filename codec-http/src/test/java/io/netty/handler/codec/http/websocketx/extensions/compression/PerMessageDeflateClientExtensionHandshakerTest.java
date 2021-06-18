@@ -90,7 +90,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "12");
-        parameters.put(SERVER_MAX_WINDOW, "10");
+        parameters.put(SERVER_MAX_WINDOW, "8");
         parameters.put(CLIENT_NO_CONTEXT, null);
         parameters.put(SERVER_NO_CONTEXT, null);
 
