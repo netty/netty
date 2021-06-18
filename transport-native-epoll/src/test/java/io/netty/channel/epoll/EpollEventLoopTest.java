@@ -18,10 +18,12 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
+import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -29,6 +31,8 @@ import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -61,7 +65,8 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
         final EventLoopGroup group = new EpollEventLoop(null,
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(), null) {
+                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(),
+                null, null) {
             @Override
             void handleLoopException(Throwable t) {
                 capture.set(t);
@@ -134,5 +139,59 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             eventFd.close();
             timerFd.close();
         }
+    }
+
+    @Test
+    void testTaskQueuesDefault() {
+        EpollEventLoop eventLoop = createEventLoop(null, null);
+        Class<?> defaultQueueType = defaultQueueType(eventLoop);
+        assertEquals(defaultQueueType, eventLoop.taskQueue().getClass());
+        assertEquals(defaultQueueType, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTaskQueuesCustom() {
+        EpollEventLoop eventLoop = createEventLoop(ARRAYDEQUE_FACTORY, ARRAYDEQUE_FACTORY);
+        assertEquals(ArrayDeque.class, eventLoop.taskQueue().getClass());
+        assertEquals(ArrayDeque.class, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTailTaskQueueCustom() {
+        EpollEventLoop eventLoop = createEventLoop(null, ARRAYDEQUE_FACTORY);
+        Class<?> defaultQueueType = defaultQueueType(eventLoop);
+        assertEquals(defaultQueueType, eventLoop.taskQueue().getClass());
+        assertEquals(ArrayDeque.class, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTaskQueueCustom() {
+        EpollEventLoop eventLoop = createEventLoop(ARRAYDEQUE_FACTORY, null);
+        Class<?> defaultQueueType = defaultQueueType(eventLoop);
+        assertEquals(ArrayDeque.class, eventLoop.taskQueue().getClass());
+        assertEquals(defaultQueueType, eventLoop.tailTaskQueue().getClass());
+    }
+
+    private static EpollEventLoop createEventLoop(EventLoopTaskQueueFactory taskQueueFactory,
+                                                  EventLoopTaskQueueFactory tailTaskQueueFactory) {
+        return (EpollEventLoop) new EpollEventLoopGroup(
+                0,
+                new ThreadPerTaskExecutor(new DefaultThreadFactory("test-pool")),
+                DefaultEventExecutorChooserFactory.INSTANCE,
+                DefaultSelectStrategyFactory.INSTANCE,
+                RejectedExecutionHandlers.reject(),
+                taskQueueFactory, tailTaskQueueFactory)
+                .next();
+    }
+
+    private static final EventLoopTaskQueueFactory ARRAYDEQUE_FACTORY = new EventLoopTaskQueueFactory() {
+        @Override
+        public Queue<Runnable> newTaskQueue(int maxCapacity) {
+            return new ArrayDeque<Runnable>();
+        }
+    };
+
+    private static Class<?> defaultQueueType(EpollEventLoop eventLoop) {
+        return eventLoop.newTaskQueue(Integer.MAX_VALUE).getClass();
     }
 }

@@ -150,12 +150,12 @@ public class NettyBlockHoundIntegrationTest {
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSingleThreadEventExecutorAddTask() throws Exception {
-        TestLinkedBlockingQueue<Runnable> taskQueue = new TestLinkedBlockingQueue<>();
+        TestLinkedBlockingQueue<Runnable> tasksQueue = new TestLinkedBlockingQueue<>();
         SingleThreadEventExecutor executor =
                 new SingleThreadEventExecutor(null, new DefaultThreadFactory("test"), true) {
                     @Override
                     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
-                        return taskQueue;
+                        return tasksQueue;
                     }
 
                     @Override
@@ -168,14 +168,14 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     }
                 };
-        taskQueue.emulateContention();
+        tasksQueue.emulateContention();
         CountDownLatch latch = new CountDownLatch(1);
         executor.submit(() -> {
             executor.execute(() -> { }); // calls addTask
             latch.countDown();
         });
-        taskQueue.waitUntilContented();
-        taskQueue.removeContention();
+        tasksQueue.waitUntilContented();
+        tasksQueue.removeContention();
         latch.await();
     }
 

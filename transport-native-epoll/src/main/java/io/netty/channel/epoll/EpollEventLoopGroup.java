@@ -134,6 +134,15 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler, queueFactory);
     }
 
+    public EpollEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
+                               SelectStrategyFactory selectStrategyFactory,
+                               RejectedExecutionHandler rejectedExecutionHandler,
+                               EventLoopTaskQueueFactory taskQueueFactory,
+                               EventLoopTaskQueueFactory tailTaskQueueFactory) {
+        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler, taskQueueFactory,
+                tailTaskQueueFactory);
+    }
+
     /**
      * @deprecated This method will be removed in future releases, and is not guaranteed to have any impacts.
      */
@@ -146,9 +155,25 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        EventLoopTaskQueueFactory queueFactory = args.length == 4 ? (EventLoopTaskQueueFactory) args[3] : null;
-        return new EpollEventLoop(this, executor, (Integer) args[0],
-                ((SelectStrategyFactory) args[1]).newSelectStrategy(),
-                (RejectedExecutionHandler) args[2], queueFactory);
+        Integer maxEvents = (Integer) args[0];
+        SelectStrategyFactory selectStrategyFactory = (SelectStrategyFactory) args[1];
+        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[2];
+        EventLoopTaskQueueFactory taskQueueFactory = null;
+        EventLoopTaskQueueFactory tailTaskQueueFactory = null;
+
+        switch (args.length) {
+            case 4:
+                taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+                break;
+            case 5:
+                taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+                tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
+                break;
+            default:
+                // ignore further arguments
+        }
+        return new EpollEventLoop(this, executor, maxEvents,
+                selectStrategyFactory.newSelectStrategy(),
+                rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 }
