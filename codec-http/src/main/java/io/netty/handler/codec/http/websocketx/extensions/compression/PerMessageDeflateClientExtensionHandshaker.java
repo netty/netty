@@ -183,7 +183,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
         }
 
         if ((requestedServerNoContext && !serverNoContext) ||
-                requestedServerWindowSize != serverWindowSize) {
+                requestedServerWindowSize < serverWindowSize) {
             succeed = false;
         }
 
