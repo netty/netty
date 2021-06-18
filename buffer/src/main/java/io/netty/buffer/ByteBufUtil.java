@@ -257,6 +257,9 @@ public final class ByteBufUtil {
                 while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
                     ++i;
                 }
+                if (i > n) {
+                    return -1;
+                }
                 if (i >= m) {
                     i = ell;
                     while (i > memory && needle.getByte(i) == haystack.getByte(i + j)) {
@@ -279,6 +282,9 @@ public final class ByteBufUtil {
                 i = ell + 1;
                 while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
                     ++i;
+                }
+                if (i > n) {
+                    return -1;
                 }
                 if (i >= m) {
                     i = ell;
