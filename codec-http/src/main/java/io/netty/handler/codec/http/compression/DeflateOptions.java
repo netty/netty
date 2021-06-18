@@ -18,26 +18,26 @@ package io.netty.handler.codec.http.compression;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * {@link DeflateCompressionOptions} holds {@link #compressionLevel()},
+ * {@link DeflateOptions} holds {@link #compressionLevel()},
  * {@link #memLevel()} and {@link #windowBits()} for Deflate compression.
  */
-public class DeflateCompressionOptions implements CompressionOptions {
+public class DeflateOptions implements CompressionOptions {
 
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
 
     /**
-     * Default implementation of {@link DeflateCompressionOptions} with
+     * Default implementation of {@link DeflateOptions} with
      * {@link #compressionLevel} set to 6, {@link #windowBits} set to 15
      * and {@link #memLevel} set to 8.
      */
-    public static final DeflateCompressionOptions DEFAULT = new DeflateCompressionOptions(
+    public static final DeflateOptions DEFAULT = new DeflateOptions(
             6, 15, 8
     );
 
     /**
-     * Create a new {@link DeflateCompressionOptions} Instance
+     * Create a new {@link DeflateOptions} Instance
      *
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
@@ -51,7 +51,7 @@ public class DeflateCompressionOptions implements CompressionOptions {
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
      */
-    public DeflateCompressionOptions(int compressionLevel, int windowBits, int memLevel) {
+    public DeflateOptions(int compressionLevel, int windowBits, int memLevel) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");

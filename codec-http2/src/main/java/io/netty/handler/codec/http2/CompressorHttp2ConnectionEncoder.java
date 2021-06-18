@@ -14,7 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import com.aayushatharva.brotli4j.encoder.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -22,13 +21,18 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.http.compression.BrotliOptions;
+import io.netty.handler.codec.http.compression.CompressionOptions;
+import io.netty.handler.codec.http.compression.DeflateOptions;
+import io.netty.handler.codec.http.compression.GzipOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
+
+import java.util.Arrays;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -49,11 +53,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     public static final int DEFAULT_WINDOW_BITS = 15;
     public static final int DEFAULT_MEM_LEVEL = 8;
 
-    private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
-    private final Encoder.Parameters parameters;
+    private int compressionLevel;
+    private int windowBits;
+    private int memLevel;
     private final Http2Connection.PropertyKey propertyKey;
+
+    private final boolean supportsCompressionOptions;
+
+    private BrotliOptions brotliOptions;
+    private GzipOptions gzipCompressionOptions;
+    private DeflateOptions deflateOptions;
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, DEFAULT_COMPRESSION_LEVEL, DEFAULT_WINDOW_BITS, DEFAULT_MEM_LEVEL);
@@ -61,16 +70,50 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
                                             int memLevel) {
-        this(delegate, compressionLevel, windowBits, memLevel, new Encoder.Parameters().setQuality(4));
-    }
-
-    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
-                                            int memLevel, Encoder.Parameters parameters) {
         super(delegate);
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
-        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+
+        propertyKey = connection().newKey();
+        connection().addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamRemoved(Http2Stream stream) {
+                final EmbeddedChannel compressor = stream.getProperty(propertyKey);
+                if (compressor != null) {
+                    cleanup(stream, compressor);
+                }
+            }
+        });
+
+        supportsCompressionOptions = false;
+    }
+
+    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
+                                            CompressionOptions... compressionOptions) {
+        this(delegate, Arrays.asList(ObjectUtil.checkNotNull(compressionOptions, "CompressionOptions")));
+    }
+
+    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
+                                            Iterable<CompressionOptions> compressionOptionsIterable) {
+        super(delegate);
+        ObjectUtil.checkNotNull(compressionOptionsIterable, "CompressionOptions");
+        ObjectUtil.deepCheckNotNull(compressionOptionsIterable, "CompressionOptions");
+
+        for (CompressionOptions compressionOptions : compressionOptionsIterable) {
+            if (compressionOptions instanceof BrotliOptions) {
+                brotliOptions = (BrotliOptions) compressionOptions;
+            } else if (compressionOptions instanceof GzipOptions) {
+                gzipCompressionOptions = (GzipOptions) compressionOptions;
+            } else if (compressionOptions instanceof DeflateOptions) {
+                deflateOptions = (DeflateOptions) compressionOptions;
+            } else {
+                throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
+                        ": " + compressionOptions);
+            }
+        }
+
+        supportsCompressionOptions = true;
 
         propertyKey = connection().newKey();
         connection().addListener(new Http2ConnectionAdapter() {
@@ -201,9 +244,9 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.ZLIB);
         }
-        if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
+        if (brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new BrotliEncoder(parameters));
+                    ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters()));
         }
         // 'identity' or unsupported
         return null;
@@ -227,9 +270,25 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param wrapper Defines what type of encoder should be used
      */
     private EmbeddedChannel newCompressionChannel(final ChannelHandlerContext ctx, ZlibWrapper wrapper) {
-        return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
-                memLevel));
+        if (supportsCompressionOptions) {
+            if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
+                return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper,
+                        gzipCompressionOptions.compressionLevel(), gzipCompressionOptions.windowBits(),
+                        gzipCompressionOptions.memLevel()));
+            } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
+                return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper,
+                        deflateOptions.compressionLevel(), deflateOptions.windowBits(),
+                        deflateOptions.memLevel()));
+            } else {
+                throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
+            }
+        } else {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
+                    memLevel));
+        }
     }
 
     /**

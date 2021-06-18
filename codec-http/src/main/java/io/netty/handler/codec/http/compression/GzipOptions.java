@@ -16,23 +16,23 @@
 package io.netty.handler.codec.http.compression;
 
 /**
- * {@link GzipCompressionOptions} holds {@link #compressionLevel()},
+ * {@link GzipOptions} holds {@link #compressionLevel()},
  * {@link #memLevel()} and {@link #windowBits()} for Gzip compression.
- * This class is an extension of {@link DeflateCompressionOptions}
+ * This class is an extension of {@link DeflateOptions}
  */
-public final class GzipCompressionOptions extends DeflateCompressionOptions {
+public final class GzipOptions extends DeflateOptions {
 
     /**
-     * Default implementation of {@link GzipCompressionOptions} with
+     * Default implementation of {@link GzipOptions} with
      * {@link #compressionLevel()} set to 6, {@link #windowBits()} set to 15
      * and {@link #memLevel()} set to 8.
      */
-    public static final GzipCompressionOptions DEFAULT = new GzipCompressionOptions(
+    public static final GzipOptions DEFAULT = new GzipOptions(
             6, 15, 8
     );
 
     /**
-     * Create a new {@link GzipCompressionOptions} Instance
+     * Create a new {@link GzipOptions} Instance
      *
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
@@ -46,7 +46,7 @@ public final class GzipCompressionOptions extends DeflateCompressionOptions {
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
      */
-    public GzipCompressionOptions(int compressionLevel, int windowBits, int memLevel) {
+    public GzipOptions(int compressionLevel, int windowBits, int memLevel) {
         super(compressionLevel, windowBits, memLevel);
     }
 }

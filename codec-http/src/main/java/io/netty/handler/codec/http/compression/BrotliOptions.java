@@ -16,32 +16,37 @@
 package io.netty.handler.codec.http.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * {@link BrotliCompressionOptions} holds {@link Encoder.Parameters} for
+ * {@link BrotliOptions} holds {@link Encoder.Parameters} for
  * Brotli compression.
  */
-public final class BrotliCompressionOptions implements CompressionOptions {
+public final class BrotliOptions implements CompressionOptions {
 
     private final Encoder.Parameters parameters;
 
     /**
-     * Default implementation of {@link BrotliCompressionOptions} with
+     * Default implementation of {@link BrotliOptions} with
      * {@link Encoder.Parameters#setQuality(int)} set to 4.
      */
-    public static final BrotliCompressionOptions DEFAULT = new BrotliCompressionOptions(
+    public static final BrotliOptions DEFAULT = new BrotliOptions(
             new Encoder.Parameters().setQuality(4)
     );
 
     /**
-     * Create a new {@link BrotliCompressionOptions}
+     * Create a new {@link BrotliOptions}
      *
      * @param parameters {@link Encoder.Parameters} Instance
      * @throws NullPointerException If {@link Encoder.Parameters} is {@code null}
      */
-    public BrotliCompressionOptions(Encoder.Parameters parameters) {
+    public BrotliOptions(Encoder.Parameters parameters) {
         this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+
+        if (!Brotli.isAvailable()) {
+            throw new IllegalStateException("Brotli is not available", Brotli.cause());
+        }
     }
 
     public Encoder.Parameters parameters() {

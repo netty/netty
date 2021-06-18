@@ -25,10 +25,10 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BrotliContentCompressorTest {
+class BrotliContentCompressorTest {
 
     @Test
-    public void testGetTargetContentEncoding() {
+    void testGetTargetContentEncoding() {
         HttpContentCompressor compressor = new HttpContentCompressor();
 
         String[] tests = {
@@ -50,7 +50,7 @@ public class BrotliContentCompressorTest {
     }
 
     @Test
-    public void testAcceptEncodingHttpRequest() {
+    void testAcceptEncodingHttpRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
         FullHttpRequest fullHttpRequest = ch.readInbound();

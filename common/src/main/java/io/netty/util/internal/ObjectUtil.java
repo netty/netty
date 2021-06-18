@@ -42,6 +42,26 @@ public final class ObjectUtil {
     }
 
     /**
+     * Check that the given iterator is not null and elements
+     * inside the iterator is also not null.
+     *
+     * If it is, throws {@link NullPointerException}.
+     * Otherwise, returns the argument.
+     */
+    public static <T> Iterable<T> deepCheckNotNull(Iterable<T> arg, String text) {
+        if (arg == null) {
+            throw new NullPointerException(text);
+        }
+
+        for(T element : arg) {
+            if (element == null) {
+                throw new NullPointerException(text);
+            }
+        }
+        return arg;
+    }
+
+    /**
      * Checks that the given argument is not null. If it is, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
@@ -192,6 +212,19 @@ public final class ObjectUtil {
             throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return array;
+    }
+
+    /**
+     * Checks that the given iterable is neither null nor empty.
+     * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static <T> Iterable<T> checkNonEmpty(Iterable<T> iterable, String name) {
+        checkNotNull(iterable, name);
+        if (!iterable.iterator().hasNext()) {
+            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
+        }
+        return iterable;
     }
 
     /**
