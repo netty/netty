@@ -53,7 +53,7 @@ public final class ObjectUtil {
             throw new NullPointerException(text);
         }
 
-        for(T element : arg) {
+        for (T element : arg) {
             if (element == null) {
                 throw new NullPointerException(text);
             }
