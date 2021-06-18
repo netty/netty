@@ -16,10 +16,13 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
+/**
+ * Utility class to handle access to {@code quiche_send_info}.
+ */
 final class QuicheSendInfo {
 
     private static final FastThreadLocal<byte[]> IPV4_ARRAYS = new FastThreadLocal<byte[]>() {
@@ -39,38 +42,45 @@ final class QuicheSendInfo {
     private QuicheSendInfo() { }
 
     /**
-     * Read the {@link InetSocketAddress} out of the {@code quiche_send_info} struct.
+     * Get the {@link InetSocketAddress} out of the {@code quiche_send_info} struct.
      *
-     * @param memory the memory address of {@code quiche_send_info}.
+     * @param memory the memory of {@code quiche_send_info}.
      * @return the address that was read.
      */
-    static InetSocketAddress read(long memory) {
-        long to = memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
-        long len = readLen(memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN);
-        if (len == Quiche.SIZEOF_SOCKADDR_IN) {
-            return SockaddrIn.readIPv4(to, IPV4_ARRAYS.get());
+    static InetSocketAddress getAddress(ByteBuffer memory) {
+        int position = memory.position();
+        try {
+            long len = getLen(memory, position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN);
+
+            memory.position(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO);
+
+            if (len == Quiche.SIZEOF_SOCKADDR_IN) {
+                return SockaddrIn.getIPv4(memory, IPV4_ARRAYS.get());
+            }
+            assert len == Quiche.SIZEOF_SOCKADDR_IN6;
+            return SockaddrIn.getIPv6(memory, IPV6_ARRAYS.get(), IPV4_ARRAYS.get());
+        } finally {
+            memory.position(position);
         }
-        assert len == Quiche.SIZEOF_SOCKADDR_IN6;
-        return SockaddrIn.readIPv6(to, IPV6_ARRAYS.get(), IPV4_ARRAYS.get());
     }
 
-    private static long readLen(long address) {
+    private static long getLen(ByteBuffer memory, int index) {
         switch (Quiche.SIZEOF_SOCKLEN_T) {
             case 1:
-                return PlatformDependent.getByte(address);
+                return memory.get(index);
             case 2:
-                return PlatformDependent.getShort(address);
+                return memory.getShort(index);
             case 4:
-                return PlatformDependent.getInt(address);
+                return memory.getInt(index);
             case 8:
-                return PlatformDependent.getLong(address);
+                return memory.getLong(index);
             default:
                 throw new IllegalStateException();
         }
     }
 
     /**
-     * Write the {@link InetSocketAddress} into the {@code quiche_send_info} struct.
+     * Set the {@link InetSocketAddress} into the {@code quiche_send_info} struct.
      * <pre>
      *
      * typedef struct {
@@ -80,36 +90,47 @@ final class QuicheSendInfo {
      * } quiche_send_info;
      * </pre>
      *
-     * @param memory the memory address of {@code quiche_send_info}.
+     * @param memory the memory of {@code quiche_send_info}.
      * @param address the {@link InetSocketAddress} to write into {@code quiche_send_info}.
      */
-    static void write(long memory, InetSocketAddress address) {
-        long sockaddr = sockAddress(memory);
-        int len = SockaddrIn.write(sockaddr, address);
-        switch (Quiche.SIZEOF_SOCKLEN_T) {
-            case 1:
-                PlatformDependent.putByte(memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (byte) len);
-                break;
-            case 2:
-                PlatformDependent.putShort(memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (short) len);
-                break;
-            case 4:
-                PlatformDependent.putInt(memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
-                break;
-            case 8:
-                PlatformDependent.putLong(memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
-                break;
-            default:
-                throw new IllegalStateException();
+    static void setSendInfo(ByteBuffer memory, InetSocketAddress address) {
+        int position = memory.position();
+        int sockaddrPosition = position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
+        try {
+            memory.position(sockaddrPosition);
+            int len = SockaddrIn.setAddress(memory, address);
+            switch (Quiche.SIZEOF_SOCKLEN_T) {
+                case 1:
+                    memory.put(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (byte) len);
+                    break;
+                case 2:
+                    memory.putShort(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (short) len);
+                    break;
+                case 4:
+                    memory.putInt(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
+                    break;
+                case 8:
+                    memory.putLong(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        } finally {
+            memory.position(position);
         }
     }
 
     /**
-     * Return the memory address of the {@code sockaddr_storage} that is contained in {@code quiche_send_info}.
-     * @param memory the memory address of {@code quiche_send_info}.
-     * @return the memory address of the {@code sockaddr_storage}.
+     * Returns {@code true} if both {@link ByteBuffer}s have the same {@code sockaddr_storage} stored.
+     *
+     * @param memory    the first {@link ByteBuffer} which holds a {@code quiche_send_info}.
+     * @param memory2   the second {@link ByteBuffer} which holds a {@code quiche_send_info}.
+     * @return          {@code true} if both {@link ByteBuffer}s have the same {@code sockaddr_storage} stored,
+     *                  {@code false} otherwise.
      */
-    static long sockAddress(long memory) {
-        return memory + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
+    static boolean isSameAddress(ByteBuffer memory, ByteBuffer memory2) {
+        long address1 = Quiche.memoryAddressWithPosition(memory) + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
+        long address2 = Quiche.memoryAddressWithPosition(memory2) + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
+        return SockaddrIn.cmp(address1, address2) == 0;
     }
 }

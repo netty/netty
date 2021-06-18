@@ -19,11 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
 final class QuicheQuicConnection {
     private static final int TOTAL_RECV_INFO_SIZE = Quiche.SIZEOF_QUICHE_RECV_INFO + Quiche.SIZEOF_SOCKADDR_STORAGE;
-    private static final int QUICHE_SEND_INFOS_OFFSET = 2 * TOTAL_RECV_INFO_SIZE;
     private final ReferenceCounted refCnt;
     private final QuicheQuicSslEngine engine;
 
@@ -37,7 +37,16 @@ final class QuicheQuicConnection {
     //
     // We need to have every stored 2 times as we need to check if the last sockaddr has changed between
     // quiche_conn_recv and quiche_conn_send calls. If this happens we know a QUIC connection migration did happen.
-    private final ByteBuf infoBuffer;
+    private final ByteBuf recvInfoBuffer;
+    private final ByteBuf sendInfoBuffer;
+
+    private boolean recvInfoFirst = true;
+    private boolean sendInfoFirst = true;
+    private final ByteBuffer recvInfoBuffer1;
+    private final ByteBuffer recvInfoBuffer2;
+    private final ByteBuffer sendInfoBuffer1;
+    private final ByteBuffer sendInfoBuffer2;
+
     private long connection;
 
     QuicheQuicConnection(long connection, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
@@ -45,10 +54,18 @@ final class QuicheQuicConnection {
         this.engine = engine;
         this.refCnt = refCnt;
         // TODO: Maybe cache these per thread as we only use them temporary within a limited scope.
-        infoBuffer = Quiche.allocateNativeOrder(QUICHE_SEND_INFOS_OFFSET +
-                2 * Quiche.SIZEOF_QUICHE_SEND_INFO);
+        recvInfoBuffer = Quiche.allocateNativeOrder(2 * TOTAL_RECV_INFO_SIZE);
+        sendInfoBuffer = Quiche.allocateNativeOrder(2 * Quiche.SIZEOF_QUICHE_SEND_INFO);
+
         // Let's memset the memory.
-        infoBuffer.setZero(0, infoBuffer.capacity());
+        recvInfoBuffer.setZero(0, recvInfoBuffer.capacity());
+        sendInfoBuffer.setZero(0, sendInfoBuffer.capacity());
+
+        recvInfoBuffer1 = recvInfoBuffer.nioBuffer(0, TOTAL_RECV_INFO_SIZE);
+        recvInfoBuffer2 = recvInfoBuffer.nioBuffer(TOTAL_RECV_INFO_SIZE, TOTAL_RECV_INFO_SIZE);
+
+        sendInfoBuffer1 = sendInfoBuffer.nioBuffer(0, Quiche.SIZEOF_QUICHE_SEND_INFO);
+        sendInfoBuffer2 = sendInfoBuffer.nioBuffer(Quiche.SIZEOF_QUICHE_SEND_INFO, Quiche.SIZEOF_QUICHE_SEND_INFO);
     }
 
     void free() {
@@ -65,7 +82,8 @@ final class QuicheQuicConnection {
         }
         if (release) {
             refCnt.release();
-            infoBuffer.release();
+            recvInfoBuffer.release();
+            sendInfoBuffer.release();
         }
     }
 
@@ -97,43 +115,40 @@ final class QuicheQuicConnection {
         return connection;
     }
 
-    private long sendInfosAddress() {
-        return infoBuffer.memoryAddress() + QUICHE_SEND_INFOS_OFFSET;
-    }
+    void initInfo(InetSocketAddress address) {
+        assert connection != -1;
+        assert recvInfoBuffer.refCnt() != 0;
+        assert sendInfoBuffer.refCnt() != 0;
 
-    void initInfoAddresses(InetSocketAddress address) {
         // Fill both quiche_recv_info structs with the same address.
-        QuicheRecvInfo.write(infoBuffer.memoryAddress(), address);
-        QuicheRecvInfo.write(infoBuffer.memoryAddress() + TOTAL_RECV_INFO_SIZE, address);
+        QuicheRecvInfo.setRecvInfo(recvInfoBuffer1, address);
+        QuicheRecvInfo.setRecvInfo(recvInfoBuffer2, address);
 
         // Fill both quiche_send_info structs with the same address.
-        long sendInfosAddress = sendInfosAddress();
-        QuicheSendInfo.write(sendInfosAddress, address);
-        QuicheSendInfo.write(sendInfosAddress + Quiche.SIZEOF_QUICHE_SEND_INFO, address);
+        QuicheSendInfo.setSendInfo(sendInfoBuffer1, address);
+        QuicheSendInfo.setSendInfo(sendInfoBuffer2, address);
     }
 
-    long recvInfoAddress() {
-        return infoBuffer.memoryAddress();
+    ByteBuffer nextRecvInfo() {
+        assert recvInfoBuffer.refCnt() != 0;
+        recvInfoFirst = !recvInfoFirst;
+        return recvInfoFirst ? recvInfoBuffer1 : recvInfoBuffer2;
     }
 
-    long sendInfoAddress() {
-        return sendInfosAddress();
+    ByteBuffer nextSendInfo() {
+        assert sendInfoBuffer.refCnt() != 0;
+        sendInfoFirst = !sendInfoFirst;
+        return sendInfoFirst ? sendInfoBuffer1 : sendInfoBuffer2;
     }
 
-    long nextRecvInfoAddress(long previousRecvInfoAddress) {
-        long memoryAddress = infoBuffer.memoryAddress();
-        if (memoryAddress == previousRecvInfoAddress) {
-            return memoryAddress + TOTAL_RECV_INFO_SIZE;
-        }
-        return memoryAddress;
+    boolean isSendInfoChanged() {
+        assert sendInfoBuffer.refCnt() != 0;
+        return !QuicheSendInfo.isSameAddress(sendInfoBuffer1, sendInfoBuffer2);
     }
 
-    long nextSendInfoAddress(long previousSendInfoAddress) {
-        long memoryAddress = sendInfosAddress();
-        if (memoryAddress == previousSendInfoAddress) {
-            return memoryAddress + Quiche.SIZEOF_QUICHE_SEND_INFO;
-        }
-        return memoryAddress;
+    boolean isRecvInfoChanged() {
+        assert recvInfoBuffer.refCnt() != 0;
+        return !QuicheRecvInfo.isSameAddress(recvInfoBuffer1, recvInfoBuffer2);
     }
 
     boolean isClosed() {
@@ -151,5 +166,4 @@ final class QuicheQuicConnection {
             super.finalize();
         }
     }
-
 }

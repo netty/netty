@@ -594,9 +594,28 @@ final class Quiche {
                 buffer_memory_address(buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
     }
 
+    /**
+     * Returns the memory address of the given {@link ByteBuffer}. If you want to also respect the
+     * {@link ByteBuffer#position()} use {@link #memoryAddressWithPosition(ByteBuffer)}.
+     *
+     * @param buf   the {@link ByteBuffer} of which we want to obtain the memory address..
+     * @return      the memory address of this {@link ByteBuffer}.
+     */
     static long memoryAddress(ByteBuffer buf) {
         assert buf.isDirect();
         return buffer_memory_address(buf);
+    }
+
+    /**
+     * Returns the memory address of the given {@link ByteBuffer} taking its current {@link ByteBuffer#position()} into
+     * account.
+     *
+     * @param buf   the {@link ByteBuffer} of which we want to obtain the memory address
+     *              (taking its {@link ByteBuffer#position()} into account).
+     * @return      the memory address of this {@link ByteBuffer}s position.
+     */
+    static long memoryAddressWithPosition(ByteBuffer buf) {
+        return memoryAddress(buf) + buf.position();
     }
 
     @SuppressWarnings("deprecation")
