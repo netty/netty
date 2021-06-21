@@ -286,7 +286,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
                     if (tlsv13Supported) {
                         // Set TLSv1.3 ciphers.
-                        SSLContext.setCipherSuite(ctx, cipherTLSv13Builder.toString(), true);
+                        SSLContext.setCipherSuite(ctx,
+                                OpenSsl.checkTls13Ciphers(logger, cipherTLSv13Builder.toString()), true);
                     }
                 }
             } catch (SSLException e) {
