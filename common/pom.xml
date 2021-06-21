@@ -39,7 +39,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.oracle.substratevm</groupId>
+      <groupId>org.graalvm.nativeimage</groupId>
       <artifactId>svm</artifactId>
       <version>${graalvm.version}</version>
       <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->

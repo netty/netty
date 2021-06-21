@@ -442,13 +442,13 @@
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
     <junit.version>5.7.0</junit.version>
+    <graalvm.version>19.3.6</graalvm.version>
+    <brotli4j.version>1.4.2</brotli4j.version>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
-    <graalvm.version>19.2.1</graalvm.version>
-    <brotli4j.version>1.4.2</brotli4j.version>
     <skipJapicmp>true</skipJapicmp>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>

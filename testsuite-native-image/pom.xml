@@ -80,7 +80,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>com.oracle.substratevm</groupId>
+        <groupId>org.graalvm.nativeimage</groupId>
         <artifactId>native-image-maven-plugin</artifactId>
         <version>${graalvm.version}</version>
         <executions>
