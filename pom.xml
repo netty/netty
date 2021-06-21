@@ -495,7 +495,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <skipJapicmp>false</skipJapicmp>
-    <graalvm.version>19.2.1</graalvm.version>
+    <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.4.2</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
