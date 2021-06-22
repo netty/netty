@@ -40,6 +40,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.ReadOnlyBufferException;
 
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
@@ -210,6 +211,9 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     @Override
     public void copyInto(int srcPos, ByteBuffer dest, int destPos, int length) {
         checkCopyIntoArgs(srcPos, length, destPos, dest.capacity());
+        if (dest.isReadOnly()) {
+            throw new ReadOnlyBufferException();
+        }
         if (dest.hasArray()) {
             copyIntoArray(srcPos, dest.array(), dest.arrayOffset() + destPos, length);
         } else {
@@ -433,7 +437,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     @Override
-    public void ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
+    public Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -452,13 +456,12 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         }
         if (writableBytes() >= size) {
             // We already have enough space.
-            return;
+            return this;
         }
 
         if (allowCompaction && writableBytes() + readerOffset() >= size) {
             // We can solve this with compaction.
-            compact();
-            return;
+            return compact();
         }
 
         // Allocate a bigger buffer.
@@ -479,6 +482,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         Drop<UnsafeBuffer> drop = untethered.drop();
         disconnectDrop(drop);
         attachNewMemory(memory, drop);
+        return this;
     }
 
     private Drop<UnsafeBuffer> disconnectDrop(Drop<UnsafeBuffer> newDrop) {
@@ -543,7 +547,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     @Override
-    public void compact() {
+    public Buffer compact() {
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }
@@ -551,7 +555,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             throw new BufferReadOnlyException("Buffer must be writable in order to compact, but was read-only.");
         }
         if (roff == 0) {
-            return;
+            return this;
         }
         try {
             PlatformDependent.copyMemory(base, address + roff, base, address, woff - roff);
@@ -560,6 +564,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         }
         woff -= roff;
         roff = 0;
+        return this;
     }
 
     @Override

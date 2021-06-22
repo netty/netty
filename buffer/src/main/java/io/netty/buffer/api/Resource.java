@@ -38,7 +38,7 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
     /**
      * Close the resource, making it inaccessible.
      * <p>
-     * Note, this method is not thread-safe unless otherwise specific.
+     * Note, this method is not thread-safe unless otherwise specified.
      *
      * @throws IllegalStateException If this {@code Resource} has already been closed.
      */

@@ -108,6 +108,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
 
     /**
      * The default byte order of this buffer.
+     *
      * @return The default byte order of this buffer.
      */
     ByteOrder order();
@@ -188,10 +189,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     long nativeAddress();
 
     /**
-     * Makes this buffer read-only.
-     * This is irreversible.
+     * Makes this buffer read-only. This is irreversible.
+     * This operation is also idempotent, so calling this method multiple times on the same buffer makes no difference.
      *
-     * @return this buffer.
+     * @return This buffer instance.
      */
     Buffer makeReadOnly();
 
@@ -217,6 +218,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @throws NullPointerException if the destination array is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
      * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
+     * @throws BufferClosedException if this buffer is closed.
      */
     void copyInto(int srcPos, byte[] dest, int destPos, int length);
 
@@ -235,9 +237,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @param dest The destination byte buffer.
      * @param destPos The index into the {@code dest} array from where the copying should start.
      * @param length The number of bytes to copy.
-     * @throws NullPointerException if the destination array is null.
+     * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
      * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
+     * @throws java.nio.ReadOnlyBufferException if the destination buffer is read-only.
+     * @throws BufferClosedException if this buffer is closed.
      */
     void copyInto(int srcPos, ByteBuffer dest, int destPos, int length);
 
@@ -256,9 +260,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @param dest The destination buffer.
      * @param destPos The index into the {@code dest} array from where the copying should start.
      * @param length The number of bytes to copy.
-     * @throws NullPointerException if the destination array is null.
+     * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
      * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
+     * @throws BufferReadOnlyException if the destination buffer is read-only.
+     * @throws BufferClosedException if this or the destination buffer is closed.
      */
     void copyInto(int srcPos, Buffer dest, int destPos, int length);
 
@@ -269,13 +275,14 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      *
      * @param source The buffer to read from.
      * @return This buffer.
+     * @throws NullPointerException If the source buffer is {@code null}.
      */
     default Buffer writeBytes(Buffer source) {
         int size = source.readableBytes();
         int woff = writerOffset();
-        writerOffset(woff + size);
         source.copyInto(source.readerOffset(), this, woff, size);
         source.readerOffset(source.readerOffset() + size);
+        writerOffset(woff + size);
         return this;
     }
 
@@ -298,7 +305,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
 
     /**
      * Resets the {@linkplain #readerOffset() read offset} and the {@linkplain #writerOffset() write offset} on this
-     * buffer to their initial values.
+     * buffer to zero, and return this buffer.
+     *
+     * @return This buffer instance.
      */
     default Buffer resetOffsets() {
         readerOffset(0);
@@ -380,12 +389,14 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * {@code false}.
      *
      * @param size The requested number of bytes of space that should be available for writing.
+     * @return This buffer instance.
      * @throws IllegalStateException if this buffer is in a bad state.
      * @throws BufferClosedException if this buffer is closed.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
-    default void ensureWritable(int size) {
+    default Buffer ensureWritable(int size) {
         ensureWritable(size, 1, true);
+        return this;
     }
 
     /**
@@ -416,6 +427,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * </ul>
      *
      * @param size The requested number of bytes of space that should be available for writing.
+     * @return This buffer instance.
      * @param minimumGrowth The minimum number of bytes to grow by. If it is determined that memory should be allocated
      *                     and copied, make sure that the new memory allocation is bigger than the old one by at least
      *                     this many bytes. This way, the buffer can grow by more than what is immediately necessary,
@@ -427,7 +439,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * @throws IllegalArgumentException if {@code size} or {@code minimumGrowth} are negative.
      * @throws IllegalStateException if this buffer is in a bad state.
      */
-    void ensureWritable(int size, int minimumGrowth, boolean allowCompaction);
+    Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction);
 
     /**
      * Returns a copy of this buffer's readable bytes.
@@ -458,6 +470,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copy,
      * so that the entire contents of the copy is ready to be read.
      *
+     * @param offset The offset where copying should start from. This is the offset of the first byte copied.
+     * @param length The number of bytes to copy, and the capacity of the returned buffer.
      * @return A new buffer instance, with independent {@link #readerOffset()} and {@link #writerOffset()},
      * that contains a copy of the given region of this buffer.
      * @throws IllegalArgumentException if the {@code offset} or {@code length} reaches outside the bounds of the
@@ -556,6 +570,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * <p>
      * See the <a href="#split">Splitting buffers</a> section for details.
      *
+     * @param splitOffset The offset into this buffer where it should be split. After the split, the data at this offset
+     *                    will be at offset zero in this buffer.
      * @return A new buffer with independent and exclusive ownership over the bytes from the beginning to the given
      * offset of this buffer.
      */
@@ -564,10 +580,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
     /**
      * Discards the read bytes, and moves the buffer contents to the beginning of the buffer.
      *
+     * @return This buffer instance.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      * @throws IllegalStateException if this buffer is in a bad state.
      */
-    void compact();
+    Buffer compact();
 
     /**
      * Get the number of "components" in this buffer. For composite buffers, this is the number of transitive
@@ -627,8 +644,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * such changes are {@link #split(int)}, {@link #split()}, {@link #compact()}, {@link #ensureWritable(int)},
      * {@link #ensureWritable(int, int, boolean)}, and {@link #send()}.
      * <p>
-     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration,
-     * or immediately after the iteration while we are still in the scope of the method that triggered the iteration.
+     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>
      * <strong>Note</strong> that the arrays, memory addresses, and byte buffers exposed as components by this method,
      * should not be used for changing the buffer contents. Doing so may cause undefined behaviour.
@@ -670,8 +686,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessors {
      * such changes are {@link #split(int)}, {@link #split()}, {@link #compact()}, {@link #ensureWritable(int)},
      * {@link #ensureWritable(int, int, boolean)}, and {@link #send()}.
      * <p>
-     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration,
-     * or immediately after the iteration while we are still in the scope of the method that triggered the iteration.
+     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>
      * Changes to position and limit of the byte buffers exposed via the processed components, are not reflected back to
      * this buffer instance.

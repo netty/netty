@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.api.BufferAllocator;
 
+import java.util.Objects;
+
 import static java.nio.ByteOrder.BIG_ENDIAN;
 
 public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable {
@@ -32,8 +34,8 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
     }
 
     public ByteBufAllocatorAdaptor(BufferAllocator onheap, BufferAllocator offheap) {
-        this.onheap = onheap;
-        this.offheap = offheap;
+        this.onheap = Objects.requireNonNull(onheap, "The on-heap allocator cannot be null.");
+        this.offheap = Objects.requireNonNull(offheap, "The off-heap allocator cannot be null.");
     }
 
     @Override

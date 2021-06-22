@@ -38,6 +38,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.api.internal.Statics.acquire;
@@ -49,8 +50,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     private final boolean hasMemoryAddress;
 
     public ByteBufAdaptor(ByteBufAllocatorAdaptor alloc, Buffer buffer) {
-        this.alloc = alloc;
-        this.buffer = buffer;
+        this.alloc = Objects.requireNonNull(alloc, "The ByteBuf allocator adaptor cannot be null.");
+        this.buffer = Objects.requireNonNull(buffer, "The buffer being adapted cannot be null.");
         hasMemoryAddress = buffer.nativeAddress() != 0;
     }
 
@@ -1557,7 +1558,7 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { internalNioBuffer(index, length) };
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override

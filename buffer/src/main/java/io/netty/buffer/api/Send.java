@@ -15,7 +15,8 @@
  */
 package io.netty.buffer.api;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import io.netty.buffer.api.internal.SendFromSupplier;
+
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -45,29 +46,7 @@ public interface Send<T extends Resource<T>> extends AutoCloseable {
      * @return A {@link Send} which will deliver an object of the given type, from the supplier.
      */
     static <T extends Resource<T>> Send<T> sending(Class<T> concreteObjectType, Supplier<? extends T> supplier) {
-        return new Send<T>() {
-            private final AtomicBoolean gate = new AtomicBoolean();
-
-            @Override
-            public T receive() {
-                if (gate.getAndSet(true)) {
-                    throw new IllegalStateException("This object has already been received.");
-                }
-                return supplier.get();
-            }
-
-            @Override
-            public boolean referentIsInstanceOf(Class<?> cls) {
-                return cls.isAssignableFrom(concreteObjectType);
-            }
-
-            @Override
-            public void close() {
-                if (!gate.getAndSet(true)) {
-                    supplier.get().close();
-                }
-            }
-        };
+        return new SendFromSupplier<>(concreteObjectType, supplier);
     }
 
     /**
@@ -111,13 +90,7 @@ public interface Send<T extends Resource<T>> extends AutoCloseable {
      * This has no effect if the send-object has already been received.
      */
     @Override
-    default void close() {
-        try {
-            receive().close();
-        } catch (IllegalStateException ignore) {
-            // Don't do anything if the "Send" has already been consumed.
-        }
-    }
+    void close();
 
     /**
      * Determine if the object received from this {@code Send} is an instance of the given class.

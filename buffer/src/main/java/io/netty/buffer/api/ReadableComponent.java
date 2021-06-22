@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 public interface ReadableComponent {
 
     /**
-     * Check if this component is backed by a cached byte array than can be accessed cheaply.
+     * Check if this component is backed by a cached byte array that can be accessed cheaply.
      * <p>
      * <strong>Note</strong> that regardless of what this method returns, the array should not be used to modify the
      * contents of this buffer component.

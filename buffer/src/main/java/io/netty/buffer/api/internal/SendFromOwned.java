@@ -22,18 +22,18 @@ import io.netty.buffer.api.Send;
 
 import java.lang.invoke.VarHandle;
 
+import static io.netty.buffer.api.internal.Statics.findVarHandle;
 import static java.lang.invoke.MethodHandles.lookup;
 
-public class TransferSend<I extends Resource<I>, T extends ResourceSupport<I, T>> implements Send<I> {
-    private static final VarHandle RECEIVED = Statics.findVarHandle(
-            lookup(), TransferSend.class, "received", boolean.class);
+public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T>> implements Send<I> {
+    private static final VarHandle RECEIVED = findVarHandle(lookup(), SendFromOwned.class, "received", boolean.class);
     private final Owned<T> outgoing;
     private final Drop<T> drop;
     private final Class<?> concreteType;
     @SuppressWarnings("unused")
     private volatile boolean received; // Accessed via VarHandle
 
-    public TransferSend(Owned<T> outgoing, Drop<T> drop, Class<?> concreteType) {
+    public SendFromOwned(Owned<T> outgoing, Drop<T> drop, Class<?> concreteType) {
         this.outgoing = outgoing;
         this.drop = drop;
         this.concreteType = concreteType;

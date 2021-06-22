@@ -24,7 +24,7 @@ package io.netty.buffer.api;
 public interface BufferAccessors {
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors interface.">
     /**
-     * Get the byte value at the current {@link Buffer#readerOffset()},
+     * Read the byte value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Byte#BYTES}.
      * The value is read using a two's complement 8-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -48,7 +48,7 @@ public interface BufferAccessors {
     byte getByte(int roff);
 
     /**
-     * Get the unsigned byte value at the current {@link Buffer#readerOffset()},
+     * Read the unsigned byte value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Byte#BYTES}.
      * The value is read using an unsigned two's complement 8-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -72,7 +72,7 @@ public interface BufferAccessors {
     int getUnsignedByte(int roff);
 
     /**
-     * Set the given byte value at the current {@link Buffer#writerOffset()},
+     * Write the given byte value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Byte#BYTES}.
      * The value is written using a two's complement 8-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -97,7 +97,7 @@ public interface BufferAccessors {
     Buffer setByte(int woff, byte value);
 
     /**
-     * Set the given unsigned byte value at the current {@link Buffer#writerOffset()},
+     * Write the given unsigned byte value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Byte#BYTES}.
      * The value is written using an unsigned two's complement 8-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -122,7 +122,7 @@ public interface BufferAccessors {
     Buffer setUnsignedByte(int woff, int value);
 
     /**
-     * Get the char value at the current {@link Buffer#readerOffset()},
+     * Read the char value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by 2.
      * The value is read using a 2-byte UTF-16 encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -146,7 +146,7 @@ public interface BufferAccessors {
     char getChar(int roff);
 
     /**
-     * Set the given char value at the current {@link Buffer#writerOffset()},
+     * Write the given char value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by 2.
      * The value is written using a 2-byte UTF-16 encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -171,7 +171,7 @@ public interface BufferAccessors {
     Buffer setChar(int woff, char value);
 
     /**
-     * Get the short value at the current {@link Buffer#readerOffset()},
+     * Read the short value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Short#BYTES}.
      * The value is read using a two's complement 16-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -195,7 +195,7 @@ public interface BufferAccessors {
     short getShort(int roff);
 
     /**
-     * Get the unsigned short value at the current {@link Buffer#readerOffset()},
+     * Read the unsigned short value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Short#BYTES}.
      * The value is read using an unsigned two's complement 16-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -219,7 +219,7 @@ public interface BufferAccessors {
     int getUnsignedShort(int roff);
 
     /**
-     * Set the given short value at the current {@link Buffer#writerOffset()},
+     * Write the given short value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Short#BYTES}.
      * The value is written using a two's complement 16-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -244,7 +244,7 @@ public interface BufferAccessors {
     Buffer setShort(int woff, short value);
 
     /**
-     * Set the given unsigned short value at the current {@link Buffer#writerOffset()},
+     * Write the given unsigned short value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Short#BYTES}.
      * The value is written using an unsigned two's complement 16-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -269,7 +269,7 @@ public interface BufferAccessors {
     Buffer setUnsignedShort(int woff, int value);
 
     /**
-     * Get the int value at the current {@link Buffer#readerOffset()},
+     * Read the int value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by 3.
      * The value is read using a two's complement 24-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -293,7 +293,7 @@ public interface BufferAccessors {
     int getMedium(int roff);
 
     /**
-     * Get the unsigned int value at the current {@link Buffer#readerOffset()},
+     * Read the unsigned int value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by 3.
      * The value is read using an unsigned two's complement 24-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -317,7 +317,7 @@ public interface BufferAccessors {
     int getUnsignedMedium(int roff);
 
     /**
-     * Set the given int value at the current {@link Buffer#writerOffset()},
+     * Write the given int value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by 3.
      * The value is written using a two's complement 24-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -342,7 +342,7 @@ public interface BufferAccessors {
     Buffer setMedium(int woff, int value);
 
     /**
-     * Set the given unsigned int value at the current {@link Buffer#writerOffset()},
+     * Write the given unsigned int value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by 3.
      * The value is written using an unsigned two's complement 24-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -367,7 +367,7 @@ public interface BufferAccessors {
     Buffer setUnsignedMedium(int woff, int value);
 
     /**
-     * Get the int value at the current {@link Buffer#readerOffset()},
+     * Read the int value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Integer#BYTES}.
      * The value is read using a two's complement 32-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -391,7 +391,7 @@ public interface BufferAccessors {
     int getInt(int roff);
 
     /**
-     * Get the unsigned int value at the current {@link Buffer#readerOffset()},
+     * Read the unsigned int value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Integer#BYTES}.
      * The value is read using an unsigned two's complement 32-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -415,7 +415,7 @@ public interface BufferAccessors {
     long getUnsignedInt(int roff);
 
     /**
-     * Set the given int value at the current {@link Buffer#writerOffset()},
+     * Write the given int value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Integer#BYTES}.
      * The value is written using a two's complement 32-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -440,7 +440,7 @@ public interface BufferAccessors {
     Buffer setInt(int woff, int value);
 
     /**
-     * Set the given unsigned int value at the current {@link Buffer#writerOffset()},
+     * Write the given unsigned int value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Integer#BYTES}.
      * The value is written using an unsigned two's complement 32-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -465,7 +465,7 @@ public interface BufferAccessors {
     Buffer setUnsignedInt(int woff, long value);
 
     /**
-     * Get the float value at the current {@link Buffer#readerOffset()},
+     * Read the float value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Float#BYTES}.
      * The value is read using a 32-bit IEEE floating point encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -489,7 +489,7 @@ public interface BufferAccessors {
     float getFloat(int roff);
 
     /**
-     * Set the given float value at the current {@link Buffer#writerOffset()},
+     * Write the given float value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Float#BYTES}.
      * The value is written using a 32-bit IEEE floating point encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -514,7 +514,7 @@ public interface BufferAccessors {
     Buffer setFloat(int woff, float value);
 
     /**
-     * Get the long value at the current {@link Buffer#readerOffset()},
+     * Read the long value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Long#BYTES}.
      * The value is read using a two's complement 64-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -538,7 +538,7 @@ public interface BufferAccessors {
     long getLong(int roff);
 
     /**
-     * Set the given long value at the current {@link Buffer#writerOffset()},
+     * Write the given long value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Long#BYTES}.
      * The value is written using a two's complement 64-bit encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -563,7 +563,7 @@ public interface BufferAccessors {
     Buffer setLong(int woff, long value);
 
     /**
-     * Get the double value at the current {@link Buffer#readerOffset()},
+     * Read the double value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Double#BYTES}.
      * The value is read using a 64-bit IEEE floating point encoding,
      * with the {@link Buffer#order() configured} default byte order.
@@ -587,7 +587,7 @@ public interface BufferAccessors {
     double getDouble(int roff);
 
     /**
-     * Set the given double value at the current {@link Buffer#writerOffset()},
+     * Write the given double value at the current {@link Buffer#writerOffset()},
      * and increase the writer offset by {@link Double#BYTES}.
      * The value is written using a 64-bit IEEE floating point encoding,
      * with the {@link Buffer#order() configured} default byte order.

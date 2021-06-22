@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 public interface WritableComponent {
 
     /**
-     * Check if this component is backed by a cached byte array than can be accessed cheaply.
+     * Check if this component is backed by a cached byte array that can be accessed cheaply.
      *
      * @return {@code true} if {@link #writableArray()} is a cheap operation, otherwise {@code false}.
      */

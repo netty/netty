@@ -242,6 +242,9 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (dest.readOnly()) {
+            throw bufferIsReadOnly(dest);
+        }
         if (dest instanceof NioBuffer) {
             var nb = (NioBuffer) dest;
             nb.checkSet(destPos, length);
@@ -391,7 +394,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     }
 
     @Override
-    public void ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
+    public Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -410,13 +413,12 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         }
         if (writableBytes() >= size) {
             // We already have enough space.
-            return;
+            return this;
         }
 
         if (allowCompaction && writableBytes() + readerOffset() >= size) {
             // We can solve this with compaction.
-            compact();
-            return;
+            return compact();
         }
 
         // Allocate a bigger buffer.
@@ -433,6 +435,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         Drop<NioBuffer> drop = untethered.drop();
         disconnectDrop(drop);
         attachNewBuffer(buffer, drop);
+        return this;
     }
 
     private void disconnectDrop(Drop<NioBuffer> newDrop) {
@@ -494,7 +497,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     }
 
     @Override
-    public void compact() {
+    public Buffer compact() {
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }
@@ -502,11 +505,12 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
             throw new BufferReadOnlyException("Buffer must be writable in order to compact, but was read-only.");
         }
         if (roff == 0) {
-            return;
+            return this;
         }
         rmem.limit(woff).position(roff).compact().clear();
         woff -= roff;
         roff = 0;
+        return this;
     }
 
     @Override

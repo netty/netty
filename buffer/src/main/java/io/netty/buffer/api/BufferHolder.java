@@ -29,7 +29,9 @@ import static java.lang.invoke.MethodHandles.lookup;
  * <p>
  * The {@link BufferHolder} can only hold on to a single buffer, so objects and classes that need to hold on to multiple
  * buffers will have to do their implementation from scratch, though they can use the code of the {@link BufferHolder}
- * as inspiration.
+ * as inspiration. Alternatively, multiple buffers can be
+ * {@linkplain CompositeBuffer#compose(BufferAllocator, Send[]) composed} into a single buffer, which can then be put
+ * in a buffer holder.
  * <p>
  * If you just want an object that is a reference to a buffer, then the {@link BufferRef} can be used for that purpose.
  * If you have an advanced use case where you wish to implement {@link Resource}, and tightly control lifetimes, then
@@ -87,7 +89,7 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
      * <p>
      * This method is protected to permit advanced use cases of {@link BufferHolder} sub-class implementations.
      * <p>
-     * <strong>Note:</strong> this method closes the current buffer,
+     * <strong>Note:</strong> This method closes the current buffer,
      * and takes exclusive ownership of the received buffer.
      * <p>
      * The buffer assignment is performed using a plain store.

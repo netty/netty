@@ -144,6 +144,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
             dest.makeReadOnly();
             try (Buffer src = allocator.allocate(8)) {
                 assertThrows(BufferReadOnlyException.class, () -> src.copyInto(0, dest, 0, 1));
+                assertThrows(BufferReadOnlyException.class, () -> src.copyInto(0, dest, 0, 0));
             }
         }
     }

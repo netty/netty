@@ -468,6 +468,10 @@ public abstract class BufferTestSupport {
             assertEquals((byte) 0x05, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
+
+            var roBuffer = bbAlloc.apply(6).asReadOnlyBuffer();
+            assertThrows(ReadOnlyBufferException.class, () -> buf.copyInto(0, roBuffer, 0, 1));
+            assertThrows(ReadOnlyBufferException.class, () -> buf.copyInto(0, roBuffer, 0, 0));
         }
     }
 

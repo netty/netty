@@ -20,6 +20,7 @@ import io.netty.buffer.api.internal.Statics;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.ReadOnlyBufferException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -463,6 +464,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     @Override
     public void copyInto(int srcPos, ByteBuffer dest, int destPos, int length) {
+        if (dest.isReadOnly()) {
+            throw new ReadOnlyBufferException();
+        }
         copyInto(srcPos, (b, s, d, l) -> b.copyInto(s, dest, d, l), destPos, length);
     }
 
@@ -501,6 +505,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
         if (srcPos + length > capacity) {
             throw indexOutOfBounds(srcPos + length, false);
+        }
+        if (dest.readOnly()) {
+            throw bufferIsReadOnly(dest);
         }
 
         // Iterate in reverse to account for src and dest buffer overlap.
@@ -732,7 +739,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     @Override
-    public void ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
+    public CompositeBuffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -750,7 +757,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
         if (writableBytes() >= size) {
             // We already have enough space.
-            return;
+            return this;
         }
 
         if (allowCompaction && size <= roff) {
@@ -779,7 +786,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                 computeBufferOffsets();
                 if (writableBytes() >= size) {
                     // Now we have enough space.
-                    return;
+                    return this;
                 }
             } else if (bufs.length == 1) {
                 // If we only have a single component buffer, then we can safely compact that in-place.
@@ -787,7 +794,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                 computeBufferOffsets();
                 if (writableBytes() >= size) {
                     // Now we have enough space.
-                    return;
+                    return this;
                 }
             }
         }
@@ -796,6 +803,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         BufferAllocator.checkSize(capacity() + (long) growth);
         Buffer extension = allocator.allocate(growth, order());
         unsafeExtendWith(extension);
+        return this;
     }
 
     /**
@@ -806,10 +814,10 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
      *
      * @see #compose(BufferAllocator, Send...)
      * @param extension The buffer to extend the composite buffer with.
+     * @return This composite buffer instance.
      */
-    public void extendWith(Send<Buffer> extension) {
-        Objects.requireNonNull(extension, "Extension buffer cannot be null.");
-        Buffer buffer = extension.receive();
+    public CompositeBuffer extendWith(Send<Buffer> extension) {
+        Buffer buffer = Objects.requireNonNull(extension, "Extension buffer cannot be null.").receive();
         if (!isAccessible() || !isOwned()) {
             buffer.close();
             if (!isAccessible()) {
@@ -834,11 +842,11 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         long extensionCapacity = buffer.capacity();
         if (extensionCapacity == 0) {
             // Extending by a zero-sized buffer makes no difference. Especially since it's not allowed to change the
-            // capacity of buffers that are constiuents of composite buffers.
+            // capacity of buffers that are constituents of composite buffers.
             // This also ensures that methods like countComponents, and forEachReadable, do not have to worry about
             // overflow in their component counters.
             buffer.close();
-            return;
+            return this;
         }
 
         long newSize = capacity() + extensionCapacity;
@@ -877,6 +885,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             bufs = restoreTemp;
             throw e;
         }
+        return this;
     }
 
     private static IllegalArgumentException extensionDuplicatesException() {
@@ -989,7 +998,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     @Override
-    public void compact() {
+    public CompositeBuffer compact() {
         if (!isOwned()) {
             throw new IllegalStateException("Buffer must be owned in order to compact.");
         }
@@ -998,7 +1007,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
         int distance = roff;
         if (distance == 0) {
-            return;
+            return this;
         }
         int pos = 0;
         var oldOrder = order;
@@ -1018,6 +1027,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
         readerOffset(0);
         writerOffset(woff - distance);
+        return this;
     }
 
     @Override
