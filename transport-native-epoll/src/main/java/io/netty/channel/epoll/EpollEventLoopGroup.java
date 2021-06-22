@@ -175,16 +175,12 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
 
-        switch (args.length) {
-            case 4:
-                taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
-                break;
-            case 5:
-                taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+        int argsLength = args.length;
+        if (argsLength > 3) {
+            taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+            if (argsLength > 4) {
                 tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
-                break;
-            default:
-                // ignore further arguments
+            }
         }
         return new EpollEventLoop(this, executor, maxEvents,
                 selectStrategyFactory.newSelectStrategy(),
