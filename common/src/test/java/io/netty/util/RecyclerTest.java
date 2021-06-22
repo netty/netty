@@ -367,7 +367,6 @@ public class RecyclerTest {
         // Always recycler the first object, that is Ok
         assertSame(o2, o);
 
-
         final CountDownLatch latch2 = new CountDownLatch(1);
         single.execute(new Runnable() {
             @Override
