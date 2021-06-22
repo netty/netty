@@ -21,7 +21,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -68,6 +70,8 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
 
     private final String fallbackProtocol;
+    private final RecyclableArrayList backlogList = RecyclableArrayList.newInstance();
+    private ChannelHandlerContext ctx;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -77,6 +81,44 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
      */
     protected ApplicationProtocolNegotiationHandler(String fallbackProtocol) {
         this.fallbackProtocol = ObjectUtil.checkNotNull(fallbackProtocol, "fallbackProtocol");
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        releaseBacklog();
+        backlogList.recycle();
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        backlogList.add(msg);
+    }
+
+    /**
+     * Process all backlog into pipeline from List.
+     */
+    private void processBacklog() {
+        for (Object o : backlogList) {
+            ctx.fireChannelRead(o);
+        }
+        backlogList.clear();
+    }
+
+    /**
+     * Release all backlog from List
+     */
+    private void releaseBacklog() {
+        for (Object o : backlogList) {
+            ReferenceCountUtil.release(o);
+        }
+        backlogList.clear();
     }
 
     @Override
@@ -92,6 +134,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     }
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
+                    processBacklog();
                 } else {
                     // if the event is not produced because of an successful handshake we will receive the same
                     // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
@@ -101,6 +144,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
+                releaseBacklog();
             } finally {
                 // Handshake failures are handled in exceptionCaught(...).
                 if (handshakeEvent.isSuccess()) {
@@ -118,6 +162,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
             pipeline.remove(this);
         }
     }
+
     /**
      * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline
      * for the negotiated application-level protocol.
