@@ -22,6 +22,8 @@ import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.Statics;
+import io.netty.util.internal.LongLongHashMap;
+import io.netty.util.internal.LongPriorityQueue;
 
 import java.util.PriorityQueue;
 

@@ -15,6 +15,9 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.LongLongHashMap;
+import io.netty.util.internal.LongPriorityQueue;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;

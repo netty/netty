@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.api.pool;
+package io.netty.util.internal;
 
 /**
  * Internal primitive map implementation that is specifically optimised for the runs availability map use case in
- * {@link PoolChunk}.
+ * {@code PoolChunk}.
  */
-final class LongLongHashMap {
+public final class LongLongHashMap {
     private static final int MASK_TEMPLATE = ~1;
     private int mask;
     private long[] array;
@@ -27,7 +27,7 @@ final class LongLongHashMap {
     private long zeroVal;
     private final long emptyVal;
 
-    LongLongHashMap(long emptyVal) {
+    public LongLongHashMap(long emptyVal) {
         this.emptyVal = emptyVal;
         zeroVal = emptyVal;
         int initialSize = 32;
