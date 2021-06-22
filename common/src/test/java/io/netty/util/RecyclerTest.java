@@ -379,7 +379,6 @@ public class RecyclerTest {
         });
         assertTrue(latch2.await(100, TimeUnit.MILLISECONDS));
 
-
         // It should be the same object, right?
         final HandledObject o3 = recycler.get();
         assertSame(o3, o);
