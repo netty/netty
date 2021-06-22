@@ -602,7 +602,7 @@ public final class HttpUtil {
         }
         // Ensure we not allow sign as part of the content-length:
         // See https://github.com/squid-cache/squid/security/advisories/GHSA-qf3v-rc95-96j5
-        if (!Character.isDigit(firstField.charAt(0))) {
+        if (firstField.isEmpty() || !Character.isDigit(firstField.charAt(0))) {
             // Reject the message as invalid
             throw new IllegalArgumentException(
                     "Content-Length value is not a number: " + firstField);
