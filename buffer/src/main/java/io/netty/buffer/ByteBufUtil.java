@@ -227,6 +227,9 @@ public final class ByteBufUtil {
 
     /**
      * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
+     * The indexOf method uses the <a href="https://en.wikipedia.org/wiki/Two-way_string-matching_algorithm">Two-Way</a>
+     * string matching algorithm to optimize performance,
+     * because it uses the o(1) Space complexity and excellent performance
      */
     public static int indexOf(ByteBuf needle, ByteBuf haystack) {
         if (haystack == null || needle == null) {
@@ -243,13 +246,20 @@ public final class ByteBufUtil {
             return 0;
         }
 
-        int i = maxSuf(needle, m, true);
-        int j = maxSuf(needle, m, false);
-        int ell = Math.max(i, j);
-        int memory;
-        int per = 0;
+        // When the needle has only one byte that can be read,
+        // the firstIndexOf method needs to be called
+        if (m == 1) {
+           return firstIndexOf((AbstractByteBuf) haystack, haystack.readerIndex(),
+                   haystack.writerIndex(), needle.getByte(needle.readerIndex()));
+        }
 
-        if (equals(needle, 0, needle, per, per + ell + 1)) {
+        int i;
+        int j;
+        int ell = Math.max(maxSuf(needle, m, true), maxSuf(needle, m, false));
+        int memory;
+        int per = needle.readerIndex();
+
+        if (equals(needle, per, needle, per, per + ell + 1)) {
             j = 0;
             memory = -1;
             while (j <= n - m) {
