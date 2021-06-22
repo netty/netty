@@ -402,7 +402,7 @@ public abstract class Recycler<T> {
             if (!handle.hasBeenRecycled) {
                 if (handleRecycleCount < interval) {
                     handleRecycleCount++;
-                    // Drop the item to prevent recycling to aggressive.
+                    // Drop the item to prevent from recycling too aggressively.
                     return;
                 }
                 handleRecycleCount = 0;
