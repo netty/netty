@@ -21,6 +21,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -134,6 +135,19 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler, queueFactory);
     }
 
+    /**
+     * @param nThreads the number of threads that will be used by this instance.
+     * @param executor the Executor to use, or {@code null} if default one should be used.
+     * @param chooserFactory the {@link EventExecutorChooserFactory} to use.
+     * @param selectStrategyFactory the {@link SelectStrategyFactory} to use.
+     * @param rejectedExecutionHandler the {@link RejectedExecutionHandler} to use.
+     * @param taskQueueFactory the {@link EventLoopTaskQueueFactory} to use for
+     *                         {@link SingleThreadEventLoop#execute(Runnable)},
+     *                         or {@code null} if default one should be used.
+     * @param tailTaskQueueFactory the {@link EventLoopTaskQueueFactory} to use for
+     *                             {@link SingleThreadEventLoop#executeAfterEventLoopIteration(Runnable)},
+     *                             or {@code null} if default one should be used.
+     */
     public EpollEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                SelectStrategyFactory selectStrategyFactory,
                                RejectedExecutionHandler rejectedExecutionHandler,
