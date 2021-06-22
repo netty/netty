@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-http3</artifactId>
-  <version>0.0.6.Final-SNAPSHOT</version>
+  <version>0.0.5.Final-SNAPSHOT</version>
   <name>Netty/Incubator/Codec/Http3</name>
   <packaging>jar</packaging>
   <url>https://netty.io/</url>
