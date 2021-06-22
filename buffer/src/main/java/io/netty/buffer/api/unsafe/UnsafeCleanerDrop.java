@@ -17,17 +17,19 @@ package io.netty.buffer.api.unsafe;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
+import io.netty.buffer.api.internal.Statics;
 import io.netty.util.internal.PlatformDependent;
 
 import java.lang.ref.Cleaner;
 
-public class CleanerDrop implements Drop<Buffer> {
+public class UnsafeCleanerDrop implements Drop<Buffer> {
     private final Drop<Buffer> drop;
 
-    public CleanerDrop(UnsafeMemory memory, Drop<Buffer> drop, Cleaner cleaner) {
+    public UnsafeCleanerDrop(UnsafeMemory memory, Drop<Buffer> drop, Cleaner cleaner) {
         this.drop = drop;
         long address = memory.address;
-        cleaner.register(memory, new FreeAddress(address));
+        int size = memory.size;
+        cleaner.register(memory, new FreeAddress(address, size));
     }
 
     @Override
@@ -42,14 +44,17 @@ public class CleanerDrop implements Drop<Buffer> {
 
     private static class FreeAddress implements Runnable {
         private final long address;
+        private final int size;
 
-        FreeAddress(long address) {
+        FreeAddress(long address, int size) {
             this.address = address;
+            this.size = size;
         }
 
         @Override
         public void run() {
             PlatformDependent.freeMemory(address);
+            Statics.MEM_USAGE_NATIVE.add(-size);
         }
     }
 }

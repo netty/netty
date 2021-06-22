@@ -66,7 +66,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
             throw attachTrace(createResourceClosedException());
         }
         if (acquires == Integer.MAX_VALUE) {
-            throw new IllegalStateException("Cannot acquire more references; counter would overflow.");
+            throw new IllegalStateException("Reached maximum allowed acquires (" + Integer.MAX_VALUE + ").");
         }
         acquires++;
         tracer.acquire(acquires);
@@ -76,7 +76,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     protected abstract RuntimeException createResourceClosedException();
 
     /**
-     * Decrement the reference count, and despose of the resource if the last reference is closed.
+     * Decrement the reference count, and dispose of the resource if the last reference is closed.
      * <p>
      * Note, this method is not thread-safe because Resources are meant to be thread-confined.
      *
@@ -189,7 +189,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     }
 
     /**
-     * Prepare this instance for ownsership transfer. This method is called from {@link #send()} in the sending thread.
+     * Prepare this instance for ownership transfer. This method is called from {@link #send()} in the sending thread.
      * This method should put this resource in a deactivated state where it is no longer accessible from the currently
      * owning thread.
      * In this state, the resource instance should only allow a call to {@link Owned#transferOwnership(Drop)} in the
@@ -201,7 +201,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
 
     /**
      * Get access to the underlying {@link Drop} object.
-     * This method is unsafe because it open the possibility of bypassing and overriding resource lifetimes.
+     * This method is unsafe because it opens the possibility of bypassing and overriding resource lifetimes.
      *
      * @return The {@link Drop} object used by this reference counted object.
      */
@@ -211,7 +211,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
 
     /**
      * Replace the current underlying {@link Drop} object with the given one.
-     * This method is unsafe because it open the possibility of bypassing and overring resource lifetimes.
+     * This method is unsafe because it opens the possibility of bypassing and overriding resource lifetimes.
      *
      * @param replacement The new {@link Drop} object to use instead of the current one.
      */

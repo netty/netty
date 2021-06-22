@@ -16,5 +16,9 @@
 
 /**
  * Internal implementation details that can be shared among Buffer implementations.
+ * <p>
+ * <strong>
+ *     Note: everything in this package is internal, and is not subject to backwards compatibility constraints.
+ * </strong>
  */
 package io.netty.buffer.api.internal;

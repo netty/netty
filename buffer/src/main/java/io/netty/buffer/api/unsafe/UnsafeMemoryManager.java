@@ -51,9 +51,10 @@ public class UnsafeMemoryManager implements MemoryManager {
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             base = null;
             address = PlatformDependent.allocateMemory(size);
+            Statics.MEM_USAGE_NATIVE.add(size);
             PlatformDependent.setMemory(address, size, (byte) 0);
             memory = new UnsafeMemory(base, address, size32);
-            drop = new CleanerDrop(memory, drop, cleaner);
+            drop = new UnsafeCleanerDrop(memory, drop, cleaner);
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
             base = new byte[size32];
             address = PlatformDependent.byteArrayBaseOffset();
