@@ -280,23 +280,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
             final ByteBuffer buffer = rmem.duplicate().order(ByteOrder.BIG_ENDIAN);
             int index = fromOffset;
             final int end = index + length;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (index + Long.BYTES <= end) {
-                    longValue = buffer.getLong(index);
-                    index += Long.BYTES;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {
@@ -347,24 +331,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
             final ByteBuffer buffer = rmem.duplicate().order(ByteOrder.LITTLE_ENDIAN);
             int index = fromOffset;
             final int end = index - length;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (index - Long.BYTES >= end) {
-                    index -= 7;
-                    longValue = buffer.getLong(index);
-                    index--;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {

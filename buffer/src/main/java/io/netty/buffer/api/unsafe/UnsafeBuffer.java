@@ -45,7 +45,6 @@ import java.nio.ReadOnlyBufferException;
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
-import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 
 class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buffer, ReadableComponent,
         WritableComponent, BufferIntegratable {
@@ -303,28 +302,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             final long baseAddress = address;
             int index = fromOffset;
             final int end = index + length;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (index + Long.BYTES <= end) {
-                    try {
-                        long value = PlatformDependent.getLong(baseObj, baseAddress + index);
-                        longValue = BIG_ENDIAN_NATIVE_ORDER? value : Long.reverseBytes(value);
-                    } finally {
-                        Reference.reachabilityFence(memory);
-                    }
-                    index += Long.BYTES;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {
@@ -381,29 +359,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             final long baseAddress = address;
             int index = fromOffset;
             final int end = index - length;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (index - Long.BYTES >= end) {
-                    index -= 7;
-                    try {
-                        long value = PlatformDependent.getLong(baseObj, baseAddress + index);
-                        longValue = BIG_ENDIAN_NATIVE_ORDER? Long.reverseBytes(value) : value;
-                    } finally {
-                        Reference.reachabilityFence(memory);
-                    }
-                    index--;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {

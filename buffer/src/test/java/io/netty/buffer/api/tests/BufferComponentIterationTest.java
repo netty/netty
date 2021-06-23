@@ -240,9 +240,6 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
                 buf.forEachReadable(0, (i, component) -> {
                     ByteCursor forward = component.openCursor();
-                    while (forward.readLong()) {
-                        actualData.writeLong(forward.getLong());
-                    }
                     while (forward.readByte()) {
                         actualData.writeByte(forward.getByte());
                     }

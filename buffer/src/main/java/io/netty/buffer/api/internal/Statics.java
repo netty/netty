@@ -93,11 +93,7 @@ public interface Statics {
         // We read longs in BE, in reverse, so they need to be flipped for writing.
         dest.order(ByteOrder.LITTLE_ENDIAN);
         try {
-            while (itr.readLong()) {
-                long val = itr.getLong();
-                length -= Long.BYTES;
-                dest.setLong(destPos + length, val);
-            }
+            // TODO make this faster by moving 8 bytes at a time.
             while (itr.readByte()) {
                 dest.setByte(destPos + --length, itr.getByte());
             }

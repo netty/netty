@@ -216,7 +216,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void byteIterationOfBigEndianBuffers(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(0x28)) {
+             Buffer buf = allocator.allocate(8)) {
             buf.order(BIG_ENDIAN); // The byte order should have no impact.
             checkByteIteration(buf);
             buf.resetOffsets();
@@ -228,7 +228,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     void byteIterationOfLittleEndianBuffers(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(0x28)) {
+             Buffer buf = allocator.allocate(8)) {
             buf.order(LITTLE_ENDIAN); // The byte order should have no impact.
             checkByteIteration(buf);
             buf.resetOffsets();

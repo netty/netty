@@ -517,10 +517,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         // We read longs in BE, in reverse, so they need to be flipped for writing.
         dest.order(ByteOrder.LITTLE_ENDIAN);
         try {
-            while (cursor.readLong()) {
-                length -= Long.BYTES;
-                dest.setLong(destPos + length, cursor.getLong());
-            }
             while (cursor.readByte()) {
                 dest.setByte(destPos + --length, cursor.getByte());
             }
@@ -556,42 +552,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             int bufferIndex = startBufferIndex;
             int initOffset = startCursor.currentOffset();
             ByteCursor cursor = startCursor;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (cursor.readLong()) {
-                    longValue = cursor.getLong();
-                    return true;
-                }
-                if (bytesLeft() >= Long.BYTES) {
-                    longValue = nextLongFromBytes();
-                    return true;
-                }
-                return false;
-            }
-
-            private long nextLongFromBytes() {
-                if (cursor.bytesLeft() == 0) {
-                    nextCursor();
-                    if (cursor.readLong()) {
-                        return cursor.getLong();
-                    }
-                }
-                long val = 0;
-                for (int i = 0; i < 8; i++) {
-                    readByte();
-                    val <<= 8;
-                    val |= getByte();
-                }
-                return val;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {
@@ -657,42 +618,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             int bufferIndex = startBufferIndex;
             int initOffset = startCursor.currentOffset();
             ByteCursor cursor = startCursor;
-            long longValue = -1;
             byte byteValue = -1;
-
-            @Override
-            public boolean readLong() {
-                if (cursor.readLong()) {
-                    longValue = cursor.getLong();
-                    return true;
-                }
-                if (bytesLeft() >= Long.BYTES) {
-                    longValue = nextLongFromBytes();
-                    return true;
-                }
-                return false;
-            }
-
-            private long nextLongFromBytes() {
-                if (cursor.bytesLeft() == 0) {
-                    nextCursor();
-                    if (cursor.readLong()) {
-                        return cursor.getLong();
-                    }
-                }
-                long val = 0;
-                for (int i = 0; i < 8; i++) {
-                    readByte();
-                    val <<= 8;
-                    val |= getByte();
-                }
-                return val;
-            }
-
-            @Override
-            public long getLong() {
-                return longValue;
-            }
 
             @Override
             public boolean readByte() {
@@ -1014,10 +940,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         order = ByteOrder.BIG_ENDIAN;
         try {
             var cursor = openCursor();
-            while (cursor.readLong()) {
-                setLong(pos, cursor.getLong());
-                pos += Long.BYTES;
-            }
             while (cursor.readByte()) {
                 setByte(pos, cursor.getByte());
                 pos++;
