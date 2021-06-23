@@ -31,7 +31,7 @@ public final class BrotliOptions implements CompressionOptions {
      * Default implementation of {@link BrotliOptions} with
      * {@link Encoder.Parameters#setQuality(int)} set to 4.
      */
-    public static final BrotliOptions DEFAULT = new BrotliOptions(
+    static final BrotliOptions DEFAULT = new BrotliOptions(
             new Encoder.Parameters().setQuality(4)
     );
 
@@ -41,7 +41,7 @@ public final class BrotliOptions implements CompressionOptions {
      * @param parameters {@link Encoder.Parameters} Instance
      * @throws NullPointerException If {@link Encoder.Parameters} is {@code null}
      */
-    public BrotliOptions(Encoder.Parameters parameters) {
+    BrotliOptions(Encoder.Parameters parameters) {
         this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
 
         if (!Brotli.isAvailable()) {

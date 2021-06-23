@@ -27,7 +27,7 @@ public final class GzipOptions extends DeflateOptions {
      * {@link #compressionLevel()} set to 6, {@link #windowBits()} set to 15
      * and {@link #memLevel()} set to 8.
      */
-    public static final GzipOptions DEFAULT = new GzipOptions(
+    static final GzipOptions DEFAULT = new GzipOptions(
             6, 15, 8
     );
 
@@ -46,7 +46,7 @@ public final class GzipOptions extends DeflateOptions {
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
      */
-    public GzipOptions(int compressionLevel, int windowBits, int memLevel) {
+    GzipOptions(int compressionLevel, int windowBits, int memLevel) {
         super(compressionLevel, windowBits, memLevel);
     }
 }

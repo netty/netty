@@ -32,7 +32,7 @@ public class DeflateOptions implements CompressionOptions {
      * {@link #compressionLevel} set to 6, {@link #windowBits} set to 15
      * and {@link #memLevel} set to 8.
      */
-    public static final DeflateOptions DEFAULT = new DeflateOptions(
+    static final DeflateOptions DEFAULT = new DeflateOptions(
             6, 15, 8
     );
 
@@ -51,7 +51,7 @@ public class DeflateOptions implements CompressionOptions {
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
      */
-    public DeflateOptions(int compressionLevel, int windowBits, int memLevel) {
+    DeflateOptions(int compressionLevel, int windowBits, int memLevel) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
