@@ -249,15 +249,17 @@ public final class ByteBufUtil {
         // When the needle has only one byte that can be read,
         // the firstIndexOf method needs to be called
         if (m == 1) {
-           return firstIndexOf((AbstractByteBuf) haystack, haystack.readerIndex(),
-                   haystack.writerIndex(), needle.getByte(needle.readerIndex()));
+            return firstIndexOf((AbstractByteBuf) haystack, haystack.readerIndex(),
+                    haystack.writerIndex(), needle.getByte(needle.readerIndex()));
         }
 
         int i;
         int j;
-        int ell = Math.max(maxSuf(needle, m, true), maxSuf(needle, m, false));
+        int startIndex = needle.readerIndex();
+        int ell = Math.max(maxSuf(needle, m, startIndex, true),
+                maxSuf(needle, m, startIndex, false));
         int memory;
-        int per = needle.readerIndex();
+        int per = startIndex;
 
         if (equals(needle, per, needle, per, per + ell + 1)) {
             j = 0;
@@ -313,10 +315,10 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    private static int maxSuf(ByteBuf x, int m, boolean isSuffix) {
+    private static int maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
         int p = 1;
         int ms = -1;
-        int j = 0;
+        int j = start;
         int k = 1;
         byte a;
         byte b;

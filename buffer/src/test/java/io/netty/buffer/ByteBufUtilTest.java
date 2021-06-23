@@ -120,18 +120,24 @@ public class ByteBufUtilTest {
 
     @Test
     public void testIndexOf() {
-        final ByteBuf haystack = Unpooled.copiedBuffer("abc123", CharsetUtil.UTF_8);
+        ByteBuf haystack = Unpooled.copiedBuffer("abc123", CharsetUtil.UTF_8);
         assertEquals(0, ByteBufUtil.indexOf(Unpooled.copiedBuffer("a", CharsetUtil.UTF_8), haystack));
         assertEquals(1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("bc".getBytes(CharsetUtil.UTF_8)), haystack));
         assertEquals(2, ByteBufUtil.indexOf(Unpooled.copiedBuffer("c".getBytes(CharsetUtil.UTF_8)), haystack));
         assertEquals(0, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abc12".getBytes(CharsetUtil.UTF_8)), haystack));
         assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abcdef".getBytes(CharsetUtil.UTF_8)), haystack));
         assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abc12x".getBytes(CharsetUtil.UTF_8)), haystack));
+        assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abc123def".getBytes(CharsetUtil.UTF_8)), haystack));
 
-        ByteBuf needle = Unpooled.copiedBuffer("abc12", CharsetUtil.UTF_8);
+        final ByteBuf needle = Unpooled.copiedBuffer("abc12", CharsetUtil.UTF_8);
         haystack.readerIndex(1);
         needle.readerIndex(1);
         assertEquals(0, ByteBufUtil.indexOf(needle, haystack));
+
+        haystack = Unpooled.copiedBuffer("123aab123", CharsetUtil.UTF_8);
+        assertEquals(3, ByteBufUtil.indexOf(Unpooled.copiedBuffer("aab", CharsetUtil.UTF_8), haystack));
+        haystack.release();
+        needle.release();
     }
 
     @Test
