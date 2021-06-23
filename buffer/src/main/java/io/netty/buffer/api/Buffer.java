@@ -97,7 +97,7 @@ import java.nio.ByteOrder;
  * The {@link BufferAllocator} has a {@link BufferAllocator#constBufferSupplier(byte[])} method that solves this, and
  * prevents these bugs from occurring.
  */
-public interface Buffer extends Resource<Buffer>, BufferAccessors {
+public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Changes the default byte order of this buffer, and return this buffer.
      *

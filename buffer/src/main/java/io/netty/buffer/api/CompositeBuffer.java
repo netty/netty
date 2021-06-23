@@ -113,7 +113,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     private static final Buffer[] EMPTY_BUFFER_ARRAY = new Buffer[0];
 
     private final BufferAllocator allocator;
-    private final TornBufferAccessors tornBufAccessors;
+    private final TornBufferAccessor tornBufAccessors;
     private Buffer[] bufs;
     private int[] offsets; // The offset, for the composite buffer, where each constituent buffer starts.
     private int capacity;
@@ -266,7 +266,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             }
             this.bufs = bufs;
             computeBufferOffsets();
-            tornBufAccessors = new TornBufferAccessors(this);
+            tornBufAccessors = new TornBufferAccessor(this);
         } catch (Exception e) {
             // Always close bufs on exception, regardless of acquireBufs value.
             // If acquireBufs is false, it just means the ref count increments happened prior to this constructor call.
@@ -1444,13 +1444,13 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         buf.setUnsignedByte(subOffset, value);
     }
 
-    private BufferAccessors prepRead(int size) {
+    private BufferAccessor prepRead(int size) {
         var buf = prepRead(roff, size);
         roff += size;
         return buf;
     }
 
-    private BufferAccessors prepRead(int index, int size) {
+    private BufferAccessor prepRead(int index, int size) {
         checkReadBounds(index, size);
         return chooseBuffer(index, size);
     }
@@ -1461,7 +1461,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
     }
 
-    private BufferAccessors prepGet(int index, int size) {
+    private BufferAccessor prepGet(int index, int size) {
         checkGetBounds(index, size);
         return chooseBuffer(index, size);
     }
@@ -1472,13 +1472,13 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
     }
 
-    private BufferAccessors prepWrite(int size) {
+    private BufferAccessor prepWrite(int size) {
         var buf = prepWrite(woff, size);
         woff += size;
         return buf;
     }
 
-    private BufferAccessors prepWrite(int index, int size) {
+    private BufferAccessor prepWrite(int index, int size) {
         checkWriteBounds(index, size);
         return chooseBuffer(index, size);
     }
@@ -1501,7 +1501,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                 capacity + "].");
     }
 
-    private BufferAccessors chooseBuffer(int index, int size) {
+    private BufferAccessor chooseBuffer(int index, int size) {
         int i = searchOffsets(index);
         if (i == bufs.length) {
             // This happens when the read/write offsets are parked 1 byte beyond the end of the buffer.
@@ -1518,7 +1518,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         return tornBufAccessors;
     }
 
-    private BufferAccessors choosePassThroughBuffer(int index) {
+    private BufferAccessor choosePassThroughBuffer(int index) {
         int i = searchOffsets(index);
         return bufs[i];
     }
@@ -1529,10 +1529,10 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     // <editor-fold defaultstate="collapsed" desc="Torn buffer access.">
-    private static final class TornBufferAccessors implements BufferAccessors {
+    private static final class TornBufferAccessor implements BufferAccessor {
         private final CompositeBuffer buf;
 
-        private TornBufferAccessors(CompositeBuffer buf) {
+        private TornBufferAccessor(CompositeBuffer buf) {
             this.buf = buf;
         }
 

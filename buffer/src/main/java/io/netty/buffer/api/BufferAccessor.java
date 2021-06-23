@@ -21,7 +21,7 @@ package io.netty.buffer.api;
  * Usually, you'd use the {@link Buffer} interface directly, since this lets you properly control the buffer reference
  * count.
  */
-public interface BufferAccessors {
+public interface BufferAccessor {
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors interface.">
     /**
      * Read the byte value at the current {@link Buffer#readerOffset()},
