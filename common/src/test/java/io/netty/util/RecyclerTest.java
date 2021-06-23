@@ -21,6 +21,8 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -343,6 +345,43 @@ public class RecyclerTest {
 
         assertSame(recycler.get(), o);
         assertNotSame(recycler.get(), o2);
+    }
+
+    @Test
+    public void testRecycleAtTwoThreadsMulti() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(256);
+        final HandledObject o = recycler.get();
+
+        ExecutorService single = Executors.newSingleThreadExecutor();
+
+        final CountDownLatch latch1 = new CountDownLatch(1);
+        single.execute(new Runnable() {
+            @Override
+            public void run() {
+                o.recycle();
+                latch1.countDown();
+            }
+        });
+        assertTrue(latch1.await(100, TimeUnit.MILLISECONDS));
+        final HandledObject o2 = recycler.get();
+        // Always recycler the first object, that is Ok
+        assertSame(o2, o);
+
+        final CountDownLatch latch2 = new CountDownLatch(1);
+        single.execute(new Runnable() {
+            @Override
+            public void run() {
+                //The object should be recycled
+                o2.recycle();
+                latch2.countDown();
+            }
+        });
+        assertTrue(latch2.await(100, TimeUnit.MILLISECONDS));
+
+        // It should be the same object, right?
+        final HandledObject o3 = recycler.get();
+        assertSame(o3, o);
+        single.shutdown();
     }
 
     @Test
