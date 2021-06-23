@@ -15,21 +15,24 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.Test;
+import org.junit.jupiter.api.function.Executable;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
-
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -246,7 +249,7 @@ public class HttpUtilTest {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
         HttpUtil.setTransferEncodingChunked(message, true);
-        List<String> expected = Collections.singletonList("chunked");
+        List<String> expected = singletonList("chunked");
         assertEquals(expected, message.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING));
     }
 
@@ -394,5 +397,29 @@ public class HttpUtilTest {
         http11Message.headers().set(
                 HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.KEEP_ALIVE);
         assertTrue(HttpUtil.isKeepAlive(http11Message));
+    }
+
+    @Test
+    public void normalizeAndGetContentLengthEmpty() {
+        testNormalizeAndGetContentLengthInvalidContentLength("");
+    }
+
+    @Test
+    public void normalizeAndGetContentLengthNotANumber() {
+        testNormalizeAndGetContentLengthInvalidContentLength("foo");
+    }
+
+    @Test
+    public void normalizeAndGetContentLengthNegative() {
+        testNormalizeAndGetContentLengthInvalidContentLength("-1");
+    }
+
+    private static void testNormalizeAndGetContentLengthInvalidContentLength(final String contentLengthField) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                normalizeAndGetContentLength(singletonList(contentLengthField), false, false);
+            }
+        });
     }
 }
