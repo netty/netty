@@ -215,19 +215,6 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given iterable is neither null nor empty.
-     * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
-     * Otherwise, returns the argument.
-     */
-    public static <T> Iterable<T> checkNonEmpty(Iterable<T> iterable, String name) {
-        checkNotNull(iterable, name);
-        if (!iterable.iterator().hasNext()) {
-            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
-        }
-        return iterable;
-    }
-
-    /**
      * Checks that the given argument is neither null nor empty.
      * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
      * Otherwise, returns the argument.

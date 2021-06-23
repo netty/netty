@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.compression.BrotliOptions;
 import io.netty.handler.codec.http.compression.CompressionOptions;
 import io.netty.handler.codec.http.compression.DeflateOptions;
 import io.netty.handler.codec.http.compression.GzipOptions;
+import io.netty.handler.codec.http.compression.StandardCompressionOptions;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Arrays;
@@ -51,13 +52,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private ChannelHandlerContext ctx;
 
     /**
-     * Create a new {@link HttpContentCompressor} Instancewith default {@link BrotliOptions#DEFAULT},
-     * {@link GzipOptions#DEFAULT} and {@link DeflateOptions#DEFAULT}
+     * Create a new {@link HttpContentCompressor} Instance with default
+     * implementation of {@link StandardCompressionOptions}
      */
     public HttpContentCompressor() {
-        brotliOptions = BrotliOptions.DEFAULT;
-        gzipCompressionOptions = GzipOptions.DEFAULT;
-        deflateOptions = DeflateOptions.DEFAULT;
+        brotliOptions = StandardCompressionOptions.brotli();
+        gzipCompressionOptions = StandardCompressionOptions.gzip();
+        deflateOptions = StandardCompressionOptions.deflate();
         supportsCompressionOptions = true;
     }
 
@@ -168,7 +169,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * @param compressionOptionsIterable {@link Iterable<CompressionOptions>} Instance
      */
     public HttpContentCompressor(int contentSizeThreshold, Iterable<CompressionOptions> compressionOptionsIterable) {
-
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
         ObjectUtil.checkNotNull(compressionOptionsIterable, "CompressionOptions");
         ObjectUtil.deepCheckNotNull(compressionOptionsIterable, "CompressionOptions");
