@@ -100,7 +100,7 @@ public class BufferSendTest extends BufferTestSupport {
             var send = orig.send();
             verifyInaccessible(orig);
             try (Buffer receive = send.receive()) {
-                assertEquals(42, receive.readInt());
+                assertEquals(42, receive.readLong());
             }
         }
     }

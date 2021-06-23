@@ -20,7 +20,6 @@ import io.netty.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BufferIntOffsettedAccessorsTest extends BufferTestSupport {
@@ -58,7 +57,6 @@ public class BufferIntOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedGetOfIntMustReadWithDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             int value = 0x01020304;
             buf.writeInt(value);
             buf.setByte(0, (byte) 0x10);
@@ -158,7 +156,6 @@ public class BufferIntOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedGetOfUnsignedIntMustReadWithDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             long value = 0x01020304;
             buf.writeUnsignedInt(value);
             buf.setByte(0, (byte) 0x10);
@@ -277,7 +274,6 @@ public class BufferIntOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedSetOfIntMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             int value = 0x01020304;
             buf.setInt(0, value);
             buf.writerOffset(Long.BYTES);
@@ -325,7 +321,6 @@ public class BufferIntOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedSetOfUnsignedIntMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             long value = 0x01020304;
             buf.setUnsignedInt(0, value);
             buf.writerOffset(Long.BYTES);

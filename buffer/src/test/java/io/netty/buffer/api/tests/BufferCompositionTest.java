@@ -26,12 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.nio.ByteOrder;
-
 import static io.netty.buffer.api.internal.Statics.acquire;
 import static io.netty.buffer.api.internal.Statics.isOwned;
-import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,7 +86,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     public void ensureWritableOnCompositeBuffersMustRespectExistingBigEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer composite;
-            try (Buffer a = allocator.allocate(4, BIG_ENDIAN)) {
+            try (Buffer a = allocator.allocate(4)) {
                 composite = CompositeBuffer.compose(allocator, a.send());
             }
             try (composite) {
@@ -99,26 +95,6 @@ public class BufferCompositionTest extends BufferTestSupport {
                 composite.writeInt(0x05060708);
                 assertEquals(0x0102030405060708L, composite.readLong());
             }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
-    public void ensureWritableOnCompositeBuffersMustRespectExistingLittleEndianByteOrder(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer composite = CompositeBuffer.compose(allocator, allocator.allocate(4, LITTLE_ENDIAN).send())) {
-            composite.writeInt(0x05060708);
-            composite.ensureWritable(4);
-            composite.writeInt(0x01020304);
-            assertEquals(0x0102030405060708L, composite.readLong());
-        }
-    }
-
-    @Test
-    public void emptyCompositeBufferMustUseNativeByteOrder() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
-             Buffer composite = CompositeBuffer.compose(allocator)) {
-            assertThat(composite.order()).isEqualTo(ByteOrder.nativeOrder());
         }
     }
 
@@ -189,11 +165,11 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void extendingCompositeBufferMustIncreaseCapacityByGivenBigEndianBuffer() {
+    public void extendingCompositeBufferMustIncreaseCapacityByGivenBuffer() {
         try (BufferAllocator allocator = BufferAllocator.heap();
              CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
             assertThat(composite.capacity()).isZero();
-            try (Buffer buf = allocator.allocate(8, BIG_ENDIAN)) {
+            try (Buffer buf = allocator.allocate(8)) {
                 composite.extendWith(buf.send());
             }
             assertThat(composite.capacity()).isEqualTo(8);
@@ -203,72 +179,12 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void extendingCompositeBufferMustIncreaseCapacityByGivenLittleEndianBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
-            assertThat(composite.capacity()).isZero();
-            try (Buffer buf = allocator.allocate(8, LITTLE_ENDIAN)) {
-                composite.extendWith(buf.send());
-            }
-            assertThat(composite.capacity()).isEqualTo(8);
-            composite.writeLong(0x0102030405060708L);
-            assertThat(composite.readLong()).isEqualTo(0x0102030405060708L);
-        }
-    }
-
-    @Test
-    public void extendingBigEndianCompositeBufferMustThrowIfExtensionIsLittleEndian() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
-            CompositeBuffer composite;
-            try (Buffer a = allocator.allocate(8, BIG_ENDIAN)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
-            }
-            try (composite) {
-                try (Buffer b = allocator.allocate(8, LITTLE_ENDIAN)) {
-                    var exc = assertThrows(IllegalArgumentException.class,
-                            () -> composite.extendWith(b.send()));
-                    assertThat(exc).hasMessageContaining("byte order");
-                }
-            }
-        }
-    }
-
-    @Test
-    public void extendingLittleEndianCompositeBufferMustThrowIfExtensionIsBigEndian() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
-            CompositeBuffer composite;
-            try (Buffer a = allocator.allocate(8, LITTLE_ENDIAN)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
-            }
-            try (composite) {
-                try (Buffer b = allocator.allocate(8, BIG_ENDIAN)) {
-                    var exc = assertThrows(IllegalArgumentException.class,
-                            () -> composite.extendWith(b.send()));
-                    assertThat(exc).hasMessageContaining("byte order");
-                }
-            }
-        }
-    }
-
-    @Test
-    public void emptyCompositeBufferMustAllowExtendingWithBufferWithBigEndianByteOrder() {
+    public void emptyCompositeBufferMustAllowExtendingWithBuffer() {
         try (BufferAllocator allocator = BufferAllocator.heap()) {
             try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
-                try (Buffer b = allocator.allocate(8, BIG_ENDIAN)) {
+                try (Buffer b = allocator.allocate(8)) {
                     composite.extendWith(b.send());
-                    assertThat(composite.order()).isEqualTo(BIG_ENDIAN);
-                }
-            }
-        }
-    }
-
-    @Test
-    public void emptyCompositeBufferMustAllowExtendingWithBufferWithLittleEndianByteOrder() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
-            try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
-                try (Buffer b = allocator.allocate(8, LITTLE_ENDIAN)) {
-                    composite.extendWith(b.send());
-                    assertThat(composite.order()).isEqualTo(LITTLE_ENDIAN);
+                    assertThat(composite.capacity()).isEqualTo(8);
                 }
             }
         }
@@ -372,15 +288,6 @@ public class BufferCompositionTest extends BufferTestSupport {
             assertThat(composite.capacity()).isEqualTo(16);
             assertThat(composite.writerOffset()).isEqualTo(12);
             assertThat(composite.readerOffset()).isEqualTo(4);
-        }
-    }
-
-    @Test
-    public void composeMustThrowWhenBuffersHaveMismatchedByteOrder() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
-             Buffer a = allocator.allocate(4, BIG_ENDIAN);
-             Buffer b = allocator.allocate(4, LITTLE_ENDIAN)) {
-            assertThrows(IllegalArgumentException.class, () -> CompositeBuffer.compose(allocator, a.send(), b.send()));
         }
     }
 

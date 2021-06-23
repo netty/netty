@@ -86,19 +86,19 @@ public interface Statics {
         return (Drop<R>) drop;
     }
 
-    static void copyToViaReverseCursor(Buffer src, int srcPos, Buffer dest, int destPos, int length) {
+    static void copyToViaReverseLoop(Buffer src, int srcPos, Buffer dest, int destPos, int length) {
+        if (length == 0) {
+            return;
+        }
         // Iterate in reverse to account for src and dest buffer overlap.
-        var itr = src.openReverseCursor(srcPos + length - 1, length);
-        ByteOrder prevOrder = dest.order();
-        // We read longs in BE, in reverse, so they need to be flipped for writing.
-        dest.order(ByteOrder.LITTLE_ENDIAN);
-        try {
-            // TODO make this faster by moving 8 bytes at a time.
-            while (itr.readByte()) {
-                dest.setByte(destPos + --length, itr.getByte());
-            }
-        } finally {
-            dest.order(prevOrder);
+        int i = length;
+        while (i >= Long.BYTES) {
+            i -= Long.BYTES;
+            dest.setLong(destPos + i, src.getLong(srcPos + i));
+        }
+        while (i > 0) {
+            i--;
+            dest.setByte(destPos + i, src.getByte(srcPos + i));
         }
     }
 

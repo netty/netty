@@ -31,8 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -107,14 +105,10 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     public void forEachReadableMustVisitBuffer(Fixture fixture) {
         long value = 0x0102030405060708L;
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer bufBERW = allocator.allocate(8).order(BIG_ENDIAN).writeLong(value);
-             Buffer bufLERW = allocator.allocate(8).order(LITTLE_ENDIAN).writeLong(value);
-             Buffer bufBERO = allocator.allocate(8).order(BIG_ENDIAN).writeLong(value).makeReadOnly();
-             Buffer bufLERO = allocator.allocate(8).order(LITTLE_ENDIAN).writeLong(value).makeReadOnly()) {
+             Buffer bufBERW = allocator.allocate(8).writeLong(value);
+             Buffer bufBERO = allocator.allocate(8).writeLong(value).makeReadOnly()) {
             verifyForEachReadableSingleComponent(fixture, bufBERW);
-            verifyForEachReadableSingleComponent(fixture, bufLERW);
             verifyForEachReadableSingleComponent(fixture, bufBERO);
-            verifyForEachReadableSingleComponent(fixture, bufLERO);
         }
     }
 
@@ -228,12 +222,12 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void forEachReadableMustExposeByteCursors(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(32).order(BIG_ENDIAN)) {
+             Buffer buf = allocator.allocate(32)) {
             buf.writeLong(0x0102030405060708L);
             buf.writeLong(0x1112131415161718L);
             assertEquals(0x01020304, buf.readInt());
-            try (Buffer actualData = allocator.allocate(buf.readableBytes()).order(BIG_ENDIAN);
-                 Buffer expectedData = allocator.allocate(12).order(BIG_ENDIAN)) {
+            try (Buffer actualData = allocator.allocate(buf.readableBytes());
+                 Buffer expectedData = allocator.allocate(12)) {
                 expectedData.writeInt(0x05060708);
                 expectedData.writeInt(0x11121314);
                 expectedData.writeInt(0x15161718);
@@ -258,10 +252,8 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     @MethodSource("nonCompositeAllocators")
     public void forEachWritableMustVisitBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer bufBERW = allocator.allocate(8).order(BIG_ENDIAN);
-             Buffer bufLERW = allocator.allocate(8).order(LITTLE_ENDIAN)) {
+             Buffer bufBERW = allocator.allocate(8)) {
             verifyForEachWritableSingleComponent(fixture, bufBERW);
-            verifyForEachWritableSingleComponent(fixture, bufLERW);
         }
     }
 
@@ -274,7 +266,6 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                  Buffer c = allocator.allocate(8)) {
                 buf = CompositeBuffer.compose(allocator, a.send(), b.send(), c.send());
             }
-            buf.order(BIG_ENDIAN);
             buf.forEachWritable(0, (index, component) -> {
                 component.writableBuffer().putLong(0x0102030405060708L + 0x1010101010101010L * index);
                 return true;
@@ -314,7 +305,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void forEachWritableChangesMadeToByteBufferComponentMustBeReflectedInBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(9).order(BIG_ENDIAN)) {
+             Buffer buf = allocator.allocate(9)) {
             buf.writeByte((byte) 0xFF);
             AtomicInteger writtenCounter = new AtomicInteger();
             buf.forEachWritable(0, (index, component) -> {

@@ -22,8 +22,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 
-import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class BufferWriteBytesCombinationsTest extends BufferTestSupport {
@@ -40,24 +38,6 @@ public class BufferWriteBytesCombinationsTest extends BufferTestSupport {
                 try (BufferAllocator alloc2 = otherFixture.createAllocator();
                      Buffer target = alloc1.allocate(37);
                      Buffer source = alloc2.allocate(35)) {
-                    // BE to BE
-                    target.order(BIG_ENDIAN);
-                    source.order(BIG_ENDIAN);
-                    verifyWriteBytes(target, source);
-
-                    // LE to BE
-                    target.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
-                    source.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
-                    verifyWriteBytes(target, source);
-
-                    // BE to LE
-                    target.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
-                    source.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
-                    verifyWriteBytes(target, source);
-
-                    // LE to LE
-                    target.fill((byte) 0).resetOffsets().order(LITTLE_ENDIAN);
-                    source.fill((byte) 0).resetOffsets().order(BIG_ENDIAN);
                     verifyWriteBytes(target, source);
                 } catch (Exception e) {
                     e.addSuppressed(new RuntimeException("other fixture was: " + otherFixture));

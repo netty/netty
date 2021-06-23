@@ -108,20 +108,6 @@ public interface BufferAllocator extends AutoCloseable {
     Buffer allocate(int size);
 
     /**
-     * Allocate a {@link Buffer} of the given size in bytes. This method may throw an {@link OutOfMemoryError} if there
-     * is not enough free memory available to allocate a {@link Buffer} of the requested size.
-     * <p>
-     * The buffer will use the given byte order by default.
-     *
-     * @param size The size of {@link Buffer} to allocate.
-     * @param order The default byte order used by the accessor methods that don't have an explicit byte order.
-     * @return The newly allocated {@link Buffer}.
-     */
-    default Buffer allocate(int size, ByteOrder order) {
-        return allocate(size).order(order);
-    }
-
-    /**
      * Create a supplier of "constant" {@linkplain Buffer Buffers} from this allocator, that all have the given
      * byte contents. The buffer has the same capacity as the byte array length, and its write offset is placed at the
      * end, and its read offset is at the beginning, such that the entire buffer contents are readable.

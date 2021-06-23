@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.buffer.SlicedByteBuf;
+import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.internal.Statics;
@@ -105,12 +106,15 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteOrder order() {
-        return buffer.order();
+        return ByteOrder.BIG_ENDIAN;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        buffer.order(endianness);
+        if (endianness == ByteOrder.LITTLE_ENDIAN) {
+            return new SwappedByteBuf(this);
+        }
         return this;
     }
 
@@ -279,13 +283,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getShort(index);
+            return Short.reverseBytes(buffer.getShort(index));
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -300,13 +301,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int getUnsignedShortLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getUnsignedShort(index);
+            return Integer.reverseBytes(buffer.getUnsignedShort(index)) >>> Short.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -321,13 +319,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int getMediumLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getMedium(index);
+            return Integer.reverseBytes(buffer.getMedium(index)) >> Byte.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -342,13 +337,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getUnsignedMedium(index);
+            return Integer.reverseBytes(buffer.getUnsignedMedium(index)) >>> Byte.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -363,13 +355,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getInt(index);
+            return Integer.reverseBytes(buffer.getInt(index));
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -384,13 +373,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public long getUnsignedIntLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getUnsignedInt(index);
+            return Long.reverseBytes(buffer.getUnsignedInt(index)) >>> Integer.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -405,13 +391,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).getLong(index);
+            return Long.reverseBytes(buffer.getLong(index));
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -554,14 +537,11 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf setShortLE(int index, int value) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).setShort(index, (short) value);
+            buffer.setShort(index, Short.reverseBytes((short) value));
             return this;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -577,14 +557,11 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf setMediumLE(int index, int value) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).setMedium(index, value);
+            buffer.setMedium(index, Integer.reverseBytes(value) >>> Byte.SIZE);
             return this;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -600,14 +577,11 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf setIntLE(int index, int value) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).setInt(index, value);
+            buffer.setInt(index, Integer.reverseBytes(value));
             return this;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -623,14 +597,11 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public ByteBuf setLongLE(int index, long value) {
-        ByteOrder originalOrder = buffer.order();
         try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).setLong(index, value);
+            buffer.setLong(index, Long.reverseBytes(value));
             return this;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -791,13 +762,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public short readShortLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readShort();
+            return Short.reverseBytes(buffer.readShort());
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -812,13 +780,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int readUnsignedShortLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readUnsignedShort();
+            return Integer.reverseBytes(buffer.readUnsignedShort()) >>> Short.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -833,13 +798,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int readMediumLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readMedium();
+            return Integer.reverseBytes(buffer.readMedium()) >> Byte.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -854,13 +816,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int readUnsignedMediumLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readUnsignedMedium();
+            return Integer.reverseBytes(buffer.readUnsignedMedium()) >>> Byte.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -875,13 +834,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public int readIntLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readInt();
+            return Integer.reverseBytes(buffer.readInt());
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -896,13 +852,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public long readUnsignedIntLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readUnsignedInt();
+            return Long.reverseBytes(buffer.readUnsignedInt()) >>> Integer.SIZE;
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -917,13 +870,10 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public long readLongLE() {
-        ByteOrder originalOrder = buffer.order();
         try {
-            return buffer.order(ByteOrder.LITTLE_ENDIAN).readLong();
+            return Long.reverseBytes(buffer.readLong());
         } catch (IllegalStateException e) {
             throw new IllegalReferenceCountException(e);
-        } finally {
-            buffer.order(originalOrder);
         }
     }
 
@@ -1096,13 +1046,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     @Override
     public ByteBuf writeShortLE(int value) {
         ensureWritable(2);
-        ByteOrder originalOrder = buffer.order();
-        try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).writeShort((short) value);
-            return this;
-        } finally {
-            buffer.order(originalOrder);
-        }
+        buffer.writeShort((short) (Integer.reverseBytes(value) >>> Short.SIZE));
+        return this;
     }
 
     @Override
@@ -1115,13 +1060,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     @Override
     public ByteBuf writeMediumLE(int value) {
         ensureWritable(3);
-        ByteOrder originalOrder = buffer.order();
-        try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).writeMedium(value);
-            return this;
-        } finally {
-            buffer.order(originalOrder);
-        }
+        buffer.writeMedium(Integer.reverseBytes(value) >> Byte.SIZE);
+        return this;
     }
 
     @Override
@@ -1134,13 +1074,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     @Override
     public ByteBuf writeIntLE(int value) {
         ensureWritable(4);
-        ByteOrder originalOrder = buffer.order();
-        try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).writeInt(value);
-            return this;
-        } finally {
-            buffer.order(originalOrder);
-        }
+        buffer.writeInt(Integer.reverseBytes(value));
+        return this;
     }
 
     @Override
@@ -1153,13 +1088,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     @Override
     public ByteBuf writeLongLE(long value) {
         ensureWritable(8);
-        ByteOrder originalOrder = buffer.order();
-        try {
-            buffer.order(ByteOrder.LITTLE_ENDIAN).writeLong(value);
-            return this;
-        } finally {
-            buffer.order(originalOrder);
-        }
+        buffer.writeLong(Long.reverseBytes(value));
+        return this;
     }
 
     @Override
@@ -1393,7 +1323,6 @@ public final class ByteBufAdaptor extends ByteBuf {
             BufferAllocator allocator = preferredBufferAllocator();
             Buffer copy = allocator.allocate(length);
             buffer.copyInto(index, copy, 0, length);
-            copy.order(buffer.order());
             copy.writerOffset(length);
             return wrap(copy);
         } catch (IllegalArgumentException e) {
@@ -1425,6 +1354,7 @@ public final class ByteBufAdaptor extends ByteBuf {
         return slice;
     }
 
+    @SuppressWarnings("deprecation")
     private static final class Slice extends SlicedByteBuf {
         private final int indexAdjustment;
         private final int lengthAdjustment;
@@ -1448,6 +1378,7 @@ public final class ByteBufAdaptor extends ByteBuf {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private static final class Duplicate extends DuplicatedByteBuf {
         Duplicate(ByteBufAdaptor byteBuf) {
             super(byteBuf);
@@ -1615,17 +1546,11 @@ public final class ByteBufAdaptor extends ByteBuf {
         return false;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int compareTo(ByteBuf buffer) {
-        ByteOrder orderThis = order();
-        ByteOrder orderThat = buffer.order();
-        try {
-            // Little-ending implementation of the compare seems to be broken.
-            return ByteBufUtil.compare(order(ByteOrder.BIG_ENDIAN), buffer.order(ByteOrder.BIG_ENDIAN));
-        } finally {
-            order(orderThis);
-            buffer.order(orderThat);
-        }
+        // Little-ending implementation of the compare seems to be broken.
+        return ByteBufUtil.compare(order(ByteOrder.BIG_ENDIAN), buffer.order(ByteOrder.BIG_ENDIAN));
     }
 
     @Override

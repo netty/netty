@@ -53,7 +53,6 @@ import static io.netty.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty.buffer.api.tests.Fixture.Properties.HEAP;
 import static io.netty.buffer.api.tests.Fixture.Properties.POOLED;
 import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -421,7 +420,7 @@ public abstract class BufferTestSupport {
     public static void testCopyIntoByteBuffer(Fixture fixture, Function<Integer, ByteBuffer> bbAlloc) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
+            buf.writeLong(0x0102030405060708L);
             ByteBuffer buffer = bbAlloc.apply(8);
             buf.copyInto(0, buffer, 0, buffer.capacity());
             assertEquals((byte) 0x01, buffer.get());
@@ -434,24 +433,12 @@ public abstract class BufferTestSupport {
             assertEquals((byte) 0x08, buffer.get());
             buffer.clear();
 
-            buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
-            buf.copyInto(0, buffer, 0, buffer.capacity());
-            assertEquals((byte) 0x08, buffer.get());
-            assertEquals((byte) 0x07, buffer.get());
-            assertEquals((byte) 0x06, buffer.get());
-            assertEquals((byte) 0x05, buffer.get());
-            assertEquals((byte) 0x04, buffer.get());
-            assertEquals((byte) 0x03, buffer.get());
-            assertEquals((byte) 0x02, buffer.get());
-            assertEquals((byte) 0x01, buffer.get());
-            buffer.clear();
-
             buffer = bbAlloc.apply(6);
             buf.copyInto(1, buffer, 1, 3);
             assertEquals((byte) 0x00, buffer.get());
-            assertEquals((byte) 0x07, buffer.get());
-            assertEquals((byte) 0x06, buffer.get());
-            assertEquals((byte) 0x05, buffer.get());
+            assertEquals((byte) 0x02, buffer.get());
+            assertEquals((byte) 0x03, buffer.get());
+            assertEquals((byte) 0x04, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
             buffer.clear();
@@ -463,9 +450,9 @@ public abstract class BufferTestSupport {
             assertEquals(3, buffer.limit());
             buffer.clear();
             assertEquals((byte) 0x00, buffer.get());
-            assertEquals((byte) 0x07, buffer.get());
-            assertEquals((byte) 0x06, buffer.get());
-            assertEquals((byte) 0x05, buffer.get());
+            assertEquals((byte) 0x02, buffer.get());
+            assertEquals((byte) 0x03, buffer.get());
+            assertEquals((byte) 0x04, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
             assertEquals((byte) 0x00, buffer.get());
 
@@ -478,7 +465,7 @@ public abstract class BufferTestSupport {
     public static void testCopyIntoBuf(Fixture fixture, Function<Integer, Buffer> bbAlloc) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
+            buf.writeLong(0x0102030405060708L);
             try (Buffer buffer = bbAlloc.apply(8)) {
                 buffer.writerOffset(8);
                 buf.copyInto(0, buffer, 0, buffer.capacity());
@@ -491,28 +478,15 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x07, buffer.readByte());
                 assertEquals((byte) 0x08, buffer.readByte());
                 buffer.resetOffsets();
-
-                buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
-                buf.copyInto(0, buffer, 0, buffer.capacity());
-                buffer.writerOffset(8);
-                assertEquals((byte) 0x08, buffer.readByte());
-                assertEquals((byte) 0x07, buffer.readByte());
-                assertEquals((byte) 0x06, buffer.readByte());
-                assertEquals((byte) 0x05, buffer.readByte());
-                assertEquals((byte) 0x04, buffer.readByte());
-                assertEquals((byte) 0x03, buffer.readByte());
-                assertEquals((byte) 0x02, buffer.readByte());
-                assertEquals((byte) 0x01, buffer.readByte());
-                buffer.resetOffsets();
             }
 
             try (Buffer buffer = bbAlloc.apply(6)) {
                 buf.copyInto(1, buffer, 1, 3);
                 buffer.writerOffset(6);
                 assertEquals((byte) 0x00, buffer.readByte());
-                assertEquals((byte) 0x07, buffer.readByte());
-                assertEquals((byte) 0x06, buffer.readByte());
-                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x02, buffer.readByte());
+                assertEquals((byte) 0x03, buffer.readByte());
+                assertEquals((byte) 0x04, buffer.readByte());
                 assertEquals((byte) 0x00, buffer.readByte());
                 assertEquals((byte) 0x00, buffer.readByte());
             }
@@ -525,15 +499,15 @@ public abstract class BufferTestSupport {
                 buffer.resetOffsets();
                 buffer.writerOffset(6);
                 assertEquals((byte) 0x00, buffer.readByte());
-                assertEquals((byte) 0x07, buffer.readByte());
-                assertEquals((byte) 0x06, buffer.readByte());
-                assertEquals((byte) 0x05, buffer.readByte());
+                assertEquals((byte) 0x02, buffer.readByte());
+                assertEquals((byte) 0x03, buffer.readByte());
+                assertEquals((byte) 0x04, buffer.readByte());
                 assertEquals((byte) 0x00, buffer.readByte());
                 assertEquals((byte) 0x00, buffer.readByte());
             }
 
             buf.resetOffsets();
-            buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
+            buf.writeLong(0x0102030405060708L);
             // Testing copyInto for overlapping writes:
             //
             //          0x0102030405060708
@@ -717,7 +691,6 @@ public abstract class BufferTestSupport {
             buf.writeInt(2);
             assertEquals(1, a.readInt());
             assertEquals(2, buf.readInt());
-            assertThat(a.order()).isEqualTo(buf.order());
         }
     }
 

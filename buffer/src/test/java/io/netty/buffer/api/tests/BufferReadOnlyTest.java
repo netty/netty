@@ -25,11 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
 import static io.netty.buffer.api.internal.Statics.isOwned;
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -164,7 +162,6 @@ public class BufferReadOnlyTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4}).get()) {
             assertTrue(buf.readOnly());
-            assertThat(buf.order()).isEqualTo(ByteOrder.nativeOrder());
             assertThat(buf.readerOffset()).isZero();
             assertThat(buf.capacity()).isEqualTo(4);
             assertThat(buf.writerOffset()).isEqualTo(4);
@@ -245,7 +242,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
                 Send<Buffer> send = buffer.send();
                 var future = executor.submit(() -> {
                     try (Buffer receive = send.receive()) {
-                        return receive.order(BIG_ENDIAN).readInt();
+                        return receive.readInt();
                     }
                 });
                 assertEquals(0x01020304, future.get());

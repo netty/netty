@@ -22,7 +22,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.netty.buffer.api.internal.Statics.acquire;
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BufferCompactTest extends BufferTestSupport {
@@ -31,7 +30,7 @@ public class BufferCompactTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void compactMustDiscardReadBytes(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(16, BIG_ENDIAN)) {
+             Buffer buf = allocator.allocate(16)) {
             buf.writeLong(0x0102030405060708L).writeInt(0x090A0B0C);
             assertEquals(0x01020304, buf.readInt());
             assertEquals(12, buf.writerOffset());
@@ -53,7 +52,7 @@ public class BufferCompactTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void compactMustThrowForUnownedBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8, BIG_ENDIAN)) {
+             Buffer buf = allocator.allocate(8)) {
             buf.writeLong(0x0102030405060708L);
             assertEquals((byte) 0x01, buf.readByte());
             try (Buffer ignore = acquire((ResourceSupport<?, ?>) buf)) {

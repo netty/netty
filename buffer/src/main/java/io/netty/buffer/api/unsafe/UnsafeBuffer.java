@@ -50,6 +50,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         WritableComponent, BufferIntegratable {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
+    private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
     private UnsafeMemory memory; // The memory liveness; monitored by Cleaner.
     private Object base; // On-heap address reference object, or null for off-heap.
     private long baseOffset; // Offset of this buffer into the memory.
@@ -57,8 +58,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     private int rsize;
     private int wsize;
     private final AllocatorControl control;
-    private ByteOrder order;
-    private boolean flipBytes;
     private boolean readOnly;
     private int roff;
     private int woff;
@@ -74,7 +73,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         rsize = size;
         wsize = size;
         control = allocatorControl;
-        order = ByteOrder.nativeOrder();
     }
 
     UnsafeBuffer(UnsafeBuffer parent) {
@@ -86,8 +84,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         address = parent.address;
         rsize = parent.rsize;
         wsize = parent.wsize;
-        order = parent.order;
-        flipBytes = parent.flipBytes;
         readOnly = parent.readOnly;
         roff = parent.roff;
         woff = parent.woff;
@@ -102,18 +98,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     @Override
     protected RuntimeException createResourceClosedException() {
         return bufferIsClosed(this);
-    }
-
-    @Override
-    public Buffer order(ByteOrder order) {
-        this.order = order;
-        flipBytes = order != ByteOrder.nativeOrder();
-        return this;
-    }
-
-    @Override
-    public ByteOrder order() {
-        return order;
     }
 
     @Override
@@ -184,7 +168,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         UnsafeMemory unsafeMemory = memory.memory();
         Buffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, memory.drop());
         copyInto(offset, copy, 0, length);
-        copy.writerOffset(length).order(order);
+        copy.writerOffset(length);
         if (readOnly) {
             copy = copy.makeReadOnly();
         }
@@ -268,7 +252,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
                 PlatformDependent.copyMemory(
                         base, address + srcPos, destUnsafe.base, destUnsafe.address + destPos, length);
             } else {
-                Statics.copyToViaReverseCursor(this, srcPos, dest, destPos, length);
+                Statics.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
             }
         } finally {
             Reference.reachabilityFence(memory);
@@ -484,7 +468,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         var splitBuffer = new UnsafeBuffer(memory, baseOffset, splitOffset, control, new ArcDrop<>(drop.increment()));
         splitBuffer.woff = Math.min(woff, splitOffset);
         splitBuffer.roff = Math.min(roff, splitOffset);
-        splitBuffer.order(order());
         boolean readOnly = readOnly();
         if (readOnly) {
             splitBuffer.makeReadOnly();
@@ -580,7 +563,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         } else {
             buf = PlatformDependent.directBuffer(address + roff, readableBytes());
         }
-        return buf.asReadOnlyBuffer().order(order());
+        return buf.asReadOnlyBuffer();
     }
 
     @Override
@@ -624,7 +607,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         } else {
             buf = PlatformDependent.directBuffer(address + woff, writableBytes());
         }
-        return buf.order(order());
+        return buf;
     }
     // </editor-fold>
 
@@ -860,13 +843,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public int readMedium() {
         checkRead(roff, 3);
         long offset = address + roff;
-        int value = order() == ByteOrder.BIG_ENDIAN ?
-                loadByte(offset) << 16 |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) & 0xFF :
-                loadByte(offset) & 0xFF |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) << 16;
+        int value = loadByte(offset) << 16 | (loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF;
         roff += 3;
         return value;
     }
@@ -875,26 +852,15 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public int getMedium(int roff) {
         checkGet(roff, 3);
         long offset = address + roff;
-        return order() == ByteOrder.BIG_ENDIAN?
-                loadByte(offset) << 16 |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) & 0xFF :
-                loadByte(offset) & 0xFF |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) << 16;
+        return loadByte(offset) << 16 | (loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF;
     }
 
     @Override
     public int readUnsignedMedium() {
         checkRead(roff, 3);
         long offset = address + roff;
-        int value = order() == ByteOrder.BIG_ENDIAN?
-                (loadByte(offset) << 16 |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) & 0xFF) & 0xFFFFFF :
-                (loadByte(offset) & 0xFF |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) << 16) & 0xFFFFFF;
+        int value =
+                (loadByte(offset) << 16 | (loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF) & 0xFFFFFF;
         roff += 3;
         return value;
     }
@@ -903,28 +869,16 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public int getUnsignedMedium(int roff) {
         checkGet(roff, 3);
         long offset = address + roff;
-        return order() == ByteOrder.BIG_ENDIAN?
-                (loadByte(offset) << 16 |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) & 0xFF) & 0xFFFFFF :
-                (loadByte(offset) & 0xFF |
-                (loadByte(offset + 1) & 0xFF) << 8 |
-                loadByte(offset + 2) << 16) & 0xFFFFFF;
+        return (loadByte(offset) << 16 |(loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF) & 0xFFFFFF;
     }
 
     @Override
     public Buffer writeMedium(int value) {
         checkWrite(woff, 3);
         long offset = address + woff;
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            storeByte(offset, (byte) (value >> 16));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value & 0xFF));
-        } else {
-            storeByte(offset, (byte) (value & 0xFF));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value >> 16 & 0xFF));
-        }
+        storeByte(offset, (byte) (value >> 16));
+        storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
+        storeByte(offset + 2, (byte) (value & 0xFF));
         woff += 3;
         return this;
     }
@@ -933,15 +887,9 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public Buffer setMedium(int woff, int value) {
         checkSet(woff, 3);
         long offset = address + woff;
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            storeByte(offset, (byte) (value >> 16));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value & 0xFF));
-        } else {
-            storeByte(offset, (byte) (value & 0xFF));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value >> 16 & 0xFF));
-        }
+        storeByte(offset, (byte) (value >> 16));
+        storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
+        storeByte(offset + 2, (byte) (value & 0xFF));
         return this;
     }
 
@@ -949,15 +897,9 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public Buffer writeUnsignedMedium(int value) {
         checkWrite(woff, 3);
         long offset = address + woff;
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            storeByte(offset, (byte) (value >> 16));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value & 0xFF));
-        } else {
-            storeByte(offset, (byte) (value & 0xFF));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value >> 16 & 0xFF));
-        }
+        storeByte(offset, (byte) (value >> 16));
+        storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
+        storeByte(offset + 2, (byte) (value & 0xFF));
         woff += 3;
         return this;
     }
@@ -966,15 +908,9 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     public Buffer setUnsignedMedium(int woff, int value) {
         checkSet(woff, 3);
         long offset = address + woff;
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            storeByte(offset, (byte) (value >> 16));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value & 0xFF));
-        } else {
-            storeByte(offset, (byte) (value & 0xFF));
-            storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
-            storeByte(offset + 2, (byte) (value >> 16 & 0xFF));
-        }
+        storeByte(offset, (byte) (value >> 16));
+        storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
+        storeByte(offset + 2, (byte) (value & 0xFF));
         return this;
     }
 
@@ -1208,7 +1144,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
 
     @Override
     protected Owned<UnsafeBuffer> prepareSend() {
-        var order = order();
         var roff = this.roff;
         var woff = this.woff;
         var readOnly = readOnly();
@@ -1222,7 +1157,6 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             @Override
             public UnsafeBuffer transferOwnership(Drop<UnsafeBuffer> drop) {
                 UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
-                copy.order(order);
                 copy.roff = roff;
                 copy.woff = woff;
                 if (readOnly) {
@@ -1344,7 +1278,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     private char loadChar(long offset) {
         if (ACCESS_UNALIGNED) {
             var value = PlatformDependent.getChar(base, offset);
-            return flipBytes? Character.reverseBytes(value) : value;
+            return FLIP_BYTES? Character.reverseBytes(value) : value;
         }
         return loadCharUnaligned(offset);
     }
@@ -1358,13 +1292,13 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             value = (char) (PlatformDependent.getByte(b, offset) << 8 |
                     PlatformDependent.getByte(b, offset + 1));
         }
-        return flipBytes? Character.reverseBytes(value) : value;
+        return FLIP_BYTES? Character.reverseBytes(value) : value;
     }
 
     private short loadShort(long offset) {
         if (ACCESS_UNALIGNED) {
             var value = PlatformDependent.getShort(base, offset);
-            return flipBytes? Short.reverseBytes(value) : value;
+            return FLIP_BYTES? Short.reverseBytes(value) : value;
         }
         return loadShortUnaligned(offset);
     }
@@ -1378,13 +1312,13 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
             value = (short) (PlatformDependent.getByte(b, offset) << 8 |
                     PlatformDependent.getByte(b, offset + 1));
         }
-        return flipBytes? Short.reverseBytes(value) : value;
+        return FLIP_BYTES? Short.reverseBytes(value) : value;
     }
 
     private int loadInt(long offset) {
         if (ACCESS_UNALIGNED) {
             var value = PlatformDependent.getInt(base, offset);
-            return flipBytes? Integer.reverseBytes(value) : value;
+            return FLIP_BYTES? Integer.reverseBytes(value) : value;
         }
         return loadIntUnaligned(offset);
     }
@@ -1403,12 +1337,12 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
                     PlatformDependent.getByte(b, offset + 2) << 8 |
                     PlatformDependent.getByte(b, offset + 3);
         }
-        return flipBytes? Integer.reverseBytes(value) : value;
+        return FLIP_BYTES? Integer.reverseBytes(value) : value;
     }
 
     private float loadFloat(long offset) {
         if (ACCESS_UNALIGNED) {
-            if (flipBytes) {
+            if (FLIP_BYTES) {
                 var value = PlatformDependent.getInt(base, offset);
                 return Float.intBitsToFloat(Integer.reverseBytes(value));
             }
@@ -1424,7 +1358,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     private long loadLong(long offset) {
         if (ACCESS_UNALIGNED) {
             var value = PlatformDependent.getLong(base, offset);
-            return flipBytes? Long.reverseBytes(value) : value;
+            return FLIP_BYTES? Long.reverseBytes(value) : value;
         }
         return loadLongUnaligned(offset);
     }
@@ -1452,12 +1386,12 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
                     (long) PlatformDependent.getByte(b, offset + 6) << 8 |
                     PlatformDependent.getByte(b, offset + 7);
         }
-        return flipBytes? Long.reverseBytes(value) : value;
+        return FLIP_BYTES? Long.reverseBytes(value) : value;
     }
 
     private double loadDouble(long offset) {
         if (ACCESS_UNALIGNED) {
-            if (flipBytes) {
+            if (FLIP_BYTES) {
                 var value = PlatformDependent.getLong(base, offset);
                 return Double.longBitsToDouble(Long.reverseBytes(value));
             }
@@ -1475,7 +1409,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     private void storeChar(long offset, char value) {
-        if (flipBytes) {
+        if (FLIP_BYTES) {
             value = Character.reverseBytes(value);
         }
         if (ACCESS_UNALIGNED) {
@@ -1496,7 +1430,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     private void storeShort(long offset, short value) {
-        if (flipBytes) {
+        if (FLIP_BYTES) {
             value = Short.reverseBytes(value);
         }
         if (ACCESS_UNALIGNED) {
@@ -1517,7 +1451,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     private void storeInt(long offset, int value) {
-        if (flipBytes) {
+        if (FLIP_BYTES) {
             value = Integer.reverseBytes(value);
         }
         if (ACCESS_UNALIGNED) {
@@ -1547,7 +1481,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
     }
 
     private void storeLong(long offset, long value) {
-        if (flipBytes) {
+        if (FLIP_BYTES) {
             value = Long.reverseBytes(value);
         }
         if (ACCESS_UNALIGNED) {

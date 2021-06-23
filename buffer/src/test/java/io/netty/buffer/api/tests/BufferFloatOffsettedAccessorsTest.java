@@ -20,7 +20,6 @@ import io.netty.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
@@ -59,7 +58,6 @@ public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedGetOfFloatMustReadWithDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             float value = Float.intBitsToFloat(0x01020304);
             buf.writeFloat(value);
             buf.setByte(0, (byte) 0x10);
@@ -176,7 +174,6 @@ public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
     void offsettedSetOfFloatMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN);
             float value = Float.intBitsToFloat(0x01020304);
             buf.setFloat(0, value);
             buf.writerOffset(Long.BYTES);

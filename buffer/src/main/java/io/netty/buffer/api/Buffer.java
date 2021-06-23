@@ -75,6 +75,12 @@ import java.nio.ByteOrder;
  *      0      <=     readerOffset  <=   writerOffset    <=    capacity
  * </pre>
  *
+ * <h3>Byte Order</h3>
+ *
+ * Buffers are always big endian, and this cannot be changed.
+ * Usages that need to get, set, read, or write, little-endian values will have to flip the byte order of the values
+ * they read and write.
+ *
  * <h3 name="split">Splitting buffers</h3>
  *
  * The {@link #split()} method breaks a buffer into two.
@@ -98,21 +104,6 @@ import java.nio.ByteOrder;
  * prevents these bugs from occurring.
  */
 public interface Buffer extends Resource<Buffer>, BufferAccessor {
-    /**
-     * Changes the default byte order of this buffer, and return this buffer.
-     *
-     * @param order The new default byte order, used by accessor methods that don't use an explicit byte order.
-     * @return This buffer instance.
-     */
-    Buffer order(ByteOrder order);
-
-    /**
-     * The default byte order of this buffer.
-     *
-     * @return The default byte order of this buffer.
-     */
-    ByteOrder order();
-
     /**
      * The capacity of this buffer, that is, the maximum number of bytes it can contain.
      *

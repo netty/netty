@@ -79,7 +79,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
-        order(parent.order());
         constBuffer = true;
     }
 
@@ -129,17 +128,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     protected RuntimeException createResourceClosedException() {
         return bufferIsClosed(this);
-    }
-
-    @Override
-    public Buffer order(ByteOrder order) {
-        rmem.order(order);
-        return this;
-    }
-
-    @Override
-    public ByteOrder order() {
-        return rmem.order();
     }
 
     @Override
@@ -209,7 +197,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         ByteBuffer buffer = length == 0? bbslice(base, 0, 0) : base;
         Buffer copy = new NioBuffer(base, buffer, control, memory.drop());
         copyInto(offset, copy, 0, length);
-        copy.writerOffset(length).order(order());
+        copy.writerOffset(length);
         if (readOnly()) {
             copy = copy.makeReadOnly();
         }
@@ -252,7 +240,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
             return;
         }
 
-        Statics.copyToViaReverseCursor(this, srcPos, dest, destPos, length);
+        Statics.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
     }
 
     @Override
@@ -393,7 +381,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         BufferAllocator.checkSize(newSize);
         var untethered = control.allocateUntethered(this, (int) newSize);
         ByteBuffer buffer = untethered.memory();
-        buffer.order(order());
 
         // Copy contents.
         copyInto(0, buffer, 0, capacity());
@@ -445,8 +432,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         var splitBuffer = new NioBuffer(base, splitByteBuffer, control, new ArcDrop<>(drop.increment()));
         splitBuffer.woff = Math.min(woff, splitOffset);
         splitBuffer.roff = Math.min(roff, splitOffset);
-        ByteOrder order = order();
-        splitBuffer.order(order);
         boolean readOnly = readOnly();
         if (readOnly) {
             splitBuffer.makeReadOnly();
@@ -459,7 +444,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         }
         woff = Math.max(woff, splitOffset) - splitOffset;
         roff = Math.max(roff, splitOffset) - splitOffset;
-        order(order);
         return splitBuffer;
     }
 
@@ -523,7 +507,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
 
     @Override
     public ByteBuffer readableBuffer() {
-        return bbslice(rmem.asReadOnlyBuffer(), readerOffset(), readableBytes()).order(order());
+        return bbslice(rmem.asReadOnlyBuffer(), readerOffset(), readableBytes());
     }
 
     @Override
@@ -553,7 +537,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
 
     @Override
     public ByteBuffer writableBuffer() {
-        return bbslice(wmem, writerOffset(), writableBytes()).order(order());
+        return bbslice(wmem, writerOffset(), writableBytes());
     }
     // </editor-fold>
 
@@ -766,13 +750,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     public int readMedium() {
         checkRead(roff, 3);
-        int value = order() == ByteOrder.BIG_ENDIAN?
-                rmem.get(roff) << 16 |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) & 0xFF :
-                rmem.get(roff) & 0xFF |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) << 16;
+        int value = rmem.get(roff) << 16 | (rmem.get(roff + 1) & 0xFF) << 8 | rmem.get(roff + 2) & 0xFF;
         roff += 3;
         return value;
     }
@@ -780,25 +758,13 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     public int getMedium(int roff) {
         checkGet(roff, 3);
-        return order() == ByteOrder.BIG_ENDIAN?
-                rmem.get(roff) << 16 |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) & 0xFF :
-                rmem.get(roff) & 0xFF |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) << 16;
+        return rmem.get(roff) << 16 | (rmem.get(roff + 1) & 0xFF) << 8 | rmem.get(roff + 2) & 0xFF;
     }
 
     @Override
     public int readUnsignedMedium() {
         checkRead(roff, 3);
-        int value = order() == ByteOrder.BIG_ENDIAN?
-                (rmem.get(roff) << 16 |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) & 0xFF) & 0xFFFFFF :
-                (rmem.get(roff) & 0xFF |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) << 16) & 0xFFFFFF;
+        int value = (rmem.get(roff) << 16 | (rmem.get(roff + 1) & 0xFF) << 8 | rmem.get(roff + 2) & 0xFF) & 0xFFFFFF;
         roff += 3;
         return value;
     }
@@ -806,27 +772,15 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     public int getUnsignedMedium(int roff) {
         checkGet(roff, 3);
-        return order() == ByteOrder.BIG_ENDIAN?
-                (rmem.get(roff) << 16 |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) & 0xFF) & 0xFFFFFF :
-                (rmem.get(roff) & 0xFF |
-                (rmem.get(roff + 1) & 0xFF) << 8 |
-                rmem.get(roff + 2) << 16) & 0xFFFFFF;
+        return (rmem.get(roff) << 16 | (rmem.get(roff + 1) & 0xFF) << 8 | rmem.get(roff + 2) & 0xFF) & 0xFFFFFF;
     }
 
     @Override
     public Buffer writeMedium(int value) {
         checkWrite(woff, 3);
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            wmem.put(woff, (byte) (value >> 16));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value & 0xFF));
-        } else {
-            wmem.put(woff, (byte) (value & 0xFF));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value >> 16 & 0xFF));
-        }
+        wmem.put(woff, (byte) (value >> 16));
+        wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
+        wmem.put(woff + 2, (byte) (value & 0xFF));
         woff += 3;
         return this;
     }
@@ -834,30 +788,18 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     public Buffer setMedium(int woff, int value) {
         checkSet(woff, 3);
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            wmem.put(woff, (byte) (value >> 16));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value & 0xFF));
-        } else {
-            wmem.put(woff, (byte) (value & 0xFF));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value >> 16 & 0xFF));
-        }
+        wmem.put(woff, (byte) (value >> 16));
+        wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
+        wmem.put(woff + 2, (byte) (value & 0xFF));
         return this;
     }
 
     @Override
     public Buffer writeUnsignedMedium(int value) {
         checkWrite(woff, 3);
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            wmem.put(woff, (byte) (value >> 16));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value & 0xFF));
-        } else {
-            wmem.put(woff, (byte) (value & 0xFF));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value >> 16 & 0xFF));
-        }
+        wmem.put(woff, (byte) (value >> 16));
+        wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
+        wmem.put(woff + 2, (byte) (value & 0xFF));
         woff += 3;
         return this;
     }
@@ -865,15 +807,9 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
     @Override
     public Buffer setUnsignedMedium(int woff, int value) {
         checkSet(woff, 3);
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            wmem.put(woff, (byte) (value >> 16));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value & 0xFF));
-        } else {
-            wmem.put(woff, (byte) (value & 0xFF));
-            wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
-            wmem.put(woff + 2, (byte) (value >> 16 & 0xFF));
-        }
+        wmem.put(woff, (byte) (value >> 16));
+        wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
+        wmem.put(woff + 2, (byte) (value & 0xFF));
         return this;
     }
 
@@ -1075,7 +1011,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
 
     @Override
     protected Owned<NioBuffer> prepareSend() {
-        var order = order();
         var roff = this.roff;
         var woff = this.woff;
         var readOnly = readOnly();
@@ -1087,7 +1022,6 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
             @Override
             public NioBuffer transferOwnership(Drop<NioBuffer> drop) {
                 NioBuffer copy = new NioBuffer(base, rmem, control, drop);
-                copy.order(order);
                 copy.roff = roff;
                 copy.woff = woff;
                 if (readOnly) {

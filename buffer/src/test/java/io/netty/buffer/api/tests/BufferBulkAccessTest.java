@@ -23,8 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.nio.ByteBuffer;
 
 import static io.netty.buffer.api.CompositeBuffer.compose;
-import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class BufferBulkAccessTest extends BufferTestSupport {
@@ -45,18 +43,14 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoByteArray(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN).writeLong(0x0102030405060708L);
+            buf.writeLong(0x0102030405060708L);
             byte[] array = new byte[8];
             buf.copyInto(0, array, 0, array.length);
             assertThat(array).containsExactly(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
 
-            buf.writerOffset(0).order(LITTLE_ENDIAN).writeLong(0x0102030405060708L);
-            buf.copyInto(0, array, 0, array.length);
-            assertThat(array).containsExactly(0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
-
             array = new byte[6];
             buf.copyInto(1, array, 1, 3);
-            assertThat(array).containsExactly(0x00, 0x07, 0x06, 0x05, 0x00, 0x00);
+            assertThat(array).containsExactly(0x00, 0x02, 0x03, 0x04, 0x00, 0x00);
         }
     }
 
@@ -214,10 +208,9 @@ public class BufferBulkAccessTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void byteIterationOfBigEndianBuffers(Fixture fixture) {
+    void byteIterationOfBuffers(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            buf.order(BIG_ENDIAN); // The byte order should have no impact.
             checkByteIteration(buf);
             buf.resetOffsets();
             checkByteIterationOfRegion(buf);
@@ -226,34 +219,9 @@ public class BufferBulkAccessTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void byteIterationOfLittleEndianBuffers(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
-            buf.order(LITTLE_ENDIAN); // The byte order should have no impact.
-            checkByteIteration(buf);
-            buf.resetOffsets();
-            checkByteIterationOfRegion(buf);
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
-    void reverseByteIterationOfBigEndianBuffers(Fixture fixture) {
+    void reverseByteIterationOfBuffers(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(0x28)) {
-            buf.order(BIG_ENDIAN); // The byte order should have no impact.
-            checkReverseByteIteration(buf);
-            buf.resetOffsets();
-            checkReverseByteIterationOfRegion(buf);
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
-    void reverseByteIterationOfLittleEndianBuffers(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(0x28)) {
-            buf.order(LITTLE_ENDIAN); // The byte order should have no impact.
             checkReverseByteIteration(buf);
             buf.resetOffsets();
             checkReverseByteIterationOfRegion(buf);

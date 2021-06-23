@@ -25,7 +25,6 @@ import io.netty.buffer.api.internal.Statics;
 
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.convert;
@@ -43,7 +42,6 @@ public class ByteBufferMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        buffer.order(ByteOrder.nativeOrder());
         return new NioBuffer(buffer, buffer, allocatorControl, convert(drop));
     }
 

@@ -299,7 +299,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         control.parent = this;
         UntetheredMemory memory = allocate(control, size);
         Buffer buffer = manager.recoverMemory(control, memory.memory(), memory.drop());
-        return buffer.fill((byte) 0).order(ByteOrder.nativeOrder());
+        return buffer.fill((byte) 0);
     }
 
     UntetheredMemory allocate(PooledAllocatorControl control, int size) {

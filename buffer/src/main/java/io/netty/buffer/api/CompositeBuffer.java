@@ -58,11 +58,6 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
  * Basically, if we imagine that the constituent buffers have their memory regions concatenated together, then the
  * result needs to make sense.
  * <p>
- * All the constituent buffers must have the same {@linkplain Buffer#order() byte order}.
- * An exception will be thrown if you attempt to compose buffers that have different byte orders,
- * and changing the byte order of the constituent buffers so that they become inconsistent after construction,
- * will result in unspecified behaviour.
- * <p>
  * The read and write offsets of the constituent buffers must be arranged such that there are no "gaps" when viewed
  * as a single connected chunk of memory.
  * Specifically, there can be at most one buffer whose write offset is neither zero nor at capacity,
@@ -120,7 +115,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     private int roff;
     private int woff;
     private int subOffset; // The next offset *within* a consituent buffer to read from or write to.
-    private ByteOrder order;
     private boolean closed;
     private boolean readOnly;
 
@@ -136,8 +130,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
      * {@link #ensureWritable(int)} calls.
      * @param sends The sent buffers to compose into a single buffer view.
      * @return A buffer composed of, and backed by, the given buffers.
-     * @throws IllegalArgumentException if the given buffers have an inconsistent
-     * {@linkplain Buffer#order() byte order}.
      * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
      * will be closed and discarded, respectively.
      */
@@ -249,20 +241,13 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         this.allocator = allocator;
         try {
             if (bufs.length > 0) {
-                ByteOrder targetOrder = bufs[0].order();
                 boolean targetReadOnly = bufs[0].readOnly();
                 for (Buffer buf : bufs) {
-                    if (buf.order() != targetOrder) {
-                        throw new IllegalArgumentException("Constituent buffers have inconsistent byte order.");
-                    }
                     if (buf.readOnly() != targetReadOnly) {
                         throw new IllegalArgumentException("Constituent buffers have inconsistent read-only state.");
                     }
                 }
-                order = bufs[0].order();
                 readOnly = targetReadOnly;
-            } else {
-                order = ByteOrder.nativeOrder();
             }
             this.bufs = bufs;
             computeBufferOffsets();
@@ -341,22 +326,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     @Override
     protected RuntimeException createResourceClosedException() {
         return bufferIsClosed(this);
-    }
-
-    @Override
-    public CompositeBuffer order(ByteOrder order) {
-        if (this.order != order) {
-            this.order = order;
-            for (Buffer buf : bufs) {
-                buf.order(order);
-            }
-        }
-        return this;
-    }
-
-    @Override
-    public ByteOrder order() {
-        return order;
     }
 
     @Override
@@ -513,15 +482,8 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         // Iterate in reverse to account for src and dest buffer overlap.
         // todo optimise by delegating to constituent buffers.
         var cursor = openReverseCursor(srcPos + length - 1, length);
-        ByteOrder prevOrder = dest.order();
-        // We read longs in BE, in reverse, so they need to be flipped for writing.
-        dest.order(ByteOrder.LITTLE_ENDIAN);
-        try {
-            while (cursor.readByte()) {
-                dest.setByte(destPos + --length, cursor.getByte());
-            }
-        } finally {
-            dest.order(prevOrder);
+        while (cursor.readByte()) {
+            dest.setByte(destPos + --length, cursor.getByte());
         }
     }
 
@@ -727,7 +689,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
         int growth = Math.max(size - writableBytes(), minimumGrowth);
         BufferAllocator.checkSize(capacity() + (long) growth);
-        Buffer extension = allocator.allocate(growth, order());
+        Buffer extension = allocator.allocate(growth);
         unsafeExtendWith(extension);
         return this;
     }
@@ -750,12 +712,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                 throw bufferIsClosed(this);
             }
             throw new IllegalStateException("This buffer cannot be extended because it is not in an owned state.");
-        }
-        if (bufs.length > 0 && buffer.order() != order()) {
-            buffer.close();
-            throw new IllegalArgumentException(
-                    "This buffer uses " + order() + " byte order, and cannot be extended with " +
-                    "a buffer that uses " + buffer.order() + " byte order.");
         }
         if (bufs.length > 0 && buffer.readOnly() != readOnly()) {
             buffer.close();
@@ -804,7 +760,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
                 unsafeExtendWith(buffer);
             }
             if (restoreTemp.length == 0) {
-                order = buffer.order();
                 readOnly = buffer.readOnly();
             }
         } catch (Exception e) {
@@ -847,7 +802,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new CompositeBuffer(allocator, bufs, unsafeGetDrop()).order(order);
+            return new CompositeBuffer(allocator, bufs, unsafeGetDrop());
         }
 
         int i = searchOffsets(splitOffset);
@@ -862,9 +817,8 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     private CompositeBuffer buildSplitBuffer(Buffer[] splits) {
-        var compositeBuf = new CompositeBuffer(allocator, splits, unsafeGetDrop());
-        compositeBuf.order = order; // Preserve byte order even if splits array is empty.
-        return compositeBuf;
+        // TODO do we need to preserve read-only state of empty buffer?
+        return new CompositeBuffer(allocator, splits, unsafeGetDrop());
     }
 
     /**
@@ -881,7 +835,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new CompositeBuffer(allocator, bufs, unsafeGetDrop()).order(order);
+            return new CompositeBuffer(allocator, bufs, unsafeGetDrop());
         }
 
         int i = searchOffsets(splitOffset);
@@ -909,7 +863,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new CompositeBuffer(allocator, bufs, unsafeGetDrop()).order(order);
+            return new CompositeBuffer(allocator, bufs, unsafeGetDrop());
         }
 
         int i = searchOffsets(splitOffset);
@@ -936,16 +890,11 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             return this;
         }
         int pos = 0;
-        var oldOrder = order;
-        order = ByteOrder.BIG_ENDIAN;
-        try {
-            var cursor = openCursor();
-            while (cursor.readByte()) {
-                setByte(pos, cursor.getByte());
-                pos++;
-            }
-        } finally {
-            order = oldOrder;
+        // TODO maybe we can delegate to a copyInto method, once it's more optimised
+        var cursor = openCursor();
+        while (cursor.readByte()) {
+            setByte(pos, cursor.getByte());
+            pos++;
         }
         readerOffset(0);
         writerOffset(woff - distance);
@@ -1500,319 +1449,181 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
         @Override
         public char readChar() {
-            if (bigEndian()) {
-                return (char) (read() << 8 | read());
-            } else {
-                return (char) (read() | read() << 8);
-            }
+            return (char) (read() << 8 | read());
         }
 
         @Override
         public char getChar(int roff) {
-            if (bigEndian()) {
-                return (char) (read(roff) << 8 | read(roff + 1));
-            } else {
-                return (char) (read(roff) | read(roff + 1) << 8);
-            }
+            return (char) (read(roff) << 8 | read(roff + 1));
         }
 
         @Override
         public Buffer writeChar(char value) {
-            if (bigEndian()) {
-                write(value >>> 8);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8);
-            }
+            write(value >>> 8);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setChar(int woff, char value) {
-            if (bigEndian()) {
-                write(woff, value >>> 8);
-                write(woff + 1, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8);
-            }
+            write(woff, value >>> 8);
+            write(woff + 1, value & 0xFF);
             return buf;
         }
 
         @Override
         public short readShort() {
-            if (bigEndian()) {
-                return (short) (read() << 8 | read());
-            } else {
-                return (short) (read() | read() << 8);
-            }
+            return (short) (read() << 8 | read());
         }
 
         @Override
         public short getShort(int roff) {
-            if (bigEndian()) {
-                return (short) (read(roff) << 8 | read(roff + 1));
-            } else {
-                return (short) (read(roff) | read(roff + 1) << 8);
-            }
+            return (short) (read(roff) << 8 | read(roff + 1));
         }
 
         @Override
         public int readUnsignedShort() {
-            if (bigEndian()) {
-                return (int) (read() << 8 | read()) & 0xFFFF;
-            } else {
-                return (int) (read() | read() << 8) & 0xFFFF;
-            }
+            return (int) (read() << 8 | read()) & 0xFFFF;
         }
 
         @Override
         public int getUnsignedShort(int roff) {
-            if (bigEndian()) {
-                return (int) (read(roff) << 8 | read(roff + 1)) & 0xFFFF;
-            } else {
-                return (int) (read(roff) | read(roff + 1) << 8) & 0xFFFF;
-            }
+            return (int) (read(roff) << 8 | read(roff + 1)) & 0xFFFF;
         }
 
         @Override
         public Buffer writeShort(short value) {
-            if (bigEndian()) {
-                write(value >>> 8);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8);
-            }
+            write(value >>> 8);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setShort(int woff, short value) {
-            if (bigEndian()) {
-                write(woff, value >>> 8);
-                write(woff + 1, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8);
-            }
+            write(woff, value >>> 8);
+            write(woff + 1, value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer writeUnsignedShort(int value) {
-            if (bigEndian()) {
-                write(value >>> 8);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8);
-            }
+            write(value >>> 8);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setUnsignedShort(int woff, int value) {
-            if (bigEndian()) {
-                write(woff, value >>> 8);
-                write(woff + 1, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8);
-            }
+            write(woff, value >>> 8);
+            write(woff + 1, value & 0xFF);
             return buf;
         }
 
         @Override
         public int readMedium() {
-            if (bigEndian()) {
-                return (int) (read() << 16 | read() << 8 | read());
-            } else {
-                return (int) (read() | read() << 8 | read() << 16);
-            }
+            return (int) (read() << 16 | read() << 8 | read());
         }
 
         @Override
         public int getMedium(int roff) {
-            if (bigEndian()) {
-                return (int) (read(roff) << 16 | read(roff + 1) << 8 | read(roff + 2));
-            } else {
-                return (int) (read(roff) | read(roff + 1) << 8 | read(roff + 2) << 16);
-            }
+            return (int) (read(roff) << 16 | read(roff + 1) << 8 | read(roff + 2));
         }
 
         @Override
         public int readUnsignedMedium() {
-            if (bigEndian()) {
-                return (int) (read() << 16 | read() << 8 | read()) & 0xFFFFFF;
-            } else {
-                return (int) (read() | read() << 8 | read() << 16) & 0xFFFFFF;
-            }
+            return (int) (read() << 16 | read() << 8 | read()) & 0xFFFFFF;
         }
 
         @Override
         public int getUnsignedMedium(int roff) {
-            if (bigEndian()) {
-                return (int) (read(roff) << 16 | read(roff + 1) << 8 | read(roff + 2)) & 0xFFFFFF;
-            } else {
-                return (int) (read(roff) | read(roff + 1) << 8 | read(roff + 2) << 16) & 0xFFFFFF;
-            }
+            return (int) (read(roff) << 16 | read(roff + 1) << 8 | read(roff + 2)) & 0xFFFFFF;
         }
 
         @Override
         public Buffer writeMedium(int value) {
-            if (bigEndian()) {
-                write(value >>> 16);
-                write(value >>> 8 & 0xFF);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8 & 0xFF);
-                write(value >>> 16);
-            }
+            write(value >>> 16);
+            write(value >>> 8 & 0xFF);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setMedium(int woff, int value) {
-            if (bigEndian()) {
-                write(woff, value >>> 16);
-                write(woff + 1, value >>> 8 & 0xFF);
-                write(woff + 2, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8 & 0xFF);
-                write(woff + 2, value >>> 16);
-            }
+            write(woff, value >>> 16);
+            write(woff + 1, value >>> 8 & 0xFF);
+            write(woff + 2, value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer writeUnsignedMedium(int value) {
-            if (bigEndian()) {
-                write(value >>> 16);
-                write(value >>> 8 & 0xFF);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8 & 0xFF);
-                write(value >>> 16);
-            }
+            write(value >>> 16);
+            write(value >>> 8 & 0xFF);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setUnsignedMedium(int woff, int value) {
-            if (bigEndian()) {
-                write(woff, value >>> 16);
-                write(woff + 1, value >>> 8 & 0xFF);
-                write(woff + 2, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8 & 0xFF);
-                write(woff + 2, value >>> 16);
-            }
+            write(woff, value >>> 16);
+            write(woff + 1, value >>> 8 & 0xFF);
+            write(woff + 2, value & 0xFF);
             return buf;
         }
 
         @Override
         public int readInt() {
-            if (bigEndian()) {
-                return (int) (read() << 24 | read() << 16 | read() << 8 | read());
-            } else {
-                return (int) (read() | read() << 8 | read() << 16 | read() << 24);
-            }
+            return (int) (read() << 24 | read() << 16 | read() << 8 | read());
         }
 
         @Override
         public int getInt(int roff) {
-            if (bigEndian()) {
-                return (int) (read(roff) << 24 | read(roff + 1) << 16 | read(roff + 2) << 8 | read(roff + 3));
-            } else {
-                return (int) (read(roff) | read(roff + 1) << 8 | read(roff + 2) << 16 | read(roff + 3) << 24);
-            }
+            return (int) (read(roff) << 24 | read(roff + 1) << 16 | read(roff + 2) << 8 | read(roff + 3));
         }
 
         @Override
         public long readUnsignedInt() {
-            if (bigEndian()) {
-                return (read() << 24 | read() << 16 | read() << 8 | read()) & 0xFFFFFFFFL;
-            } else {
-                return (read() | read() << 8 | read() << 16 | read() << 24) & 0xFFFFFFFFL;
-            }
+            return (read() << 24 | read() << 16 | read() << 8 | read()) & 0xFFFFFFFFL;
         }
 
         @Override
         public long getUnsignedInt(int roff) {
-            if (bigEndian()) {
-                return (read(roff) << 24 | read(roff + 1) << 16 | read(roff + 2) << 8 | read(roff + 3)) & 0xFFFFFFFFL;
-            } else {
-                return (read(roff) | read(roff + 1) << 8 | read(roff + 2) << 16 | read(roff + 3) << 24) & 0xFFFFFFFFL;
-            }
+            return (read(roff) << 24 | read(roff + 1) << 16 | read(roff + 2) << 8 | read(roff + 3)) & 0xFFFFFFFFL;
         }
 
         @Override
         public Buffer writeInt(int value) {
-            if (bigEndian()) {
-                write(value >>> 24);
-                write(value >>> 16 & 0xFF);
-                write(value >>> 8 & 0xFF);
-                write(value & 0xFF);
-            } else {
-                write(value & 0xFF);
-                write(value >>> 8 & 0xFF);
-                write(value >>> 16 & 0xFF);
-                write(value >>> 24);
-            }
+            write(value >>> 24);
+            write(value >>> 16 & 0xFF);
+            write(value >>> 8 & 0xFF);
+            write(value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer setInt(int woff, int value) {
-            if (bigEndian()) {
-                write(woff, value >>> 24);
-                write(woff + 1, value >>> 16 & 0xFF);
-                write(woff + 2, value >>> 8 & 0xFF);
-                write(woff + 3, value & 0xFF);
-            } else {
-                write(woff, value & 0xFF);
-                write(woff + 1, value >>> 8 & 0xFF);
-                write(woff + 2, value >>> 16 & 0xFF);
-                write(woff + 3, value >>> 24);
-            }
+            write(woff, value >>> 24);
+            write(woff + 1, value >>> 16 & 0xFF);
+            write(woff + 2, value >>> 8 & 0xFF);
+            write(woff + 3, value & 0xFF);
             return buf;
         }
 
         @Override
         public Buffer writeUnsignedInt(long value) {
-            if (bigEndian()) {
-                write((int) (value >>> 24));
-                write((int) (value >>> 16 & 0xFF));
-                write((int) (value >>> 8 & 0xFF));
-                write((int) (value & 0xFF));
-            } else {
-                write((int) (value & 0xFF));
-                write((int) (value >>> 8 & 0xFF));
-                write((int) (value >>> 16 & 0xFF));
-                write((int) (value >>> 24));
-            }
+            write((int) (value >>> 24));
+            write((int) (value >>> 16 & 0xFF));
+            write((int) (value >>> 8 & 0xFF));
+            write((int) (value & 0xFF));
             return buf;
         }
 
         @Override
         public Buffer setUnsignedInt(int woff, long value) {
-            if (bigEndian()) {
-                write(woff, (int) (value >>> 24));
-                write(woff + 1, (int) (value >>> 16 & 0xFF));
-                write(woff + 2, (int) (value >>> 8 & 0xFF));
-                write(woff + 3, (int) (value & 0xFF));
-            } else {
-                write(woff, (int) (value & 0xFF));
-                write(woff + 1, (int) (value >>> 8 & 0xFF));
-                write(woff + 2, (int) (value >>> 16 & 0xFF));
-                write(woff + 3, (int) (value >>> 24));
-            }
+            write(woff, (int) (value >>> 24));
+            write(woff + 1, (int) (value >>> 16 & 0xFF));
+            write(woff + 2, (int) (value >>> 8 & 0xFF));
+            write(woff + 3, (int) (value & 0xFF));
             return buf;
         }
 
@@ -1838,71 +1649,39 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
         @Override
         public long readLong() {
-            if (bigEndian()) {
-                return read() << 56 | read() << 48 | read() << 40 | read() << 32 |
-                       read() << 24 | read() << 16 | read() << 8 | read();
-            } else {
-                return read() | read() << 8 | read() << 16 | read() << 24 |
-                       read() << 32 | read() << 40 | read() << 48 | read() << 56;
-            }
+            return read() << 56 | read() << 48 | read() << 40 | read() << 32 |
+                   read() << 24 | read() << 16 | read() << 8 | read();
         }
 
         @Override
         public long getLong(int roff) {
-            if (bigEndian()) {
-                return read(roff) << 56 | read(roff + 1) << 48 | read(roff + 2) << 40 | read(roff + 3) << 32 |
-                       read(roff + 4) << 24 | read(roff + 5) << 16 | read(roff + 6) << 8 | read(roff + 7);
-            } else {
-                return read(roff) | read(roff + 1) << 8 | read(roff + 2) << 16 | read(roff + 3) << 24 |
-                       read(roff + 4) << 32 | read(roff + 5) << 40 | read(roff + 6) << 48 | read(roff + 7) << 56;
-            }
+            return read(roff) << 56 | read(roff + 1) << 48 | read(roff + 2) << 40 | read(roff + 3) << 32 |
+                   read(roff + 4) << 24 | read(roff + 5) << 16 | read(roff + 6) << 8 | read(roff + 7);
         }
 
         @Override
         public Buffer writeLong(long value) {
-            if (bigEndian()) {
-                write((int) (value >>> 56));
-                write((int) (value >>> 48 & 0xFF));
-                write((int) (value >>> 40 & 0xFF));
-                write((int) (value >>> 32 & 0xFF));
-                write((int) (value >>> 24 & 0xFF));
-                write((int) (value >>> 16 & 0xFF));
-                write((int) (value >>> 8 & 0xFF));
-                write((int) (value & 0xFF));
-            } else {
-                write((int) (value & 0xFF));
-                write((int) (value >>> 8 & 0xFF));
-                write((int) (value >>> 16 & 0xFF));
-                write((int) (value >>> 24));
-                write((int) (value >>> 32));
-                write((int) (value >>> 40));
-                write((int) (value >>> 48));
-                write((int) (value >>> 56));
-            }
+            write((int) (value >>> 56));
+            write((int) (value >>> 48 & 0xFF));
+            write((int) (value >>> 40 & 0xFF));
+            write((int) (value >>> 32 & 0xFF));
+            write((int) (value >>> 24 & 0xFF));
+            write((int) (value >>> 16 & 0xFF));
+            write((int) (value >>> 8 & 0xFF));
+            write((int) (value & 0xFF));
             return buf;
         }
 
         @Override
         public Buffer setLong(int woff, long value) {
-            if (bigEndian()) {
-                write(woff, (int) (value >>> 56));
-                write(woff + 1, (int) (value >>> 48 & 0xFF));
-                write(woff + 2, (int) (value >>> 40 & 0xFF));
-                write(woff + 3, (int) (value >>> 32 & 0xFF));
-                write(woff + 4, (int) (value >>> 24 & 0xFF));
-                write(woff + 5, (int) (value >>> 16 & 0xFF));
-                write(woff + 6, (int) (value >>> 8 & 0xFF));
-                write(woff + 7, (int) (value & 0xFF));
-            } else {
-                write(woff, (int) (value & 0xFF));
-                write(woff + 1, (int) (value >>> 8 & 0xFF));
-                write(woff + 2, (int) (value >>> 16 & 0xFF));
-                write(woff + 3, (int) (value >>> 24));
-                write(woff + 4, (int) (value >>> 32));
-                write(woff + 5, (int) (value >>> 40));
-                write(woff + 6, (int) (value >>> 48));
-                write(woff + 7, (int) (value >>> 56));
-            }
+            write(woff, (int) (value >>> 56));
+            write(woff + 1, (int) (value >>> 48 & 0xFF));
+            write(woff + 2, (int) (value >>> 40 & 0xFF));
+            write(woff + 3, (int) (value >>> 32 & 0xFF));
+            write(woff + 4, (int) (value >>> 24 & 0xFF));
+            write(woff + 5, (int) (value >>> 16 & 0xFF));
+            write(woff + 6, (int) (value >>> 8 & 0xFF));
+            write(woff + 7, (int) (value & 0xFF));
             return buf;
         }
 
@@ -1924,10 +1703,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         @Override
         public Buffer setDouble(int woff, double value) {
             return setLong(woff, Double.doubleToRawLongBits(value));
-        }
-
-        private boolean bigEndian() {
-            return buf.order() == ByteOrder.BIG_ENDIAN;
         }
 
         private long read() {
