@@ -399,12 +399,14 @@ public abstract class Recycler<T> {
             // While we also enforce the recycling ratio when we transfer objects from the WeakOrderQueue to the Stack
             // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
             // without control
-            if (handleRecycleCount < interval) {
-                handleRecycleCount++;
-                // Drop the item to prevent recycling to aggressive.
-                return;
+            if (!handle.hasBeenRecycled) {
+                if (handleRecycleCount < interval) {
+                    handleRecycleCount++;
+                    // Drop the item to prevent from recycling too aggressively.
+                    return;
+                }
+                handleRecycleCount = 0;
             }
-            handleRecycleCount = 0;
 
             Link tail = this.tail;
             int writeIndex;
