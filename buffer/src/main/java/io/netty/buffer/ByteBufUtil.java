@@ -261,8 +261,9 @@ public final class ByteBufUtil {
         int ell = Math.max(suffixes[0], prefixes[0]);
         int per = Math.max(suffixes[1], prefixes[1]);
         int memory;
+        int length = Math.min(m - per, ell + 1);
 
-        if (equals(needle, startIndex, needle, startIndex + per,  ell - startIndex + 1)) {
+        if (equals(needle, startIndex, needle, startIndex + per,  length)) {
             j = 0;
             memory = -1;
             while (j <= n - m) {
