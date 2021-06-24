@@ -227,9 +227,8 @@ public final class ByteBufUtil {
 
     /**
      * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
-     * The indexOf method uses the <a href="https://en.wikipedia.org/wiki/Two-way_string-matching_algorithm">Two-Way</a>
-     * string matching algorithm to optimize performance,
-     * because it uses the o(1) Space complexity and excellent performance
+     * This method uses the <a href="https://en.wikipedia.org/wiki/Two-way_string-matching_algorithm">Two-Way
+     * string matching algorithm</a>, which yields O(1) space complexity and excellent performance.
      */
     public static int indexOf(ByteBuf needle, ByteBuf haystack) {
         if (haystack == null || needle == null) {
