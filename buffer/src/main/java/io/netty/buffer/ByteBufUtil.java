@@ -257,10 +257,10 @@ public final class ByteBufUtil {
         int j = 0;
         int aStartIndex = needle.readerIndex();
         int bStartIndex = haystack.readerIndex();
-        int[] suffixes =  maxSuf(needle, m, aStartIndex, true);
-        int[] prefixes = maxSuf(needle, m, aStartIndex, false);
-        int ell = Math.max(suffixes[0], prefixes[0]);
-        int per = Math.max(suffixes[1], prefixes[1]);
+        long suffixes =  maxSuf(needle, m, aStartIndex, true);
+        long prefixes = maxSuf(needle, m, aStartIndex, false);
+        int ell = (int) Math.max(suffixes >>> 32, prefixes >>> 32);
+        int per = (int) Math.max(suffixes, prefixes);
         int memory;
         int length = Math.min(m - per, ell + 1);
 
@@ -316,7 +316,7 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    private static int[] maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
+    private static long maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
         int p = 1;
         int ms = -1;
         int j = start;
@@ -344,7 +344,7 @@ public final class ByteBufUtil {
                 k = p = 1;
             }
         }
-        return new int[]{ms, p};
+        return ((long) ms << 32) + p;
     }
 
     /**
