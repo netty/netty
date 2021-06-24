@@ -18,14 +18,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2FrameTypes.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 
@@ -44,7 +46,7 @@ public class DefaultHttp2FrameReaderTest {
     // Used to generate frame
     private HpackEncoder hpackEncoder;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
@@ -54,7 +56,7 @@ public class DefaultHttp2FrameReaderTest {
         hpackEncoder = new HpackEncoder();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         frameReader.close();
     }
@@ -123,11 +125,11 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenUnknownFrameInMiddleOfHeaderBlock() throws Http2Exception {
         final int streamId = 1;
 
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             Http2Headers headers = new DefaultHttp2Headers()
                     .authority("foo")
@@ -137,15 +139,21 @@ public class DefaultHttp2FrameReaderTest {
             Http2Flags flags = new Http2Flags().endOfHeaders(false).endOfStream(true);
             writeHeaderFrame(input, streamId, headers, flags);
             writeFrameHeader(input, 0, (byte) 0xff, new Http2Flags(), streamId);
-            frameReader.readFrame(ctx, input, listener);
+
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenContinuationFrameStreamIdMismatch() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             Http2Headers headers = new DefaultHttp2Headers()
                     .authority("foo")
@@ -156,27 +164,38 @@ public class DefaultHttp2FrameReaderTest {
                              new Http2Flags().endOfHeaders(false).endOfStream(true));
             writeContinuationFrame(input, 3, new DefaultHttp2Headers().add("foo", "bar"),
                     new Http2Flags().endOfHeaders(true));
-            frameReader.readFrame(ctx, input, listener);
+
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenContinuationFrameNotFollowHeaderFrame() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writeContinuationFrame(input, 1, new DefaultHttp2Headers().add("foo", "bar"),
                                    new Http2Flags().endOfHeaders(true));
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenHeaderFrameDependsOnItself() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             Http2Headers headers = new DefaultHttp2Headers()
                     .authority("foo")
@@ -187,7 +206,12 @@ public class DefaultHttp2FrameReaderTest {
                     input, 1, headers,
                     new Http2Flags().endOfHeaders(true).endOfStream(true).priorityPresent(true),
                     1, 10);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
@@ -216,16 +240,21 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenDataFrameNotAssociateWithStream() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         ByteBuf payload = Unpooled.buffer();
         try {
             payload.writeByte(1);
 
             writeFrameHeader(input, payload.readableBytes(), DATA, new Http2Flags().endOfStream(true), 0);
             input.writeBytes(payload);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             payload.release();
             input.release();
@@ -243,24 +272,34 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenPriorityFrameDependsOnItself() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writePriorityFrame(input, 1, 1, 10);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenWindowUpdateFrameWithZeroDelta() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writeFrameHeader(input, 4, WINDOW_UPDATE, new Http2Flags(), 0);
             input.writeInt(0);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
@@ -294,39 +333,54 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenSettingsFrameOnNonZeroStream() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writeFrameHeader(input, 6, SETTINGS, new Http2Flags(), 1);
             input.writeShort(SETTINGS_MAX_HEADER_LIST_SIZE);
             input.writeInt(1024);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenAckSettingsFrameWithPayload() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writeFrameHeader(input, 1, SETTINGS, new Http2Flags().ack(true), 0);
             input.writeByte(1);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void failedWhenSettingsFrameWithWrongPayloadLength() throws Http2Exception {
-        ByteBuf input = Unpooled.buffer();
+        final ByteBuf input = Unpooled.buffer();
         try {
             writeFrameHeader(input, 8, SETTINGS, new Http2Flags(), 0);
             input.writeInt(SETTINGS_MAX_HEADER_LIST_SIZE);
             input.writeInt(1024);
-            frameReader.readFrame(ctx, input, listener);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
         } finally {
             input.release();
         }

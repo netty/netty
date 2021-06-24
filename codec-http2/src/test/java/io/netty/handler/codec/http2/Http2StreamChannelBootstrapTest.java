@@ -32,9 +32,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +44,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,9 +53,6 @@ public class Http2StreamChannelBootstrapTest {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(Http2StreamChannelBootstrapTest.class);
-
-    @Rule
-    public ExpectedException exceptionRule = ExpectedException.none();
 
     private volatile Channel serverConnectedChannel;
 
@@ -114,9 +110,12 @@ public class Http2StreamChannelBootstrapTest {
             assertThat(promise.isDone(), is(false));
             closeLatch.countDown();
 
-            exceptionRule.expect(ExecutionException.class);
-            exceptionRule.expectCause(IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
-            promise.get(3, SECONDS);
+            try {
+                promise.get(3, SECONDS);
+                fail();
+            } catch (ExecutionException e) {
+                assertThat(e.getCause(), IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
+            }
         } finally {
             safeClose(clientChannel);
             safeClose(serverConnectedChannel);

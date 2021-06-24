@@ -32,21 +32,23 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit tests for {@link Http2MultiplexCodec}.
@@ -59,12 +61,12 @@ public class Http2MultiplexCodecBuilderTest {
     private Channel clientChannel;
     private LastInboundHandler serverLastInboundHandler;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         group = new DefaultEventLoop();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws InterruptedException {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         LocalAddress serverAddress = new LocalAddress(getClass().getName());
@@ -115,7 +117,7 @@ public class Http2MultiplexCodecBuilderTest {
                 .handler(new Http2MultiplexCodecBuilder(false, new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
-                        Assert.fail("Should not be called for outbound streams");
+                        fail("Should not be called for outbound streams");
                     }
                 }).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
@@ -127,7 +129,7 @@ public class Http2MultiplexCodecBuilderTest {
         group.shutdownGracefully(0, 5, SECONDS);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
@@ -251,8 +253,13 @@ public class Http2MultiplexCodecBuilderTest {
         assertNotNull(Http2MultiplexCodecBuilder.forServer(new SharableChannelHandler2()));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnsharableHandler() {
-        Http2MultiplexCodecBuilder.forServer(new UnsharableChannelHandler());
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                Http2MultiplexCodecBuilder.forServer(new UnsharableChannelHandler());
+            }
+        });
     }
 }

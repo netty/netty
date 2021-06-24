@@ -33,29 +33,19 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ResourcesUtil;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
 public class HpackTest {
 
     private static final String TEST_DIR = '/' + HpackTest.class.getPackage().getName().replaceAll("\\.", "/")
             + "/testdata/";
 
-    private final String fileName;
-
-    public HpackTest(String fileName) {
-        this.fileName = fileName;
-    }
-
-    @Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         File[] files = ResourcesUtil.getFile(HpackTest.class, TEST_DIR).listFiles();
         ObjectUtil.checkNotNull(files, "files");
@@ -67,8 +57,9 @@ public class HpackTest {
         return data;
     }
 
-    @Test
-    public void test() throws Exception {
+    @ParameterizedTest(name = "file = {0}")
+    @MethodSource("data")
+    public void test(String fileName) throws Exception {
         InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + fileName);
         HpackTestCase hpackTestCase = HpackTestCase.load(is);
         hpackTestCase.testCompress();

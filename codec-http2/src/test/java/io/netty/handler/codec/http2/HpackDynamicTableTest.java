@@ -15,11 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HpackDynamicTableTest {
 
@@ -60,10 +62,15 @@ public class HpackDynamicTableTest {
         }
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testGetEntryExceptionally() {
-        HpackDynamicTable table = new HpackDynamicTable(1);
-        table.getEntry(1);
+        final HpackDynamicTable table = new HpackDynamicTable(1);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                table.getEntry(1);
+            }
+        });
     }
 
     @Test

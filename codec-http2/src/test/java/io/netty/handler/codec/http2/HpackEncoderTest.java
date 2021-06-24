@@ -17,12 +17,15 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class HpackEncoderTest {
@@ -30,7 +33,7 @@ public class HpackEncoderTest {
     private HpackEncoder hpackEncoder;
     private Http2Headers mockHeaders;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         hpackEncoder = new HpackEncoder();
         hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE);
@@ -47,11 +50,16 @@ public class HpackEncoderTest {
         buf.release();
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testSetMaxHeaderTableSizeOverflow() throws Http2Exception {
-        ByteBuf buf = Unpooled.buffer();
+        final ByteBuf buf = Unpooled.buffer();
         try {
-            hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
+                }
+            });
         } finally {
             buf.release();
         }
@@ -82,10 +90,10 @@ public class HpackEncoderTest {
         assertEquals(headersOut.get(bigHeaderName).toString(), bigHeaderVal);
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testSetMaxHeaderListSizeEnforcedAfterSet() throws Http2Exception {
-        ByteBuf buf = Unpooled.buffer();
-        Http2Headers headers = new DefaultHttp2Headers().add(
+        final ByteBuf buf = Unpooled.buffer();
+        final Http2Headers headers = new DefaultHttp2Headers().add(
                 "x-big-header",
                 new String(new char[1024 * 16]).replace('\0', 'X')
         );
@@ -93,7 +101,12 @@ public class HpackEncoderTest {
         hpackEncoder.setMaxHeaderListSize(1000);
 
         try {
-            hpackEncoder.encodeHeaders(0, buf, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackEncoder.encodeHeaders(0, buf, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+                }
+            });
         } finally {
             buf.release();
         }

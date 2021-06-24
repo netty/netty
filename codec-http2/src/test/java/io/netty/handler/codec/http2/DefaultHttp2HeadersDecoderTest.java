@@ -18,8 +18,9 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
@@ -27,8 +28,9 @@ import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link DefaultHttp2HeadersDecoder}.
@@ -37,7 +39,7 @@ public class DefaultHttp2HeadersDecoderTest {
 
     private DefaultHttp2HeadersDecoder decoder;
 
-    @Before
+    @BeforeEach
     public void setup() {
         decoder = new DefaultHttp2HeadersDecoder(false);
     }
@@ -55,14 +57,19 @@ public class DefaultHttp2HeadersDecoderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testExceedHeaderSize() throws Exception {
         final int maxListSize = 100;
         decoder.configuration().maxHeaderListSize(maxListSize, maxListSize);
-        ByteBuf buf = encode(randomBytes(maxListSize), randomBytes(1));
+        final ByteBuf buf = encode(randomBytes(maxListSize), randomBytes(1));
+
         try {
-            decoder.decodeHeaders(0, buf);
-            fail();
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.decodeHeaders(0, buf);
+                }
+            });
         } finally {
             buf.release();
         }

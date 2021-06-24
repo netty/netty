@@ -18,7 +18,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-@Ignore
+@Disabled
 public final class HashCollisionTest {
     private HashCollisionTest() { }
 

@@ -47,8 +47,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -56,10 +56,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class Http2StreamFrameToHttpObjectCodecTest {
 
@@ -90,15 +91,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertFalse(ch.finish());
     }
 
-    @Test (expected = EncoderException.class)
+    @Test
     public void encodeNonFullHttpResponse100ContinueIsRejected() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        try {
-            ch.writeOutbound(new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
-        } finally {
-            ch.finishAndReleaseAll();
-        }
+        final EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeOutbound(new DefaultHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
+            }
+        });
+        ch.finishAndReleaseAll();
     }
 
     @Test

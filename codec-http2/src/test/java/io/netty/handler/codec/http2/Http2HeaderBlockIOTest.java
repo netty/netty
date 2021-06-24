@@ -18,12 +18,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests for encoding/decoding HTTP2 header blocks.
@@ -34,14 +34,14 @@ public class Http2HeaderBlockIOTest {
     private DefaultHttp2HeadersEncoder encoder;
     private ByteBuf buffer;
 
-    @Before
+    @BeforeEach
     public void setup() {
         encoder = new DefaultHttp2HeadersEncoder();
         decoder = new DefaultHttp2HeadersDecoder(false);
         buffer = Unpooled.buffer();
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         buffer.release();
     }

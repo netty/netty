@@ -15,14 +15,17 @@
 
 package io.netty.handler.codec.http2;
 
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link Http2Settings}.
@@ -31,7 +34,7 @@ public class Http2SettingsTest {
 
     private Http2Settings settings;
 
-    @Before
+    @BeforeEach
     public void setup() {
         settings = new Http2Settings();
     }
@@ -83,9 +86,14 @@ public class Http2SettingsTest {
         assertEquals(MAX_UNSIGNED_INT, (long) settings.maxHeaderListSize());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void headerListSizeBoundCheck() {
-        settings.maxHeaderListSize(Long.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                settings.maxHeaderListSize(Long.MAX_VALUE);
+            }
+        });
     }
 
     @Test
@@ -94,13 +102,23 @@ public class Http2SettingsTest {
         assertEquals(MAX_UNSIGNED_INT, (long) settings.get(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void headerTableSizeBoundCheck() {
-        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) Long.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) Long.MAX_VALUE);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void headerTableSizeBoundCheck2() {
-        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, Long.valueOf(-1L));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, Long.valueOf(-1L));
+            }
+        });
     }
 }
