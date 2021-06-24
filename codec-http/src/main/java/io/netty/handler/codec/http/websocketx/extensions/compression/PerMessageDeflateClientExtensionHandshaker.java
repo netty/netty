@@ -117,7 +117,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
     @Override
     public WebSocketExtensionData newRequestData() {
         HashMap<String, String> parameters = new HashMap<String, String>(4);
-        if (requestedServerWindowSize != MAX_WINDOW_SIZE) {
+        if (requestedServerNoContext) {
             parameters.put(SERVER_NO_CONTEXT, null);
         }
         if (allowClientNoContext) {
@@ -174,11 +174,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                 }
             } else if (SERVER_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
                 // acknowledged server_no_context_takeover
-                if (requestedServerNoContext) {
-                    serverNoContext = true;
-                } else {
-                    succeed = false;
-                }
+                serverNoContext = true;
             } else {
                 // unknown parameter
                 succeed = false;
