@@ -104,8 +104,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-                            throws Exception {
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                         if (lastWritePromise != null) {
                             throw new IllegalStateException();
                         }

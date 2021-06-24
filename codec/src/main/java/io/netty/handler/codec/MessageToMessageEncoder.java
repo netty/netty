@@ -78,7 +78,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         CodecOutputList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -99,9 +99,9 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                 ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
-            throw e;
+            promise.setFailure(e);
         } catch (Throwable t) {
-            throw new EncoderException(t);
+            promise.setFailure(new EncoderException(t));
         } finally {
             if (out != null) {
                 try {

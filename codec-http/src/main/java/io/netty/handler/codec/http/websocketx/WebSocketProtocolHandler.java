@@ -82,7 +82,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         if (closeStatus == null || !ctx.channel().isActive()) {
             ctx.close(promise);
         } else {
@@ -96,7 +96,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());

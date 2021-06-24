@@ -24,7 +24,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectPool;
-import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -483,7 +482,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -523,7 +522,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -562,7 +561,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().disconnect(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -595,7 +594,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().close(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -628,7 +627,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().register(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -661,7 +660,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().deregister(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -688,20 +687,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().read(this);
         } catch (Throwable t) {
-            invokeExceptionCaughtFromOutbound(t);
-        }
-    }
-
-    private void invokeExceptionCaughtFromOutbound(Throwable t) {
-        if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
-            invokeExceptionCaught(t);
-        } else {
-            DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
-            if (ctx == null) {
-                notifyHandlerRemovedAlready();
-                return;
-            }
-            ctx.invokeExceptionCaught(t);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -722,7 +708,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().write(this, m, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -753,7 +739,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().flush(this);
         } catch (Throwable t) {
-            invokeExceptionCaughtFromOutbound(t);
+            handleOutboundHandlerException(t);
         }
     }
 
@@ -817,8 +803,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return writeAndFlush(msg, newPromise());
     }
 
-    private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        PromiseNotificationUtil.tryFailure(promise, cause, logger);
+    private void handleOutboundHandlerException(Throwable cause) {
+        logger.warn("{} threw an exception while handling an outbound event." +
+                " This is most likely a bug, closing the channel.", handler(), cause);
+        close();
     }
 
     @Override

@@ -647,12 +647,17 @@ public class Http2ConnectionRoundtripTest {
                     newPromise());
             clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     ReferenceCountUtil.release(msg);
 
-                    // Ensure we update the window size so we will try to write the rest of the frame while
-                    // processing the flush.
-                    http2Client.encoder().flowController().initialWindowSize(8);
+                    try {
+                        // Ensure we update the window size so we will try to write the rest of the frame while
+                        // processing the flush.
+                        http2Client.encoder().flowController().initialWindowSize(8);
+                    } catch (Http2Exception e) {
+                        promise.setFailure(e);
+                        return;
+                    }
                     promise.setFailure(new IllegalStateException());
                 }
             });

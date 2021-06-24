@@ -96,7 +96,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -120,9 +120,9 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
                 ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
-            throw e;
+            promise.setFailure(e);
         } catch (Throwable e) {
-            throw new EncoderException(e);
+            promise.setFailure(new EncoderException(e));
         } finally {
             if (buf != null) {
                 buf.release();

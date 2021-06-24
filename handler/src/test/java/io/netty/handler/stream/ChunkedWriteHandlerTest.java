@@ -616,7 +616,7 @@ public class ChunkedWriteHandlerTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 ReferenceCountUtil.release(msg);
                 // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
                 ctx.close();

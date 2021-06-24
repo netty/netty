@@ -28,8 +28,8 @@ import java.net.SocketAddress;
 
 /**
  * {@link ChannelHandler} which will resolve the {@link SocketAddress} that is passed to
- * {@link #connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)} if it is not already resolved
- * and the {@link AddressResolver} supports the type of {@link SocketAddress}.
+ * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)} if it is not
+ * already resolved and the {@link AddressResolver} supports the type of {@link SocketAddress}.
  */
 @Sharable
 public class ResolveAddressHandler implements ChannelHandler {
@@ -42,7 +42,7 @@ public class ResolveAddressHandler implements ChannelHandler {
 
     @Override
     public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        final SocketAddress localAddress, final ChannelPromise promise)  {
+                        final SocketAddress localAddress, final ChannelPromise promise) {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
             resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {

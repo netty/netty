@@ -278,10 +278,9 @@ public interface ChannelHandler {
      * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
      * @param localAddress  the {@link SocketAddress} to which it should bound
      * @param promise       the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception    thrown if an error occurs
      */
     @Skip
-    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
@@ -292,12 +291,11 @@ public interface ChannelHandler {
      * @param remoteAddress     the {@link SocketAddress} to which it should connect
      * @param localAddress      the {@link SocketAddress} which is used as source on connect
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
     default void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
@@ -306,10 +304,9 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
@@ -318,10 +315,9 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    default void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.close(promise);
     }
 
@@ -330,10 +326,9 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the register operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    default void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
@@ -342,10 +337,9 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
@@ -360,15 +354,14 @@ public interface ChannelHandler {
     /**
      * Called once a write operation is made. The write operation will write the messages through the
      * {@link ChannelPipeline}. Those are then ready to be flushed to the actual {@link Channel} once
-     * {@link Channel#flush()} is called
+     * {@link Channel#flush()} is called.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
      * @param msg               the message to write
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
@@ -377,10 +370,9 @@ public interface ChannelHandler {
      * that are pending.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
-     * @throws Exception        thrown if an error occurs
      */
     @Skip
-    default void flush(ChannelHandlerContext ctx) throws Exception {
+    default void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 }

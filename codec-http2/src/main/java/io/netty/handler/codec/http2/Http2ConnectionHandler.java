@@ -436,23 +436,23 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (decoupleCloseAndGoAway) {
             ctx.close(promise);
             return;
@@ -508,12 +508,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
@@ -523,7 +523,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
