@@ -1321,8 +1321,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private SSLEngineResult sslReadErrorResult(int error, int stackError, int bytesConsumed, int bytesProduced)
-            throws SSLException {
+    private boolean needWrapAgain(int stackError) {
         // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
@@ -1334,13 +1333,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSLException exception = handshakeState == HandshakeState.FINISHED ?
                     new SSLException(message) : new SSLHandshakeException(message);
             if (pendingException == null) {
-               pendingException = exception;
+                pendingException = exception;
             } else {
                 ThrowableUtil.addSuppressed(pendingException, exception);
             }
             // We need to clear all errors so we not pick up anything that was left on the stack on the next
             // operation. Note that shutdownWithError(...) will cleanup the stack as well so its only needed here.
             SSL.clearError();
+            return true;
+        }
+        return false;
+    }
+
+    private SSLEngineResult sslReadErrorResult(int error, int stackError, int bytesConsumed, int bytesProduced)
+            throws SSLException {
+        if (needWrapAgain(stackError)) {
+            // There is something that needs to be send to the remote peer before we can teardown.
+            // This is most likely some alert.
             return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
         }
         throw shutdownWithError("SSL_read", error, stackError);
@@ -1904,6 +1913,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return NEED_TASK;
             }
 
+            if (needWrapAgain(SSL.getLastErrorNumber())) {
+                // There is something that needs to be send to the remote peer before we can teardown.
+                // This is most likely some alert.
+                return NEED_WRAP;
+            }
             // Check if we have a pending exception that was created during the handshake and if so throw it after
             // shutdown the connection.
             if (pendingException != null) {
