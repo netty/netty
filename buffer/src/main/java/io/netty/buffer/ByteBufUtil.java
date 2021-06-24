@@ -256,12 +256,13 @@ public final class ByteBufUtil {
         int i;
         int j;
         int startIndex = needle.readerIndex();
-        int ell = Math.max(maxSuf(needle, m, startIndex, true),
-                maxSuf(needle, m, startIndex, false));
+        int[] suffixes =  maxSuf(needle, m, startIndex, true);
+        int[] prefixes = maxSuf(needle, m, startIndex, false);
+        int ell = Math.max(suffixes[0], prefixes[0]);
+        int per = Math.max(suffixes[1], prefixes[1]);
         int memory;
-        int per = startIndex;
 
-        if (equals(needle, per, needle, per, per + ell + 1)) {
+        if (equals(needle, startIndex, needle, startIndex + per,  ell - startIndex + 1)) {
             j = 0;
             memory = -1;
             while (j <= n - m) {
@@ -315,7 +316,7 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    private static int maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
+    private static int[] maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
         int p = 1;
         int ms = -1;
         int j = start;
@@ -343,7 +344,7 @@ public final class ByteBufUtil {
                 k = p = 1;
             }
         }
-        return ms;
+        return new int[]{ms, p};
     }
 
     /**
