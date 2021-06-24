@@ -254,21 +254,21 @@ public final class ByteBufUtil {
         }
 
         int i;
-        int j;
-        int startIndex = needle.readerIndex();
-        int[] suffixes =  maxSuf(needle, m, startIndex, true);
-        int[] prefixes = maxSuf(needle, m, startIndex, false);
+        int j = 0;
+        int aStartIndex = needle.readerIndex();
+        int bStartIndex = haystack.readerIndex();
+        int[] suffixes =  maxSuf(needle, m, aStartIndex, true);
+        int[] prefixes = maxSuf(needle, m, aStartIndex, false);
         int ell = Math.max(suffixes[0], prefixes[0]);
         int per = Math.max(suffixes[1], prefixes[1]);
         int memory;
         int length = Math.min(m - per, ell + 1);
 
-        if (equals(needle, startIndex, needle, startIndex + per,  length)) {
-            j = 0;
+        if (equals(needle, aStartIndex, needle, aStartIndex + per,  length)) {
             memory = -1;
             while (j <= n - m) {
                 i = Math.max(ell, memory) + 1;
-                while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
+                while (i < m && needle.getByte(i + aStartIndex) == haystack.getByte(i + j + bStartIndex)) {
                     ++i;
                 }
                 if (i > n) {
@@ -276,7 +276,7 @@ public final class ByteBufUtil {
                 }
                 if (i >= m) {
                     i = ell;
-                    while (i > memory && needle.getByte(i) == haystack.getByte(i + j)) {
+                    while (i > memory && needle.getByte(i + aStartIndex) == haystack.getByte(i + j + bStartIndex)) {
                         --i;
                     }
                     if (i <= memory) {
@@ -291,10 +291,9 @@ public final class ByteBufUtil {
             }
         } else {
             per = Math.max(ell + 1, m - ell - 1) + 1;
-            j = 0;
             while (j <= n - m) {
                 i = ell + 1;
-                while (i < m && needle.getByte(i) == haystack.getByte(i + j)) {
+                while (i < m && needle.getByte(i + aStartIndex) == haystack.getByte(i + j + bStartIndex)) {
                     ++i;
                 }
                 if (i > n) {
@@ -302,7 +301,7 @@ public final class ByteBufUtil {
                 }
                 if (i >= m) {
                     i = ell;
-                    while (i >= 0 && needle.getByte(i) == haystack.getByte(i + j)) {
+                    while (i >= 0 && needle.getByte(i + aStartIndex) == haystack.getByte(i + j + bStartIndex)) {
                         --i;
                     }
                     if (i < 0) {

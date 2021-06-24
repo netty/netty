@@ -133,6 +133,12 @@ public class ByteBufUtilTest {
         haystack.readerIndex(1);
         needle.readerIndex(1);
         assertEquals(0, ByteBufUtil.indexOf(needle, haystack));
+        haystack.readerIndex(2);
+        needle.readerIndex(3);
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        haystack.readerIndex(1);
+        needle.readerIndex(2);
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
 
         haystack = Unpooled.copiedBuffer("123aab123", CharsetUtil.UTF_8);
         assertEquals(3, ByteBufUtil.indexOf(Unpooled.copiedBuffer("aab", CharsetUtil.UTF_8), haystack));
