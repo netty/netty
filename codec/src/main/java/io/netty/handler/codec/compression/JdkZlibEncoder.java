@@ -262,7 +262,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
 

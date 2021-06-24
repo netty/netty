@@ -1278,7 +1278,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx) throws Exception {
+        public void flush(ChannelHandlerContext ctx) {
             didFlush = true;
             ctx.flush();
         }

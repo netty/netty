@@ -102,7 +102,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         encoder.write(ctx, msg, promise);
     }
 

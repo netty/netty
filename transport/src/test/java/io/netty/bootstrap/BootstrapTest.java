@@ -397,7 +397,7 @@ public class BootstrapTest {
         private ChannelPromise registerPromise;
 
         @Override
-        public void register(ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+        public void register(ChannelHandlerContext ctx, final ChannelPromise promise) {
             registerPromise = promise;
             latch.countDown();
             ChannelPromise newPromise = ctx.newPromise();
