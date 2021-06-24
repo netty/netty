@@ -259,8 +259,8 @@ public final class ByteBufUtil {
         int bStartIndex = haystack.readerIndex();
         long suffixes =  maxSuf(needle, m, aStartIndex, true);
         long prefixes = maxSuf(needle, m, aStartIndex, false);
-        int ell = (int) Math.max(suffixes >>> 32, prefixes >>> 32);
-        int per = (int) Math.max(suffixes, prefixes);
+        int ell = Math.max((int) (suffixes >> 32), (int) (prefixes >> 32));
+        int per = Math.max((int) suffixes, (int) prefixes);
         int memory;
         int length = Math.min(m - per, ell + 1);
 
