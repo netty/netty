@@ -295,7 +295,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         if (!outboundCtx.removed) {
             outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
         } else {
-            outboundCtx.connect(localAddress, promise);
+            outboundCtx.connect(remoteAddress, localAddress, promise);
         }
     }
 
