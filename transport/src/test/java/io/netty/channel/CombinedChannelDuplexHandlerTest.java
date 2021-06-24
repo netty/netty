@@ -392,7 +392,7 @@ public class CombinedChannelDuplexHandlerTest {
             }
             return (Event) o;
         }
-    };
+    }
 
     private static final class OutboundEventHandler extends ChannelOutboundHandlerAdapter {
         private final Queue<Object> queue = new ArrayDeque<Object>();
@@ -477,5 +477,5 @@ public class CombinedChannelDuplexHandlerTest {
             }
             return (Event) o;
         }
-    };
+    }
 }
