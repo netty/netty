@@ -181,8 +181,6 @@ public abstract class LifecycleTracer {
         private static final int TRACE_LIFECYCLE_DEPTH;
         static {
             int traceDefault = 0;
-            //noinspection AssertWithSideEffects
-            assert (traceDefault = 10) > 0;
             TRACE_LIFECYCLE_DEPTH = Math.max(Integer.getInteger(
                     "io.netty.buffer.api.internal.LifecycleTracer.TRACE_LIFECYCLE_DEPTH", traceDefault), 0);
         }
