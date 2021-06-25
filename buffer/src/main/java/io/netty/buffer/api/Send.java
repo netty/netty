@@ -68,7 +68,7 @@ public interface Send<T extends Resource<T>> extends AutoCloseable {
      * <p>
      * This method can only be called once, and will throw otherwise.
      *
-     * @return The sent resource instance.
+     * @return The sent resource instance, never {@code null}.
      * @throws IllegalStateException If this method is called more than once.
      */
     T receive();
