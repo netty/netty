@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
@@ -90,6 +91,11 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * Inner byte buffer for outgoing data. It's capacity will be {@link #blockSize}.
      */
     private ByteBuf buffer;
+
+    /**
+     * Promise associated with writing out the contents of {@link #buffer}.
+     */
+    private ChannelPromise bufferPromise;
 
     /**
      * Maximum size for any buffer to write encoded (compressed) data into.
@@ -254,6 +260,72 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Override of {@link MessageToByteEncoder#write(ChannelHandlerContext, Object, ChannelPromise)} that accounts for
+     * the fact that messages are buffered in {@link #buffer} and a write to the context thus may not directly mean
+     * that the message has been written completely.
+     */
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, final ChannelPromise promise) throws Exception {
+        ByteBuf buf = null;
+        try {
+            if (acceptOutboundMessage(msg)) {
+                ByteBuf cast = (ByteBuf) msg;
+                buf = allocateBuffer(ctx, cast, isPreferDirect());
+                try {
+                    encode(ctx, cast, buf);
+                } finally {
+                    ReferenceCountUtil.release(cast);
+                }
+
+                if (buf.isReadable()) {
+                    // we previous buffer contents so we must resolve the existing promise if one exists
+                    ChannelPromise promiseToUse = bufferPromise;
+                    if (buffer.isReadable()) {
+                        bufferPromise = promise;
+                    } else {
+                        // message fit the block size exactly, nothing remains buffered and no promise must be retained
+                        bufferPromise = null;
+                        if (promiseToUse == null) {
+                            promiseToUse = promise;
+                        } else {
+                            promiseToUse.addListener(new ChannelPromiseNotifier(promise));
+                        }
+                    }
+                    ctx.write(buf, promiseToUse == null ? ctx.newPromise() : promiseToUse);
+                } else {
+                    final ChannelPromise promiseToUse;
+                    if (buffer.isReadable()) {
+                        // message was buffered but not passed down the pipeline so we keep track of its promise
+                        if (bufferPromise == null) {
+                            bufferPromise = promise;
+                        } else {
+                            bufferPromise.addListener(new ChannelPromiseNotifier(promise));
+                        }
+                        promiseToUse = ctx.newPromise();
+                    } else {
+                        promiseToUse = promise;
+                    }
+                    buf.release();
+                    ctx.write(Unpooled.EMPTY_BUFFER, promiseToUse);
+                }
+                buf = null;
+            } else {
+                ctx.write(msg, promise);
+            }
+        } catch (EncoderException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new EncoderException(e);
+        } finally {
+            if (buf != null) {
+                buf.release();
+            }
+        }
+    }
+
     private void flushBufferedData(ByteBuf out) {
         int flushableBytes = buffer.readableBytes();
         if (flushableBytes == 0) {
@@ -299,7 +371,9 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         if (buffer != null && buffer.isReadable()) {
             final ByteBuf buf = allocateBuffer(ctx, Unpooled.EMPTY_BUFFER, isPreferDirect(), false);
             flushBufferedData(buf);
-            ctx.write(buf);
+            final ChannelPromise promise = bufferPromise;
+            bufferPromise = null;
+            ctx.write(buf, promise);
         }
         ctx.flush();
     }
@@ -314,7 +388,13 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         final ByteBuf footer = ctx.alloc().heapBuffer(
                 compressor.maxCompressedLength(buffer.readableBytes()) + HEADER_LENGTH);
         flushBufferedData(footer);
+        if (bufferPromise != null) {
+            // buffer is empty now and its associated promise must be used with the write below
+            promise.addListener(new ChannelPromiseNotifier(bufferPromise));
+            bufferPromise = null;
+        }
 
+        footer.ensureWritable(HEADER_LENGTH);
         final int idx = footer.writerIndex();
         footer.setLong(idx, MAGIC_NUMBER);
         footer.setByte(idx + TOKEN_OFFSET, (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel));

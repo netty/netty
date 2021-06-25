@@ -24,15 +24,24 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.EncoderException;
+
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
@@ -68,6 +77,19 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
      * an empty buffer.
      */
     private static final int NONALLOCATABLE_SIZE = 1;
+
+    /**
+     * Handler that completes incoming write-promise directly for tests that verify when promises are completed.
+     */
+    private static final ChannelOutboundHandler DIRECT_COMPLETE_HANDLER = new DirectCompleteHandler();
+
+    @ChannelHandler.Sharable
+    private static final class DirectCompleteHandler extends ChannelOutboundHandlerAdapter {
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            promise.setSuccess();
+        }
+    }
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -115,6 +137,117 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         }
 
         return Unpooled.wrappedBuffer(decompressed);
+    }
+
+    @Test
+    public void testHandlePromisesBasic() {
+        int blockSize = 100;
+        Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        channel.pipeline().addFirst(DIRECT_COMPLETE_HANDLER);
+        int size = blockSize - 1;
+
+        // msg < blocksize -> 1st msg sent -> no promise completed
+        ByteBuf buf1 = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf1.writerIndex(size);
+        ChannelPromise promise1 = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf1, promise1);
+        ByteBuf backingBuf = encoder.getBackingBuffer();
+        assertEquals(99, backingBuf.readableBytes());
+        assertFalse(promise1.isSuccess());
+
+        // msg < blocksize -> 2nd msg sent -> 1st promise gets completed, 2nd promise remains not completed
+        ByteBuf buf2 = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf2.writerIndex(size);
+        ChannelPromise promise2 = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf2, promise2);
+        assertEquals(98, backingBuf.readableBytes());
+        assertTrue(promise1.isSuccess());
+        assertFalse(promise2.isSuccess());
+
+        // 3rd msg fills the current and next block completely and the existing promise and new promise get completed
+        int newSize = 2 * blockSize - backingBuf.readableBytes();
+        ByteBuf buf3 = ByteBufAllocator.DEFAULT.buffer(newSize, newSize);
+        buf3.writerIndex(newSize);
+        ChannelPromise promise3 = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf3, promise3);
+        assertEquals(0, backingBuf.readableBytes());
+        assertTrue(promise2.isSuccess());
+        assertTrue(promise3.isSuccess());
+    }
+
+    @Test
+    public void testHandlePromisesIfMsgEqualBlockSize() {
+        // msg = blocksize -> backing buffer is empty and promise is completed
+        int blockSize = 100;
+        Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        channel.pipeline().addFirst(DIRECT_COMPLETE_HANDLER);
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(blockSize, blockSize);
+        buf.writerIndex(blockSize);
+        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf, promise);
+        ByteBuf backingBuf = encoder.getBackingBuffer();
+        assertEquals(0, backingBuf.readableBytes());
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void testHandlePromisesIfBlockSizeIsUnreached() {
+        // 2 msgs < blocksize -> neither promise is completed
+        int blockSize = 100;
+        Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        channel.pipeline().addFirst(DIRECT_COMPLETE_HANDLER);
+        int size = blockSize / 2 - 1;
+        ByteBuf buf1 = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf1.writerIndex(size);
+        ChannelPromise promise1 = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf1, promise1);
+        ByteBuf backingBuf = encoder.getBackingBuffer();
+        assertEquals(size, backingBuf.readableBytes());
+        assertFalse(promise1.isSuccess());
+
+        ByteBuf buf2 = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf2.writerIndex(size);
+        ChannelPromise promise2 = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf2, promise2);
+        assertEquals(size * 2, backingBuf.readableBytes());
+        assertFalse(promise2.isSuccess());
+    }
+
+    @Test
+    public void testHandlePromisesWhileFlushing() {
+        // msg < blocksize and then channel flush -> promise gets completed
+        int blockSize = 100;
+        Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        channel.pipeline().addFirst(DIRECT_COMPLETE_HANDLER);
+        int size = blockSize - 1;
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf.writerIndex(size);
+        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf, promise);
+        assertFalse(promise.isSuccess());
+        channel.flush();
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void testHandlePromisesIfChanelClosed() throws ExecutionException, InterruptedException {
+        // msg < blocksize and then channel close -> promise gets completed
+        int blockSize = 100;
+        Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        channel.pipeline().addFirst(DIRECT_COMPLETE_HANDLER);
+        int size = blockSize - 1;
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
+        buf.writerIndex(size);
+        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        channel.write(buf, promise);
+        assertFalse(promise.isSuccess());
+        channel.close().get();
+        assertTrue(promise.isSuccess());
     }
 
     @Test
