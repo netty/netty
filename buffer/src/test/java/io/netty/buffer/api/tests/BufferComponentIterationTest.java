@@ -68,7 +68,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
     @Test
     public void compositeBufferComponentCountMustBeTransitiveSum() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer buf;
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);
@@ -114,7 +114,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
     @Test
     public void forEachReadableMustVisitAllReadableConstituentBuffersInOrder() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer composite;
             try (Buffer a = allocator.allocate(4);
                  Buffer b = allocator.allocate(4);
@@ -151,7 +151,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
     @Test
     public void forEachReadableMustStopIterationWhenProcessorReturnsFalse() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer composite;
             try (Buffer a = allocator.allocate(4);
                  Buffer b = allocator.allocate(4);
@@ -259,7 +259,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
     @Test
     public void forEachWritableMustVisitAllWritableConstituentBuffersInOrder() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer buf;
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);

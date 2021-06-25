@@ -28,7 +28,7 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
     private boolean closed;
 
     public ByteBufAllocatorAdaptor() {
-        this(BufferAllocator.pooledHeap(), BufferAllocator.pooledDirect());
+        this(BufferAllocator.onHeapPooled(), BufferAllocator.offHeapPooled());
     }
 
     public ByteBufAllocatorAdaptor(BufferAllocator onheap, BufferAllocator offheap) {

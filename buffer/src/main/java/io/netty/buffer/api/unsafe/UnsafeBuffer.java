@@ -1530,7 +1530,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
         ByteBufAdaptor bba = adaptor;
         if (bba == null) {
             ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(
-                    BufferAllocator.heap(), BufferAllocator.direct());
+                    BufferAllocator.onHeapUnpooled(), BufferAllocator.offHeapUnpooled());
             return adaptor = new ByteBufAdaptor(alloc, this);
         }
         return bba;

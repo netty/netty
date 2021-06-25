@@ -32,8 +32,8 @@ public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
     static void setUpAllocator(String name) {
         Optional<MemoryManager> managers = MemoryManager.lookupImplementation(name);
         assumeTrue(managers.isPresent(), () -> "Memory implementation '" + name + "' not found.");
-        BufferAllocator onheap = MemoryManager.using(managers.get(), BufferAllocator::pooledHeap);
-        BufferAllocator offheap = MemoryManager.using(managers.get(), BufferAllocator::pooledHeap);
+        BufferAllocator onheap = MemoryManager.using(managers.get(), BufferAllocator::onHeapPooled);
+        BufferAllocator offheap = MemoryManager.using(managers.get(), BufferAllocator::onHeapPooled);
         alloc = new ByteBufAllocatorAdaptor(onheap, offheap);
     }
 

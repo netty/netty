@@ -121,10 +121,10 @@ public abstract class BufferTestSupport {
 
     static List<Fixture> initialAllocators() {
         return List.of(
-                new Fixture("heap", BufferAllocator::heap, HEAP),
-                new Fixture("direct", BufferAllocator::direct, DIRECT, CLEANER),
-                new Fixture("pooledHeap", BufferAllocator::pooledHeap, POOLED, HEAP),
-                new Fixture("pooledDirect", BufferAllocator::pooledDirect, POOLED, DIRECT, CLEANER));
+                new Fixture("heap", BufferAllocator::onHeapUnpooled, HEAP),
+                new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT, CLEANER),
+                new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
+                new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT, CLEANER));
     }
 
     static List<Fixture> initialFixturesForEachImplementation() {
@@ -207,7 +207,7 @@ public abstract class BufferTestSupport {
         // Also add a 3-way composite buffer.
         builder.add(new Fixture("compose(heap,heap,heap)", () -> {
             return new TestAllocator() {
-                final BufferAllocator alloc = BufferAllocator.heap();
+                final BufferAllocator alloc = BufferAllocator.onHeapUnpooled();
                 @Override
                 public Buffer allocate(int size) {
                     int part = size / 3;
@@ -316,7 +316,7 @@ public abstract class BufferTestSupport {
 
         verifyWriteInaccessible(buf, BufferClosedException.class);
 
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer target = allocator.allocate(24)) {
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, target, 0, 1));
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, new byte[1], 0, 1));
@@ -393,7 +393,7 @@ public abstract class BufferTestSupport {
 
         assertThrows(expected, () -> buf.ensureWritable(1));
         assertThrows(expected, () -> buf.fill((byte) 0));
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer source = allocator.allocate(8)) {
             assertThrows(expected, () -> source.copyInto(0, buf, 0, 1));
             if (expected == BufferClosedException.class) {

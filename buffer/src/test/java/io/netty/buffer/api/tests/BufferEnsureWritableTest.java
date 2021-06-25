@@ -77,7 +77,7 @@ public class BufferEnsureWritableTest extends BufferTestSupport {
 
     @Test
     public void ensureWritableMustExpandCapacityOfEmptyCompositeBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = CompositeBuffer.compose(allocator)) {
             assertThat(buf.writableBytes()).isEqualTo(0);
             buf.ensureWritable(8);

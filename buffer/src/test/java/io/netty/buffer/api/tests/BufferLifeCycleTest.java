@@ -579,7 +579,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @Test
     public void splitOnEmptyCompositeBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = CompositeBuffer.compose(allocator)) {
             verifySplitEmptyCompositeBuffer(buf);
         }

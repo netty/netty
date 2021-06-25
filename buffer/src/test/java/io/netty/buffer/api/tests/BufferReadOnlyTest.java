@@ -90,7 +90,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
 
     @Test
     public void readOnlyBufferMustRemainReadOnlyAfterSendForEmptyCompositeBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = CompositeBuffer.compose(allocator)) {
             buf.makeReadOnly();
             var send = buf.send();

@@ -69,20 +69,20 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoOnHeapBuf(Fixture fixture) {
-        testCopyIntoBuf(fixture, BufferAllocator.heap()::allocate);
+        testCopyIntoBuf(fixture, BufferAllocator.onHeapUnpooled()::allocate);
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoOffHeapBuf(Fixture fixture) {
-        testCopyIntoBuf(fixture, BufferAllocator.direct()::allocate);
+        testCopyIntoBuf(fixture, BufferAllocator.offHeapUnpooled()::allocate);
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOnHeapBuf(Fixture fixture) {
-        try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.heap()) {
+        try (var a = BufferAllocator.onHeapUnpooled();
+             var b = BufferAllocator.onHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -97,8 +97,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOffHeapBuf(Fixture fixture) {
-        try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.direct()) {
+        try (var a = BufferAllocator.onHeapUnpooled();
+             var b = BufferAllocator.offHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -113,8 +113,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOnHeapBuf(Fixture fixture) {
-        try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.heap()) {
+        try (var a = BufferAllocator.offHeapUnpooled();
+             var b = BufferAllocator.onHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -129,8 +129,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOffHeapBuf(Fixture fixture) {
-        try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.direct()) {
+        try (var a = BufferAllocator.offHeapUnpooled();
+             var b = BufferAllocator.offHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -145,8 +145,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOnHeapBufCopy(Fixture fixture) {
-        try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.heap()) {
+        try (var a = BufferAllocator.onHeapUnpooled();
+             var b = BufferAllocator.onHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -161,8 +161,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOnHeapOffHeapBufCopy(Fixture fixture) {
-        try (var a = BufferAllocator.heap();
-             var b = BufferAllocator.direct()) {
+        try (var a = BufferAllocator.onHeapUnpooled();
+             var b = BufferAllocator.offHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -177,8 +177,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOnHeapBufCopy(Fixture fixture) {
-        try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.heap()) {
+        try (var a = BufferAllocator.offHeapUnpooled();
+             var b = BufferAllocator.onHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
@@ -193,8 +193,8 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoCompositeOffHeapOffHeapBufCopy(Fixture fixture) {
-        try (var a = BufferAllocator.direct();
-             var b = BufferAllocator.direct()) {
+        try (var a = BufferAllocator.offHeapUnpooled();
+             var b = BufferAllocator.offHeapUnpooled()) {
             testCopyIntoBuf(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;

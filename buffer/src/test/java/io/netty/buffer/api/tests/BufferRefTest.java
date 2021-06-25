@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class BufferRefTest {
     @Test
     public void closingBufRefMustCloseOwnedBuf() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             BufferRef ref;
             try (Buffer b = allocator.allocate(8)) {
                 ref = new BufferRef(b.send());
@@ -44,7 +44,7 @@ class BufferRefTest {
 
     @Test
     public void closingBufRefMustCloseOwnedBufFromSend() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = allocator.allocate(8)) {
             BufferRef ref = new BufferRef(buf.send());
             ref.content().writeInt(42);
@@ -56,7 +56,7 @@ class BufferRefTest {
 
     @Test
     public void mustCloseOwnedBufferWhenReplacedFromSend() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             AtomicReference<Buffer> orig = new AtomicReference<>();
             BufferRef ref;
             Send<Buffer> s = allocator.allocate(8).send();
@@ -83,7 +83,7 @@ class BufferRefTest {
 
     @Test
     public void sendingRefMustSendBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.heap();
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              BufferRef refA = new BufferRef(allocator.allocate(8).send())) {
             refA.content().writeInt(42);
             Send<BufferRef> send = refA.send();

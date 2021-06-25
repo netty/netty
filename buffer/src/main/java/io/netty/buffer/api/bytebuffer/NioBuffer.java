@@ -1122,7 +1122,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
         ByteBufAdaptor bba = adaptor;
         if (bba == null) {
             ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(
-                    BufferAllocator.heap(), BufferAllocator.direct());
+                    BufferAllocator.onHeapUnpooled(), BufferAllocator.offHeapUnpooled());
             return adaptor = new ByteBufAdaptor(alloc, this);
         }
         return bba;

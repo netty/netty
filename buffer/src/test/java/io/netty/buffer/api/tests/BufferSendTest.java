@@ -143,7 +143,7 @@ public class BufferSendTest extends BufferTestSupport {
 
     @Test
     public void isSendOfMustCheckObjectTypes() {
-        try (BufferAllocator allocator = BufferAllocator.heap()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Send<Buffer> bufferSend = allocator.allocate(8).send();
             Send<BufferRef> bufferRefSend = new BufferRef(allocator.allocate(8).send()).send();
             try {

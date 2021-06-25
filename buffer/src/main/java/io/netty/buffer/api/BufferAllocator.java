@@ -32,7 +32,7 @@ public interface BufferAllocator extends AutoCloseable {
      *
      * @return A non-pooling allocator of on-heap buffers
      */
-    static BufferAllocator heap() {
+    static BufferAllocator onHeapUnpooled() {
         return new ManagedBufferAllocator(MemoryManager.instance(), false);
     }
 
@@ -45,7 +45,7 @@ public interface BufferAllocator extends AutoCloseable {
      *
      * @return A non-pooling allocator of on-heap buffers
      */
-    static BufferAllocator direct() {
+    static BufferAllocator offHeapUnpooled() {
         return new ManagedBufferAllocator(MemoryManager.instance(), true);
     }
 
@@ -58,7 +58,7 @@ public interface BufferAllocator extends AutoCloseable {
      *
      * @return A pooling allocator of on-heap buffers
      */
-    static BufferAllocator pooledHeap() {
+    static BufferAllocator onHeapPooled() {
         return new PooledBufferAllocator(MemoryManager.instance(), false);
     }
 
@@ -71,7 +71,7 @@ public interface BufferAllocator extends AutoCloseable {
      *
      * @return A pooling allocator of on-heap buffers
      */
-    static BufferAllocator pooledDirect() {
+    static BufferAllocator offHeapPooled() {
         return new PooledBufferAllocator(MemoryManager.instance(), true);
     }
 
