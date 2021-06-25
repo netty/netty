@@ -17,7 +17,6 @@ package io.netty.buffer.api;
 
 import io.netty.buffer.api.pool.PooledBufferAllocator;
 
-import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
 /**
@@ -99,11 +98,11 @@ public interface BufferAllocator extends AutoCloseable {
      * Allocate a {@link Buffer} of the given size in bytes. This method may throw an {@link OutOfMemoryError} if there
      * is not enough free memory available to allocate a {@link Buffer} of the requested size.
      * <p>
-     * The buffer will use the current platform native byte order by default, for accessor methods that don't have an
-     * explicit byte order.
+     * The buffer will use big endian byte order.
      *
      * @param size The size of {@link Buffer} to allocate.
      * @return The newly allocated {@link Buffer}.
+     * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
      */
     Buffer allocate(int size);
 
@@ -128,11 +127,10 @@ public interface BufferAllocator extends AutoCloseable {
      *
      * @param bytes The byte contents of the buffers produced by the returned supplier.
      * @return A supplier of read-only buffers with the given contents.
+     * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}, but any supplier obtained
+     * prior to closing the allocator will continue to work.
      */
-    default Supplier<Buffer> constBufferSupplier(byte[] bytes) {
-        byte[] safeCopy = bytes.clone(); // Prevent modifying the bytes after creating the supplier.
-        return () -> allocate(bytes.length).writeBytes(safeCopy).makeReadOnly();
-    }
+    Supplier<Buffer> constBufferSupplier(byte[] bytes);
 
     /**
      * Close this allocator, freeing all of its internal resources.
@@ -141,13 +139,9 @@ public interface BufferAllocator extends AutoCloseable {
      * If this is a pooling or caching allocator, then existing buffers will be immediately freed when they are closed,
      * instead of being pooled or cached.
      * <p>
-     * The allocator can still be used to allocate more buffers after calling this method.
-     * However, if this is a pooling or caching allocator, then the pooling and caching functionality will be
-     * effectively disabled after calling this method.
-     * <p>
-     * If this allocator does not perform any pooling or caching, then calling this method likely has no effect.
+     * The allocator can no longer be used to allocate more buffers after calling this method.
+     * Attempting to allocate from a closed allocator will cause {@link IllegalStateException}s to be thrown.
      */
     @Override
-    default void close() {
-    }
+    void close();
 }

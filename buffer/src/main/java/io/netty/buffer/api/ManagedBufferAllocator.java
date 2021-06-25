@@ -20,10 +20,12 @@ import io.netty.buffer.api.internal.Statics;
 import java.util.function.Supplier;
 
 import static io.netty.buffer.api.internal.Statics.NO_OP_DROP;
+import static io.netty.buffer.api.internal.Statics.allocatorClosedException;
 
 class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     private final MemoryManager manager;
     private final AllocationType allocationType;
+    private volatile boolean closed;
 
     ManagedBufferAllocator(MemoryManager manager, boolean direct) {
         this.manager = manager;
@@ -32,16 +34,27 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
 
     @Override
     public Buffer allocate(int size) {
+        if (closed) {
+            throw allocatorClosedException();
+        }
         BufferAllocator.checkSize(size);
         return manager.allocateShared(this, size, manager.drop(), Statics.CLEANER, allocationType);
     }
 
     @Override
     public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+        if (closed) {
+            throw allocatorClosedException();
+        }
         Buffer constantBuffer = manager.allocateShared(
                 this, bytes.length, manager.drop(), Statics.CLEANER, allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
+    }
+
+    @Override
+    public void close() {
+        closed = true;
     }
 
     @SuppressWarnings("unchecked")

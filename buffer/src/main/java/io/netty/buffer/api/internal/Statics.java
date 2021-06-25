@@ -27,7 +27,6 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.concurrent.atomic.LongAdder;
 
 public interface Statics {
@@ -171,6 +170,10 @@ public interface Statics {
 
     static BufferReadOnlyException bufferIsReadOnly(Buffer buffer) {
         return new BufferReadOnlyException("This buffer is read-only: " + buffer);
+    }
+
+    static IllegalStateException allocatorClosedException() {
+        return new IllegalStateException("This allocator has been closed.");
     }
 
     static <T> T acquire(ResourceSupport<?, ?> obj) {

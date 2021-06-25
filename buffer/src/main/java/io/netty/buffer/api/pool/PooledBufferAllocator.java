@@ -21,6 +21,7 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
+import io.netty.buffer.api.internal.Statics;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -32,12 +33,13 @@ import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
+import static io.netty.buffer.api.internal.Statics.allocatorClosedException;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
@@ -173,6 +175,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     private final PoolThreadLocalCache threadCache;
     private final int chunkSize;
     private final PooledBufferAllocatorMetric metric;
+    private volatile boolean closed;
 
     public PooledBufferAllocator(MemoryManager manager, boolean direct) {
         this(manager, direct, direct? DEFAULT_NUM_DIRECT_ARENA : DEFAULT_NUM_HEAP_ARENA,
@@ -292,6 +295,9 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
 
     @Override
     public Buffer allocate(int size) {
+        if (closed) {
+            throw allocatorClosedException();
+        }
         if (size < 1) {
             throw new IllegalArgumentException("Allocation size must be positive, but was " + size + '.');
         }
@@ -300,6 +306,19 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         UntetheredMemory memory = allocate(control, size);
         Buffer buffer = manager.recoverMemory(control, memory.memory(), memory.drop());
         return buffer.fill((byte) 0);
+    }
+
+    @Override
+    public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+        if (closed) {
+            throw allocatorClosedException();
+        }
+        PooledAllocatorControl control = new PooledAllocatorControl();
+        control.parent = this;
+        Buffer constantBuffer = manager.allocateShared(
+                control, bytes.length, manager.drop(), Statics.CLEANER, allocationType);
+        constantBuffer.writeBytes(bytes).makeReadOnly();
+        return () -> manager.allocateConstChild(constantBuffer);
     }
 
     UntetheredMemory allocate(PooledAllocatorControl control, int size) {
@@ -318,6 +337,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
 
     @Override
     public void close() {
+        closed = true;
         trimCurrentThreadCache();
         threadCache.remove();
         for (int i = 0, arenasLength = arenas.length; i < arenasLength; i++) {

@@ -20,12 +20,14 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.buffer.api.internal.ResourceSupport;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static io.netty.buffer.api.internal.Statics.acquire;
 import static io.netty.buffer.api.internal.Statics.isOwned;
@@ -34,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BufferReferenceCountingTest extends BufferTestSupport {
+public class BufferLifeCycleTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void allocateAndAccessingBuffer(Fixture fixture) {
@@ -640,5 +642,18 @@ public class BufferReferenceCountingTest extends BufferTestSupport {
                 assertTrue(buf.readOnly());
             }
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void allocatingOnClosedAllocatorMustThrow(Fixture fixture) {
+        BufferAllocator allocator = fixture.createAllocator();
+        Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[8]);
+        allocator.close();
+        assertThrows(IllegalStateException.class, () -> allocator.allocate(8));
+        assertThrows(IllegalStateException.class, () -> allocator.constBufferSupplier(EmptyArrays.EMPTY_BYTES));
+        assertThrows(IllegalStateException.class, () -> allocator.constBufferSupplier(new byte[8]));
+        // Existing const suppliers continue to work because they hold on to static memory allocation.
+        supplier.get().close();
     }
 }
