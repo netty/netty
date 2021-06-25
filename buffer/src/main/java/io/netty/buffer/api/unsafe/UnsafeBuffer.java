@@ -161,9 +161,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         Buffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, memory.drop());
         copyInto(offset, copy, 0, length);
         copy.writerOffset(length);
-        if (readOnly) {
-            copy = copy.makeReadOnly();
-        }
         return copy;
     }
 

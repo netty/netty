@@ -371,8 +371,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     ByteCursor openReverseCursor(int fromOffset, int length);
 
     /**
-     * Ensures that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
-     * bytes.
+     * Ensures that this buffer has at least the given number of bytes of
+     * {@linkplain #writableBytes() available space for writing}.
      * If this buffer already has the necessary space, then this method returns immediately.
      * If this buffer does not already have the necessary space, then it will be expanded using the
      * {@link BufferAllocator} the buffer was created with.
@@ -391,8 +391,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
-     * Ensures that this buffer has {@linkplain #writableBytes() available space for writing} the given number of
-     * bytes.
+     * Ensures that this buffer has at least the given number of bytes of
+     * {@linkplain #writableBytes() available space for writing}.
      * If this buffer already has the necessary space, then this method returns immediately.
      * If this buffer does not already have the necessary space, then space will be made available in one or all of
      * the following available ways:
@@ -441,6 +441,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copied data,
      * so that the entire contents of the copy is ready to be read.
+     * <p>
+     * The returned buffer will not be read-only, regardless of the {@linkplain #readOnly() read-only state} of this
+     * buffer.
      *
      * @return A new buffer instance, with independent {@link #readerOffset()} and {@link #writerOffset()},
      * that contains a copy of the readable region of this buffer.
@@ -460,6 +463,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copy,
      * so that the entire contents of the copy is ready to be read.
+     * <p>
+     * The returned buffer will not be read-only, regardless of the {@linkplain #readOnly() read-only state} of this
+     * buffer.
      *
      * @param offset The offset where copying should start from. This is the offset of the first byte copied.
      * @param length The number of bytes to copy, and the capacity of the returned buffer.

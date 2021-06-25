@@ -619,19 +619,6 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void copyOfReadOnlyBufferMustBeReadOnly(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
-            buf.writeLong(0x0102030405060708L);
-            buf.makeReadOnly();
-            try (Buffer copy = buf.copy()) {
-                assertTrue(copy.readOnly());
-            }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
     public void splitOfReadOnlyBufferMustBeReadOnly(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(16)) {

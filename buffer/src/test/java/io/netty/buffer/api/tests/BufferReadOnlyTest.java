@@ -196,7 +196,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
             assertThat(a.capacity()).isEqualTo(8);
             assertThat(b.capacity()).isEqualTo(8);
             try (Buffer c = b.copy()) {
-                assertTrue(c.readOnly());
+                assertFalse(c.readOnly()); // Buffer copies are never read-only.
                 assertTrue(isOwned((ResourceSupport<?, ?>) c));
                 assertTrue(isOwned((ResourceSupport<?, ?>) b));
                 assertThat(c.capacity()).isEqualTo(8);
@@ -226,7 +226,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
 
                 assertEquals(1, c.readByte());
                 assertEquals(2, c.readByte());
-                assertThrows(BufferReadOnlyException.class, () -> c.compact()); // Can't compact read-only buffer.
+                c.compact(); // Copies are not read-only, so we can compact this one.
                 assertEquals(3, c.readByte());
                 assertEquals(4, c.readByte());
             }
@@ -247,6 +247,20 @@ public class BufferReadOnlyTest extends BufferTestSupport {
                 });
                 assertEquals(0x01020304, future.get());
             }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfReadOnlyBufferIsNotReadOnly(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L).makeReadOnly();
+             Buffer copy = buf.copy()) {
+            assertFalse(copy.readOnly());
+            assertReadableEquals(buf, copy);
+            assertEquals(8, copy.readerOffset());
+            copy.setLong(0, 0xA1A2A3A4A5A6A7A8L);
+            assertEquals(0xA1A2A3A4A5A6A7A8L, copy.getLong(0));
         }
     }
 }
