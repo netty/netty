@@ -42,14 +42,47 @@ public abstract class LifecycleTracer {
         return stackTracer;
     }
 
+    /**
+     * Add to the trace log that the object has been acquired, in other words the reference count has been incremented.
+     *
+     * @param acquires The new current number of acquires on the traced object.
+     */
     public abstract void acquire(int acquires);
 
+    /**
+     * Add to the trace log that the object has been dropped.
+     *
+     * @param acquires The new current number of acquires on the traced object.
+     */
     public abstract void drop(int acquires);
 
+    /**
+     * Add to the trace log that the object has been closed, in other words, the reference count has been decremented.
+     *
+     * @param acquires The new current number of acquires on the traced object.
+     */
     public abstract void close(int acquires);
 
-    public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> send, int acquires);
+    /**
+     * Add to the trace log that the object is being sent.
+     *
+     * @param instance The owned instance being sent.
+     * @param acquires The current number of acquires on this object.
+     * @param <I> The resource interface for the object.
+     * @param <T> The concrete type of the object.
+     * @return An {@link Owned} instance that may trace the reception of the object.
+     */
+    public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(
+            Owned<T> instance, int acquires);
 
+    /**
+     * Attach a life cycle trace log to the given exception.
+     *
+     * @param throwable The exception that will receive the trace log in the form of
+     * {@linkplain Throwable#addSuppressed(Throwable) suppressed exceptions}.
+     * @param <E> The concrete exception type.
+     * @return The same exception instance, that can then be thrown.
+     */
     public abstract <E extends Throwable> E attachTrace(E throwable);
 
     private static final class NoOpTracer extends LifecycleTracer {
@@ -68,8 +101,8 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> send, int acquires) {
-            return send;
+        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance, int acquires) {
+            return instance;
         }
 
         @Override
@@ -119,7 +152,7 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> send, int acquires) {
+        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance, int acquires) {
             Trace sendTrace = new Trace("send", acquires);
             sendTrace.sent = true;
             addTrace(WALKER.walk(sendTrace));
@@ -127,7 +160,7 @@ public abstract class LifecycleTracer {
                 @Override
                 public T transferOwnership(Drop<T> drop) {
                     sendTrace.received = WALKER.walk(new Trace("received", acquires));
-                    return send.transferOwnership(drop);
+                    return instance.transferOwnership(drop);
                 }
             };
         }
