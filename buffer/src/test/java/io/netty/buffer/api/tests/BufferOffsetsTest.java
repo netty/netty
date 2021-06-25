@@ -26,15 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class BufferOffsetsTest extends BufferTestSupport {
 
     @ParameterizedTest
-    @MethodSource("initialAllocators")
-    void mustThrowWhenAllocatingZeroSizedBuffer(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator()) {
-            assertThrows(IllegalArgumentException.class, () -> allocator.allocate(0));
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
+    @MethodSource("initialCombinations")
     void mustThrowWhenAllocatingNegativeSizedBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             assertThrows(IllegalArgumentException.class, () -> allocator.allocate(-1));

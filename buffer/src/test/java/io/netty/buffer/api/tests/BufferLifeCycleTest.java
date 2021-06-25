@@ -73,6 +73,25 @@ public class BufferLifeCycleTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
+    @MethodSource("initialCombinations")
+    public void allocatingZeroSizedBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Supplier<Buffer> supplier = allocator.constBufferSupplier(EmptyArrays.EMPTY_BYTES);
+
+            try (Buffer empty = supplier.get()) {
+                assertThat(empty.capacity()).isZero();
+                assertTrue(empty.readOnly());
+            }
+
+            try (Buffer empty = allocator.allocate(0)) {
+                assertThat(empty.capacity()).isZero();
+                empty.ensureWritable(8);
+                assertThat(empty.capacity()).isGreaterThanOrEqualTo(8);
+            }
+        }
+    }
+
+    @ParameterizedTest
     @MethodSource("allocators")
     void acquireOnClosedBufferMustThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {

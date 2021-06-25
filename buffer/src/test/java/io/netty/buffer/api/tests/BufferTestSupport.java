@@ -49,7 +49,6 @@ import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
 import static io.netty.buffer.api.internal.Statics.acquire;
-import static io.netty.buffer.api.tests.Fixture.Properties.CLEANER;
 import static io.netty.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty.buffer.api.tests.Fixture.Properties.HEAP;
 import static io.netty.buffer.api.tests.Fixture.Properties.POOLED;
@@ -64,8 +63,8 @@ public abstract class BufferTestSupport {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferTestSupport.class);
     public static ExecutorService executor;
 
-    private static final Memoize<Fixture[]> INITIAL_NO_CONST = new Memoize<>(
-            () -> initialFixturesForEachImplementation().stream().filter(f -> !f.isConst()).toArray(Fixture[]::new));
+    private static final Memoize<Fixture[]> INITIAL_COMBINATIONS = new Memoize<>(
+            () -> initialFixturesForEachImplementation().toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> ALL_COMBINATIONS = new Memoize<>(
             () -> fixtureCombinations(initialFixturesForEachImplementation()).toArray(Fixture[]::new));
     private static final Memoize<Fixture[]> ALL_ALLOCATORS = new Memoize<>(
@@ -115,16 +114,16 @@ public abstract class BufferTestSupport {
         return POOLED_ALLOCS.get();
     }
 
-    static Fixture[] initialNoConstAllocators() {
-        return INITIAL_NO_CONST.get();
+    static Fixture[] initialCombinations() {
+        return INITIAL_COMBINATIONS.get();
     }
 
     static List<Fixture> initialAllocators() {
         return List.of(
                 new Fixture("heap", BufferAllocator::onHeapUnpooled, HEAP),
-                new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT, CLEANER),
+                new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT),
                 new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
-                new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT, CLEANER));
+                new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT));
     }
 
     static List<Fixture> initialFixturesForEachImplementation() {

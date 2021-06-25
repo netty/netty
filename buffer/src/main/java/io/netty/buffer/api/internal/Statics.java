@@ -93,8 +93,8 @@ public interface Statics {
      * buffer to accommodate.
      */
     static void assertValidBufferSize(long size) {
-        if (size < 1) {
-            throw new IllegalArgumentException("Buffer size must be positive, but was " + size + '.');
+        if (size < 0) {
+            throw new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
         }
         // We use max array size because on-heap buffers will be backed by byte-arrays.
         int maxArraySize = Integer.MAX_VALUE - 8;

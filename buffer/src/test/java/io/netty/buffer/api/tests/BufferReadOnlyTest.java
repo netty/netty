@@ -157,7 +157,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
-    @MethodSource("initialNoConstAllocators")
+    @MethodSource("initialCombinations")
     public void constBufferInitialState(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4}).get()) {
@@ -176,7 +176,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
-    @MethodSource("initialNoConstAllocators")
+    @MethodSource("initialCombinations")
     public void constBuffersCanBeSplit(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[16]);
@@ -205,7 +205,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
-    @MethodSource("initialNoConstAllocators")
+    @MethodSource("initialCombinations")
     public void compactOnConstBufferMustNotImpactSiblings(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4});
@@ -234,7 +234,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
-    @MethodSource("initialNoConstAllocators")
+    @MethodSource("initialCombinations")
     public void constBuffersMustBeSendable(Fixture fixture) throws Exception {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4});
