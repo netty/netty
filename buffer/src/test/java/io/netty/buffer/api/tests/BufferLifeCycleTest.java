@@ -295,7 +295,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void copyMustBeOwned(Fixture fixture) {
+    void copyMustBeOwned(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer buf = allocator.allocate(8);
             buf.writeInt(42);
@@ -310,6 +310,17 @@ public class BufferLifeCycleTest extends BufferTestSupport {
                     assertFalse(copy.isAccessible());
                 }
             }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfLastByte(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L);
+             Buffer copy = buf.copy(7, 1)) {
+            assertThat(copy.capacity()).isOne();
+            assertEquals((byte) 0x08, copy.readByte());
         }
     }
 

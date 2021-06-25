@@ -858,7 +858,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     public int getUnsignedMedium(int roff) {
         checkGet(roff, 3);
         long offset = address + roff;
-        return (loadByte(offset) << 16 |(loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF) & 0xFFFFFF;
+        return (loadByte(offset) << 16 | (loadByte(offset + 1) & 0xFF) << 8 | loadByte(offset + 2) & 0xFF) & 0xFFFFFF;
     }
 
     @Override

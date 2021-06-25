@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
+import static java.lang.Math.addExact;
 
 /**
  * The {@code CompositeBuffer} is a concrete {@link Buffer} implementation that make a number of other buffers appear
@@ -52,7 +53,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
  *
  * <h3>Constituent buffer requirements</h3>
  *
- * The buffers that a being composed to form the composite buffer, need to live up to a number of requirements.
+ * The buffers that are being composed to form the composite buffer, need to live up to a number of requirements.
  * Basically, if we imagine that the constituent buffers have their memory regions concatenated together, then the
  * result needs to make sense.
  * <p>
@@ -92,10 +93,19 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     private static final Drop<CompositeBuffer> COMPOSITE_DROP = new Drop<>() {
         @Override
         public void drop(CompositeBuffer buf) {
-            for (Buffer b : buf.bufs) {
-                b.close();
-            }
             buf.makeInaccessible();
+            RuntimeException re = null;
+            for (Buffer b : buf.bufs) {
+                try {
+                    b.close();
+                } catch (RuntimeException e) {
+                    if (re == null) {
+                        re = e;
+                    } else {
+                        re.addSuppressed(e);
+                    }
+                }
+            }
         }
 
         @Override
@@ -134,7 +144,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     @SafeVarargs
     public static CompositeBuffer compose(BufferAllocator allocator, Send<Buffer>... sends) {
         Buffer[] bufs = new Buffer[sends.length];
-        IllegalStateException ise = null;
+        RuntimeException ise = null;
         for (int i = 0; i < sends.length; i++) {
             if (ise != null) {
                 try {
@@ -145,7 +155,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             } else {
                 try {
                     bufs[i] = sends[i].receive();
-                } catch (IllegalStateException e) {
+                } catch (RuntimeException e) {
+                    // We catch RuntimeException instead of IllegalStateException to ensure cleanup always happens
+                    // regardless of the exception thrown.
                     ise = e;
                     for (int j = 0; j < i; j++) {
                         try {
@@ -236,8 +248,8 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     private CompositeBuffer(BufferAllocator allocator, Buffer[] bufs, Drop<CompositeBuffer> drop) {
         super(drop);
-        this.allocator = allocator;
         try {
+            this.allocator = Objects.requireNonNull(allocator, "BufferAllocator cannot be null.");
             if (bufs.length > 0) {
                 boolean targetReadOnly = bufs[0].readOnly();
                 for (Buffer buf : bufs) {
@@ -251,8 +263,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             computeBufferOffsets();
             tornBufAccessors = new TornBufferAccessor(this);
         } catch (Exception e) {
-            // Always close bufs on exception, regardless of acquireBufs value.
-            // If acquireBufs is false, it just means the ref count increments happened prior to this constructor call.
+            // Always close bufs on exception, since we've taken ownership of them at this point.
             for (Buffer buf : bufs) {
                 try {
                     buf.close();
@@ -408,14 +419,15 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             int off = subOffset;
             int cap = length;
             int i;
+            int j = 0;
             for (i = searchOffsets(offset); cap > 0; i++) {
                 var buf = bufs[i];
                 int avail = buf.capacity() - off;
-                copies[i] = buf.copy(off, Math.min(cap, avail));
+                copies[j++] = buf.copy(off, Math.min(cap, avail));
                 cap -= avail;
                 off = 0;
             }
-            copies = Arrays.copyOf(copies, i);
+            copies = Arrays.copyOf(copies, j);
         } else {
             // Specialize for length == 0, since we must copy from at least one constituent buffer.
             copies = new Buffer[] { choice.copy(subOffset, 0) };
@@ -426,7 +438,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     @Override
     public void copyInto(int srcPos, byte[] dest, int destPos, int length) {
-        copyInto(srcPos, (b, s, d, l) -> b.copyInto(s, dest, d, l), destPos, length);
+        copyInto(srcPos, (s, b, d, l) -> b.copyInto(s, dest, d, l), destPos, length);
     }
 
     @Override
@@ -434,7 +446,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (dest.isReadOnly()) {
             throw new ReadOnlyBufferException();
         }
-        copyInto(srcPos, (b, s, d, l) -> b.copyInto(s, dest, d, l), destPos, length);
+        copyInto(srcPos, (s, b, d, l) -> b.copyInto(s, dest, d, l), destPos, length);
     }
 
     private void copyInto(int srcPos, CopyInto dest, int destPos, int length) {
@@ -450,7 +462,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         while (length > 0) {
             var buf = (Buffer) chooseBuffer(srcPos, 0);
             int toCopy = Math.min(buf.capacity() - subOffset, length);
-            dest.copyInto(buf, subOffset, destPos, toCopy);
+            dest.copyInto(subOffset, buf, destPos, toCopy);
             srcPos += toCopy;
             destPos += toCopy;
             length -= toCopy;
@@ -459,7 +471,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     @FunctionalInterface
     private interface CopyInto {
-        void copyInto(Buffer src, int srcPos, int destPos, int length);
+        void copyInto(int srcPos, Buffer src, int destPos, int length);
     }
 
     @Override
@@ -470,7 +482,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (srcPos < 0) {
             throw indexOutOfBounds(srcPos, false);
         }
-        if (srcPos + length > capacity) {
+        if (addExact(srcPos, length) > capacity) {
             throw indexOutOfBounds(srcPos + length, false);
         }
         if (dest.readOnly()) {
@@ -498,7 +510,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (length < 0) {
             throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
         }
-        if (capacity < fromOffset + length) {
+        if (capacity < addExact(fromOffset, length)) {
             throw new IllegalArgumentException("The fromOffset+length is beyond the end of the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
         }

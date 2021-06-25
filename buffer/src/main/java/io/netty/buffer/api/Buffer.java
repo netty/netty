@@ -480,9 +480,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Splits the buffer into two, at the {@linkplain #writerOffset() write offset} position.
      * <p>
-     * The region of this buffer that contain the read and readable bytes, will be captured and returned in a new
-     * buffer, that will hold its own ownership of that region. This allows the returned buffer to be independently
-     * {@linkplain #send() sent} to other threads.
+     * The region of this buffer that contain the previously read and readable bytes, will be captured and returned in
+     * a new buffer, that will hold its own ownership of that region. This allows the returned buffer to be
+     * independently {@linkplain #send() sent} to other threads.
      * <p>
      * The returned buffer will adopt the {@link #readerOffset()} of this buffer, and have its {@link #writerOffset()}
      * and {@link #capacity()} both set to the equal to the write-offset of this buffer.
@@ -519,7 +519,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * See the <a href="#split">Splitting buffers</a> section for details.
      *
-     * @return A new buffer with independent and exclusive ownership over the read and readable bytes from this buffer.
+     * @return A new buffer with independent and exclusive ownership over the previously read and readable bytes from
+     * this buffer.
      */
     default Buffer split() {
         return split(writerOffset());
