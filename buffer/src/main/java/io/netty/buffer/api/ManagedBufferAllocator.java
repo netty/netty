@@ -37,7 +37,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
         if (closed) {
             throw allocatorClosedException();
         }
-        BufferAllocator.checkSize(size);
+        Statics.assertValidBufferSize(size);
         return manager.allocateShared(this, size, manager.drop(), Statics.CLEANER, allocationType);
     }
 
@@ -60,7 +60,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     @SuppressWarnings("unchecked")
     @Override
     public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-        BufferAllocator.checkSize(size);
+        Statics.assertValidBufferSize(size);
         var buf = manager.allocateShared(this, size, NO_OP_DROP, Statics.CLEANER, allocationType);
         return new UntetheredMemory() {
             @Override

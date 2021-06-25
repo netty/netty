@@ -406,7 +406,7 @@ class UnsafeBuffer extends ResourceSupport<Buffer, UnsafeBuffer> implements Buff
 
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
-        BufferAllocator.checkSize(newSize);
+        Statics.assertValidBufferSize(newSize);
         var untethered = control.allocateUntethered(this, (int) newSize);
         UnsafeMemory memory = untethered.memory();
 

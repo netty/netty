@@ -298,9 +298,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         if (closed) {
             throw allocatorClosedException();
         }
-        if (size < 1) {
-            throw new IllegalArgumentException("Allocation size must be positive, but was " + size + '.');
-        }
+        Statics.assertValidBufferSize(size);
         PooledAllocatorControl control = new PooledAllocatorControl();
         control.parent = this;
         UntetheredMemory memory = allocate(control, size);

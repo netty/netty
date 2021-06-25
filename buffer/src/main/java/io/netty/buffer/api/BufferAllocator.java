@@ -76,25 +76,6 @@ public interface BufferAllocator extends AutoCloseable {
     }
 
     /**
-     * Check that the given {@code size} argument is a valid buffer size, or throw an {@link IllegalArgumentException}.
-     *
-     * @param size The size to check.
-     * @throws IllegalArgumentException if the size is not positive, or if the size is too big (over ~2 GB) for a
-     * buffer to accommodate.
-     */
-    static void checkSize(long size) {
-        if (size < 1) {
-            throw new IllegalArgumentException("Buffer size must be positive, but was " + size + '.');
-        }
-        // We use max array size because on-heap buffers will be backed by byte-arrays.
-        int maxArraySize = Integer.MAX_VALUE - 8;
-        if (size > maxArraySize) {
-            throw new IllegalArgumentException(
-                    "Buffer size cannot be greater than " + maxArraySize + ", but was " + size + '.');
-        }
-    }
-
-    /**
      * Allocate a {@link Buffer} of the given size in bytes. This method may throw an {@link OutOfMemoryError} if there
      * is not enough free memory available to allocate a {@link Buffer} of the requested size.
      * <p>

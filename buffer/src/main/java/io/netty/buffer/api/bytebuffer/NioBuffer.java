@@ -378,7 +378,7 @@ class NioBuffer extends ResourceSupport<Buffer, NioBuffer> implements Buffer, Re
 
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
-        BufferAllocator.checkSize(newSize);
+        Statics.assertValidBufferSize(newSize);
         var untethered = control.allocateUntethered(this, (int) newSize);
         ByteBuffer buffer = untethered.memory();
 

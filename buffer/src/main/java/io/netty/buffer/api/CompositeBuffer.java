@@ -19,7 +19,6 @@ import io.netty.buffer.api.internal.ResourceSupport;
 import io.netty.buffer.api.internal.Statics;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,8 +44,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
  *     </li>
  *     <li>
  *         {@link #compose(BufferAllocator)} creates an empty, zero capacity, composite buffer. Such empty buffers may
- *         change their {@linkplain #order() byte order} or {@linkplain #readOnly() read-only} states when they gain
- *         their first component.
+ *         change their {@linkplain #readOnly() read-only} states when they gain their first component.
  *     </li>
  * </ul>
  * Composite buffers can later be extended with internally allocated components, with {@link #ensureWritable(int)},
@@ -688,7 +686,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
 
         int growth = Math.max(size - writableBytes(), minimumGrowth);
-        BufferAllocator.checkSize(capacity() + (long) growth);
+        Statics.assertValidBufferSize(capacity() + (long) growth);
         Buffer extension = allocator.allocate(growth);
         unsafeExtendWith(extension);
         return this;
@@ -732,7 +730,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
 
         long newSize = capacity() + extensionCapacity;
-        BufferAllocator.checkSize(newSize);
+        Statics.assertValidBufferSize(newSize);
 
         Buffer[] restoreTemp = bufs; // We need this to restore our buffer array, in case offset computations fail.
         try {

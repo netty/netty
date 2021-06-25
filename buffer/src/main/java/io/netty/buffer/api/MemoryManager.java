@@ -24,7 +24,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.ref.Cleaner;
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -103,8 +102,7 @@ public interface MemoryManager {
      *
      * @param allocatorControl Call-back interface for controlling the {@linkplain BufferAllocator allocator} that
      *                        requested the allocation of this buffer.
-     * @param size The size of the buffer to allocate.
-     *            The size has passed the {@link BufferAllocator#checkSize(long)} check.
+     * @param size The size of the buffer to allocate. This size is assumed to be valid for the implementation.
      * @param drop The {@link Drop} instance to use when the buffer is {@linkplain Resource#close() closed}.
      * @param cleaner The {@link Cleaner} that the underlying memory should be attached to. Can be {@code null}.
      * @param allocationType The type of allocation to perform.
