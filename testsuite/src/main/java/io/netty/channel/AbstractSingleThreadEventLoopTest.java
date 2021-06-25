@@ -13,23 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport;
+package io.netty.channel;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -156,9 +152,55 @@ public abstract class AbstractSingleThreadEventLoopTest {
         assertRejection(loop);
     }
 
+    @Test
+    void testTaskQueuesDefault() {
+        EventLoopGroup eventLoopGroup = newEventLoopGroup(null, null);
+        Assumptions.assumeFalse(eventLoopGroup instanceof DefaultEventLoopGroup);
+        SingleThreadEventLoop eventLoop = newEventLoop(eventLoopGroup);
+        Class<?> defaultQueueType = newTaskQueue(eventLoop).getClass();
+        assertEquals(defaultQueueType, eventLoop.taskQueue().getClass());
+        assertEquals(defaultQueueType, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTaskQueuesCustom() {
+        EventLoopGroup eventLoopGroup = newEventLoopGroup(ARRAYDEQUE_FACTORY, ARRAYDEQUE_FACTORY);
+        Assumptions.assumeFalse(eventLoopGroup instanceof DefaultEventLoopGroup);
+        SingleThreadEventLoop eventLoop = newEventLoop(eventLoopGroup);
+        assertEquals(ArrayDeque.class, eventLoop.taskQueue().getClass());
+        assertEquals(ArrayDeque.class, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTailTaskQueueCustom() {
+        EventLoopGroup eventLoopGroup = newEventLoopGroup(null, ARRAYDEQUE_FACTORY);
+        Assumptions.assumeFalse(eventLoopGroup instanceof DefaultEventLoopGroup);
+        SingleThreadEventLoop eventLoop = newEventLoop(eventLoopGroup);
+        Class<?> defaultQueueType = newTaskQueue(eventLoop).getClass();
+        assertEquals(defaultQueueType, eventLoop.taskQueue().getClass());
+        assertEquals(ArrayDeque.class, eventLoop.tailTaskQueue().getClass());
+    }
+
+    @Test
+    void testTaskQueueCustom() {
+        EventLoopGroup eventLoopGroup = newEventLoopGroup(ARRAYDEQUE_FACTORY, null);
+        Assumptions.assumeFalse(eventLoopGroup instanceof DefaultEventLoopGroup);
+        SingleThreadEventLoop eventLoop = newEventLoop(eventLoopGroup);
+        Class<?> defaultQueueType = newTaskQueue(eventLoop).getClass();
+        assertEquals(ArrayDeque.class, eventLoop.taskQueue().getClass());
+        assertEquals(defaultQueueType, eventLoop.tailTaskQueue().getClass());
+    }
+
     private static final Runnable NOOP = new Runnable() {
         @Override
         public void run() { }
+    };
+
+    private static final EventLoopTaskQueueFactory ARRAYDEQUE_FACTORY = new EventLoopTaskQueueFactory() {
+        @Override
+        public Queue<Runnable> newTaskQueue(int maxCapacity) {
+            return new ArrayDeque<Runnable>();
+        }
     };
 
     private static void assertRejection(EventExecutor loop) {
@@ -170,7 +212,19 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
+    private static Queue<Runnable> newTaskQueue(SingleThreadEventLoop eventLoop) {
+        return eventLoop.newTaskQueue(Integer.MAX_VALUE);
+    }
+
+    private static SingleThreadEventLoop newEventLoop(EventLoopGroup eventLoopGroup) {
+        EventLoop eventLoop = eventLoopGroup.next();
+        assert eventLoop instanceof SingleThreadEventLoop;
+        return (SingleThreadEventLoop) eventLoop;
+    }
+
     protected abstract EventLoopGroup newEventLoopGroup();
+    protected abstract EventLoopGroup newEventLoopGroup(EventLoopTaskQueueFactory taskQueueFactory,
+                                                        EventLoopTaskQueueFactory tailTaskQueueFactory);
     protected abstract Channel newChannel();
     protected abstract Class<? extends ServerChannel> serverChannelClass();
 }

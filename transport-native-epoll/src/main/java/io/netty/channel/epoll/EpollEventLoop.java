@@ -427,20 +427,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    /**
-     * Visible only for testing!
-     */
-    Queue<Runnable> taskQueue() {
-        return taskQueue;
-    }
-
-    /**
-     * Visible only for testing!
-     */
-    Queue<Runnable> tailTaskQueue() {
-        return tailTasks;
-    }
-
     private void closeAll() {
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.

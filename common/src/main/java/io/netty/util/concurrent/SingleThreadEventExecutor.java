@@ -74,7 +74,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
 
-    protected final Queue<Runnable> taskQueue;
+    private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
     @SuppressWarnings("unused")
@@ -170,6 +170,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         this.executor = ThreadExecutorMap.apply(executor, this);
         this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         this.rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+    }
+
+    /**
+     * Visible for testing only!
+     */
+    protected Queue<Runnable> taskQueue() {
+        return taskQueue;
     }
 
     /**
