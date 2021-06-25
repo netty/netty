@@ -1,9 +1,25 @@
+/*
+ * Copyright 2019 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -16,7 +32,7 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
     }
 
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
-        this.encoder = encoder;
+        this.encoder = ObjectUtil.checkNotNull(encoder, "encoder");
     }
 
     @Override
@@ -26,10 +42,10 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
         try {
             buf.writerIndex(buf.writerIndex() + 2);
             encodeHeader(response, buf);
-            this.encodeQuestions(response, buf);
-            this.encodeRecords(response, DnsSection.ANSWER, buf);
-            this.encodeRecords(response, DnsSection.AUTHORITY, buf);
-            this.encodeRecords(response, DnsSection.ADDITIONAL, buf);
+            encodeQuestions(response, buf);
+            encodeRecords(response, DnsSection.ANSWER, buf);
+            encodeRecords(response, DnsSection.AUTHORITY, buf);
+            encodeRecords(response, DnsSection.ADDITIONAL, buf);
             buf.setShort(0, buf.readableBytes() - 2);
             success = true;
         } finally {
@@ -68,14 +84,14 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
     private void encodeQuestions(DnsResponse response, ByteBuf buf) throws Exception {
         int count = response.count(DnsSection.QUESTION);
         for (int i = 0; i < count; ++i) {
-            this.encoder.encodeQuestion(response.<DnsQuestion>recordAt(DnsSection.QUESTION, i), buf);
+            encoder.encodeQuestion(response.<DnsQuestion>recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 
     private void encodeRecords(DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
         int count = response.count(section);
         for (int i = 0; i < count; ++i) {
-            this.encoder.encodeRecord(response.recordAt(section, i), buf);
+            encoder.encodeRecord(response.recordAt(section, i), buf);
         }
     }
 }

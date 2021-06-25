@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.example.dns.tcp;
 
 import io.netty.bootstrap.Bootstrap;
@@ -9,7 +24,21 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.dns.*;
+import io.netty.handler.codec.dns.DefaultDnsQuery;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsOpCode;
+import io.netty.handler.codec.dns.DnsQuery;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRawRecord;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.handler.codec.dns.DnsSection;
+import io.netty.handler.codec.dns.TcpDnsQueryDecoder;
+import io.netty.handler.codec.dns.TcpDnsQueryEncoder;
+import io.netty.handler.codec.dns.TcpDnsResponseDecoder;
+import io.netty.handler.codec.dns.TcpDnsResponseEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
@@ -22,9 +51,10 @@ public final class TcpDnsServer {
     private static final String QUERY_DOMAIN = "www.example.com";
     private static final int DNS_SERVER_PORT = 53;
     private static final String DNS_SERVER_HOST = "127.0.0.1";
+    private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
 
     public static void main(String[] args) throws Exception {
-        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1), new NioEventLoopGroup())
+        final ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1), new NioEventLoopGroup())
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {
@@ -36,7 +66,8 @@ public final class TcpDnsServer {
                                 DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
                                 System.out.println("Query domain: " + question);
 
-                                ctx.writeAndFlush(newResponse(msg, question, 600, new byte[]{(byte) 192, (byte) 168, 1, 1}));
+                                //always return 192.168.1.1
+                                ctx.writeAndFlush(newResponse(msg, question, 600, QUERY_RESULT));
                             }
 
                             private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, long ttl, byte[]... addresses) {
@@ -52,19 +83,22 @@ public final class TcpDnsServer {
                         });
                     }
                 });
+        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).channel();
         Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
             @Override
             public void run() {
                 try {
                     clientQuery();
+                    channel.close();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-        }, 2000, TimeUnit.MILLISECONDS);
-        bootstrap.bind(DNS_SERVER_PORT).channel().closeFuture().sync();
+        }, 1000, TimeUnit.MILLISECONDS);
+        channel.closeFuture().sync();
     }
 
+    // copy from TcpDnsClient.java
     private static void clientQuery() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
