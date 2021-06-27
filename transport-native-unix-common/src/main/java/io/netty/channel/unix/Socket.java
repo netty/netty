@@ -146,6 +146,14 @@ public class Socket extends FileDescriptor {
         return ioResult("sendTo", res);
     }
 
+    public final int sendToDomainSocket(ByteBuffer buf, int pos, int limit, byte[] path) throws IOException {
+        int res = sendToDomainSocket(fd, buf, pos, limit, path);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendToDomainSocket", res);
+    }
+
     public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
             throws IOException {
         return sendToAddress(memoryAddress, pos, limit, addr, port, false);
@@ -180,6 +188,14 @@ public class Socket extends FileDescriptor {
             throw new PortUnreachableException("sendToAddress failed");
         }
         return ioResult("sendToAddress", res);
+    }
+
+    public final int sendToAddressDomainSocket(long memoryAddress, int pos, int limit, byte[] path) throws IOException {
+        int res = sendToAddressDomainSocket(fd, memoryAddress, pos, limit, path);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendToAddressDomainSocket", res);
     }
 
     public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
@@ -217,12 +233,30 @@ public class Socket extends FileDescriptor {
         return ioResult("sendToAddresses", res);
     }
 
+    public final int sendToAddressesDomainSocket(long memoryAddress, int length, byte[] path) throws IOException {
+        int res = sendToAddressesDomainSocket(fd, memoryAddress, length, path);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendToAddressesDomainSocket", res);
+    }
+
     public final DatagramSocketAddress recvFrom(ByteBuffer buf, int pos, int limit) throws IOException {
         return recvFrom(fd, buf, pos, limit);
     }
 
     public final DatagramSocketAddress recvFromAddress(long memoryAddress, int pos, int limit) throws IOException {
         return recvFromAddress(fd, memoryAddress, pos, limit);
+    }
+
+    public final DomainDatagramSocketAddress recvFromDomainSocket(ByteBuffer buf, int pos, int limit)
+            throws IOException {
+        return recvFromDomainSocket(fd, buf, pos, limit);
+    }
+
+    public final DomainDatagramSocketAddress recvFromAddressDomainSocket(long memoryAddress, int pos, int limit)
+            throws IOException {
+        return recvFromAddressDomainSocket(fd, memoryAddress, pos, limit);
     }
 
     public final int recvFd() throws IOException {
@@ -441,6 +475,10 @@ public class Socket extends FileDescriptor {
         return new Socket(newSocketDomain0());
     }
 
+    public static Socket newSocketDomainDgram() {
+        return new Socket(newSocketDomainDgram0());
+    }
+
     public static void initialize() {
         if (INITIALIZED.compareAndSet(false, true)) {
             initialize(NetUtil.isIpV4StackPreferred());
@@ -479,6 +517,14 @@ public class Socket extends FileDescriptor {
         return res;
     }
 
+    protected static int newSocketDomainDgram0() {
+        int res = newSocketDomainDgramFd();
+        if (res < 0) {
+            throw new ChannelException(newIOException("newSocketDomainDgram", res));
+        }
+        return res;
+    }
+
     private static native int shutdown(int fd, boolean read, boolean write);
     private static native int connect(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int connectDomainSocket(int fd, byte[] path);
@@ -504,9 +550,17 @@ public class Socket extends FileDescriptor {
             int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
             int flags);
 
+    private static native int sendToDomainSocket(int fd, ByteBuffer buf, int pos, int limit, byte[] path);
+    private static native int sendToAddressDomainSocket(int fd, long memoryAddress, int pos, int limit, byte[] path);
+    private static native int sendToAddressesDomainSocket(int fd, long memoryAddress, int length, byte[] path);
+
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     private static native DatagramSocketAddress recvFromAddress(
+            int fd, long memoryAddress, int pos, int limit) throws IOException;
+    private static native DomainDatagramSocketAddress recvFromDomainSocket(
+            int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+    private static native DomainDatagramSocketAddress recvFromAddressDomainSocket(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
@@ -515,6 +569,7 @@ public class Socket extends FileDescriptor {
     private static native int newSocketStreamFd(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);
     private static native int newSocketDomainFd();
+    private static native int newSocketDomainDgramFd();
 
     private static native int isReuseAddress(int fd) throws IOException;
     private static native int isReusePort(int fd) throws IOException;
