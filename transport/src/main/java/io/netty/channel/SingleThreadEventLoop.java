@@ -167,7 +167,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      * Boilerplate code to make methods of parent visible for tests
      */
     @Override
-    protected final Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
         return super.newTaskQueue(maxPendingTasks);
     }
 
