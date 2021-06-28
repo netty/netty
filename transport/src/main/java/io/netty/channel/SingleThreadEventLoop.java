@@ -159,7 +159,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      * Boilerplate code to make methods of parent visible for tests
      */
     @Override
-    protected Queue<Runnable> taskQueue() {
+    protected final Queue<Runnable> taskQueue() {
         return super.taskQueue();
     }
 
@@ -167,14 +167,14 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      * Boilerplate code to make methods of parent visible for tests
      */
     @Override
-    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+    protected final Queue<Runnable> newTaskQueue(int maxPendingTasks) {
         return super.newTaskQueue(maxPendingTasks);
     }
 
     /**
      * Visible for testing only!
      */
-    protected Queue<Runnable> tailTaskQueue() {
+    protected final Queue<Runnable> tailTaskQueue() {
         return tailTasks;
     }
 }
