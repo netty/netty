@@ -62,7 +62,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param enableHexDump hexDump enable or not.
      */
     public LoggingHandler(ByteBufFormat format) {
-        this(DEFAULT_LEVEL, enableHexDump ? ByteBufFormat.HEX_DUMP : ByteBufFormat.SIMPLE);
+        this(DEFAULT_LEVEL, format);
     }
     
     /**
