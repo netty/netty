@@ -4031,4 +4031,34 @@ public abstract class SSLEngineTest {
     protected String[] protocols() {
         return new String[] { protocolCipherCombo.protocol };
     }
+
+    @Test
+    public void testRSASSAPSS() throws Exception {
+        char[] password = "password".toCharArray();
+
+        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
+        serverKeyStore.load(getClass().getResourceAsStream("rsaValidation-server-keystore.p12"), password);
+
+        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
+        clientKeyStore.load(getClass().getResourceAsStream("user-rsassapss-cert.p12"), password);
+
+        final KeyManagerFactory serverKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        serverKeyManagerFactory.init(serverKeyStore, password);
+        final KeyManagerFactory clientKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        clientKeyManagerFactory.init(clientKeyStore, password);
+
+        File clientCert = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cer");
+        File serverTrust = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cer");
+
+        clientKeyManagerFactory.getKeyManagers();
+        ClientAuth auth = ClientAuth.REQUIRE;
+
+        mySetupMutualAuth(serverKeyManagerFactory, clientCert, clientKeyManagerFactory, serverTrust,
+                auth, false, true);
+
+        runTest(null);
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
+    }
 }
