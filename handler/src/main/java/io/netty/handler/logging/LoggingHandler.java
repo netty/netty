@@ -59,7 +59,7 @@ public class LoggingHandler implements ChannelHandler {
      * Creates a new instance whose logger name is the fully qualified class
      * name of the instance.
      *
-     * @param enableHexDump hexDump enable or not.
+     * @param format Format of ByteBuf dumping
      */
     public LoggingHandler(ByteBufFormat format) {
         this(DEFAULT_LEVEL, format);
