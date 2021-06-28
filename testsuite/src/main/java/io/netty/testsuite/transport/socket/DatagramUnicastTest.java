@@ -21,7 +21,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -55,26 +54,6 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     private static final byte[] BYTES = {0, 1, 2, 3};
     private enum WrapType {
         NONE, DUP, SLICE, READ_ONLY
-    }
-
-    @Test
-    public void testBindWithPortOnly(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
-                testBindWithPortOnly(bootstrap, bootstrap2);
-            }
-        });
-    }
-
-    public void testBindWithPortOnly(Bootstrap sb, Bootstrap cb) throws Throwable {
-        Channel channel = null;
-        try {
-            cb.handler(new ChannelHandlerAdapter() { });
-            channel = cb.bind(0).sync().channel();
-        } finally {
-            closeChannel(channel);
-        }
     }
 
     @Test
@@ -447,7 +426,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         return sb.bind(newSocketAddress()).sync().channel();
     }
 
-    private static void closeChannel(Channel channel) throws Exception {
+    protected static void closeChannel(Channel channel) throws Exception {
         if (channel != null) {
             channel.close().sync();
         }
