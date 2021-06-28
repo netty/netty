@@ -498,7 +498,7 @@ public class DnsNameResolver extends InetNameResolver {
         } else {
             future = b.bind(localAddress);
         }
-        Throwable cause = future.cause();
+        Throwable cause = future.awaitUninterruptibly().cause();
         if (cause != null) {
             if (cause instanceof RuntimeException) {
                 throw (RuntimeException) cause;
