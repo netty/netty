@@ -104,7 +104,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 I cast = (I) msg;
                 buf = allocateBuffer(ctx, cast, preferDirect);
                 try {
-                    encode(ctx, cast, buf);
+                    promise = encode(ctx, cast, buf, promise);
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
@@ -153,6 +153,12 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
      * @throws Exception    is thrown if an error occurs
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+
+    protected ChannelPromise encode(ChannelHandlerContext ctx, I msg, ByteBuf out, ChannelPromise promise)
+            throws Exception {
+        encode(ctx, msg, out);
+        return promise;
+    }
 
     protected boolean isPreferDirect() {
         return preferDirect;

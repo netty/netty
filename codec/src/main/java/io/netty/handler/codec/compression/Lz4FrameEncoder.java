@@ -26,7 +26,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
@@ -260,69 +259,44 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Override of {@link MessageToByteEncoder#write(ChannelHandlerContext, Object, ChannelPromise)} that accounts for
-     * the fact that messages are buffered in {@link #buffer} and a write to the context thus may not directly mean
-     * that the message has been written completely.
-     */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, final ChannelPromise promise) throws Exception {
-        ByteBuf buf = null;
+    protected ChannelPromise encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out, ChannelPromise promise)
+            throws Exception {
         try {
-            if (acceptOutboundMessage(msg)) {
-                ByteBuf cast = (ByteBuf) msg;
-                buf = allocateBuffer(ctx, cast, isPreferDirect());
-                try {
-                    encode(ctx, cast, buf);
-                } finally {
-                    ReferenceCountUtil.release(cast);
-                }
-
-                if (buf.isReadable()) {
-                    // we previous buffer contents so we must resolve the existing promise if one exists
-                    ChannelPromise promiseToUse = bufferPromise;
-                    if (buffer.isReadable()) {
-                        bufferPromise = promise;
-                    } else {
-                        // message fit the block size exactly, nothing remains buffered and no promise must be retained
-                        bufferPromise = null;
-                        if (promiseToUse == null) {
-                            promiseToUse = promise;
-                        } else {
-                            promiseToUse.addListener(new ChannelPromiseNotifier(promise));
-                        }
-                    }
-                    ctx.write(buf, promiseToUse == null ? ctx.newPromise() : promiseToUse);
-                } else {
-                    final ChannelPromise promiseToUse;
-                    if (buffer.isReadable()) {
-                        // message was buffered but not passed down the pipeline so we keep track of its promise
-                        if (bufferPromise == null) {
-                            bufferPromise = promise;
-                        } else {
-                            bufferPromise.addListener(new ChannelPromiseNotifier(promise));
-                        }
-                        promiseToUse = ctx.newPromise();
-                    } else {
-                        promiseToUse = promise;
-                    }
-                    buf.release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, promiseToUse);
-                }
-                buf = null;
-            } else {
-                ctx.write(msg, promise);
+            encode(ctx, msg, out);
+        } catch (Exception e) {
+            if (bufferPromise != null) {
+                bufferPromise.tryFailure(e);
             }
-        } catch (EncoderException e) {
             throw e;
-        } catch (Throwable e) {
-            throw new EncoderException(e);
-        } finally {
-            if (buf != null) {
-                buf.release();
+        }
+
+        if (bufferPromise == null) {
+            if (finished) {
+                return promise;
             }
+            if (buffer.isReadable()) {
+                bufferPromise = promise;
+                return ctx.newPromise();
+            } else {
+                return promise;
+            }
+        } else {
+            final ChannelPromise p;
+            if (buffer.isReadable()) {
+                if (out.isReadable()) {
+                    p = bufferPromise;
+                    bufferPromise = promise;
+                } else {
+                    bufferPromise.addListener(new ChannelPromiseNotifier(promise));
+                    p = ctx.newPromise();
+                }
+            } else {
+                p = bufferPromise;
+                bufferPromise = null;
+                p.addListener(new ChannelPromiseNotifier(promise));
+            }
+            return p;
         }
     }
 
