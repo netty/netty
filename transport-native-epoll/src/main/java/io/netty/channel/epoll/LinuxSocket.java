@@ -345,6 +345,10 @@ final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketDomain0());
     }
 
+    public static LinuxSocket newSocketDomainDgram() {
+        return new LinuxSocket(newSocketDomainDgram0());
+    }
+
     private static InetAddress unsafeInetAddrByName(String inetName) {
         try {
             return InetAddress.getByName(inetName);
