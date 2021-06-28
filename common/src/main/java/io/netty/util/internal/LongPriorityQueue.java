@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.util.internal;
 
 import java.util.Arrays;
 
 /**
- * Internal primitive priority queue, used by {@link PoolChunk}.
+ * Internal primitive priority queue, used by {@code PoolChunk}.
  * The implementation is based on the binary heap, as described in Algorithms by Sedgewick and Wayne.
  */
-final class LongPriorityQueue {
+public final class LongPriorityQueue {
     public static final int NO_VALUE = -1;
     private long[] array = new long[9];
     private int size;
