@@ -154,6 +154,18 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
 
+    /**
+     * Encode a message into a {@link ByteBuf}. This method will be called for each written message that can be handled
+     * by this encoder. It returns a promise to notify once the contents of {@code out} have been written. Overrides
+     * can use this to delay notifying the given {@code promise} to e.g. account for internal buffering in the encoder.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
+     * @param msg           the message to encode
+     * @param out           the {@link ByteBuf} into which the encoded message will be written
+     * @param promise       the {@link ChannelPromise} to be notified when the write operation finishes
+     * @return              a promise to notify when writing {@code out} finishes
+     * @throws Exception    is thrown if an error occurs
+     */
     protected ChannelPromise encode(ChannelHandlerContext ctx, I msg, ByteBuf out, ChannelPromise promise)
             throws Exception {
         encode(ctx, msg, out);

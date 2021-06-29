@@ -278,25 +278,24 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             if (buffer.isReadable()) {
                 bufferPromise = promise;
                 return ctx.newPromise();
-            } else {
-                return promise;
             }
+            return promise;
         } else {
-            final ChannelPromise p;
             if (buffer.isReadable()) {
                 if (out.isReadable()) {
-                    p = bufferPromise;
+                    final ChannelPromise prev = bufferPromise;
                     bufferPromise = promise;
+                    return prev;
                 } else {
                     bufferPromise.addListener(new ChannelPromiseNotifier(promise));
-                    p = ctx.newPromise();
+                    return ctx.newPromise();
                 }
             } else {
-                p = bufferPromise;
+                bufferPromise.addListener(new ChannelPromiseNotifier(promise));
+                final ChannelPromise prev = bufferPromise;
                 bufferPromise = null;
-                p.addListener(new ChannelPromiseNotifier(promise));
+                return prev;
             }
-            return p;
         }
     }
 
@@ -347,6 +346,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             flushBufferedData(buf);
             final ChannelPromise promise = bufferPromise;
             bufferPromise = null;
+            assert promise != null;
             ctx.write(buf, promise);
         }
         ctx.flush();

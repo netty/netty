@@ -60,12 +60,14 @@ import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -88,6 +90,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             promise.setSuccess();
+            ctx.write(msg);
         }
     }
 
@@ -174,6 +177,25 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         assertEquals(0, backingBuf.readableBytes());
         assertTrue(promise2.isSuccess());
         assertTrue(promise3.isSuccess());
+
+        assertTrue(channel.finish());
+
+        final ByteBuf firstMessage = channel.readOutbound();
+        assertEquals(0, firstMessage.readableBytes());
+        firstMessage.release();
+
+        final ByteBuf secondMessage = channel.readOutbound();
+        assertThat(secondMessage.readableBytes(), greaterThan(0));
+        secondMessage.release();
+
+        final ByteBuf thirdMessage = channel.readOutbound();
+        assertThat(thirdMessage.readableBytes(), greaterThan(0));
+        thirdMessage.release();
+
+        final ByteBuf lastHeader = channel.readOutbound();
+        assertEquals(Lz4Constants.HEADER_LENGTH, lastHeader.readableBytes());
+        lastHeader.release();
+        assertNull(channel.readOutbound());
     }
 
     @Test
@@ -190,6 +212,17 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         ByteBuf backingBuf = encoder.getBackingBuffer();
         assertEquals(0, backingBuf.readableBytes());
         assertTrue(promise.isSuccess());
+
+        assertTrue(channel.finish());
+
+        final ByteBuf sentMessage = channel.readOutbound();
+        assertThat(sentMessage.readableBytes(), greaterThan(0));
+        sentMessage.release();
+
+        final ByteBuf lastHeader = channel.readOutbound();
+        assertEquals(Lz4Constants.HEADER_LENGTH, lastHeader.readableBytes());
+        lastHeader.release();
+        assertNull(channel.readOutbound());
     }
 
     @Test
@@ -214,6 +247,19 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         channel.write(buf2, promise2);
         assertEquals(size * 2, backingBuf.readableBytes());
         assertFalse(promise2.isSuccess());
+
+        assertTrue(channel.finish());
+
+        final ByteBuf empty1 = channel.readOutbound();
+        assertEquals(0, empty1.readableBytes());
+
+        final ByteBuf empty2 = channel.readOutbound();
+        assertEquals(0, empty2.readableBytes());
+
+        final ByteBuf flushedMessage = channel.readOutbound();
+        assertThat(flushedMessage.readableBytes(), greaterThan(0));
+        flushedMessage.release();
+        assertNull(channel.readOutbound());
     }
 
     @Test
@@ -231,6 +277,20 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         assertFalse(promise.isSuccess());
         channel.flush();
         assertTrue(promise.isSuccess());
+
+        final ByteBuf empty = channel.readOutbound();
+        assertEquals(0, empty.readableBytes());
+
+        final ByteBuf flushedMessage = channel.readOutbound();
+        assertThat(flushedMessage.readableBytes(), greaterThan(0));
+        flushedMessage.release();
+        assertNull(channel.readOutbound());
+
+        assertTrue(channel.finish());
+        final ByteBuf lastHeader = channel.readOutbound();
+        assertEquals(Lz4Constants.HEADER_LENGTH, lastHeader.readableBytes());
+        lastHeader.release();
+        assertNull(channel.readOutbound());
     }
 
     @Test
@@ -248,6 +308,15 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         assertFalse(promise.isSuccess());
         channel.close().get();
         assertTrue(promise.isSuccess());
+
+        final ByteBuf empty = channel.readOutbound();
+        assertEquals(0, empty.readableBytes());
+
+        final ByteBuf flushedMessage = channel.readOutbound();
+        assertThat(flushedMessage.readableBytes(), greaterThan(0));
+        flushedMessage.release();
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finish());
     }
 
     @Test
