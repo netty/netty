@@ -19,7 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -60,27 +63,30 @@ public final class TcpDnsServer {
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
-                        ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(), new SimpleChannelInboundHandler<DnsQuery>() {
-                            @Override
-                            protected void channelRead0(ChannelHandlerContext ctx, DnsQuery msg) throws Exception {
-                                DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
-                                System.out.println("Query domain: " + question);
+                        ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DnsQuery msg) throws Exception {
+                                        DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
+                                        System.out.println("Query domain: " + question);
 
-                                //always return 192.168.1.1
-                                ctx.writeAndFlush(newResponse(msg, question, 600, QUERY_RESULT));
-                            }
+                                        //always return 192.168.1.1
+                                        ctx.writeAndFlush(newResponse(msg, question, 600, QUERY_RESULT));
+                                    }
 
-                            private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, long ttl, byte[]... addresses) {
-                                DefaultDnsResponse response = new DefaultDnsResponse(query.id());
-                                response.addRecord(DnsSection.QUESTION, question);
+                                    private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question,
+                                                                           long ttl, byte[]... addresses) {
+                                        DefaultDnsResponse response = new DefaultDnsResponse(query.id());
+                                        response.addRecord(DnsSection.QUESTION, question);
 
-                                for (byte[] address : addresses) {
-                                    DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(question.name(), DnsRecordType.A, ttl, Unpooled.wrappedBuffer(address));
-                                    response.addRecord(DnsSection.ANSWER, queryAnswer);
-                                }
-                                return response;
-                            }
-                        });
+                                        for (byte[] address : addresses) {
+                                            DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(question.name(),
+                                                    DnsRecordType.A, ttl, Unpooled.wrappedBuffer(address));
+                                            response.addRecord(DnsSection.ANSWER, queryAnswer);
+                                        }
+                                        return response;
+                                    }
+                                });
                     }
                 });
         final Channel channel = bootstrap.bind(DNS_SERVER_PORT).channel();
@@ -100,7 +106,7 @@ public final class TcpDnsServer {
 
     // copy from TcpDnsClient.java
     private static void clientQuery() throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
@@ -108,8 +114,7 @@ public final class TcpDnsServer {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast(new TcpDnsQueryEncoder())
+                            ch.pipeline().addLast(new TcpDnsQueryEncoder())
                                     .addLast(new TcpDnsResponseDecoder())
                                     .addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
                                         @Override
