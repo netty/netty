@@ -735,15 +735,14 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         int windowBefore = window(STREAM_A);
 
-        try {
-            controller.addFlowControlled(stream, flowControlled);
-            controller.writePendingBytes();
-            fail();
-        } catch (Http2Exception e) {
-            assertSame(fakeException, e.getCause());
-        } catch (Throwable t) {
-            fail();
-        }
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.addFlowControlled(stream, flowControlled);
+                controller.writePendingBytes();
+            }
+        });
+        assertSame(fakeException, e.getCause());
 
         verify(flowControlled, atLeastOnce()).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));

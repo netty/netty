@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
@@ -68,8 +69,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
@@ -427,12 +428,13 @@ public class Http2FrameCodecTest {
         Http2HeadersFrame headersFrame = inboundHandler.readInboundMessageOrUserEvent();
         assertNotNull(headersFrame);
 
-        try {
-            inboundHandler.checkException();
-            fail("stream exception expected");
-        } catch (Http2FrameStreamException e) {
-            assertEquals(streamEx, e.getCause());
-        }
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(streamEx, e.getCause());
 
         assertNull(inboundHandler.readInboundMessageOrUserEvent());
     }

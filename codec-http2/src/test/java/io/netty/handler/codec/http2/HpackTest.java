@@ -38,29 +38,22 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collection;
 
 public class HpackTest {
 
     private static final String TEST_DIR = '/' + HpackTest.class.getPackage().getName().replaceAll("\\.", "/")
             + "/testdata/";
 
-    public static Collection<Object[]> data() {
+    public static File[] files() {
         File[] files = ResourcesUtil.getFile(HpackTest.class, TEST_DIR).listFiles();
         ObjectUtil.checkNotNull(files, "files");
-
-        ArrayList<Object[]> data = new ArrayList<Object[]>();
-        for (File file : files) {
-            data.add(new Object[]{file.getName()});
-        }
-        return data;
+        return files;
     }
 
     @ParameterizedTest(name = "file = {0}")
-    @MethodSource("data")
-    public void test(String fileName) throws Exception {
-        InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + fileName);
+    @MethodSource("files")
+    public void test(File file) throws Exception {
+        InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + file.getName());
         HpackTestCase hpackTestCase = HpackTestCase.load(is);
         hpackTestCase.testCompress();
         hpackTestCase.testDecompress();

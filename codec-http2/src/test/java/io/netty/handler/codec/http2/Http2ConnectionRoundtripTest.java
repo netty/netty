@@ -43,6 +43,7 @@ import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -74,8 +75,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -724,12 +725,13 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        try {
-            emptyDataPromise.get();
-            fail();
-        } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
-        }
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                emptyDataPromise.get();
+            }
+        });
+        assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
     }
 
     @Test
@@ -775,13 +777,13 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        try {
-            dataPromise.get();
-            fail();
-        } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
-        }
-
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dataPromise.get();
+            }
+        });
+        assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
         assertPromise.sync();
     }
 

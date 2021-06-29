@@ -371,13 +371,14 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void clientLocalCreateStreamExhaustedSpace() throws Http2Exception {
         client.local().createStream(MAX_VALUE, true);
-        try {
-            client.local().createStream(MAX_VALUE, true);
-            fail();
-        } catch (Http2Exception expected) {
-            assertEquals(Http2Error.REFUSED_STREAM, expected.error());
-            assertEquals(Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN, expected.shutdownHint());
-        }
+        Http2Exception expected = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                client.local().createStream(MAX_VALUE, true);
+            }
+        });
+        assertEquals(Http2Error.REFUSED_STREAM, expected.error());
+        assertEquals(Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN, expected.shutdownHint());
     }
 
     @Test
@@ -670,7 +671,7 @@ public class DefaultHttp2ConnectionTest {
             endpoint.createStream(streamId, true);
             streamId = endpoint.incrementAndGetNextStreamId();
         } catch (Throwable t) {
-            fail();
+            fail(t);
         }
         assertTrue(streamId < 0);
         final int finalStreamId = streamId;

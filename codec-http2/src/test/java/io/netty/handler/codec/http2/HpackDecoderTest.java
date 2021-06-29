@@ -48,8 +48,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -763,7 +761,7 @@ public class HpackDecoderTest {
 
     @Test
     public void failedValidationDoesntCorruptHpack() throws Exception {
-        ByteBuf in1 = Unpooled.buffer(200);
+        final ByteBuf in1 = Unpooled.buffer(200);
         ByteBuf in2 = Unpooled.buffer(200);
         try {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
@@ -774,14 +772,16 @@ public class HpackDecoderTest {
             toEncode.add("foo", "bar");
             hpackEncoder.encodeHeaders(1, in1, toEncode, NEVER_SENSITIVE);
 
-            Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = new DefaultHttp2Headers();
 
-            try {
-                hpackDecoder.decode(1, in1, decoded, true);
-                fail("Should have thrown a StreamException");
-            } catch (Http2Exception.StreamException expected) {
-                assertEquals(1, expected.streamId());
-            }
+            Http2Exception.StreamException expected =
+                    assertThrows(Http2Exception.StreamException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackDecoder.decode(1, in1, decoded, true);
+                }
+            });
+            assertEquals(1, expected.streamId());
 
             // Do it again, this time without validation, to make sure the HPACK state is still sane.
             decoded.clear();

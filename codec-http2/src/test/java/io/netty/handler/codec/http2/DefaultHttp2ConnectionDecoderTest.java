@@ -55,7 +55,6 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -334,22 +333,23 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void dataReadForUnknownStreamShouldApplyFlowControl() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         final ByteBuf data = dummyData();
-        int padding = 10;
+        final int padding = 10;
         int processedBytes = data.readableBytes() + padding;
         try {
-            try {
-                decode().onDataRead(ctx, STREAM_ID, data, padding, true);
-                fail();
-            } catch (Http2Exception e) {
-                verify(localFlow)
-                        .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
-                verify(localFlow).frameWriter(any(Http2FrameWriter.class));
-                verifyNoMoreInteractions(localFlow);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+                }
+            });
+            verify(localFlow)
+                    .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
+            verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+            verify(localFlow).frameWriter(any(Http2FrameWriter.class));
+            verifyNoMoreInteractions(localFlow);
 
-                // Verify that the event was absorbed and not propagated to the observer.
-                verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
-            }
+            // Verify that the event was absorbed and not propagated to the observer.
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             data.release();
         }
@@ -477,9 +477,12 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         }).when(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(10), eq(true));
         try {
-            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
-            fail("Expected exception");
-        } catch (RuntimeException cause) {
+            assertThrows(RuntimeException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+                }
+            });
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(stream), eq(data), eq(padding), eq(true));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));

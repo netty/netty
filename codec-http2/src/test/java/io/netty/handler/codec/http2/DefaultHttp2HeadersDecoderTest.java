@@ -30,7 +30,6 @@ import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link DefaultHttp2HeadersDecoder}.
@@ -78,27 +77,32 @@ public class DefaultHttp2HeadersDecoderTest {
     @Test
     public void decodeLargerThanHeaderListSizeButLessThanGoAway() throws Exception {
         decoder.maxHeaderListSize(MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE);
-        ByteBuf buf = encode(b(":method"), b("GET"));
+        final ByteBuf buf = encode(b(":method"), b("GET"));
         final int streamId = 1;
-        try {
-            decoder.decodeHeaders(streamId, buf);
-            fail();
-        } catch (Http2Exception.HeaderListSizeException e) {
-            assertEquals(streamId, e.streamId());
-        } finally {
-            buf.release();
-        }
+        Http2Exception.HeaderListSizeException e =
+                assertThrows(Http2Exception.HeaderListSizeException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.decodeHeaders(streamId, buf);
+            }
+        });
+        assertEquals(streamId, e.streamId());
+        buf.release();
     }
 
     @Test
     public void decodeLargerThanHeaderListSizeButLessThanGoAwayWithInitialDecoderSettings() throws Exception {
-        ByteBuf buf = encode(b(":method"), b("GET"), b("test_header"),
+        final ByteBuf buf = encode(b(":method"), b("GET"), b("test_header"),
             b(String.format("%09000d", 0).replace('0', 'A')));
         final int streamId = 1;
         try {
-            decoder.decodeHeaders(streamId, buf);
-            fail();
-        } catch (Http2Exception.HeaderListSizeException e) {
+            Http2Exception.HeaderListSizeException e = assertThrows(Http2Exception.HeaderListSizeException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            decoder.decodeHeaders(streamId, buf);
+                        }
+                    });
             assertEquals(streamId, e.streamId());
         } finally {
             buf.release();
@@ -108,12 +112,15 @@ public class DefaultHttp2HeadersDecoderTest {
     @Test
     public void decodeLargerThanHeaderListSizeGoAway() throws Exception {
         decoder.maxHeaderListSize(MIN_HEADER_LIST_SIZE, MIN_HEADER_LIST_SIZE);
-        ByteBuf buf = encode(b(":method"), b("GET"));
+        final ByteBuf buf = encode(b(":method"), b("GET"));
         final int streamId = 1;
         try {
-            decoder.decodeHeaders(streamId, buf);
-            fail();
-        } catch (Http2Exception e) {
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.decodeHeaders(streamId, buf);
+                }
+            });
             assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
         } finally {
             buf.release();

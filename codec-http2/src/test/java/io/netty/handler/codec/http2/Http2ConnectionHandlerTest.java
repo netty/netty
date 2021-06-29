@@ -38,6 +38,7 @@ import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -63,8 +64,8 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -235,23 +236,25 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void onHttpServerUpgradeWithoutHandlerAdded() throws Exception {
         handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(true).build();
-        try {
-            handler.onHttpServerUpgrade(new Http2Settings());
-            fail();
-        } catch (Http2Exception e) {
-            assertEquals(Http2Error.INTERNAL_ERROR, e.error());
-        }
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                handler.onHttpServerUpgrade(new Http2Settings());
+            }
+        });
+        assertEquals(Http2Error.INTERNAL_ERROR, e.error());
     }
 
     @Test
     public void onHttpClientUpgradeWithoutHandlerAdded() throws Exception {
         handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(false).build();
-        try {
-            handler.onHttpClientUpgrade();
-            fail();
-        } catch (Http2Exception e) {
-            assertEquals(Http2Error.INTERNAL_ERROR, e.error());
-        }
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                handler.onHttpClientUpgrade();
+            }
+        });
+        assertEquals(Http2Error.INTERNAL_ERROR, e.error());
     }
 
     @Test

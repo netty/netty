@@ -21,7 +21,6 @@ import org.junit.jupiter.api.function.Executable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HpackDynamicTableTest {
 
@@ -49,17 +48,18 @@ public class HpackDynamicTableTest {
 
     @Test
     public void testGetEntry() {
-        HpackDynamicTable table = new HpackDynamicTable(100);
+        final HpackDynamicTable table = new HpackDynamicTable(100);
         HpackHeaderField entry = new HpackHeaderField("foo", "bar");
         table.add(entry);
         assertEquals(entry, table.getEntry(1));
         table.clear();
-        try {
-            table.getEntry(1);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            //success
-        }
+
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                table.getEntry(1);
+            }
+        });
     }
 
     @Test
