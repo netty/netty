@@ -397,7 +397,7 @@ public class DnsNameResolver extends InetNameResolver {
                 null, dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes,
                 recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
                 hostsFileEntriesResolver, dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn,
-                completeOncePreferredResolved);
+                completeOncePreferredResolved, -1);
     }
 
     DnsNameResolver(
@@ -421,7 +421,8 @@ public class DnsNameResolver extends InetNameResolver {
             String[] searchDomains,
             int ndots,
             boolean decodeIdn,
-            boolean completeOncePreferredResolved) {
+            boolean completeOncePreferredResolved,
+            long bindTimeoutMillis) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis > 0
             ? queryTimeoutMillis
@@ -498,7 +499,13 @@ public class DnsNameResolver extends InetNameResolver {
         } else {
             future = b.bind(localAddress);
         }
-        Throwable cause = future.awaitUninterruptibly().cause();
+        if (bindTimeoutMillis > 0 && !future.awaitUninterruptibly(bindTimeoutMillis)) {
+            throw new IllegalStateException("Timed out waiting for channel registration and binding to complete.");
+        }
+        if (bindTimeoutMillis < 0) {
+            future.awaitUninterruptibly();
+        }
+        Throwable cause = future.cause();
         if (cause != null) {
             if (cause instanceof RuntimeException) {
                 throw (RuntimeException) cause;

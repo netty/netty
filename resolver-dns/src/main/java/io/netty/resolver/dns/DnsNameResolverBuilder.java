@@ -63,6 +63,7 @@ public final class DnsNameResolverBuilder {
     private String[] searchDomains;
     private int ndots = -1;
     private boolean decodeIdn = true;
+    private long bindTimeoutMillis = -1;
 
     /**
      * Creates a new builder.
@@ -250,6 +251,18 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         this.queryTimeoutMillis = queryTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Sets the timeout for registering and binding the underlying socket for the DNS resolver, in milliseconds.
+     * This timeout is used when the {@link DnsNameResolver} is {@linkplain #build() built}.
+     *
+     * @param bindTimeoutMillis The timeout for binding the underlying socket for the resolver.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder bindTimeoutMillis(long bindTimeoutMillis) {
+        this.bindTimeoutMillis = bindTimeoutMillis;
         return this;
     }
 
@@ -506,7 +519,8 @@ public final class DnsNameResolverBuilder {
                 searchDomains,
                 ndots,
                 decodeIdn,
-                completeOncePreferredResolved);
+                completeOncePreferredResolved,
+                bindTimeoutMillis);
     }
 
     /**
