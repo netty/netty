@@ -15,11 +15,12 @@
 
 package io.netty.handler.codec.http2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackDynamicTableTest {
 
@@ -47,23 +48,29 @@ public class HpackDynamicTableTest {
 
     @Test
     public void testGetEntry() {
-        HpackDynamicTable table = new HpackDynamicTable(100);
+        final HpackDynamicTable table = new HpackDynamicTable(100);
         HpackHeaderField entry = new HpackHeaderField("foo", "bar");
         table.add(entry);
         assertEquals(entry, table.getEntry(1));
         table.clear();
-        try {
-            table.getEntry(1);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            //success
-        }
+
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                table.getEntry(1);
+            }
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void testGetEntryExceptionally() {
-        HpackDynamicTable table = new HpackDynamicTable(1);
-        table.getEntry(1);
+        final HpackDynamicTable table = new HpackDynamicTable(1);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                table.getEntry(1);
+            }
+        });
     }
 
     @Test
