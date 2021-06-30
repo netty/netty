@@ -16,21 +16,16 @@
 
 package io.netty.handler.codec.mqtt;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(value = Parameterized.class)
 public class MqttMessageBuildersPacketIdTest {
-    @Parameterized.Parameter
-    public Integer id;
 
-    @Parameterized.Parameters(name = "{index}: {0}")
-    public static Iterable<Integer> data() {
+    static Iterable<Integer> data() {
         // we take a subset of valid packetIds
         return Arrays.asList(
                 0x0001,
@@ -41,8 +36,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testUnsubAckMessageIdAsShort() {
+    @ParameterizedTest()
+    @MethodSource("data")
+    public void testUnsubAckMessageIdAsShort(Integer id) {
         final MqttUnsubAckMessage msg = MqttMessageBuilders.unsubAck()
                 .packetId(id.shortValue())
                 .build();
@@ -53,8 +49,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testSubAckMessageIdAsShort() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testSubAckMessageIdAsShort(Integer id) {
         final MqttSubAckMessage msg = MqttMessageBuilders.subAck()
                 .packetId(id.shortValue())
                 .build();
@@ -65,8 +62,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testPubAckMessageIdAsShort() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testPubAckMessageIdAsShort(Integer id) {
         final MqttMessage msg = MqttMessageBuilders.pubAck()
                 .packetId(id.shortValue())
                 .build();
@@ -77,8 +75,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testUnsubAckMessageIdAsInt() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnsubAckMessageIdAsInt(Integer id) {
         final MqttUnsubAckMessage msg = MqttMessageBuilders.unsubAck()
                 .packetId(id)
                 .build();
@@ -89,8 +88,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testSubAckMessageIdAsInt() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testSubAckMessageIdAsInt(Integer id) {
         final MqttSubAckMessage msg = MqttMessageBuilders.subAck()
                 .packetId(id)
                 .build();
@@ -101,8 +101,9 @@ public class MqttMessageBuildersPacketIdTest {
         );
     }
 
-    @Test
-    public void testPubAckMessageIdAsInt() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testPubAckMessageIdAsInt(Integer id) {
         final MqttMessage msg = MqttMessageBuilders.pubAck()
                 .packetId(id)
                 .build();

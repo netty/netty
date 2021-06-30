@@ -16,14 +16,14 @@
 
 package io.netty.handler.codec.mqtt;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_LEAST_ONCE;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateProperties;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateSubscribePayload;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateUnsubscribePayload;
@@ -41,14 +41,14 @@ public class MqttMessageFactoryTest {
 
         MqttMessage unsuback = MqttMessageFactory.newMessage(fixedHeader, variableHeader, null);
 
-        assertEquals("Message type mismatch", MqttMessageType.UNSUBACK, unsuback.fixedHeader().messageType());
+        assertEquals(MqttMessageType.UNSUBACK, unsuback.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) unsuback.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(MqttProperties.NO_PROPERTIES, actualVariableHeader.properties());
         MqttUnsubAckPayload actualPayload = (MqttUnsubAckPayload) unsuback.payload();
-        assertNotNull("payload", actualPayload);
-        assertEquals("reason codes size", 0, actualPayload.unsubscribeReasonCodes().size());
+        assertNotNull(actualPayload);
+        assertEquals(0, actualPayload.unsubscribeReasonCodes().size());
     }
 
     @Test
@@ -66,15 +66,13 @@ public class MqttMessageFactoryTest {
 
         MqttMessage unsuback = MqttMessageFactory.newMessage(fixedHeader, variableHeader, payload);
 
-        assertEquals("Message type mismatch", MqttMessageType.UNSUBACK, unsuback.fixedHeader().messageType());
+        assertEquals(MqttMessageType.UNSUBACK, unsuback.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) unsuback.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(properties, actualVariableHeader.properties());
         MqttUnsubAckPayload actualPayload = (MqttUnsubAckPayload) unsuback.payload();
-        assertEquals("Reason code list doesn't match",
-                payload.unsubscribeReasonCodes(),
-                actualPayload.unsubscribeReasonCodes());
+        assertEquals(payload.unsubscribeReasonCodes(), actualPayload.unsubscribeReasonCodes());
     }
 
     @Test
@@ -89,10 +87,10 @@ public class MqttMessageFactoryTest {
 
         MqttMessage subscribe = MqttMessageFactory.newMessage(fixedHeader, variableHeader, payload);
 
-        assertEquals("Message type mismatch", MqttMessageType.SUBSCRIBE, subscribe.fixedHeader().messageType());
+        assertEquals(MqttMessageType.SUBSCRIBE, subscribe.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) subscribe.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(MqttProperties.NO_PROPERTIES, actualVariableHeader.properties());
         MqttSubscribePayload actualPayload = (MqttSubscribePayload) subscribe.payload();
         validateSubscribePayload(payload, actualPayload);
@@ -113,10 +111,10 @@ public class MqttMessageFactoryTest {
 
         MqttMessage subscribe = MqttMessageFactory.newMessage(fixedHeader, variableHeader, payload);
 
-        assertEquals("Message type mismatch", MqttMessageType.SUBSCRIBE, subscribe.fixedHeader().messageType());
+        assertEquals(MqttMessageType.SUBSCRIBE, subscribe.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) subscribe.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(properties, actualVariableHeader.properties());
         MqttSubscribePayload actualPayload = (MqttSubscribePayload) subscribe.payload();
         validateSubscribePayload(payload, actualPayload);
@@ -134,10 +132,10 @@ public class MqttMessageFactoryTest {
 
         MqttMessage unsubscribe = MqttMessageFactory.newMessage(fixedHeader, variableHeader, payload);
 
-        assertEquals("Message type mismatch", MqttMessageType.UNSUBSCRIBE, unsubscribe.fixedHeader().messageType());
+        assertEquals(MqttMessageType.UNSUBSCRIBE, unsubscribe.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) unsubscribe.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(MqttProperties.NO_PROPERTIES, actualVariableHeader.properties());
         MqttUnsubscribePayload actualPayload = (MqttUnsubscribePayload) unsubscribe.payload();
         validateUnsubscribePayload(payload, actualPayload);
@@ -158,10 +156,10 @@ public class MqttMessageFactoryTest {
 
         MqttMessage unsubscribe = MqttMessageFactory.newMessage(fixedHeader, variableHeader, payload);
 
-        assertEquals("Message type mismatch", MqttMessageType.UNSUBSCRIBE, unsubscribe.fixedHeader().messageType());
+        assertEquals(MqttMessageType.UNSUBSCRIBE, unsubscribe.fixedHeader().messageType());
         MqttMessageIdAndPropertiesVariableHeader actualVariableHeader =
                 (MqttMessageIdAndPropertiesVariableHeader) unsubscribe.variableHeader();
-        assertEquals("MessageId mismatch", SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
+        assertEquals(SAMPLE_MESSAGE_ID, actualVariableHeader.messageId());
         validateProperties(properties, actualVariableHeader.properties());
         MqttUnsubscribePayload actualPayload = (MqttUnsubscribePayload) unsubscribe.payload();
         validateUnsubscribePayload(payload, actualPayload);
