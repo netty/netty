@@ -16,7 +16,8 @@
 
 package io.netty.handler.codec.mqtt;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +27,7 @@ import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTEN
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.USER_PROPERTY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MqttPropertiesTest {
 
@@ -46,10 +47,10 @@ public class MqttPropertiesTest {
     public void testGetProperty() {
         MqttProperties props = createSampleProperties();
 
-        assertEquals("getProperty Content Type",
+        assertEquals(
                 "text/plain",
                 ((MqttProperties.StringProperty) props.getProperty(CONTENT_TYPE.value())).value);
-        assertEquals("getProperty Subscription ID",
+        assertEquals(
                 10,
                 ((MqttProperties.IntegerProperty) props.getProperty(SUBSCRIPTION_IDENTIFIER.value())).value.intValue());
 
@@ -59,21 +60,21 @@ public class MqttPropertiesTest {
         expectedUserProps.add(new MqttProperties.StringPair("tag", "secondTag"));
         List<MqttProperties.StringPair> actualUserProps =
                 ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value;
-        assertEquals("getProperty User Properties", expectedUserProps, actualUserProps);
+        assertEquals(expectedUserProps, actualUserProps);
     }
 
     @Test
     public void testGetProperties() {
         MqttProperties props = createSampleProperties();
 
-        assertEquals("getProperties Content Type",
+        assertEquals(
                 Collections.singletonList(new MqttProperties.StringProperty(CONTENT_TYPE.value(), "text/plain")),
                 props.getProperties(CONTENT_TYPE.value()));
 
         List<MqttProperties.IntegerProperty> expectedSubscriptionIds = new ArrayList<MqttProperties.IntegerProperty>();
         expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
         expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
-        assertEquals("getProperties Subscription ID",
+        assertEquals(
                 expectedSubscriptionIds,
                props.getProperties(SUBSCRIPTION_IDENTIFIER.value()));
 
@@ -83,7 +84,7 @@ public class MqttPropertiesTest {
         expectedUserProps.add(new MqttProperties.UserProperty("tag", "secondTag"));
         List<MqttProperties.UserProperty> actualUserProps =
                 (List<MqttProperties.UserProperty>) props.getProperties(USER_PROPERTY.value());
-        assertEquals("getProperty User Properties", expectedUserProps, actualUserProps);
+        assertEquals(expectedUserProps, actualUserProps);
     }
 
     @Test
@@ -104,9 +105,7 @@ public class MqttPropertiesTest {
 
         expectedProperties.add(expectedUserProperties);
 
-        assertEquals("listAll",
-                expectedProperties,
-                props.listAll());
+        assertEquals(expectedProperties, props.listAll());
     }
 
 }
