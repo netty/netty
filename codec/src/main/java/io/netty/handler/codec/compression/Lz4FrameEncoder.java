@@ -281,11 +281,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     // succeed for msg's promise to succeed. We create a new promise for the part of the message in
                     // out because we started without a pending #bufferPromise.
                     return combinedPromise(ctx, promise, ctx.newPromise());
-                } else {
-                    bufferPromise = promise;
-                    // out is empty and we just return a new promise as out does not contain any part of msg
-                    return ctx.newPromise();
                 }
+                bufferPromise = promise;
+                // out is empty and we just return a new promise as out does not contain any part of msg
+                return ctx.newPromise();
             }
             return promise;
         }
