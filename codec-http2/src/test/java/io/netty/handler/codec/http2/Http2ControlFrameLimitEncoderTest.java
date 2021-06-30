@@ -28,9 +28,9 @@ import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -43,7 +43,9 @@ import java.util.Queue;
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -78,7 +80,7 @@ public class Http2ControlFrameLimitEncoderTest {
     /**
      * Init fields and do mocking.
      */
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
@@ -149,7 +151,7 @@ public class Http2ControlFrameLimitEncoderTest {
         return promise;
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         // Close and release any buffered frames.
         encoder.close();

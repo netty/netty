@@ -14,18 +14,19 @@
  */
 package io.netty.handler.codec.http2;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
 import org.mockito.verification.VerificationMode;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.atLeastOnce;
@@ -47,7 +48,7 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
     private static final int STREAM_E = 9;
     private static final int ALLOCATION_QUANTUM = 100;
 
-    @Before
+    @BeforeEach
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
@@ -152,14 +153,15 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
         Exception fakeException = new RuntimeException("Fake exception");
         doThrow(fakeException).when(writer).write(same(stream(STREAM_C)), eq(3));
 
-        try {
-            write(10);
-            fail("Expected an exception");
-        } catch (Http2Exception e) {
-            assertFalse(Http2Exception.isStreamError(e));
-            assertEquals(Http2Error.INTERNAL_ERROR, e.error());
-            assertSame(fakeException, e.getCause());
-        }
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                write(10);
+            }
+        });
+        assertFalse(Http2Exception.isStreamError(e));
+        assertEquals(Http2Error.INTERNAL_ERROR, e.error());
+        assertSame(fakeException, e.getCause());
 
         verifyWrite(atMost(1), STREAM_A, 1);
         verifyWrite(atMost(1), STREAM_B, 2);
