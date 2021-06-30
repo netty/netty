@@ -25,6 +25,7 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import org.junit.runners.Parameterized;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -41,12 +43,14 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.X509ExtendedKeyManager;
+import java.io.File;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
 import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -55,6 +59,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
@@ -1534,5 +1539,34 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     protected boolean isSessionMaybeReused(SSLEngine engine) {
         return unwrapEngine(engine).isSessionReused();
+    }
+
+    @Test
+    public void testRSASSAPSS() throws Exception {
+        char[] password = "password".toCharArray();
+
+        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
+        serverKeyStore.load(getClass().getResourceAsStream("rsaValidation-server-keystore.p12"), password);
+
+        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
+        clientKeyStore.load(getClass().getResourceAsStream("user-rsassapss-cert.p12"), password);
+
+        final KeyManagerFactory serverKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        serverKeyManagerFactory.init(serverKeyStore, password);
+        final KeyManagerFactory clientKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        clientKeyManagerFactory.init(clientKeyStore, password);
+
+        File clientCert = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cert");
+        File serverTrust = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cert");
+
+        ClientAuth auth = ClientAuth.REQUIRE;
+
+        mySetupMutualAuth(serverKeyManagerFactory, clientCert, clientKeyManagerFactory, serverTrust,
+                auth, false, true);
+
+        runTest(null);
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
     }
 }
