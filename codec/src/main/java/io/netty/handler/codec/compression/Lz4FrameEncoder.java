@@ -315,6 +315,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 compressor.maxCompressedLength(buffer.readableBytes()) + HEADER_LENGTH);
         flushBufferedData(footer);
 
+        footer.ensureWritable(HEADER_LENGTH);
         final int idx = footer.writerIndex();
         footer.setLong(idx, MAGIC_NUMBER);
         footer.setByte(idx + TOKEN_OFFSET, (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel));
