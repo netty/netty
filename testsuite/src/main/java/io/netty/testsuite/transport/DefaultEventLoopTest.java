@@ -15,11 +15,9 @@
  */
 package io.netty.testsuite.transport;
 
-import io.netty.channel.AbstractSingleThreadEventLoopTest;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -29,12 +27,6 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new DefaultEventLoopGroup();
-    }
-
-    @Override
-    protected EventLoopGroup newEventLoopGroup(EventLoopTaskQueueFactory taskQueueFactory,
-                                               EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        return newEventLoopGroup();
     }
 
     @Override

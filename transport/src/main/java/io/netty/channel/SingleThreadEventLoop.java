@@ -154,27 +154,4 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public int registeredChannels() {
         return -1;
     }
-
-    /**
-     * Boilerplate code to make methods of parent visible for tests
-     */
-    @Override
-    protected final Queue<Runnable> taskQueue() {
-        return super.taskQueue();
-    }
-
-    /**
-     * Boilerplate code to make methods of parent visible for tests
-     */
-    @Override
-    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
-        return super.newTaskQueue(maxPendingTasks);
-    }
-
-    /**
-     * Visible for testing only!
-     */
-    protected final Queue<Runnable> tailTaskQueue() {
-        return tailTasks;
-    }
 }

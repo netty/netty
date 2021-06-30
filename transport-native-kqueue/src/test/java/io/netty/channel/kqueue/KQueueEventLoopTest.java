@@ -15,18 +15,12 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.AbstractSingleThreadEventLoopTest;
-import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -36,17 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
-    @Override
-    protected KQueueEventLoopGroup newEventLoopGroup(EventLoopTaskQueueFactory taskQueueFactory,
-                                                    EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        return new KQueueEventLoopGroup(
-                0,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory("kqueue-test-pool")),
-                DefaultEventExecutorChooserFactory.INSTANCE,
-                DefaultSelectStrategyFactory.INSTANCE,
-                RejectedExecutionHandlers.reject(),
-                taskQueueFactory, tailTaskQueueFactory);
-    }
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new KQueueEventLoopGroup();

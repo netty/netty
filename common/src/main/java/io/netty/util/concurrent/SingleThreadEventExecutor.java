@@ -173,13 +173,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Visible for testing only!
-     */
-    protected Queue<Runnable> taskQueue() {
-        return taskQueue;
-    }
-
-    /**
      * @deprecated Please use and override {@link #newTaskQueue(int)}.
      */
     @Deprecated

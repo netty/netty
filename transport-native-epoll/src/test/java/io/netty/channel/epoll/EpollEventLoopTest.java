@@ -15,15 +15,13 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.AbstractSingleThreadEventLoopTest;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -45,18 +43,6 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new EpollEventLoopGroup();
-    }
-
-    @Override
-    protected EpollEventLoopGroup newEventLoopGroup(EventLoopTaskQueueFactory taskQueueFactory,
-                                               EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        return new EpollEventLoopGroup(
-                0,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory("epoll-test-pool")),
-                DefaultEventExecutorChooserFactory.INSTANCE,
-                DefaultSelectStrategyFactory.INSTANCE,
-                RejectedExecutionHandlers.reject(),
-                taskQueueFactory, tailTaskQueueFactory);
     }
 
     @Override

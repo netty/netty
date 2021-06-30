@@ -15,40 +15,18 @@
  */
 package io.netty.testsuite.transport;
 
-import io.netty.channel.AbstractSingleThreadEventLoopTest;
 import io.netty.channel.Channel;
-import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
-
-import java.nio.channels.spi.SelectorProvider;
 
 public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new NioEventLoopGroup();
-    }
-
-    @Override
-    protected EventLoopGroup newEventLoopGroup(EventLoopTaskQueueFactory taskQueueFactory,
-                                               EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        return new NioEventLoopGroup(
-                0,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory("nio-test-pool")),
-                DefaultEventExecutorChooserFactory.INSTANCE,
-                SelectorProvider.provider(),
-                DefaultSelectStrategyFactory.INSTANCE,
-                RejectedExecutionHandlers.reject(),
-                taskQueueFactory, tailTaskQueueFactory);
     }
 
     @Override
