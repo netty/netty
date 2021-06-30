@@ -29,11 +29,11 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -41,6 +41,10 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LocalTransportThreadModelTest3 {
 
@@ -60,7 +64,7 @@ public class LocalTransportThreadModelTest3 {
     private static EventLoopGroup group;
     private static LocalAddress localAddr;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         // Configure a test server
         group = new DefaultEventLoopGroup();
@@ -83,35 +87,39 @@ public class LocalTransportThreadModelTest3 {
         localAddr = (LocalAddress) sb.bind(LocalAddress.ANY).syncUninterruptibly().channel().localAddress();
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() throws Exception {
         group.shutdownGracefully().sync();
     }
 
-    @Test(timeout = 60000)
-    @Ignore("regression test")
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
+    @Disabled("regression test")
     public void testConcurrentAddRemoveInboundEventsMultiple() throws Throwable {
         for (int i = 0; i < 50; i ++) {
             testConcurrentAddRemoveInboundEvents();
         }
     }
 
-    @Test(timeout = 60000)
-    @Ignore("regression test")
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
+    @Disabled("regression test")
     public void testConcurrentAddRemoveOutboundEventsMultiple() throws Throwable {
         for (int i = 0; i < 50; i ++) {
             testConcurrentAddRemoveOutboundEvents();
         }
     }
 
-    @Test(timeout = 30000)
-    @Ignore("needs a fix")
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Disabled("needs a fix")
     public void testConcurrentAddRemoveInboundEvents() throws Throwable {
         testConcurrentAddRemove(true);
     }
 
-    @Test(timeout = 30000)
-    @Ignore("needs a fix")
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Disabled("needs a fix")
     public void testConcurrentAddRemoveOutboundEvents() throws Throwable {
         testConcurrentAddRemove(false);
     }
@@ -211,10 +219,10 @@ public class LocalTransportThreadModelTest3 {
             for (;;) {
                 EventType event = events.poll();
                 if (event == null) {
-                    Assert.assertTrue("Missing events:" + expectedEvents, expectedEvents.isEmpty());
+                    assertTrue(expectedEvents.isEmpty(), "Missing events:" + expectedEvents);
                     break;
                 }
-                Assert.assertEquals(event, expectedEvents.poll());
+                assertEquals(event, expectedEvents.poll());
             }
         } finally {
             l.shutdownGracefully();
