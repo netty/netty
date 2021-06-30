@@ -267,6 +267,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         } catch (Exception e) {
             if (bufferPromise != null) {
                 bufferPromise.tryFailure(e);
+                bufferPromise = null;
             }
             throw e;
         }
