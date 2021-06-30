@@ -25,7 +25,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,7 +36,11 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class ZlibTest {
 
@@ -209,7 +214,7 @@ public abstract class ZlibTest {
                 buf.release();
                 decoded = true;
             }
-            assertFalse("should decode nothing", decoded);
+            assertFalse(decoded, "should decode nothing");
 
             assertFalse(chDecoderZlib.finish());
         } finally {
@@ -366,19 +371,20 @@ public abstract class ZlibTest {
     public void testMaxAllocation() throws Exception {
         int maxAllocation = 1024;
         ZlibDecoder decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
-        EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
+        final EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
 
-        try {
-            chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
-            fail("decompressed size > maxAllocation, so should have thrown exception");
-        } catch (DecompressionException e) {
-            assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
-            assertEquals(maxAllocation, alloc.getMaxAllocation());
-            assertTrue(decoder.isClosed());
-            assertFalse(chDecoder.finish());
-        }
+        DecompressionException e = assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
+            }
+        });
+        assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
+        assertEquals(maxAllocation, alloc.getMaxAllocation());
+        assertTrue(decoder.isClosed());
+        assertFalse(chDecoder.finish());
     }
 
     private static byte[] gzip(byte[] bytes) throws IOException {

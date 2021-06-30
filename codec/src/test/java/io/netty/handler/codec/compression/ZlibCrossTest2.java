@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ZlibCrossTest2 extends ZlibTest {
 
@@ -29,9 +32,14 @@ public class ZlibCrossTest2 extends ZlibTest {
         return new JdkZlibDecoder(wrapper, maxAllocation);
     }
 
-    @Test(expected = DecompressionException.class)
+    @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        super.testZLIB_OR_NONE3();
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ZlibCrossTest2.super.testZLIB_OR_NONE3();
+            }
+        });
     }
 }
