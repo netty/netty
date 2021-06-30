@@ -16,11 +16,13 @@
 package io.netty.resolver;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class InetSocketAddressResolverTest {
 
