@@ -4051,14 +4051,13 @@ public abstract class SSLEngineTest {
 
         File clientCert = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cer");
         File serverTrust = ResourcesUtil.getFile(getClass(), "CA-rsassapss.cer");
-
-        clientKeyManagerFactory.getKeyManagers();
+        
         ClientAuth auth = ClientAuth.REQUIRE;
 
         mySetupMutualAuth(serverKeyManagerFactory, clientCert, clientKeyManagerFactory, serverTrust,
                 auth, false, true);
 
         runTest(null);
-        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
     }
 }
