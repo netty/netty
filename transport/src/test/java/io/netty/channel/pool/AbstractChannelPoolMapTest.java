@@ -26,19 +26,22 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AbstractChannelPoolMapTest {
-    @Test(expected = ConnectException.class)
+    @Test
     public void testMap() throws Exception {
         EventLoopGroup group = new LocalEventLoopGroup();
         LocalAddress addr = new LocalAddress(getLocalAddrId());
@@ -60,7 +63,7 @@ public class AbstractChannelPoolMapTest {
         assertFalse(poolMap.iterator().hasNext());
         assertEquals(0, poolMap.size());
 
-        SimpleChannelPool pool = poolMap.get(loop);
+        final SimpleChannelPool pool = poolMap.get(loop);
         assertEquals(1, poolMap.size());
         assertTrue(poolMap.iterator().hasNext());
 
@@ -71,7 +74,12 @@ public class AbstractChannelPoolMapTest {
         assertFalse(poolMap.iterator().hasNext());
         assertEquals(0, poolMap.size());
 
-        pool.acquire().syncUninterruptibly();
+        assertThrows(ConnectException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.acquire().syncUninterruptibly();
+            }
+        });
         poolMap.close();
     }
 
