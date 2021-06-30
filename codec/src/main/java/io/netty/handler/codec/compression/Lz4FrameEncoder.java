@@ -499,7 +499,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             buffer = null;
         }
         if (bufferPromise != null) {
-            bufferPromise.cancel(false);
+            bufferPromise.setFailure(new IllegalStateException("handler was removed"));
             bufferPromise = null;
         }
     }
