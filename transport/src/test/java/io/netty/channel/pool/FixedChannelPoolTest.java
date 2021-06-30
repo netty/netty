@@ -29,32 +29,33 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FixedChannelPoolTest {
     private static EventLoopGroup group;
 
-    @BeforeClass
+    @BeforeAll
     public static void createEventLoop() {
         group = new DefaultEventLoopGroup();
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroyEventLoop() {
         if (group != null) {
             group.shutdownGracefully();
@@ -104,12 +105,12 @@ public class FixedChannelPoolTest {
         pool.close();
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test
     public void testAcquireTimeout() throws Exception {
         testAcquireTimeout(500);
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test
     public void testAcquireWithZeroTimeout() throws Exception {
         testAcquireTimeout(0);
     }
@@ -138,14 +139,16 @@ public class FixedChannelPoolTest {
                                                 AcquireTimeoutAction.FAIL, timeoutMillis, 1, Integer.MAX_VALUE);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
-        Future<Channel> future = pool.acquire();
-        try {
-            future.syncUninterruptibly();
-        } finally {
-            sc.close().syncUninterruptibly();
-            channel.close().syncUninterruptibly();
-            pool.close();
-        }
+        final Future<Channel> future = pool.acquire();
+        assertThrows(TimeoutException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                future.syncUninterruptibly();
+            }
+        });
+        sc.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+        pool.close();
     }
 
     @Test
@@ -219,7 +222,7 @@ public class FixedChannelPoolTest {
         pool.close();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testAcquireBoundQueue() throws Exception {
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
@@ -240,22 +243,24 @@ public class FixedChannelPoolTest {
         // Start server
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        ChannelPool pool = new FixedChannelPool(cb, handler, 1, 1);
+        final ChannelPool pool = new FixedChannelPool(cb, handler, 1, 1);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         Future<Channel> future = pool.acquire();
         assertFalse(future.isDone());
 
-        try {
-            pool.acquire().syncUninterruptibly();
-        } finally {
-            sc.close().syncUninterruptibly();
-            channel.close().syncUninterruptibly();
-            pool.close();
-        }
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.acquire().syncUninterruptibly();
+            }
+        });
+        sc.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+        pool.close();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testReleaseDifferentPool() throws Exception {
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
@@ -277,18 +282,20 @@ public class FixedChannelPoolTest {
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(cb, handler, 1, 1);
-        ChannelPool pool2 = new FixedChannelPool(cb, handler, 1, 1);
+        final ChannelPool pool2 = new FixedChannelPool(cb, handler, 1, 1);
 
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        final Channel channel = pool.acquire().syncUninterruptibly().getNow();
 
-        try {
-            pool2.release(channel).syncUninterruptibly();
-        } finally {
-            sc.close().syncUninterruptibly();
-            channel.close().syncUninterruptibly();
-            pool.close();
-            pool2.close();
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool2.release(channel).syncUninterruptibly();
+            }
+        });
+        sc.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+        pool.close();
+        pool2.close();
     }
 
     @Test
@@ -311,7 +318,7 @@ public class FixedChannelPoolTest {
         // Start server
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
 
-        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
         final Future<Channel> acquire = pool.acquire();
         final Channel channel = acquire.get();
         pool.close();
@@ -321,15 +328,15 @@ public class FixedChannelPoolTest {
                 // NOOP
             }
         }).syncUninterruptibly();
-        try {
-            pool.release(channel).syncUninterruptibly();
-            fail();
-        } catch (IllegalStateException e) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.release(channel).syncUninterruptibly();
+            }
+        });
         // Since the pool is closed, the Channel should have been closed as well.
         channel.closeFuture().syncUninterruptibly();
-        assertFalse("Unexpected open channel", channel.isOpen());
+        assertFalse(channel.isOpen());
         sc.close().syncUninterruptibly();
         pool.close();
     }
@@ -392,7 +399,7 @@ public class FixedChannelPoolTest {
         pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
-                Assert.assertEquals(0, pool.acquiredChannelCount());
+                assertEquals(0, pool.acquiredChannelCount());
                 sc.close(closePromise).syncUninterruptibly();
             }
         }).awaitUninterruptibly();
