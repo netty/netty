@@ -56,6 +56,15 @@ public class LoggingHandler extends ChannelDuplexHandler {
     public LoggingHandler() {
         this(DEFAULT_LEVEL);
     }
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
+     * @param format Format of ByteBuf dumping
+     */
+    public LoggingHandler(ByteBufFormat format) {
+        this(DEFAULT_LEVEL, format);
+    }
 
     /**
      * Creates a new instance whose logger name is the fully qualified class

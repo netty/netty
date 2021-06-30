@@ -17,11 +17,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -41,7 +42,7 @@ public class Http2EmptyDataFrameListenerTest {
 
     private Http2EmptyDataFrameListener listener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         initMocks(this);
         when(nonEmpty.isReadable()).thenReturn(true);
@@ -53,67 +54,68 @@ public class Http2EmptyDataFrameListenerTest {
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
 
-        try {
-            listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
-            fail();
-        } catch (Http2Exception expected) {
-            // expected
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
+            }
+        });
         verify(frameListener, times(2)).onDataRead(eq(ctx), eq(1), any(ByteBuf.class), eq(0), eq(false));
     }
 
     @Test
     public void testEmptyDataFramesWithNonEmptyInBetween() throws Http2Exception {
-        Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
+        final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, nonEmpty, 0, false);
 
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
 
-        try {
-            listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
-            fail();
-        } catch (Http2Exception expected) {
-            // expected
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
+            }
+        });
         verify(frameListener, times(4)).onDataRead(eq(ctx), eq(1), any(ByteBuf.class), eq(0), eq(false));
     }
 
     @Test
     public void testEmptyDataFramesWithEndOfStreamInBetween() throws Http2Exception {
-        Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
+        final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, true);
 
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
 
-        try {
-            listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
-            fail();
-        } catch (Http2Exception expected) {
-            // expected
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
+            }
+        });
+
         verify(frameListener, times(1)).onDataRead(eq(ctx), eq(1), any(ByteBuf.class), eq(0), eq(true));
         verify(frameListener, times(3)).onDataRead(eq(ctx), eq(1), any(ByteBuf.class), eq(0), eq(false));
     }
 
     @Test
     public void testEmptyDataFramesWithHeaderFrameInBetween() throws Http2Exception {
-        Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
+        final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onHeadersRead(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, true);
 
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
 
-        try {
-            listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
-            fail();
-        } catch (Http2Exception expected) {
-            // expected
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
+            }
+        });
 
         verify(frameListener, times(1)).onHeadersRead(eq(ctx), eq(1), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true));
         verify(frameListener, times(3)).onDataRead(eq(ctx), eq(1), any(ByteBuf.class), eq(0), eq(false));
@@ -121,19 +123,19 @@ public class Http2EmptyDataFrameListenerTest {
 
     @Test
     public void testEmptyDataFramesWithHeaderFrameInBetween2() throws Http2Exception {
-        Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
+        final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onHeadersRead(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, (short) 0, false, 0, true);
 
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
         listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
 
-        try {
-            listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
-            fail();
-        } catch (Http2Exception expected) {
-            // expected
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, 1, Unpooled.EMPTY_BUFFER, 0, false);
+            }
+        });
 
         verify(frameListener, times(1)).onHeadersRead(eq(ctx), eq(1),
                 eq(EmptyHttp2Headers.INSTANCE), eq(0), eq((short) 0), eq(false), eq(0), eq(true));

@@ -32,9 +32,8 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +45,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,9 +54,6 @@ public class Http2StreamChannelBootstrapTest {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(Http2StreamChannelBootstrapTest.class);
-
-    @Rule
-    public ExpectedException exceptionRule = ExpectedException.none();
 
     private volatile Channel serverConnectedChannel;
 
@@ -109,14 +106,18 @@ public class Http2StreamChannelBootstrapTest {
             });
 
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
-            Promise<Http2StreamChannel> promise = clientChannel.eventLoop().newPromise();
+            final Promise<Http2StreamChannel> promise = clientChannel.eventLoop().newPromise();
             bootstrap.open(promise);
             assertThat(promise.isDone(), is(false));
             closeLatch.countDown();
 
-            exceptionRule.expect(ExecutionException.class);
-            exceptionRule.expectCause(IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
-            promise.get(3, SECONDS);
+            ExecutionException exception = assertThrows(ExecutionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    promise.get(3, SECONDS);
+                }
+            });
+            assertThat(exception.getCause(), IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
         } finally {
             safeClose(clientChannel);
             safeClose(serverConnectedChannel);

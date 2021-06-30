@@ -14,17 +14,18 @@
  */
 package io.netty.handler.codec.http2;
 
-import org.junit.Test;
-
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec> {
 
@@ -76,14 +77,20 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
         assertTrue(upgradeHandler.channelInactiveCalled);
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void clientUpgradeWithoutUpgradeHandlerThrowsHttp2Exception() throws Http2Exception {
-        C codec = newCodec(null);
-        EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
-        try {
-            codec.onHttpClientUpgrade();
-        } finally {
-            assertTrue(ch.finishAndReleaseAll());
-        }
+        final C codec = newCodec(null);
+        final EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
+
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                try {
+                    codec.onHttpClientUpgrade();
+                } finally {
+                    ch.finishAndReleaseAll();
+                }
+            }
+        });
     }
 }

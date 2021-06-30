@@ -14,20 +14,29 @@
  */
 package io.netty.handler.codec.http2;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public class DecoratingHttp2ConnectionEncoderTest {
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testConsumeReceivedSettingsThrows() {
         Http2ConnectionEncoder encoder = mock(Http2ConnectionEncoder.class);
-        DecoratingHttp2ConnectionEncoder decoratingHttp2ConnectionEncoder =
+        final DecoratingHttp2ConnectionEncoder decoratingHttp2ConnectionEncoder =
                 new DecoratingHttp2ConnectionEncoder(encoder);
-        decoratingHttp2ConnectionEncoder.consumeReceivedSettings(Http2Settings.defaultSettings());
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                decoratingHttp2ConnectionEncoder.consumeReceivedSettings(Http2Settings.defaultSettings());
+            }
+        });
     }
 
     @Test

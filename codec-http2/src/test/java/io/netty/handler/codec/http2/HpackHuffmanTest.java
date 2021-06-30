@@ -34,11 +34,14 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import java.util.Arrays;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackHuffmanTest {
 
@@ -55,62 +58,108 @@ public class HpackHuffmanTest {
         roundTrip(buf);
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeEOS() throws Http2Exception {
-        byte[] buf = new byte[4];
+        final byte[] buf = new byte[4];
         for (int i = 0; i < 4; i++) {
             buf[i] = (byte) 0xFF;
         }
-        decode(buf);
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeIllegalPadding() throws Http2Exception {
-        byte[] buf = new byte[1];
+        final byte[] buf = new byte[1];
         buf[0] = 0x00; // '0', invalid padding
-        decode(buf);
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding() throws Http2Exception {
-        byte[] buf = makeBuf(0x0f, 0xFF); // '1', 'EOS'
-        decode(buf);
+        final byte[] buf = makeBuf(0x0f, 0xFF); // '1', 'EOS'
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding1byte() throws Http2Exception {
-        byte[] buf = makeBuf(0xFF);
-        decode(buf);
+        final byte[] buf = makeBuf(0xFF);
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding2byte() throws Http2Exception {
-        byte[] buf = makeBuf(0x1F, 0xFF); // 'a'
-        decode(buf);
+        final byte[] buf = makeBuf(0x1F, 0xFF); // 'a'
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding3byte() throws Http2Exception {
-        byte[] buf = makeBuf(0x1F, 0xFF, 0xFF); // 'a'
-        decode(buf);
+        final byte[] buf = makeBuf(0x1F, 0xFF, 0xFF); // 'a'
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding4byte() throws Http2Exception {
-        byte[] buf = makeBuf(0x1F, 0xFF, 0xFF, 0xFF); // 'a'
-        decode(buf);
+        final byte[] buf = makeBuf(0x1F, 0xFF, 0xFF, 0xFF); // 'a'
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodeExtraPadding29bit() throws Http2Exception {
-        byte[] buf = makeBuf(0xFF, 0x9F, 0xFF, 0xFF, 0xFF);  // '|'
-        decode(buf);
+        final byte[] buf = makeBuf(0xFF, 0x9F, 0xFF, 0xFF, 0xFF);  // '|'
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testDecodePartialSymbol() throws Http2Exception {
-        byte[] buf = makeBuf(0x52, 0xBC, 0x30, 0xFF, 0xFF, 0xFF, 0xFF); // " pFA\x00", 31 bits of padding, a.k.a. EOS
-        decode(buf);
+        final byte[] buf =
+                makeBuf(0x52, 0xBC, 0x30, 0xFF, 0xFF, 0xFF, 0xFF); // " pFA\x00", 31 bits of padding, a.k.a. EOS
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode(buf);
+            }
+        });
     }
 
     private static byte[] makeBuf(int ... bytes) {
@@ -144,7 +193,7 @@ public class HpackHuffmanTest {
 
             byte[] actualBytes = decode(bytes);
 
-            Assert.assertTrue(Arrays.equals(buf, actualBytes));
+            assertArrayEquals(buf, actualBytes);
         } finally {
             buffer.release();
         }
@@ -154,7 +203,7 @@ public class HpackHuffmanTest {
         ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
         try {
             AsciiString decoded = new HpackHuffmanDecoder().decode(buffer, buffer.readableBytes());
-            Assert.assertFalse(buffer.isReadable());
+            assertFalse(buffer.isReadable());
             return decoded.toByteArray();
         } finally {
             buffer.release();

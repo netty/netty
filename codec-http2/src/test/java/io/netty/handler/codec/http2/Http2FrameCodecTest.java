@@ -42,16 +42,19 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ReflectionUtil;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -62,12 +65,12 @@ import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
@@ -98,12 +101,12 @@ public class Http2FrameCodecTest {
     private final Http2Headers response = new DefaultHttp2Headers()
             .status(HttpResponseStatus.OK.codeAsText());
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings());
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (inboundHandler != null) {
             inboundHandler.finishAndReleaseAll();
@@ -425,12 +428,13 @@ public class Http2FrameCodecTest {
         Http2HeadersFrame headersFrame = inboundHandler.readInboundMessageOrUserEvent();
         assertNotNull(headersFrame);
 
-        try {
-            inboundHandler.checkException();
-            fail("stream exception expected");
-        } catch (Http2FrameStreamException e) {
-            assertEquals(streamEx, e.getCause());
-        }
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(streamEx, e.getCause());
 
         assertNull(inboundHandler.readInboundMessageOrUserEvent());
     }
@@ -576,7 +580,8 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeSettings(eqFrameCodecCtx(), same(settings), any(ChannelPromise.class));
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void newOutboundStream() {
         final Http2FrameStream stream = frameCodec.newStream();
 
@@ -847,7 +852,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
+        Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
@@ -885,7 +890,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
+        Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         String longString = new String(new char[70000]).replace("\0", "*");
         DefaultFullHttpRequest request =
