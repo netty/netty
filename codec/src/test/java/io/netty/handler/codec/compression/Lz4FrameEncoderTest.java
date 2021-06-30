@@ -252,9 +252,11 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
         final ByteBuf empty1 = channel.readOutbound();
         assertEquals(0, empty1.readableBytes());
+        empty1.release();
 
         final ByteBuf empty2 = channel.readOutbound();
         assertEquals(0, empty2.readableBytes());
+        empty2.release();
 
         final ByteBuf flushedMessage = channel.readOutbound();
         assertThat(flushedMessage.readableBytes(), greaterThan(0));
@@ -280,6 +282,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
         final ByteBuf empty = channel.readOutbound();
         assertEquals(0, empty.readableBytes());
+        empty.release();
 
         final ByteBuf flushedMessage = channel.readOutbound();
         assertThat(flushedMessage.readableBytes(), greaterThan(0));
@@ -311,6 +314,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
         final ByteBuf empty = channel.readOutbound();
         assertEquals(0, empty.readableBytes());
+        empty.release();
 
         final ByteBuf flushedMessage = channel.readOutbound();
         assertThat(flushedMessage.readableBytes(), greaterThan(0));
