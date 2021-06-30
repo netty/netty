@@ -17,8 +17,7 @@ package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ResourcesUtil;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,7 +28,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class HostsFileParserTest {
 
@@ -53,15 +53,15 @@ public class HostsFileParserTest {
         Map<String, Inet4Address> inet4Entries = entries.inet4Entries();
         Map<String, Inet6Address> inet6Entries = entries.inet6Entries();
 
-        assertEquals("Expected 7 IPv4 entries", 7, inet4Entries.size());
-        assertEquals("Expected 1 IPv6 entries", 1, inet6Entries.size());
+        assertEquals(7, inet4Entries.size(), "Expected 7 IPv4 entries");
+        assertEquals(1, inet6Entries.size(), "Expected 1 IPv6 entries");
         assertEquals("127.0.0.1", inet4Entries.get("host1").getHostAddress());
         assertEquals("192.168.0.1", inet4Entries.get("host2").getHostAddress());
         assertEquals("192.168.0.2", inet4Entries.get("host3").getHostAddress());
         assertEquals("192.168.0.3", inet4Entries.get("host4").getHostAddress());
         assertEquals("192.168.0.3", inet4Entries.get("host5").getHostAddress());
         assertEquals("192.168.0.3", inet4Entries.get("host6").getHostAddress());
-        assertNotNull("uppercase host doesn't resolve", inet4Entries.get("host7"));
+        assertNotNull(inet4Entries.get("host7"), "uppercase host doesn't resolve");
         assertEquals("192.168.0.5", inet4Entries.get("host7").getHostAddress());
         assertEquals("0:0:0:0:0:0:0:1", inet6Entries.get("host1").getHostAddress());
     }
@@ -72,7 +72,6 @@ public class HostsFileParserTest {
         try {
             unicodeCharset = Charset.forName("unicode");
         } catch (UnsupportedCharsetException e) {
-            Assume.assumeNoException(e);
             return;
         }
         testParseFile(HostsFileParser.parse(
@@ -85,7 +84,6 @@ public class HostsFileParserTest {
         try {
             unicodeCharset = Charset.forName("unicode");
         } catch (UnsupportedCharsetException e) {
-            Assume.assumeNoException(e);
             return;
         }
         testParseFile(HostsFileParser.parse(ResourcesUtil.getFile(getClass(),  "hosts-unicode"),
@@ -96,8 +94,8 @@ public class HostsFileParserTest {
         Map<String, Inet4Address> inet4Entries = entries.inet4Entries();
         Map<String, Inet6Address> inet6Entries = entries.inet6Entries();
 
-        assertEquals("Expected 2 IPv4 entries", 2, inet4Entries.size());
-        assertEquals("Expected 1 IPv6 entries", 1, inet6Entries.size());
+        assertEquals(2, inet4Entries.size(), "Expected 2 IPv4 entries");
+        assertEquals(1, inet6Entries.size(), "Expected 1 IPv6 entries");
         assertEquals("127.0.0.1", inet4Entries.get("localhost").getHostAddress());
         assertEquals("255.255.255.255", inet4Entries.get("broadcasthost").getHostAddress());
         assertEquals("0:0:0:0:0:0:0:1", inet6Entries.get("localhost").getHostAddress());

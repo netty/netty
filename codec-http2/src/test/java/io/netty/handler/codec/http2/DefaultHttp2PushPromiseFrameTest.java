@@ -30,14 +30,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
 
@@ -47,7 +47,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     private ChannelFuture connectionFuture;
 
-    @Before
+    @BeforeEach
     public void setup() throws InterruptedException {
         ServerBootstrap serverBootstrap = new ServerBootstrap()
                 .group(eventLoopGroup)
@@ -101,7 +101,7 @@ public class DefaultHttp2PushPromiseFrameTest {
         });
     }
 
-    @After
+    @AfterEach
     public void shutdown() {
         eventLoopGroup.shutdownGracefully();
     }

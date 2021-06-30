@@ -27,7 +27,8 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,13 +36,13 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SimpleChannelPoolTest {
     @Test
@@ -67,25 +68,25 @@ public class SimpleChannelPoolTest {
         Channel sc = sb.bind(addr).sync().channel();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
-        ChannelPool pool = new SimpleChannelPool(cb, handler);
+        final ChannelPool pool = new SimpleChannelPool(cb, handler);
 
         Channel channel = pool.acquire().sync().getNow();
 
         pool.release(channel).syncUninterruptibly();
 
-        Channel channel2 = pool.acquire().sync().getNow();
+        final Channel channel2 = pool.acquire().sync().getNow();
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
         pool.release(channel2).syncUninterruptibly();
 
         // Should fail on multiple release calls.
-        try {
-            pool.release(channel2).syncUninterruptibly();
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-            assertFalse(channel.isActive());
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.release(channel2).syncUninterruptibly();
+            }
+        });
+        assertFalse(channel.isActive());
 
         assertEquals(2, handler.acquiredCount());
         assertEquals(2, handler.releasedCount());
@@ -118,7 +119,7 @@ public class SimpleChannelPoolTest {
         Channel sc = sb.bind(addr).sync().channel();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
-        ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE) {
+        final ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE) {
             private final Queue<Channel> queue = new LinkedBlockingQueue<Channel>(1);
 
             @Override
@@ -133,15 +134,15 @@ public class SimpleChannelPoolTest {
         };
 
         Channel channel = pool.acquire().sync().getNow();
-        Channel channel2 = pool.acquire().sync().getNow();
+        final Channel channel2 = pool.acquire().sync().getNow();
 
         pool.release(channel).syncUninterruptibly().getNow();
-        try {
-            pool.release(channel2).syncUninterruptibly();
-            fail();
-        } catch (IllegalStateException e) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.release(channel2).syncUninterruptibly();
+            }
+        });
         channel2.close().sync();
 
         assertEquals(2, handler.channelCount());

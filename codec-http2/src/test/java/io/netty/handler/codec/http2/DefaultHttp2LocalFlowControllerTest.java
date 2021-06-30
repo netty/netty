@@ -18,16 +18,16 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -39,8 +39,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.EventExecutor;
 import junit.framework.AssertionFailedError;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -68,7 +69,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private DefaultHttp2Connection connection;
 
-    @Before
+    @BeforeEach
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
         setupChannelHandlerContext(false);
@@ -136,10 +137,15 @@ public class DefaultHttp2LocalFlowControllerTest {
         verifyNoMoreInteractions(frameWriter);
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void connectionFlowControlExceededShouldThrow() throws Http2Exception {
         // Window exceeded because of the padding.
-        receiveFlowControlledFrame(STREAM_ID, DEFAULT_WINDOW_SIZE, 1, true);
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                receiveFlowControlledFrame(STREAM_ID, DEFAULT_WINDOW_SIZE, 1, true);
+            }
+        });
     }
 
     @Test
@@ -342,9 +348,14 @@ public class DefaultHttp2LocalFlowControllerTest {
         assertFalse(controller.consumeBytes(connection.stream(STREAM_ID), 0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void consumeBytesForNegativeNumBytesShouldFail() throws Http2Exception {
-        assertFalse(controller.consumeBytes(connection.stream(STREAM_ID), -1));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.consumeBytes(connection.stream(STREAM_ID), -1);
+            }
+        });
     }
 
     private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)

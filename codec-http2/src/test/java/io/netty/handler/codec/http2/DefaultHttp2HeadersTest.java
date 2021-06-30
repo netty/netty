@@ -18,23 +18,39 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Map.Entry;
 
 import static io.netty.util.AsciiString.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultHttp2HeadersTest {
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void nullHeaderNameNotAllowed() {
-        new DefaultHttp2Headers().add(null, "foo");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add(null, "foo");
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void emptyHeaderNameNotAllowed() {
-        new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+            }
+        });
     }
 
     @Test
@@ -126,11 +142,16 @@ public class DefaultHttp2HeadersTest {
         assertEquals("value2", headers.get("name2"));
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testHeaderNameValidation() {
-        Http2Headers headers = newHeaders();
+        final Http2Headers headers = newHeaders();
 
-        headers.add(of("Foo"), of("foo"));
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.add(of("Foo"), of("foo"));
+            }
+        });
     }
 
     @Test

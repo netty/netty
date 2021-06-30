@@ -27,9 +27,10 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -47,9 +48,9 @@ import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.min;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -90,7 +91,7 @@ public class Http2FrameRoundtripTest {
     private Http2FrameReader reader;
     private final List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
@@ -120,7 +121,7 @@ public class Http2FrameRoundtripTest {
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         try {
             // Release all of the buffers.
@@ -286,14 +287,15 @@ public class Http2FrameRoundtripTest {
         reader.configuration().headersConfiguration().maxHeaderListSize(maxListSize, maxListSize);
         final Http2Headers headers = headersOfSize(maxListSize + 1);
         writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, MAX_PADDING, true, ctx.newPromise());
-        try {
-            readFrames();
-            fail();
-        } catch (Http2Exception e) {
-            verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
-                    any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(),
-                    anyBoolean());
-        }
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                readFrames();
+            }
+        });
+        verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
+                any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(),
+                anyBoolean());
     }
 
     @Test

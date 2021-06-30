@@ -40,9 +40,10 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -69,13 +70,13 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -115,14 +116,14 @@ public class Http2ConnectionRoundtripTest {
     private CountDownLatch trailersLatch;
     private CountDownLatch goAwayLatch;
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
         mockFlowControl(clientListener);
         mockFlowControl(serverListener);
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
@@ -311,8 +312,8 @@ public class Http2ConnectionRoundtripTest {
         });
 
         assertTrue(clientDataWrite.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
-        assertNotNull("Header encode should have exceeded maxHeaderListSize!", clientHeadersWriteException.get());
-        assertNotNull("Data on closed stream should fail!", clientDataWriteException.get());
+        assertNotNull(clientHeadersWriteException.get(), "Header encode should have exceeded maxHeaderListSize!");
+        assertNotNull(clientDataWriteException.get(), "Data on closed stream should fail!");
 
         // Set the maxHeaderListSize to the max value so we can send the headers.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
@@ -345,8 +346,8 @@ public class Http2ConnectionRoundtripTest {
         });
 
         assertTrue(clientHeadersLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
-        assertNull("Client write of headers should succeed with increased header list size!",
-                   clientHeadersWriteException2.get());
+        assertNull(clientHeadersWriteException2.get(),
+                "Client write of headers should succeed with increased header list size!");
         assertTrue(serverRevHeadersLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class),
@@ -724,12 +725,13 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        try {
-            emptyDataPromise.get();
-            fail();
-        } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
-        }
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                emptyDataPromise.get();
+            }
+        });
+        assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
     }
 
     @Test
@@ -775,13 +777,13 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        try {
-            dataPromise.get();
-            fail();
-        } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
-        }
-
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dataPromise.get();
+            }
+        });
+        assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
         assertPromise.sync();
     }
 

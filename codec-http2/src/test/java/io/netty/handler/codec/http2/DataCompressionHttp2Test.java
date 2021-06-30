@@ -35,9 +35,9 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -53,8 +53,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -88,7 +88,7 @@ public class DataCompressionHttp2Test {
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
 
-    @Before
+    @BeforeEach
     public void setup() throws InterruptedException, Http2Exception {
         MockitoAnnotations.initMocks(this);
         doAnswer(new Answer<Void>() {
@@ -113,12 +113,12 @@ public class DataCompressionHttp2Test {
                 anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
     }
 
-    @After
+    @AfterEach
     public void cleanup() throws IOException {
         serverOut.close();
     }
 
-    @After
+    @AfterEach
     public void teardown() throws InterruptedException {
         if (clientChannel != null) {
             clientChannel.close().sync();

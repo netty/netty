@@ -21,13 +21,17 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Queue;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class JdkZlibTest extends ZlibTest {
@@ -42,10 +46,15 @@ public class JdkZlibTest extends ZlibTest {
         return new JdkZlibDecoder(wrapper, maxAllocation);
     }
 
-    @Test(expected = DecompressionException.class)
+    @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        super.testZLIB_OR_NONE3();
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                JdkZlibTest.super.testZLIB_OR_NONE3();
+            }
+        });
     }
 
     @Test
