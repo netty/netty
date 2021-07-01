@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -69,6 +70,8 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
 
     private final String fallbackProtocol;
+    private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
+    private ChannelHandlerContext ctx;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -78,6 +81,36 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
      */
     protected ApplicationProtocolNegotiationHandler(String fallbackProtocol) {
         this.fallbackProtocol = requireNonNull(fallbackProtocol, "fallbackProtocol");
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        fireBufferedMessages();
+        bufferedMessages.recycle();
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // Let's buffer all data until this handler will be removed from the pipeline.
+        bufferedMessages.add(msg);
+    }
+
+    /**
+     * Process all backlog into pipeline from List.
+     */
+    private void fireBufferedMessages() {
+        if (!bufferedMessages.isEmpty()) {
+            for (int i = 0; i < bufferedMessages.size(); i++) {
+                ctx.fireChannelRead(bufferedMessages.get(i));
+            }
+            ctx.fireChannelReadComplete();
+            bufferedMessages.clear();
+        }
     }
 
     @Override
@@ -120,6 +153,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             pipeline.remove(this);
         }
     }
+
     /**
      * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline
      * for the negotiated application-level protocol.
