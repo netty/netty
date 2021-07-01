@@ -15,8 +15,9 @@
 package io.netty.util.collection;
 
 import io.netty.util.collection.@K@ObjectMap.PrimitiveEntry;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,7 +27,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 
 /**
  * Tests for {@link @K@ObjectHashMap}.
@@ -73,13 +80,13 @@ public class @K@ObjectHashMapTest {
 
     private @K@ObjectHashMap<Value> map;
 
-    @Before
+    @BeforeEach
     public void setup() {
         map = new @K@ObjectHashMap<Value>();
     }
 
     @Test
-    public void iteartorRemoveShouldNotNPE() {
+    public void iteratorRemoveShouldNotNPE() {
         map = new @K@ObjectHashMap<Value>(4, 1);
         map.put((@O@)(@k@) 0, new Value("A"));
         map.put((@O@)(@k@) 1, new Value("B"));
