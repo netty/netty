@@ -151,7 +151,6 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
         if (pipeline.context(this) != null) {
-            fireBufferedMessages();
             pipeline.remove(this);
         }
     }
