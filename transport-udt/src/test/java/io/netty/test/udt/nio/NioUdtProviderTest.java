@@ -24,10 +24,11 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.channel.udt.nio.NioUdtMessageAcceptorChannel;
 import io.netty.channel.udt.nio.NioUdtMessageConnectorChannel;
 import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class NioUdtProviderTest extends AbstractUdtTest {
 
@@ -68,7 +69,7 @@ public class NioUdtProviderTest extends AbstractUdtTest {
         assertNotNull(NioUdtProvider.channelUDT(nioUdtMessageRendezvousChannel));
 
         // acceptor types
-        assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel() instanceof UdtServerChannel);
-        assertTrue(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel() instanceof UdtServerChannel);
+        assertThat(NioUdtProvider.BYTE_ACCEPTOR.newChannel(), instanceOf(UdtServerChannel.class));
+        assertThat(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(), instanceOf(UdtServerChannel.class));
     }
 }
