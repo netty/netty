@@ -21,6 +21,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -135,6 +136,28 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * @param nThreads the number of threads that will be used by this instance.
+     * @param executor the Executor to use, or {@code null} if default one should be used.
+     * @param chooserFactory the {@link EventExecutorChooserFactory} to use.
+     * @param selectStrategyFactory the {@link SelectStrategyFactory} to use.
+     * @param rejectedExecutionHandler the {@link RejectedExecutionHandler} to use.
+     * @param taskQueueFactory the {@link EventLoopTaskQueueFactory} to use for
+     *                         {@link SingleThreadEventLoop#execute(Runnable)},
+     *                         or {@code null} if default one should be used.
+     * @param tailTaskQueueFactory the {@link EventLoopTaskQueueFactory} to use for
+     *                             {@link SingleThreadEventLoop#executeAfterEventLoopIteration(Runnable)},
+     *                             or {@code null} if default one should be used.
+     */
+    public EpollEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
+                               SelectStrategyFactory selectStrategyFactory,
+                               RejectedExecutionHandler rejectedExecutionHandler,
+                               EventLoopTaskQueueFactory taskQueueFactory,
+                               EventLoopTaskQueueFactory tailTaskQueueFactory) {
+        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler, taskQueueFactory,
+                tailTaskQueueFactory);
+    }
+
+    /**
      * @deprecated This method will be removed in future releases, and is not guaranteed to have any impacts.
      */
     @Deprecated
@@ -146,9 +169,21 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        EventLoopTaskQueueFactory queueFactory = args.length == 4 ? (EventLoopTaskQueueFactory) args[3] : null;
-        return new EpollEventLoop(this, executor, (Integer) args[0],
-                ((SelectStrategyFactory) args[1]).newSelectStrategy(),
-                (RejectedExecutionHandler) args[2], queueFactory);
+        Integer maxEvents = (Integer) args[0];
+        SelectStrategyFactory selectStrategyFactory = (SelectStrategyFactory) args[1];
+        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[2];
+        EventLoopTaskQueueFactory taskQueueFactory = null;
+        EventLoopTaskQueueFactory tailTaskQueueFactory = null;
+
+        int argsLength = args.length;
+        if (argsLength > 3) {
+            taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+        }
+        if (argsLength > 4) {
+            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
+        }
+        return new EpollEventLoop(this, executor, maxEvents,
+                selectStrategyFactory.newSelectStrategy(),
+                rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 }
