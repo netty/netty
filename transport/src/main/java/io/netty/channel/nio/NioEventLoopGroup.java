@@ -175,9 +175,9 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         int argsLength = args.length;
         if (argsLength > 3) {
             taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
-            if (argsLength > 4) {
-                tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
-            }
+        }
+        if (argsLength > 4) {
+            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
         }
         return new NioEventLoop(this, executor, selectorProvider,
                 selectStrategyFactory.newSelectStrategy(),
