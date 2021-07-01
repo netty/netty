@@ -18,17 +18,20 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import org.junit.Test;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
 import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -98,5 +101,51 @@ public class ApplicationProtocolNegotiationHandlerTest {
             assertNull(channel.pipeline().context(alpnHandler));
             assertFalse(channel.finishAndReleaseAll());
         }
+    }
+
+    @Test
+    public void testBufferMessagesUntilHandshakeComplete() throws Exception {
+        final AtomicReference<byte[]> channelReadData = new AtomicReference<byte[]>();
+        final AtomicBoolean channelReadCompleteCalled = new AtomicBoolean(false);
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                assertEquals(ApplicationProtocolNames.HTTP_1_1, protocol);
+                ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        channelReadData.set((byte[]) msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        channelReadCompleteCalled.set(true);
+                    }
+                });
+            }
+        };
+
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        // This test is mocked/simulated and doesn't go through full TLS handshake. Currently only JDK SSLEngineImpl
+        // client mode will generate a close_notify.
+        engine.setUseClientMode(true);
+
+        final byte[] someBytes = new byte[1024];
+
+        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                    ctx.fireChannelRead(someBytes);
+                }
+                ctx.fireUserEventTriggered(evt);
+            }
+        }, alpnHandler);
+        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+        assertNull(channel.pipeline().context(alpnHandler));
+        assertArrayEquals(someBytes, channelReadData.get());
+        assertTrue(channelReadCompleteCalled.get());
+        assertNull(channel.readInbound());
+        channel.finishAndReleaseAll();
     }
 }

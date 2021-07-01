@@ -70,7 +70,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
 
     private final String fallbackProtocol;
-    private final RecyclableArrayList backlogList = RecyclableArrayList.newInstance();
+    private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
     private ChannelHandlerContext ctx;
 
     /**
@@ -91,34 +91,28 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        releaseBacklog();
-        backlogList.recycle();
+        fireBufferedMessages();
+        bufferedMessages.recycle();
         super.handlerRemoved(ctx);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        backlogList.add(msg);
+        // Let's buffer all data until this handler will be removed from the pipeline.
+        bufferedMessages.add(msg);
     }
 
     /**
      * Process all backlog into pipeline from List.
      */
-    private void processBacklog() {
-        for (Object o : backlogList) {
-            ctx.fireChannelRead(o);
+    private void fireBufferedMessages() {
+        if (!bufferedMessages.isEmpty()) {
+            for (int i = 0; i < bufferedMessages.size(); i++) {
+                ctx.fireChannelRead(bufferedMessages.get(i));
+            }
+            ctx.fireChannelReadComplete();
+            bufferedMessages.clear();
         }
-        backlogList.clear();
-    }
-
-    /**
-     * Release all backlog from List
-     */
-    private void releaseBacklog() {
-        for (Object o : backlogList) {
-            ReferenceCountUtil.release(o);
-        }
-        backlogList.clear();
     }
 
     @Override
@@ -134,7 +128,6 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     }
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
-                    processBacklog();
                 } else {
                     // if the event is not produced because of an successful handshake we will receive the same
                     // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
@@ -144,7 +137,6 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
-                releaseBacklog();
             } finally {
                 // Handshake failures are handled in exceptionCaught(...).
                 if (handshakeEvent.isSuccess()) {
@@ -159,6 +151,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
         if (pipeline.context(this) != null) {
+            fireBufferedMessages();
             pipeline.remove(this);
         }
     }
