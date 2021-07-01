@@ -17,9 +17,9 @@
 package io.netty.test.udt.nio;
 
 import io.netty.channel.udt.nio.NioUdtMessageConnectorChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class NioUdtMessageConnectorChannelTest extends AbstractUdtTest {
 
