@@ -29,8 +29,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,7 +37,8 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EpollSpliceTest {
 
@@ -238,8 +238,8 @@ public class EpollSpliceTest {
         FileInputStream in = new FileInputStream(file);
 
         try {
-            Assert.assertEquals(written.length, in.read(written));
-            Assert.assertArrayEquals(data, written);
+            assertEquals(written.length, in.read(written));
+            assertArrayEquals(data, written);
         } finally {
             in.close();
             group.shutdownGracefully();
