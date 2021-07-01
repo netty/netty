@@ -174,6 +174,17 @@ public final class ObjectUtil {
      * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
+    public static short checkInRange(short i, short start, short end, String name) {
+        if (i < start || i > end) {
+            throw new IllegalArgumentException(name + ": " + i + " (expected: " + start + "-" + end + ")");
+        }
+        return i;
+    }
+
+    /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
     public static int checkInRange(int i, int start, int end, String name) {
         if (i < start || i > end) {
             throw new IllegalArgumentException(name + ": " + i + " (expected: " + start + "-" + end + ")");
