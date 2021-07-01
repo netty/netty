@@ -13,17 +13,17 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.handler.codec.http2.Http2Settings;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.handler.codec.http2.Http2Settings;
 
 import java.util.function.Function;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 public final class Http2ClientCodecBuilder {
     private Function<Channel, ChannelFlowControlledBytesDistributor> distributorFactory;
@@ -100,7 +100,7 @@ public final class Http2ClientCodecBuilder {
         return build0(sslContext, new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new EnsureByteBufOutbound());
+                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 if (headerSensitivityDetector != null) {
                     ch.pipeline().addLast(new Http2FrameEncoder(headerSensitivityDetector));
                 } else {
@@ -131,7 +131,7 @@ public final class Http2ClientCodecBuilder {
         return build0(sslContext, new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new EnsureByteBufOutbound());
+                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 ch.pipeline().addLast(new Http2FrameDecoder(validateHeaders));
                 final ChannelFlowControlledBytesDistributor distributor;
                 if (distributorFactory == null) {
@@ -147,7 +147,7 @@ public final class Http2ClientCodecBuilder {
                                 (DefaultChannelFlowControlledBytesDistributor) distributor) :
                         new Http2ClientStreamMuxer(h2channel, headerSensitivityDetector);
                 // Muxer creates child streams which will write Buffer instances to the parent channel
-                ch.pipeline().addLast(new EnsureByteBufOutbound());
+                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 h2channel.pipeline().addLast(muxer);
 
                 initializer.initialize(ch, h2channel);
@@ -160,7 +160,8 @@ public final class Http2ClientCodecBuilder {
             @Override
             protected void initChannel(Channel ch) {
                 if (sslContext != null) {
-                    ch.pipeline().addLast(sslContext.newHandler(ch.alloc()), sslContext.newApnHandler(h2Initializer));
+                    ch.pipeline().addLast(sslContext.newHandler(ch.bufferAllocator()),
+                                          sslContext.newApnHandler(h2Initializer));
                 } else {
                     ch.pipeline().addLast(h2Initializer);
                 }

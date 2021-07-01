@@ -12,23 +12,23 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
+import io.netty5.util.internal.EmptyArrays;
 
 import java.util.function.Supplier;
 
-import static io.netty.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
+import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * A {@link ChannelHandler} that manages <a href="https://httpwg.org/specs/rfc7540.html#GOAWAY">GOAWAY</a> handling. An
@@ -44,13 +44,13 @@ final class GoAwayManager extends ChannelHandlerAdapter {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        final ByteBufAllocator alloc = ctx.alloc();
-        if (alloc instanceof ByteBufAllocatorAdaptor) {
-            allocator = ((ByteBufAllocatorAdaptor) alloc).getOnHeap();
+        final BufferAllocator alloc = ctx.bufferAllocator();
+        if (!alloc.getAllocationType().isDirect()) {
+            allocator = alloc;
         } else {
-            allocator = BufferAllocator.onHeapPooled();
+            allocator = DefaultBufferAllocators.onHeapAllocator();
         }
-        emptyDebugDataSupplier = allocator.constBufferSupplier(new byte[0]);
+        emptyDebugDataSupplier = allocator.constBufferSupplier(EmptyArrays.EMPTY_BYTES);
     }
 
     @Override

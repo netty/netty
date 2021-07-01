@@ -12,18 +12,18 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.internal.logging.InternalLogger;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.logging.InternalLogger;
 
-import static io.netty.handler.codec.h2new.GoAwayManager.ProtocolErrorEvent.PROTOCOL_ERROR_EVENT_NO_DEBUG_DATA;
-import static io.netty.util.internal.logging.InternalLoggerFactory.getInstance;
+import static io.netty5.handler.codec.h2new.GoAwayManager.ProtocolErrorEvent.PROTOCOL_ERROR_EVENT_NO_DEBUG_DATA;
+import static io.netty5.util.internal.logging.InternalLoggerFactory.getInstance;
 
 /**
  * A {@link ChannelHandler} that validates frames exchanged on a stream.

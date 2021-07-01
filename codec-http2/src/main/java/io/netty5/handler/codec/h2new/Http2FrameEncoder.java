@@ -13,62 +13,61 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.DefaultHttp2HeadersEncoder;
-import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2FrameWriter;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersEncoder;
-import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.DefaultHttp2HeadersEncoder;
+import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty5.handler.codec.http2.Http2Exception;
+import io.netty5.handler.codec.http2.Http2FrameWriter;
+import io.netty5.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.handler.codec.http2.Http2Settings;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.handler.codec.h2new.Http2Flags.ACK;
-import static io.netty.handler.codec.h2new.Http2Flags.END_HEADERS;
-import static io.netty.handler.codec.h2new.Http2Flags.END_STREAM;
-import static io.netty.handler.codec.h2new.Http2Flags.PADDED;
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.GO_AWAY_FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HEADERS_FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_FRAME_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PUSH_PROMISE_FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.RST_STREAM_FRAME_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.WINDOW_UPDATE_FRAME_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
-import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
-import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
-import static io.netty.handler.codec.http2.Http2FrameTypes.GO_AWAY;
-import static io.netty.handler.codec.http2.Http2FrameTypes.HEADERS;
-import static io.netty.handler.codec.http2.Http2FrameTypes.PING;
-import static io.netty.handler.codec.http2.Http2FrameTypes.PRIORITY;
-import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
-import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
-import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
-import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.handler.codec.h2new.Http2Flags.ACK;
+import static io.netty5.handler.codec.h2new.Http2Flags.END_HEADERS;
+import static io.netty5.handler.codec.h2new.Http2Flags.END_STREAM;
+import static io.netty5.handler.codec.h2new.Http2Flags.PADDED;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.GO_AWAY_FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.HEADERS_FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.PRIORITY_FRAME_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.PUSH_PROMISE_FRAME_HEADER_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.RST_STREAM_FRAME_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.WINDOW_UPDATE_FRAME_LENGTH;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.verifyPadding;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.CONTINUATION;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.DATA;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.GO_AWAY;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.HEADERS;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.PING;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.PRIORITY;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.RST_STREAM;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.SETTINGS;
+import static io.netty5.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
@@ -89,7 +88,6 @@ final class Http2FrameEncoder extends ChannelHandlerAdapter {
 
     private final Http2HeadersEncoder headersEncoder;
     private int maxFrameSize;
-    private ByteBufAllocatorAdaptor byteBufAllocatorAdaptor;
 
     Http2FrameEncoder() {
         this(new DefaultHttp2HeadersEncoder());
@@ -106,18 +104,6 @@ final class Http2FrameEncoder extends ChannelHandlerAdapter {
     Http2FrameEncoder(Http2HeadersEncoder headersEncoder) {
         this.headersEncoder = headersEncoder;
         maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        byteBufAllocatorAdaptor = new ByteBufAllocatorAdaptor();
-    }
-
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (byteBufAllocatorAdaptor != null) {
-            byteBufAllocatorAdaptor.close();
-        }
     }
 
     @Override
@@ -609,8 +595,8 @@ final class Http2FrameEncoder extends ChannelHandlerAdapter {
         }
     }
 
-    private ByteBufAdaptor toByteBuf(Buffer data) {
-        return new ByteBufAdaptor(byteBufAllocatorAdaptor, data, data.capacity());
+    private ByteBuf toByteBuf(Buffer data) {
+        return ByteBufAdaptor.intoByteBuf(data);
     }
 
     /**

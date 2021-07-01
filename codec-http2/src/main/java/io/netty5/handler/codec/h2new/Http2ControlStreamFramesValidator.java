@@ -12,12 +12,12 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
 
-import static io.netty.util.internal.StringUtil.simpleClassName;
+import static io.netty5.util.internal.StringUtil.simpleClassName;
 
 /**
  * A {@link ChannelHandler} that validates frames sent/received on stream ID {@code 0}. This handler

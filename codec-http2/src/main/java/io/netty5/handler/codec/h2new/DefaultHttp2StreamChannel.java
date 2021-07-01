@@ -12,33 +12,33 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.api.Buffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.DefaultChannelPipeline;
-import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
-import io.netty.util.DefaultAttributeMap;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ObjectPool;
-import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.RecyclableArrayList;
-import io.netty.util.internal.StringUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelId;
+import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.DefaultChannelConfig;
+import io.netty5.channel.DefaultChannelPipeline;
+import io.netty5.channel.EventLoop;
+import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
+import io.netty5.util.DefaultAttributeMap;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.ObjectPool;
+import io.netty5.util.internal.ObjectPool.Handle;
+import io.netty5.util.internal.RecyclableArrayList;
+import io.netty5.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
-import static io.netty.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
+import static io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
 
 final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -126,7 +126,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     @Override
     public Future<Void> closeFuture() {
-        return closePromise;
+        return closePromise.asFuture();
     }
 
     @Override
@@ -262,7 +262,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
         private byte state;
         @Override
-        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+        public RecvBufferAllocator.Handle recvBufAllocHandle() {
             throw new UnsupportedOperationException("Buffer allocations not supported by HTTP/2 streams.");
         }
 
@@ -296,7 +296,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                         onStreamReserved(promise);
                     } else {
                         if (future.isCancelled()) {
-                            promise.cancel(false);
+                            promise.cancel();
                         } else {
                             promise.setFailure(future.cause());
                         }

@@ -13,14 +13,14 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.h2new.Http2ServerCodecBuilder.Http2ServerChannelInitializer;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.h2new.Http2ServerCodecBuilder.Http2ServerChannelInitializer;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * An initializer of different {@link Http2StreamChannel}s for a server.

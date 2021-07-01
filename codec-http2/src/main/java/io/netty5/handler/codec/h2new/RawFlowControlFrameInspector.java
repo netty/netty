@@ -13,13 +13,13 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Future;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.concurrent.Future;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * A {@link ChannelHandlerAdapter} that feeds flow control events to the associated

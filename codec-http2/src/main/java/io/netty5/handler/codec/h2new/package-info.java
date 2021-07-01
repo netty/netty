@@ -17,6 +17,6 @@
  * Handlers for sending and receiving HTTP/2 frames.
  */
 @UnstableApi
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.util.internal.UnstableApi;
+import io.netty5.util.internal.UnstableApi;

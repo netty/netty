@@ -13,7 +13,7 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 /**
  * An <a href="https://httpwg.org/specs/rfc7540.html#WINDOW_UPDATE">HTTP/2 window update frame</a>.

@@ -13,36 +13,36 @@
  * the License.
  */
 
-package io.netty.example.h2new;
+package io.netty5.example.h2new;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.nio.NioHandler;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.h2new.Http2ClientCodecBuilder;
-import io.netty.handler.codec.h2new.Http2ClientSslContextBuilder;
-import io.netty.handler.codec.h2new.DefaultHttp2DataFrame;
-import io.netty.handler.codec.h2new.DefaultHttp2HeadersFrame;
-import io.netty.handler.codec.h2new.Http2DataFrame;
-import io.netty.handler.codec.h2new.Http2Frame;
-import io.netty.handler.codec.h2new.Http2HeadersFrame;
-import io.netty.handler.codec.h2new.Http2SettingsFrame;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty5.bootstrap.Bootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.codec.h2new.Http2ClientCodecBuilder;
+import io.netty5.handler.codec.h2new.Http2ClientSslContextBuilder;
+import io.netty5.handler.codec.h2new.DefaultHttp2DataFrame;
+import io.netty5.handler.codec.h2new.DefaultHttp2HeadersFrame;
+import io.netty5.handler.codec.h2new.Http2DataFrame;
+import io.netty5.handler.codec.h2new.Http2Frame;
+import io.netty5.handler.codec.h2new.Http2HeadersFrame;
+import io.netty5.handler.codec.h2new.Http2SettingsFrame;
+import io.netty5.handler.codec.http2.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.Http2Settings;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;

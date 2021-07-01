@@ -13,32 +13,32 @@
  * the License.
  */
 
-package io.netty.example.h2new;
+package io.netty5.example.h2new;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.nio.NioHandler;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.h2new.DefaultHttp2HeadersFrame;
-import io.netty.handler.codec.h2new.Http2ServerCodecBuilder;
-import io.netty.handler.codec.h2new.Http2ServerSslContextBuilder;
-import io.netty.handler.codec.h2new.Http2DataFrame;
-import io.netty.handler.codec.h2new.Http2HeadersFrame;
-import io.netty.handler.codec.h2new.Http2RequestStreamInboundHandler;
-import io.netty.handler.codec.h2new.Http2ServerStreamsInitializer;
-import io.netty.handler.codec.h2new.Http2StreamChannel;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.nio.NioServerSocketChannel;
+import io.netty5.handler.codec.h2new.DefaultHttp2HeadersFrame;
+import io.netty5.handler.codec.h2new.Http2ServerCodecBuilder;
+import io.netty5.handler.codec.h2new.Http2ServerSslContextBuilder;
+import io.netty5.handler.codec.h2new.Http2DataFrame;
+import io.netty5.handler.codec.h2new.Http2HeadersFrame;
+import io.netty5.handler.codec.h2new.Http2RequestStreamInboundHandler;
+import io.netty5.handler.codec.h2new.Http2ServerStreamsInitializer;
+import io.netty5.handler.codec.h2new.Http2StreamChannel;
+import io.netty5.handler.codec.http2.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.Http2Settings;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.ReferenceCountUtil;
 
 public class Http2ServerExampleStreams {
     public static void main(String[] args) throws Exception {

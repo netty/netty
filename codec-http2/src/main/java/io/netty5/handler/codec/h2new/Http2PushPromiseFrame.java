@@ -12,9 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.Http2Headers;
 
 /**
  * An <a href="https://httpwg.org/specs/rfc7540.html#PUSH_PROMISE">HTTP/2 push promise frame</a>.

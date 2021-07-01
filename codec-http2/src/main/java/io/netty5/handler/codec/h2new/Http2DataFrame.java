@@ -13,9 +13,9 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.buffer.api.Buffer;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * An <a href="https://httpwg.org/specs/rfc7540.html#DATA">HTTP/2 data frame</a>.

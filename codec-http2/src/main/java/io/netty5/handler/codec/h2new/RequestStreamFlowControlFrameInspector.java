@@ -13,20 +13,20 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
-import io.netty.handler.codec.h2new.ChannelFlowControlledBytesDistributor.DistributionAcceptor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty5.channel.socket.ChannelOutputShutdownEvent;
+import io.netty5.handler.codec.h2new.ChannelFlowControlledBytesDistributor.DistributionAcceptor;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * A {@link ChannelHandlerAdapter} that feeds flow control events to the associated
@@ -122,7 +122,7 @@ final class RequestStreamFlowControlFrameInspector extends ChannelHandlerAdapter
             }
             final Promise<Void> promise = ctx.executor().newPromise();
             pendingWriteQueue.addLast(new PendingWrite((Http2Frame) msg, promise));
-            return promise;
+            return promise.asFuture();
         } else {
             return ctx.write(msg);
         }
@@ -171,7 +171,7 @@ final class RequestStreamFlowControlFrameInspector extends ChannelHandlerAdapter
                 } else {
                     if (entry.frame instanceof Http2DataFrame) {
                         final int bytes = ((Http2DataFrame) entry.frame).initialFlowControlledBytes();
-                        this.unflushedDataFrameBytes -= bytes;
+                        unflushedDataFrameBytes -= bytes;
                         distributor.bytesWritten(streamId, bytes);
                     }
                     ctx.write(entry.frame).cascadeTo(entry.promise);

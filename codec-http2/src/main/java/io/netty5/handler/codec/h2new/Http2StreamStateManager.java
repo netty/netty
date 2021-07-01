@@ -12,15 +12,15 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListeners;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
-import io.netty.util.concurrent.Future;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFutureListeners;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty5.channel.socket.ChannelOutputShutdownEvent;
+import io.netty5.util.concurrent.Future;
 
 /**
  * A handler that maps <a href="https://httpwg.org/specs/rfc7540.html#StreamStates">HTTP/2 stream states</a> to netty

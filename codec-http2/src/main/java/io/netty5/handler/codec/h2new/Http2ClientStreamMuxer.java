@@ -13,9 +13,9 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 
 final class Http2ClientStreamMuxer extends AbstractHttp2StreamMuxer {
 

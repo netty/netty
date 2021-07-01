@@ -13,10 +13,10 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 
 final class Http2ClientRequestStreamInitializer extends ChannelInitializer<Http2StreamChannel> {
     private final SensitivityDetector headerSensitivityDetector;

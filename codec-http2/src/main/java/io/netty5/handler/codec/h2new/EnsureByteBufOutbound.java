@@ -12,43 +12,29 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufAllocatorAdaptor;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.adaptor.BufferConversionHandler;
+import io.netty5.handler.adaptor.BufferConversionHandler.Conversion;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
+
+import static io.netty5.handler.adaptor.BufferConversionHandler.Conversion.BUFFER_TO_BYTEBUF;
+import static io.netty5.handler.adaptor.BufferConversionHandler.Conversion.NONE;
 
 /**
  * A {@link ChannelHandler} that converts {@link Buffer} to {@link ByteBuf} when written.
  */
-final class EnsureByteBufOutbound extends ChannelHandlerAdapter {
-    private ByteBufAllocatorAdaptor byteBufAllocatorAdaptor;
+final class EnsureByteBufOutbound {
+    static final BufferConversionHandler ADAPTOR = new BufferConversionHandler(NONE, BUFFER_TO_BYTEBUF);
 
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        byteBufAllocatorAdaptor = new ByteBufAllocatorAdaptor();
-    }
-
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (byteBufAllocatorAdaptor != null) {
-            byteBufAllocatorAdaptor.close();
-        }
-    }
-
-    @Override
-    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof Buffer) {
-            Buffer buffer = (Buffer) msg;
-            return ctx.write(new ByteBufAdaptor(byteBufAllocatorAdaptor, buffer, buffer.capacity()));
-        } else {
-            return ctx.write(msg);
-        }
+    private EnsureByteBufOutbound() {
     }
 }

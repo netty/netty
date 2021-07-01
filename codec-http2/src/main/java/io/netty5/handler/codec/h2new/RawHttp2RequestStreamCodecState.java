@@ -12,7 +12,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 interface RawHttp2RequestStreamCodecState {
     Http2RequestStreamCodecState localStateForStream(int streamId);

@@ -13,23 +13,23 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListeners;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFutureListeners;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.Http2Settings;
+import io.netty5.util.AttributeKey;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static io.netty.handler.codec.h2new.Http2ServerCodecBuilder.FLOW_CONTROLLED_BYTES_DISTRIBUTOR_ATTRIBUTE_KEY;
+import static io.netty5.handler.codec.h2new.Http2ServerCodecBuilder.FLOW_CONTROLLED_BYTES_DISTRIBUTOR_ATTRIBUTE_KEY;
 
 final class Http2ControlStreamInitializer extends ChannelHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ControlStreamInitializer.class);
@@ -159,7 +159,7 @@ final class Http2ControlStreamInitializer extends ChannelHandlerAdapter {
             }
             final Promise<Void> promise = channel.executor().newPromise();
             waitingReserve.addLast(promise);
-            return promise;
+            return promise.asFuture();
         }
 
         DefaultHttp2StreamChannel channel() {

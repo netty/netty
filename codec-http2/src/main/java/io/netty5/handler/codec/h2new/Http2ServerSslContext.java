@@ -13,16 +13,16 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.DelegatingSslContext;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.handler.ssl.ApplicationProtocolNames;
+import io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler;
+import io.netty5.handler.ssl.DelegatingSslContext;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
 

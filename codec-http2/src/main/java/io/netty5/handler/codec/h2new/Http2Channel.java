@@ -13,16 +13,16 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.DuplexChannel;
-import io.netty.handler.codec.http2.Http2WindowUpdateFrame;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.socket.DuplexChannel;
+import io.netty5.handler.codec.http2.Http2WindowUpdateFrame;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 
 /**
  * A {@link DuplexChannel} which supports {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) reading} and

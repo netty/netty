@@ -13,7 +13,7 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 final class Http2Flags {
     static final short END_STREAM = 0x1;

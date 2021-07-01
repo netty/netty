@@ -13,20 +13,20 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelId;
+import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.EventLoop;
+import io.netty5.util.Attribute;
+import io.netty5.util.AttributeKey;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -56,7 +56,7 @@ final class DefaultHttp2Channel implements Http2Channel {
         } else {
             delegate.executor().execute(() -> createStream0(handler, promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private void createStream0(ChannelHandler handler, Promise<Http2StreamChannel> promise) {
@@ -71,7 +71,7 @@ final class DefaultHttp2Channel implements Http2Channel {
                 promise.setSuccess(stream);
             } else {
                 if (future.isCancelled()) {
-                    promise.cancel(false);
+                    promise.cancel();
                 } else {
                     promise.setFailure(future.cause());
                 }

@@ -13,12 +13,12 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferHolder;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default implementation of {@link Http2GoAwayFrame}.

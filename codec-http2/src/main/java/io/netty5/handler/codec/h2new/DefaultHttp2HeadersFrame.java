@@ -13,13 +13,13 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.Http2Headers;
 
-import static io.netty.util.internal.ObjectUtil.checkInRange;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.ObjectUtil.checkInRange;
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default implementation of {@link Http2HeadersFrame}.

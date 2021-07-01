@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelId;
-import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty5.channel.ChannelId;
+import io.netty5.handler.codec.http2.Http2StreamChannel;
 
 /**
  * ChannelId implementation which is used by our {@link Http2StreamChannel} implementation.

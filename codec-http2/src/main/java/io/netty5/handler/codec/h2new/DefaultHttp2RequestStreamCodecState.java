@@ -12,9 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty5.handler.codec.http.HttpStatusClass;
 
 class DefaultHttp2RequestStreamCodecState implements Http2RequestStreamCodecState {
     private enum State {

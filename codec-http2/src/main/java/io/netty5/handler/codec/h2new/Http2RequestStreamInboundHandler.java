@@ -13,14 +13,14 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.ReferenceCountUtil;
 
-import static io.netty.util.ReferenceCountUtil.release;
+import static io.netty5.util.ReferenceCountUtil.release;
 
 /**
  * A {@link ChannelHandler} that reads {@link Http2Frame}s for a request stream

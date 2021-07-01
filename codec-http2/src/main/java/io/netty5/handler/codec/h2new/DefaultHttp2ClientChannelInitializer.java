@@ -13,18 +13,18 @@
  * the License.
  */
 
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.h2new.Http2ClientCodecBuilder.Http2ClientChannelInitializer;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.h2new.Http2ClientCodecBuilder.Http2ClientChannelInitializer;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.ImmediateEventExecutor;
+import io.netty5.util.concurrent.Promise;
 
-import static io.netty.util.ReferenceCountUtil.release;
+import static io.netty5.util.ReferenceCountUtil.release;
 
 public class DefaultHttp2ClientChannelInitializer implements Http2ClientChannelInitializer {
     private final ChannelHandler controlStreamHandler;
@@ -46,12 +46,12 @@ public class DefaultHttp2ClientChannelInitializer implements Http2ClientChannelI
                 toReturn.setFailure(future.cause());
             }
         });
-        http2ChannelPromise.addListener(future -> {
+        http2ChannelPromise.asFuture().addListener(future -> {
             if (future.isSuccess()) {
                 toReturn.setSuccess(future.getNow());
             }
         });
-        return toReturn;
+        return toReturn.asFuture();
     }
 
     @Override

@@ -12,14 +12,14 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.CipherSuiteFilter;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslContextOption;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty5.handler.ssl.ApplicationProtocolConfig;
+import io.netty5.handler.ssl.CipherSuiteFilter;
+import io.netty5.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.SslContextOption;
+import io.netty5.handler.ssl.SslProvider;
+import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -32,11 +32,11 @@ import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.cert.X509Certificate;
 
-import static io.netty.handler.codec.http2.Http2SecurityUtil.CIPHERS;
-import static io.netty.handler.ssl.ApplicationProtocolConfig.Protocol.ALPN;
-import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT;
-import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE;
-import static io.netty.handler.ssl.ApplicationProtocolNames.HTTP_2;
+import static io.netty5.handler.codec.http2.Http2SecurityUtil.CIPHERS;
+import static io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol.ALPN;
+import static io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT;
+import static io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE;
+import static io.netty5.handler.ssl.ApplicationProtocolNames.HTTP_2;
 
 public final class Http2ClientSslContextBuilder {
     private final SslContextBuilder delegate;

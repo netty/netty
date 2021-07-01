@@ -12,21 +12,20 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.h2new;
+package io.netty5.handler.codec.h2new;
 
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
-import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.ControlStream;
+import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.util.collection.IntObjectHashMap;
+import io.netty5.util.collection.IntObjectMap;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty5.handler.codec.h2new.Http2ControlStreamInitializer.CONTROL_STREAM_ATTRIBUTE_KEY;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 abstract class AbstractHttp2StreamMuxer extends ChannelHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamMuxer.class);
