@@ -18,11 +18,9 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,17 +36,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
-@RunWith(Parameterized.class)
 public class MultipleContentLengthHeadersTest {
 
-    private final boolean allowDuplicateContentLengths;
-    private final boolean sameValue;
-    private final boolean singleField;
-
-    private EmbeddedChannel channel;
-
-    @Parameters
-    public static Collection<Object[]> parameters() {
+    static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
                 { false, false, false },
                 { false, false, true },
@@ -61,27 +51,22 @@ public class MultipleContentLengthHeadersTest {
         });
     }
 
-    public MultipleContentLengthHeadersTest(
-            boolean allowDuplicateContentLengths, boolean sameValue, boolean singleField) {
-        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
-        this.sameValue = sameValue;
-        this.singleField = singleField;
-    }
-
-    @Before
-    public void setUp() {
+    private static EmbeddedChannel newChannel(boolean allowDuplicateContentLengths) {
         HttpRequestDecoder decoder = new HttpRequestDecoder(
                 DEFAULT_MAX_INITIAL_LINE_LENGTH,
                 DEFAULT_MAX_HEADER_SIZE,
                 DEFAULT_VALIDATE_HEADERS,
                 DEFAULT_INITIAL_BUFFER_SIZE,
                 allowDuplicateContentLengths);
-        channel = new EmbeddedChannel(decoder);
+        return new EmbeddedChannel(decoder);
     }
 
-    @Test
-    public void testMultipleContentLengthHeadersBehavior() {
-        String requestStr = setupRequestString();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMultipleContentLengthHeadersBehavior(boolean allowDuplicateContentLengths,
+                                                         boolean sameValue, boolean singleField) {
+        EmbeddedChannel channel = newChannel(allowDuplicateContentLengths);
+        String requestStr = setupRequestString(sameValue, singleField);
         assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
         HttpRequest request = channel.readInbound();
 
@@ -102,7 +87,7 @@ public class MultipleContentLengthHeadersTest {
         assertThat(channel.finish(), is(false));
     }
 
-    private String setupRequestString() {
+    private static String setupRequestString(boolean sameValue, boolean singleField) {
         String firstValue = "1";
         String secondValue = sameValue ? firstValue : "2";
         String contentLength;
@@ -119,6 +104,7 @@ public class MultipleContentLengthHeadersTest {
 
     @Test
     public void testDanglingComma() {
+        EmbeddedChannel channel = newChannel(false);
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                             "Content-Length: 1,\r\n" +
                             "Connection: close\n\n" +

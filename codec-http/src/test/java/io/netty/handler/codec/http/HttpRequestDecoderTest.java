@@ -20,8 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 

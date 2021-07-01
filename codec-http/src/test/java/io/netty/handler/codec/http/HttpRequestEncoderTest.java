@@ -21,7 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -33,8 +34,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  */
@@ -137,15 +138,17 @@ public class HttpRequestEncoderTest {
     @Test
     public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() throws Exception {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
-        EmbeddedChannel channel = new EmbeddedChannel(encoder);
-        ByteBuf buf = Unpooled.buffer();
+        final EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        final ByteBuf buf = Unpooled.buffer();
         buf.release();
-        try {
-            channel.writeAndFlush(buf).get();
-            fail();
-        } catch (ExecutionException e) {
-            assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
-        }
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeAndFlush(buf).get();
+            }
+        });
+        assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+
         channel.finishAndReleaseAll();
     }
 
