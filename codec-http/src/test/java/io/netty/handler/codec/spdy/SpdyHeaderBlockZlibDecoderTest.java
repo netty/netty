@@ -18,13 +18,15 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SpdyHeaderBlockZlibDecoderTest {
 
@@ -42,13 +44,13 @@ public class SpdyHeaderBlockZlibDecoderTest {
     private SpdyHeaderBlockZlibDecoder decoder;
     private SpdyHeadersFrame frame;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         decoder = new SpdyHeaderBlockZlibDecoder(SpdyVersion.SPDY_3_1, maxHeaderSize);
         frame = new DefaultSpdyHeadersFrame(1);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         decoder.end();
     }
@@ -170,9 +172,9 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.release();
     }
 
-    @Test(expected = SpdyProtocolException.class)
+    @Test
     public void testHeaderBlockExtraData() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(37);
+        final ByteBuf headerBlock = Unpooled.buffer(37);
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x15); // little-endian length (21)
@@ -189,14 +191,20 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeByte(0x03); // adler-32 checksum
         headerBlock.writeByte(0xc9); // adler-32 checksum
         headerBlock.writeByte(0); // Data following zlib stream
-        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+
+        assertThrows(SpdyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+            }
+        });
 
         headerBlock.release();
     }
 
-    @Test(expected = SpdyProtocolException.class)
+    @Test
     public void testHeaderBlockInvalidDictionary() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(7);
+        final ByteBuf headerBlock = Unpooled.buffer(7);
         headerBlock.writeByte(0x78);
         headerBlock.writeByte(0x3f);
         headerBlock.writeByte(0x01); // Unknown dictionary
@@ -204,21 +212,33 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeByte(0x03); // Unknown dictionary
         headerBlock.writeByte(0x04); // Unknown dictionary
         headerBlock.writeByte(0); // Non-compressed block
-        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+
+        assertThrows(SpdyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+            }
+        });
 
         headerBlock.release();
     }
 
-    @Test(expected = SpdyProtocolException.class)
+    @Test
     public void testHeaderBlockInvalidDeflateBlock() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(11);
+        final ByteBuf headerBlock = Unpooled.buffer(11);
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x00); // little-endian length (0)
         headerBlock.writeByte(0x00); // little-endian length (0)
         headerBlock.writeByte(0x00); // invalid one's compliment
         headerBlock.writeByte(0x00); // invalid one's compliment
-        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+
+        assertThrows(SpdyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+            }
+        });
 
         headerBlock.release();
     }
