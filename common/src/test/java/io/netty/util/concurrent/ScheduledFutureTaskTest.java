@@ -15,13 +15,13 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class ScheduledFutureTaskTest {
 
     @Test
     public void testDeadlineNanosNotOverflow() {
-        Assert.assertEquals(Long.MAX_VALUE, ScheduledFutureTask.deadlineNanos(Long.MAX_VALUE));
+        Assertions.assertEquals(Long.MAX_VALUE, ScheduledFutureTask.deadlineNanos(Long.MAX_VALUE));
     }
 }
