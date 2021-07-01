@@ -15,13 +15,13 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -61,7 +61,8 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
         final EventLoopGroup group = new EpollEventLoop(null,
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(), null) {
+                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(),
+                null, null) {
             @Override
             void handleLoopException(Throwable t) {
                 capture.set(t);
