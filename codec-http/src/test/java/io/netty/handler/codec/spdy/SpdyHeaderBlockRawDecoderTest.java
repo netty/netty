@@ -18,13 +18,13 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SpdyHeaderBlockRawDecoderTest {
 
@@ -38,13 +38,13 @@ public class SpdyHeaderBlockRawDecoderTest {
     private SpdyHeaderBlockRawDecoder decoder;
     private SpdyHeadersFrame frame;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         decoder = new SpdyHeaderBlockRawDecoder(SpdyVersion.SPDY_3_1, maxHeaderSize);
         frame = new DefaultSpdyHeadersFrame(1);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         decoder.end();
     }

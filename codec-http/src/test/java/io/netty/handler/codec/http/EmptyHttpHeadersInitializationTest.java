@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * A test to validate that either order of initialization of the {@link EmptyHttpHeaders#INSTANCE} and
