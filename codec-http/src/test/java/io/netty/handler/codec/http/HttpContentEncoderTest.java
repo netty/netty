@@ -26,7 +26,8 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -39,8 +40,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpContentEncoderTest {
 
@@ -413,7 +414,7 @@ public class HttpContentEncoderTest {
         };
 
         final AtomicBoolean channelInactiveCalled = new AtomicBoolean();
-        EmbeddedChannel channel = new EmbeddedChannel(encoder, new ChannelInboundHandlerAdapter() {
+        final EmbeddedChannel channel = new EmbeddedChannel(encoder, new ChannelInboundHandlerAdapter() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 assertTrue(channelInactiveCalled.compareAndSet(false, true));
@@ -425,12 +426,13 @@ public class HttpContentEncoderTest {
         HttpContent content = new DefaultHttpContent(Unpooled.buffer().writeZero(10));
         assertTrue(channel.writeOutbound(content));
         assertEquals(1, content.refCnt());
-        try {
-            channel.finishAndReleaseAll();
-            fail();
-        } catch (CodecException expected) {
-            // expected
-        }
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.finishAndReleaseAll();
+            }
+        });
+
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
     }

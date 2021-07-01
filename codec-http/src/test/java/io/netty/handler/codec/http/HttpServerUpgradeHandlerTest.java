@@ -18,8 +18,6 @@ package io.netty.handler.codec.http;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.junit.Test;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
@@ -33,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpServerUpgradeHandlerTest {
 
-    private class TestUpgradeCodec implements UpgradeCodec {
+    private static class TestUpgradeCodec implements UpgradeCodec {
         @Override
         public Collection<CharSequence> requiredUpgradeHeaders() {
             return Collections.<CharSequence>emptyList();

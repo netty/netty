@@ -17,17 +17,23 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.Random;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 public class SpdyFrameDecoderTest {
 
@@ -37,12 +43,12 @@ public class SpdyFrameDecoderTest {
     private final TestSpdyFrameDecoderDelegate testDelegate = new TestSpdyFrameDecoderDelegate();
     private SpdyFrameDecoder decoder;
 
-    @Before
+    @BeforeEach
     public void createDecoder() {
         decoder = new SpdyFrameDecoder(SpdyVersion.SPDY_3_1, testDelegate);
     }
 
-    @After
+    @AfterEach
     public void releaseBuffers() {
         testDelegate.releaseAll();
     }

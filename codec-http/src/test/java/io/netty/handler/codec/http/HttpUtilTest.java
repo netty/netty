@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetAddress;
