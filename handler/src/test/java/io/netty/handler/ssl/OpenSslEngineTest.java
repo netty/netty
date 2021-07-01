@@ -1543,6 +1543,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testRSASSAPSS() throws Exception {
+        checkShouldUseKeyManagerFactory();
         char[] password = "password".toCharArray();
 
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
