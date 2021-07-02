@@ -29,12 +29,13 @@ import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IdleStateHandlerTest {
 
@@ -67,8 +68,7 @@ public class IdleStateHandlerTest {
     }
 
     private static void anyIdle(TestableIdleStateHandler idleStateHandler, Object... expected) throws Exception {
-
-        assertTrue(expected.length >= 1);
+        assertThat(expected.length,  greaterThanOrEqualTo(1));
 
         final List<Object> events = new ArrayList<Object>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {

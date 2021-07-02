@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SniClientTest {
-
+    private static final String PARAMETERIZED_NAME = "{index}: serverSslProvider = {0}, clientSslProvider = {1}";
     static Collection<Object[]> parameters() {
         List<SslProvider> providers = new ArrayList<SslProvider>(Arrays.asList(SslProvider.values()));
         if (!OpenSsl.isAvailable()) {
@@ -69,14 +69,7 @@ public class SniClientTest {
         return params;
     }
 
-    @ParameterizedTest(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    @MethodSource("parameters")
-    public void testSniClient(SslProvider serverProvider, SslProvider clientProvider) throws Exception {
-        testSniClient0(serverProvider, clientProvider);
-    }
-
-    @ParameterizedTest(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     @MethodSource("parameters")
     public void testSniSNIMatcherMatchesClient(SslProvider serverProvider, SslProvider clientProvider)
@@ -85,7 +78,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
-    @ParameterizedTest(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     @MethodSource("parameters")
     public void testSniSNIMatcherDoesNotMatchClient(
@@ -99,7 +92,10 @@ public class SniClientTest {
         });
     }
 
-    private static void testSniClient0(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @MethodSource("parameters")
+    public void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);

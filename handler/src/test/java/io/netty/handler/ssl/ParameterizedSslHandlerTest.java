@@ -76,6 +76,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ParameterizedSslHandlerTest {
 
+    private static final String PARAMETERIZED_NAME = "{index}: clientProvider={0}, {index}: serverProvider={1}";
+
     static Collection<Object[]> data() {
         List<SslProvider> providers = new ArrayList<SslProvider>(3);
         if (OpenSsl.isAvailable()) {
@@ -94,7 +96,7 @@ public class ParameterizedSslHandlerTest {
         return params;
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 48000, unit = TimeUnit.MILLISECONDS)
     public void testCompositeBufSizeEstimationGuaranteesSynchronousWrite(
@@ -271,7 +273,7 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testAlertProducedAndSend(SslProvider clientProvider, SslProvider serverProvider) throws Exception {
@@ -371,14 +373,14 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider) throws Exception {
         testCloseNotify(clientProvider, serverProvider, 5000, false);
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testCloseNotifyReceivedTimeout(SslProvider clientProvider, SslProvider serverProvider)
@@ -386,7 +388,7 @@ public class ParameterizedSslHandlerTest {
         testCloseNotify(clientProvider, serverProvider, 100, true);
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testCloseNotifyNotWaitForResponse(SslProvider clientProvider, SslProvider serverProvider)
@@ -513,7 +515,7 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteNioChannel(SslProvider clientProvider, SslProvider serverProvider)
@@ -536,7 +538,7 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteLocalChannel(SslProvider clientProvider, SslProvider serverProvider)

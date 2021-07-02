@@ -639,6 +639,7 @@ public class SniHandlerTest {
     public void testNonFragmented(SslProvider provider) throws Exception {
         testWithFragmentSize(provider, Integer.MAX_VALUE);
     }
+
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
     public void testFragmented(SslProvider provider) throws Exception {

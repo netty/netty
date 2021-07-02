@@ -101,7 +101,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                assertFalse(channel.finishAndReleaseAll());
+                channel.finishAndReleaseAll();
             }
         });
     }
