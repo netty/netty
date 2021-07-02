@@ -16,15 +16,18 @@
 
 package io.netty.handler.ssl.util;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.Java8SslTestUtils.loadCertCollection;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FingerprintTrustManagerFactoryTest {
 
@@ -48,27 +51,47 @@ public class FingerprintTrustManagerFactoryTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFingerprintWithInvalidLength() {
-        FingerprintTrustManagerFactory.builder("SHA-256").fingerprints("00:00:00").build();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                FingerprintTrustManagerFactory.builder("SHA-256").fingerprints("00:00:00").build();
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFingerprintWithUnexpectedCharacters() {
-        FingerprintTrustManagerFactory.builder("SHA-256").fingerprints("00:00:00\n").build();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                FingerprintTrustManagerFactory.builder("SHA-256").fingerprints("00:00:00\n").build();
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testWithNoFingerprints() {
-        FingerprintTrustManagerFactory.builder("SHA-256").build();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                FingerprintTrustManagerFactory.builder("SHA-256").build();
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testWithNullFingerprint() {
-        FingerprintTrustManagerFactory
-                .builder("SHA-256")
-                .fingerprints(FIRST_CERT_SHA256_FINGERPRINT, null)
-                .build();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                FingerprintTrustManagerFactory
+                        .builder("SHA-256")
+                        .fingerprints(FIRST_CERT_SHA256_FINGERPRINT, null)
+                        .build();
+            }
+        });
     }
 
     @Test
@@ -96,7 +119,7 @@ public class FingerprintTrustManagerFactoryTest {
         tm.checkClientTrusted(keyCertChain, "test");
     }
 
-    @Test(expected = CertificateException.class)
+    @Test
     public void testUntrustedCertificateWithSHA256Fingerprint() throws Exception {
         FingerprintTrustManagerFactory factory = FingerprintTrustManagerFactory
                 .builder("SHA-256")
@@ -105,8 +128,14 @@ public class FingerprintTrustManagerFactoryTest {
 
         assertTrue(factory.engineGetTrustManagers().length > 0);
         assertTrue(factory.engineGetTrustManagers()[0] instanceof X509TrustManager);
-        X509TrustManager tm = (X509TrustManager) factory.engineGetTrustManagers()[0];
-        tm.checkClientTrusted(SECOND_CHAIN, "test");
+        final X509TrustManager tm = (X509TrustManager) factory.engineGetTrustManagers()[0];
+
+        assertThrows(CertificateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                tm.checkClientTrusted(SECOND_CHAIN, "test");
+            }
+        });
     }
 
 }

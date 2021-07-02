@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -27,9 +27,9 @@ import java.nio.ByteOrder;
 import java.security.NoSuchAlgorithmException;
 
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SslUtilsTest {
 

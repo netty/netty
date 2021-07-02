@@ -37,9 +37,9 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -50,17 +50,21 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class FlowControlHandlerTest {
     private static EventLoopGroup GROUP;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         GROUP = new NioEventLoopGroup();
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
     }

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -25,8 +25,8 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 
 import static io.netty.handler.ssl.Java8SslTestUtils.loadCertCollection;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SslContextTrustManagerTest {
     @Test
@@ -84,7 +84,7 @@ public class SslContextTrustManagerTest {
 
         for (int i = 0; i < eecResources.length; i++) {
             X509Certificate eecCert = eecCerts[i];
-            assertNotNull("Cannot use cert " + eecResources[i], eecCert);
+            assertNotNull(eecCert, "Cannot use cert " + eecResources[i]);
             try {
                 tm.checkServerTrusted(new X509Certificate[] { eecCert }, "RSA");
                 if (!expectations[i]) {
