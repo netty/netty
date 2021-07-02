@@ -18,11 +18,15 @@ package io.netty.handler.flush;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FlushConsolidationHandlerTest {
 
@@ -124,10 +128,10 @@ public class FlushConsolidationHandlerTest {
         assertFalse(channel.finish());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testFlushViaException() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount, false);
+        final EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
@@ -136,7 +140,12 @@ public class FlushConsolidationHandlerTest {
         assertEquals(1, flushCount.get());
         assertEquals(1L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
-        channel.finish();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.finish();
+            }
+        });
     }
 
     @Test

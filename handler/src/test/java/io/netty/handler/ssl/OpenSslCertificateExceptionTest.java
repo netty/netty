@@ -16,15 +16,18 @@
 package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.CertificateVerifier;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public class OpenSslCertificateExceptionTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void ensureOpenSsl() {
         OpenSsl.ensureAvailability();
     }
@@ -36,14 +39,19 @@ public class OpenSslCertificateExceptionTest {
             if (field.isAccessible()) {
                 int errorCode = field.getInt(null);
                 OpenSslCertificateException exception = new OpenSslCertificateException(errorCode);
-                Assert.assertEquals(errorCode, exception.errorCode());
+                assertEquals(errorCode, exception.errorCode());
             }
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testNonValidErrorCode() {
-        new OpenSslCertificateException(Integer.MIN_VALUE);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new OpenSslCertificateException(Integer.MIN_VALUE);
+            }
+        });
     }
 
     @Test

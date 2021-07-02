@@ -22,14 +22,15 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
@@ -47,9 +48,8 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@RunWith(Parameterized.class)
 public class CloseNotifyTest {
 
     private static final UnpooledByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
@@ -60,16 +60,7 @@ public class CloseNotifyTest {
         }
     };
 
-    private final SslProvider provider;
-    private final String protocol;
-
-    public CloseNotifyTest(SslProvider provider, String protocol) {
-        this.provider = provider;
-        this.protocol = protocol;
-    }
-
-    @Parameterized.Parameters(name = "{index}: provider={0}, protocol={1}")
-    public static Collection<Object[]> data() {
+    static Collection<Object[]> data() {
         return asList(new Object[][] {
                 { SslProvider.JDK, PROTOCOL_TLS_V1_2 },
                 { SslProvider.JDK, PROTOCOL_TLS_V1_3 },
@@ -78,9 +69,11 @@ public class CloseNotifyTest {
         });
     }
 
-    @Test(timeout = 5000)
-    public void eventsOrder() throws Exception {
-        assumeTrue("OpenSSL is not available", provider != SslProvider.OPENSSL || OpenSsl.isAvailable());
+    @ParameterizedTest(name = "{index}: provider={0}, protocol={1}")
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @MethodSource("data")
+    public void eventsOrder(SslProvider provider, String protocol) throws Exception {
+        assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
 
         if (PROTOCOL_TLS_V1_3.equals(protocol)) {
             // Ensure we support TLSv1.3
@@ -89,8 +82,8 @@ public class CloseNotifyTest {
         BlockingQueue<Object> clientEventQueue = new LinkedBlockingQueue<Object>();
         BlockingQueue<Object> serverEventQueue = new LinkedBlockingQueue<Object>();
 
-        EmbeddedChannel clientChannel = initChannel(true, clientEventQueue);
-        EmbeddedChannel serverChannel = initChannel(false, serverEventQueue);
+        EmbeddedChannel clientChannel = initChannel(provider, protocol, true, clientEventQueue);
+        EmbeddedChannel serverChannel = initChannel(provider, protocol, false, serverEventQueue);
 
         try {
             // handshake:
@@ -119,7 +112,7 @@ public class CloseNotifyTest {
             assertThat(clientEventQueue.poll(), instanceOf(SslCloseCompletionEvent.class));
 
             // make sure client automatically responds with close_notify:
-            if (!jdkTls13()) {
+            if (!jdkTls13(provider, protocol)) {
                 // JDK impl of TLSv1.3 does not automatically generate "close_notify" in response to the received
                 // "close_notify" alert. This is a legit behavior according to the spec:
                 // https://tools.ietf.org/html/rfc8446#section-6.1. Handle it differently:
@@ -133,7 +126,7 @@ public class CloseNotifyTest {
             }
         }
 
-        if (jdkTls13()) {
+        if (jdkTls13(provider, protocol)) {
             assertCloseNotify((ByteBuf) clientChannel.readOutbound());
         } else {
             discardEmptyOutboundBuffers(clientChannel);
@@ -150,11 +143,11 @@ public class CloseNotifyTest {
         assertThat(serverChannel.releaseOutbound(), is(false));
     }
 
-    private boolean jdkTls13() {
+    private static boolean jdkTls13(SslProvider provider, String protocol) {
         return provider == SslProvider.JDK && PROTOCOL_TLS_V1_3.equals(protocol);
     }
 
-    private EmbeddedChannel initChannel(final boolean useClientMode,
+    private static EmbeddedChannel initChannel(SslProvider provider, String protocol, final boolean useClientMode,
             final BlockingQueue<Object> eventQueue) throws Exception {
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();

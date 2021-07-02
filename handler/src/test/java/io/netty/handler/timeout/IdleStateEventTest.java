@@ -15,7 +15,8 @@
  */
 package io.netty.handler.timeout;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.timeout.IdleStateEvent.*;
 import static org.hamcrest.MatcherAssert.assertThat;
