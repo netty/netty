@@ -36,13 +36,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
 import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -67,27 +65,25 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class OpenSslPrivateKeyMethodTest {
     private static final String RFC_CIPHER_NAME = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static EventLoopGroup GROUP;
     private static SelfSignedCertificate CERT;
     private static ExecutorService EXECUTOR;
 
-    @Parameters(name = "{index}: delegate = {0}")
-    public static Collection<Object[]> parameters() {
+    static Collection<Object[]> parameters() {
         List<Object[]> dst = new ArrayList<Object[]>();
         dst.add(new Object[] { true });
         dst.add(new Object[] { false });
         return dst;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         checkShouldUseKeyManagerFactory();
 
@@ -107,19 +103,13 @@ public class OpenSslPrivateKeyMethodTest {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         if (OpenSsl.isBoringSSL()) {
             GROUP.shutdownGracefully();
             CERT.delete();
             EXECUTOR.shutdown();
         }
-    }
-
-    private final boolean delegate;
-
-    public OpenSslPrivateKeyMethodTest(boolean delegate) {
-        this.delegate = delegate;
     }
 
     private static void assumeCipherAvailable(SslProvider provider) throws NoSuchAlgorithmException {
@@ -170,11 +160,11 @@ public class OpenSslPrivateKeyMethodTest {
                 .build();
     }
 
-    private Executor delegateExecutor() {
+    private static Executor delegateExecutor(boolean delegate) {
        return delegate ? EXECUTOR : null;
     }
 
-    private void assertThread() {
+    private static void assertThread(boolean delegate) {
         if (delegate && OpenSslContext.USE_TASKS) {
             assertEquals(DelegateThread.class, Thread.currentThread().getClass());
         } else {
@@ -182,14 +172,15 @@ public class OpenSslPrivateKeyMethodTest {
         }
     }
 
-    @Test
-    public void testPrivateKeyMethod() throws Exception {
+    @ParameterizedTest(name = "{index}: delegate = {0}")
+    @MethodSource("parameters")
+    public void testPrivateKeyMethod(final boolean delegate) throws Exception {
         final AtomicBoolean signCalled = new AtomicBoolean();
         final SslContext sslServerContext = buildServerContext(new OpenSslPrivateKeyMethod() {
             @Override
             public byte[] sign(SSLEngine engine, int signatureAlgorithm, byte[] input) throws Exception {
                 signCalled.set(true);
-                assertThread();
+                assertThread(delegate);
 
                 assertEquals(CERT.cert().getPublicKey(),
                         engine.getSession().getLocalCertificates()[0].getPublicKey());
@@ -227,7 +218,7 @@ public class OpenSslPrivateKeyMethodTest {
                     @Override
                     protected void initChannel(Channel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(newSslHandler(sslServerContext, ch.alloc(), delegateExecutor()));
+                        pipeline.addLast(newSslHandler(sslServerContext, ch.alloc(), delegateExecutor(delegate)));
 
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
@@ -263,7 +254,7 @@ public class OpenSslPrivateKeyMethodTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(newSslHandler(sslClientContext, ch.alloc(), delegateExecutor()));
+                            pipeline.addLast(newSslHandler(sslClientContext, ch.alloc(), delegateExecutor(delegate)));
 
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
@@ -293,8 +284,8 @@ public class OpenSslPrivateKeyMethodTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                               .syncUninterruptibly();
 
-                        assertTrue("client timeout", clientPromise.await(5L, TimeUnit.SECONDS));
-                        assertTrue("server timeout", serverPromise.await(5L, TimeUnit.SECONDS));
+                        assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
+                        assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");
 
                         clientPromise.sync();
                         serverPromise.sync();
@@ -313,20 +304,23 @@ public class OpenSslPrivateKeyMethodTest {
         }
     }
 
-    @Test
-    public void testPrivateKeyMethodFailsBecauseOfException() throws Exception {
-        testPrivateKeyMethodFails(false);
+    @ParameterizedTest(name = "{index}: delegate = {0}")
+    @MethodSource("parameters")
+    public void testPrivateKeyMethodFailsBecauseOfException(final boolean delegate) throws Exception {
+        testPrivateKeyMethodFails(delegate, false);
     }
 
-    @Test
-    public void testPrivateKeyMethodFailsBecauseOfNull() throws Exception {
-        testPrivateKeyMethodFails(true);
+    @ParameterizedTest(name = "{index}: delegate = {0}")
+    @MethodSource("parameters")
+    public void testPrivateKeyMethodFailsBecauseOfNull(final boolean delegate) throws Exception {
+        testPrivateKeyMethodFails(delegate, true);
     }
-    private void testPrivateKeyMethodFails(final boolean returnNull) throws Exception {
+
+    private void testPrivateKeyMethodFails(final boolean delegate, final boolean returnNull) throws Exception {
         final SslContext sslServerContext = buildServerContext(new OpenSslPrivateKeyMethod() {
             @Override
             public byte[] sign(SSLEngine engine, int signatureAlgorithm, byte[] input) throws Exception {
-                assertThread();
+                assertThread(delegate);
                 if (returnNull) {
                     return null;
                 }
@@ -341,9 +335,9 @@ public class OpenSslPrivateKeyMethodTest {
         final SslContext sslClientContext = buildClientContext();
 
         SslHandler serverSslHandler = newSslHandler(
-                sslServerContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor());
+                sslServerContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor(delegate));
         SslHandler clientSslHandler = newSslHandler(
-                sslClientContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor());
+                sslClientContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor(delegate));
 
         try {
             try {

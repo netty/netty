@@ -33,10 +33,9 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLException;
@@ -60,14 +59,11 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
-
-@RunWith(Parameterized.class)
 public class SslErrorTest {
 
-    @Parameterized.Parameters(
-            name = "{index}: serverProvider = {0}, clientProvider = {1}, exception = {2}, serverProduceError = {3}")
-    public static Collection<Object[]> data() {
+    static Collection<Object[]> data() {
         List<SslProvider> serverProviders = new ArrayList<SslProvider>(2);
         List<SslProvider> clientProviders = new ArrayList<SslProvider>(3);
 
@@ -110,21 +106,13 @@ public class SslErrorTest {
                 new CertPathValidatorException("x", null, null, -1, reason));
     }
 
-    private final SslProvider serverProvider;
-    private final SslProvider clientProvider;
-    private final CertificateException exception;
-    private final boolean serverProduceError;
-
-    public SslErrorTest(SslProvider serverProvider, SslProvider clientProvider,
-                        CertificateException exception, boolean serverProduceError) {
-        this.serverProvider = serverProvider;
-        this.clientProvider = clientProvider;
-        this.exception = exception;
-        this.serverProduceError = serverProduceError;
-    }
-
-    @Test(timeout = 30000)
-    public void testCorrectAlert() throws Exception {
+    @ParameterizedTest(
+            name = "{index}: serverProvider = {0}, clientProvider = {1}, exception = {2}, serverProduceError = {3}")
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testCorrectAlert(SslProvider serverProvider, final SslProvider clientProvider,
+                                 final CertificateException exception, final boolean serverProduceError)
+            throws Exception {
         // As this only works correctly at the moment when OpenSslEngine is used on the server-side there is
         // no need to run it if there is no openssl is available at all.
         OpenSsl.ensureAvailability();
@@ -140,11 +128,11 @@ public class SslErrorTest {
                 .sslProvider(clientProvider);
 
         if (serverProduceError) {
-            sslServerCtxBuilder.trustManager(new ExceptionTrustManagerFactory());
+            sslServerCtxBuilder.trustManager(new ExceptionTrustManagerFactory(exception));
             sslClientCtxBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE);
         } else {
             sslServerCtxBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE);
-            sslClientCtxBuilder.trustManager(new ExceptionTrustManagerFactory());
+            sslClientCtxBuilder.trustManager(new ExceptionTrustManagerFactory(exception));
         }
 
         final SslContext sslServerCtx = sslServerCtxBuilder.build();
@@ -163,7 +151,8 @@ public class SslErrorTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
                             if (!serverProduceError) {
-                                ch.pipeline().addLast(new AlertValidationHandler(promise));
+                                ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
+                                        exception, promise));
                             }
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
@@ -182,7 +171,8 @@ public class SslErrorTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
                             if (serverProduceError) {
-                                ch.pipeline().addLast(new AlertValidationHandler(promise));
+                                ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
+                                        exception, promise));
                             }
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
@@ -209,7 +199,13 @@ public class SslErrorTest {
         }
     }
 
-    private final class ExceptionTrustManagerFactory extends SimpleTrustManagerFactory {
+    private static final class ExceptionTrustManagerFactory extends SimpleTrustManagerFactory {
+        private final CertificateException exception;
+
+        ExceptionTrustManagerFactory(CertificateException exception) {
+            this.exception = exception;
+        }
+
         @Override
         protected void engineInit(KeyStore keyStore) { }
         @Override
@@ -239,10 +235,17 @@ public class SslErrorTest {
         }
     }
 
-    private final class AlertValidationHandler extends ChannelInboundHandlerAdapter {
+    private static final class AlertValidationHandler extends ChannelInboundHandlerAdapter {
+        private final SslProvider clientProvider;
+        private final boolean serverProduceError;
+        private final CertificateException exception;
         private final Promise<Void> promise;
 
-        AlertValidationHandler(Promise<Void> promise) {
+        AlertValidationHandler(SslProvider clientProvider, boolean serverProduceError,
+                               CertificateException exception, Promise<Void> promise) {
+            this.clientProvider = clientProvider;
+            this.serverProduceError = serverProduceError;
+            this.exception = exception;
             this.promise = promise;
         }
 
@@ -255,20 +258,20 @@ public class SslErrorTest {
                     CertPathValidatorException.Reason reason =
                             ((CertPathValidatorException) exception.getCause()).getReason();
                     if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
-                        verifyException(unwrappedCause, promise, "expired");
+                        verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "expired");
                     } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
                         // BoringSSL may use "expired" in this case while others use "bad"
-                        verifyException(unwrappedCause, promise, "expired", "bad");
+                        verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "expired", "bad");
                     } else if (reason == CertPathValidatorException.BasicReason.REVOKED) {
-                        verifyException(unwrappedCause, promise, "revoked");
+                        verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "revoked");
                     }
                 } else if (exception instanceof CertificateExpiredException) {
-                    verifyException(unwrappedCause, promise,  "expired");
+                    verifyException(clientProvider, serverProduceError, unwrappedCause, promise,  "expired");
                 } else if (exception instanceof CertificateNotYetValidException) {
                     // BoringSSL may use "expired" in this case while others use "bad"
-                    verifyException(unwrappedCause, promise, "expired", "bad");
+                    verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "expired", "bad");
                 } else if (exception instanceof CertificateRevokedException) {
-                    verifyException(unwrappedCause, promise, "revoked");
+                    verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "revoked");
                 }
             }
         }
@@ -276,7 +279,8 @@ public class SslErrorTest {
 
     // Its a bit hacky to verify against the message that is part of the exception but there is no other way
     // at the moment as there are no different exceptions for the different alerts.
-    private void verifyException(Throwable cause, Promise<Void> promise, String... messageParts) {
+    private static void verifyException(SslProvider clientProvider, boolean serverProduceError,
+                                 Throwable cause, Promise<Void> promise, String... messageParts) {
         String message = cause.getMessage();
         // When the error is produced on the client side and the client side uses JDK as provider it will always
         // use "certificate unknown".
