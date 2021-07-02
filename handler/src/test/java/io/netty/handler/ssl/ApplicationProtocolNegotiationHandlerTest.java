@@ -102,7 +102,6 @@ public class ApplicationProtocolNegotiationHandlerTest {
             @Override
             public void execute() throws Throwable {
                 assertFalse(channel.finishAndReleaseAll());
-
             }
         });
     }
